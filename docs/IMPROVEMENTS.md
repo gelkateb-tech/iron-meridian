@@ -560,3 +560,364 @@ without a landing stamp, `--fuzz`, the two noise kinds), in the fixer's tool ste
   nation-days (90 days) and 69.0% (100 days), against 53.6% at 60 days, with 100-112 wars per run. It does not bind in long wars either;
   still the owner's call (Q7).
 
+## Round 3 ranking   (2026-11-21)
+
+Sources: the military hunter (4x90 days, seeds 3007/3016/3025/3034, `--invariants --stats --provoke 3`, the order fuzz, scan3.js), the
+economy hunter (4x100 days, seeds 3500-3503, probes eco/p/), the player hunter (India on desktop; Greece on a phone viewport 440x900 at 2x
+with touch, no CPU throttle), the verifier's rejected list, and the advisor's read-only probe (scratchpad `autotest/round3/adv/forces0.js`).
+Each idea was checked against docs/DECISIONS.md and the last section of LATER.md; an option that would change a settled decision is marked
+**PROPOSAL** with its id. Nothing here copies Conflict of Nations. Owner's note of 2026-11-21 ("we dont want to focus on bad phones"):
+nothing below is aimed at old or low-end phones; phone items are about touch controls on ordinary phones, and timings are taken without a
+CPU throttle. IMP-6 and the old-phone part of P1-05 (rows 1-2 of "Bugs for other jobs" in docs/ROUND_LOG.md) drop to the bottom.
+
+| Rank | Idea | Area | Effort | Settled decision touched by the recommendation? |
+|---|---|---|---|---|
+| 1 | IMP-21 Phones cannot select several forces: building one stack takes about 15 taps | UI / touch controls | small-medium | no (UNI-7: a tap still only selects) — **prototype `idea/phone-group` @ 4ac62da** |
+| 2 | IMP-22 "Battle won" but nothing taken, and "ended" when you fled: the battle dispatch does not say what happened to the province | dispatch text | small | no (option 3 would be a PROPOSAL on MOV-1) |
+| 3 | IMP-23 Units in training are lost on capture with no word: 253 orders in 4x100 games | production feedback | small | no (option 2 is a new rule, Q29) |
+| 4 | IMP-24 Phone: the INTEL card on a foreign city opens a screen with no buttons | UI / intel | small | no |
+| 5 | IMP-25 AI forces shuttle between two provinces, sometimes across a strait | AI movement | small | no (AI-1 kept; see the AI-8 note) |
+| 6 | IMP-26 Repeat production does not start on an idle city and never resumes after a pause | production / fewer clicks | small | no; option 1 is done on auto-test/fixes as the fix of ECO-R3-4 (33e8da9) |
+| 7 | IMP-27 One error in the page's drawing stops the game for good, with no message | page resilience | small | no (touches the main loop the map job also edits) |
+| 8 | IMP-13 (k)-(p): six more text items | UI text | small | no |
+| — | Evidence added to IMP-1, 3, 7, 8, 9, 11, 12, 16, 17, 20 | | | |
+| last | IMP-6 (older-phone side panel) and the old-phone part of P1-05 | performance | small | moved down by the owner's note |
+
+**Why IMP-21 is the one to prototype.** On a phone, the core move of the game is building stacks and sending them. Today the phone has
+no way to do that with more than one force at a time. Every phone player meets this in the first minutes, because First Steps asks for a
+merged stack. Nations start with a median of 13 separate ground forces of about 2 units each (forces0.js), so this happens for all 68
+nations.
+- The rules and the page already support groups: `sel.group`, `groupHTML()` with "Send all", and `sendToTarget()` ordering every force of
+  the group. Only a touch gesture to fill the group is missing.
+- The prototype is page only. It needs no `rng()`, adds no save fields, and leaves the golden unchanged. It touches no hands-off code:
+  selection input is not map drawing.
+- It changes no settled decision. A tap still only selects (UNI-7), and the unit panel keeps its layout (UNI-5).
+- The other candidates do not need a prototype:
+  - IMP-22, IMP-23 and IMP-24 are small text or wiring changes that the fixer or the owner can take directly.
+  - IMP-25 changes AI play and the golden, for a modest effect (20 forces, 101 h in one 40-day game).
+  - IMP-17 (Diplomacy open time) is best done together with the confirmed bug B2.25 / ECO-R3-8, on auto-test/fixes, not on an idea
+    branch. The UI-1 half is now fixed there (a405a5d, pure `blocsView`); the memo that would also cut the open time is not done yet.
+
+## IMP-21. Phones cannot select several forces: building one stack takes about 15 taps   (round 3; area: UI / touch controls)
+
+**Problem.** On a desktop, Shift-click or a Shift-drag box selects several forces, and the group panel sends them all with one order. A
+phone has neither gesture. A phone player gathers a stack one force at a time: tap the force, tap Move, tap the destination, and repeat for
+every force. The group panel even tells phone users to "Shift-click forces to add or remove them".
+
+**Evidence.**
+- Player hunter (P3-11): box select needs `e.pointerType === 'mouse' && e.shiftKey` (index.html:8934). Add-select is Shift only (tap,
+  `if (shift && sel.army !== null) selectArmy(own[0].id, true)`). Greece (phone) starts with 10 forces of 2 infantry, India with 18. A
+  10-unit stack costs about 5 forces x 3 taps = 15 taps, then Merge. On a desktop it takes one Shift-drag, Move and a tap.
+- Advisor `adv/forces0.js` (nations world, seed 3500, day 0): own ground forces per nation are min 7 (New Zealand), median 13, p90 15,
+  max 18 (USA, Russia, India, China). There are a median 2.27 units per force, so every nation needs 4-5 forces for one full stack
+  (STACK_LIM land 10).
+- First Steps asks for exactly this ("Merge forces into one stack (up to 10 ground units)").
+- The group machinery exists and works on touch once a group is set. `groupArmies()`, `groupHTML()` ("Send all", the slowest ETA) and
+  `sendToTarget()` (each force gets its own spot around the tapped point) are all there. Only the way into a group is missing on touch.
+
+**Options.**
+1. A **long press** (the existing `TAP_LONG`, 650 ms) on one of your forces while another is selected adds it to the group, and a long
+   press on a force already in the group removes it. A long press on a counter that holds several of your forces adds all of them. A
+   long press with nothing selected selects every own force under the counter. Short toast and a light vibration as feedback. The group
+   panel's help text is written for touch. Page only. A long press is today ignored or treated as a plain tap, so nothing anyone relies on
+   changes.
+2. A **"Gather here"** button on an own province's sheet: every idle own ground force within N hours marches there. It saves the most
+   taps, but it is a new order type with choices (which forces, how far, leave garrisons?) the owner should make. Medium.
+3. A **"Select" toggle** in the phone action bar: while it is on, each tap on an own force adds or removes it, and a drag draws a box.
+   Easy to discover, but one more mode for the player to forget to switch off. Small-medium.
+
+**Recommendation.** 1, prototyped. It is the smallest change, it mirrors Shift-click exactly, and it reuses the group panel. A one-line
+touch hint makes it discoverable. Add 3 later only if playtests show players never find the long press. Keep 2 as an owner question (Q31).
+
+**Effort.** small-medium (about 40-60 lines of index.html)
+
+**Prototype.** **`idea/phone-group`** @ 4ac62da (below): 12 taps → 6 for one 10-unit stack.
+
+**Touches a settled decision?** no.
+- UNI-7: a tap (or long press) still only selects; orders still need Move or Attack and a tap.
+- UNI-5: the unit panel loses and gains no buttons.
+- PRF-1: no change to drawing.
+- Not a copy of Conflict of Nations: long press to multi-select is a common touch convention.
+
+### Prototype `idea/phone-group` (built in round 3)
+
+**Branch.** `idea/phone-group` @ **4ac62da**, one commit on master 9e1cd8c (the same as a98a88b apart from docs/QUEUE.md), pushed, never
+merged. Only index.html changed (+29/-5): no rules, no `rng()`, no save fields, nothing in the hands-off areas.
+
+**What it does.**
+- A long press by touch (650 ms, `TAP_LONG`) on one of your counters runs `groupToggle(ids)`: it adds all your forces on that counter to
+  the selection, or takes them out if they are all in it. With nothing selected it selects them (several forces become a group). A group
+  of one is no group. A long press on the one selected force changes nothing. Feedback: a toast "Group: N forces · long-press more to add ·
+  Move to send all" and a 12 ms vibration (skipped with reduced motion). A mouse long press is still a plain click.
+- A long press never gives an order: a finger that slides a little on the force's own counter gives no order and no merge (on master that
+  slide could merge the force into the others on the counter).
+- Phone text (touch only): the group panel says "Long-press other forces to add or remove them. Press Move, then tap a destination to send
+  the whole group."; the keyboard-only "Saved groups: Ctrl+4…9" row is hidden; the hint bar and the single-force panel mention the long
+  press.
+- When the whole group stands idle in one province, the group panel offers "Merge forces here (N)" (the group's forces only, into the
+  largest).
+- Two master bugs fixed on the branch only (logged as B3.18 and B3.19 in docs/ROUND_LOG.md): the 'merged' handler left duplicate ids in
+  `sel.group`, and a group sent to its lead's own province moved only the lead (Move-then-tap path).
+
+**How to try it.** `git checkout idea/phone-group`, `bash tools/mkpage.sh`, open `.test/page.html?start=nations` on a phone or in a touch
+emulator. Greece: tap one force, long-press 3 more, press Move, tap Thessaloniki.
+
+**Measured (Playwright, 390x844 with touch, Greece, day 0).** One 10-unit stack in Thessaloniki from 4 forces joining the one there:
+**12 taps on master, 6 on the branch** (1 tap, 3 long presses, Move, 1 tap); in both cases the forces arrive in 6 h and join into one
+10-unit force. With a Merge tap (stack gathered in an empty province or over the limit): about 14 against 7.
+Checks: split-lint OK; split-golden 10 12345 same; headless --check deterministic; stack-duel, eco-check --scenarios, nations-balance
+--quick pass; the existing .test/controls.js 49 PASS (desktop and phone); the branch test `group.js` 15 PASS on the phone; desktop
+Shift-click, Shift box and right-click orders unchanged; a v3.12 save loads and plays 120 h. (The one `--selftest` miss, mutant (e), targets
+rules code changed on auto-test/fixes; the branch's rules are master's.) Test scripts and screenshots: scratchpad
+`autotest/round3/proto/` (group.js, phone-group-1-selected.png, phone-group-2-ordered.png, phone-group-3-merge.png).
+
+**What to watch.**
+- The long press is the only way in and only the new hint lines show it; a "Select" toggle (option 3) would be easier to find.
+- 650 ms may feel slow; 450-500 ms is the owner's pick.
+- The phone wording follows `UC_TOUCH`, fixed at page load: a touch laptop with a mouse gets the phone text.
+- The desktop right-click path still moves only the lead when a group is sent to its lead's province (B3.19, left as on master).
+- A force already in the target province counts as "ordered" (it steps to the pin point): "2 of 2 forces ordered" can read oddly.
+
+## IMP-22. "Battle won" but nothing taken, and "ended" when you fled: the battle dispatch does not say what happened to the province   (round 3; area: dispatch text, rules/combat.js battleReport)
+
+**Problem.** A player orders a force to a spot inside an enemy province, but not on its city (pinpoint movement, MOV-1). The battle is
+won, the dispatch says "won", and the province is still the enemy's 15 hours later. The force stands idle 70 km from the city. The
+opposite case is confusing too: when your routed force leaves, the battle may be reported as "ended" (a draw), not as a loss or a
+retreat.
+
+**Evidence.**
+- Player hunter (P3-12): Greece, 5th Infantry Division ordered to a spot in Izmir away from the city. At h25 the dispatch read "Battle
+  of Izmir won after 11 h: you lost 0 units, they lost 0". At h40 Izmir was still Turkish, the force had stood still for 26 h at 8.0
+  world units (about 70 km) from the heart, and `dest` was null. Only the selected force's side panel explains it ("Reach the city to
+  capture Izmir…", gr-izmir-idle.png).
+- Verifier (P3-04, rejected as a bug): a battle that neither side holds at the end, because both sides left, is reported "ended" (a
+  draw). In the hunter's run the routed Greek force fled and the Turkish force moved on, so the report read as a draw. Not a broken
+  state, but the player cannot tell that they withdrew.
+- CMB-6 (capture at the heart) and MOV-1 (pinpoint) are settled, so this can only be fixed with feedback.
+
+**Options.**
+1. Text only (rules dispatch, no randomness):
+   - When the winner of a battle in a province it does not hold is not at the heart, add to the won dispatch: "… Izmir is not yours
+     yet: march to the city to take it."
+   - When your side's last force left by rout, write "Battle of X: your forces withdrew after N h", not "ended".
+2. Also a map marker on own idle forces standing in an enemy province they could take: a small flag pointing to the heart. This is
+   page work and close to counter drawing, so check with the map job first.
+3. **PROPOSAL (MOV-1):** an order into a capturable enemy or independent province goes to its heart, unless the tap is on another spot
+   that the player confirms.
+
+**Recommendation.** 1 (small; the two text changes together). Then watch whether players still stop short. 3 is only for the owner.
+
+**Effort.** small
+
+**Prototype.** none
+
+**Touches a settled decision?** 1 and 2: no. 3: MOV-1.
+
+## IMP-23. Units in training are lost on capture with no word: 253 orders in 4x100 games   (round 3; area: production feedback / economy)
+
+**Problem.** When a city falls, everything in its training queue disappears, with its full price already paid. The losing player gets
+the capture dispatch but no line about the units that were in training. It reads like money vanished.
+
+**Evidence.**
+- Economy hunter (ECO-R3-I3): 4x100 (seeds 3500-3503), "orders cancelled (queue lost) 253".
+- `capture()` (rules/combat.js:396), `rebelHour`, `terrSell` and the cede paths all do `S.queue[p] = []`. None refunds anything or
+  tells the old owner what was queued. No settled decision covers it (BLD-8 covers the queue size only).
+
+**Options.**
+1. A dispatch to the old owner: "2 units in training in Izmir were lost (Main Battle Tank, Infantry)." Small, rules text only, no
+   randomness.
+2. Refund the goods (not the money or manpower) of queued items that had not started training. New rule; small-medium (Q29).
+3. Move the queue to the nation's nearest city that can train them, if it has room. Medium; feels generous and adds a hidden rule.
+
+**Recommendation.** 1 now; ask the owner about 2 (Q29).
+
+**Effort.** small (1), small-medium (2)
+
+**Prototype.** none
+
+**Touches a settled decision?** no for 1; 2 and 3 are new rules (Q29).
+
+## IMP-24. Phone: the INTEL card on a foreign city opens a screen with no buttons   (round 3; area: UI / intel, index.html phone city sheet)
+
+**Problem.** On a foreign city's phone sheet, the INTEL card ("1 idle agent") leads to the general Intelligence screen. That screen says
+"Open a foreign province on the map and pick an operation", which is what the player just did, and it lists operations with no buttons.
+
+**Evidence.**
+- Player hunter (P3-10): Greece phone, Antalya sheet (gr-intel-sheet.png). index.html:10919 'intel' ignores `sel.prov`.
+- The working path is about 4 actions: the i button (cs-info), scroll the side sheet about 590 px, then "Reconnaissance · $20M"
+  (gr-antalya-info.png). It works: "Agent dispatched to Antalya: Reconnaissance (85% chance, 24 h)".
+
+**Options.**
+1. When a foreign province is selected, the INTEL card opens that province's operation buttons directly: Reconnaissance, Sabotage,
+   Incite and Steal, with price and chance, the same buttons the info sheet shows. Page only.
+2. The Intelligence screen gets a "Target: Antalya" row with the four buttons when it is opened from a province.
+3. Put the four buttons straight on the phone city sheet.
+
+**Recommendation.** 1 (small, page only, reuses the existing operation buttons and `startSpy` via the page's existing handler).
+
+**Effort.** small
+
+**Prototype.** none
+
+**Touches a settled decision?** no
+
+## IMP-25. AI forces shuttle between two provinces, sometimes across a strait   (round 3; area: AI movement)
+
+**Problem.** Some AI forces switch target every planning pass and walk back and forth between the same two provinces. To a player
+watching, the AI front looks jittery. Across water, each switch costs the AI 45 min of boarding, 45 min of landing and a first-day
+landing penalty.
+
+**Evidence.**
+- Military hunter (MIL-R3-I3), `scan3.js 3016 40` (6 province changes alternating between the same 2 provinces): 20 forces, 101 h.
+  Examples:
+  - Germany force 1266 {inf 5, at 4, tank 1}, Cottbus ↔ Dresden, 16 h (h401-461).
+  - Iraq, Isfahan ↔ Arak, 13 h.
+  - Poland, Szczecin ↔ Lubusz, 12 h and 6 h.
+  - Iran force 126, Muscat ↔ Bandar Abbas, a sea crossing each way, 9 h over h162-639.
+- Related: IMP-10 (churn on independent land); the IMP-1 note that a route that depends on the start point may make the AI switch more
+  often.
+
+**Options.**
+1. Hysteresis: an AI force keeps its target for N hours unless the odds change by a margin.
+2. Do not re-target a force that arrived in the last 6 h, unless it is attacked.
+3. Count a sea crossing at its real cost (boarding, landing and first-day penalty) in the AI's target score.
+
+**Recommendation.** 2 (small, one condition in the AI planner), plus 3 if the sea shuttles remain. Measure with the hunter's
+scan3.js (oscillating cases), captures and nations-balance --quick. The golden changes on purpose.
+
+**Effort.** small
+
+**Prototype.** none
+
+**Touches a settled decision?** no. AI-1 (same rules) is kept. AI-8 ("the current test-campaign AI stays as it is") is read, as in
+rounds 1-2 (B1.2, B2.8), as "no AI rewrite". A one-condition planner fix is the owner's call to merge like any other.
+
+## IMP-26. Repeat production does not start on an idle city and never resumes after a pause   (round 3; area: production / fewer clicks)
+
+**Problem.** Repeat ("keep training the last unit queued here while you can afford it") stops for good once money runs short, even
+after the treasury refills. Ticking Repeat on a city with an empty queue starts nothing. Either way the player believes the city is
+producing when it is not.
+
+**Evidence.**
+- Economy hunter's `eco/p/repeat.js`, re-run by the advisor on d3670ca:
+  - (a) Anchorage, Repeat on, empty queue, $5,000M: infantry 2 → 2 after 72 h, queue 0.
+  - (b) Minneapolis paused at h89 ("Repeat production paused in Minneapolis: not enough resources for Motorized Infantry."). With the
+    money back at h102: 3 → 3 after 72 h more, queue 0, Repeat still on.
+- 4x100: "no unit in training" a median 54% of nation-hours. For the AI this is cash-bound (IMP-16), but for a person it is also this.
+- **ECO-R3-4 is a confirmed bug** (the paused Repeat never comes back), fixed on auto-test/fixes in **33e8da9** (B3.11): a seat's
+  Repeat city with an empty queue tries again every hour, with one "paused" and one "resumed" dispatch. That is option 1, and it also
+  starts an idle city within the hour of ticking Repeat (repeat.js (a): infantry 2 → 6 in 72 h).
+
+**Options.**
+1. An hourly retry for Repeat cities whose queue is empty: one "paused" dispatch, then silent retries until it trains again, then
+   "Repeat production resumed in X". Small, rules side.
+2. Ticking Repeat on an idle city queues the unit at once, when it can be paid for. Page only.
+3. A per-city standing order with a cash reserve ("keep $X"). Medium; needs the owner.
+
+**Recommendation.** 1 (done by the bug fix) + 2 (left: start the unit at the moment Repeat is ticked, not at the next hour).
+
+**Effort.** small
+
+**Prototype.** none
+
+**Touches a settled decision?** no (BLD-8 queue size kept).
+
+## IMP-27. One error in the page's drawing stops the game for good, with no message   (round 3; area: page resilience, index.html frame loop)
+
+**Problem.** If any drawing or panel code throws once, the animation loop is not re-armed. The clock and the map stop and nothing tells
+the player. They lose the session unless they reload, and they do not know a reload is safe.
+
+**Evidence.**
+- Player hunter (P3-02, rejected as a bug because only the test-only call `__im.selectProv(-1)` triggered it): one exception in the
+  UI block of `frame()` stopped the loop for the rest of the session, with no error shown.
+- No player action is known to trigger it today. But every future UI bug would show up as a frozen game rather than a broken panel.
+
+**Options.**
+1. In `frame()`, re-arm `requestAnimationFrame` first, and wrap the UI block (`renderSide`, panels) in try/catch. Log the error once,
+   and show a small toast ("Display error, the game continues. Save and reload if the screen looks wrong.").
+2. 1, plus an autosave on the first caught error.
+3. Leave it.
+
+**Recommendation.** 1 (small).
+
+**Effort.** small
+
+**Prototype.** none
+
+**Touches a settled decision?** no. Note: `frame()` also runs the map drawing that the map job edits. Agree on the edit with that job,
+or wrap only the side-panel calls.
+
+## IMP-13 additions (round 3): (k)-(p)
+
+- (k) First-time tips are dropped, not queued. `ftipAsk` shows one tip at a time and drops the others. India's "Forces march while the
+  clock runs (1×)" first appeared at h80, after 5 marches and 3 battles (P3-15b, in-dispatches.png). Queue the tips and show the next
+  one when the current one closes.
+- (l) The "Open a route with…" list shows 75 nations in id order, with the good each ships but not its money value (P3-15c). Sort it by
+  value, or by name, and show the money. This matters on a phone, where the list is long (index.html near 4571).
+- (m) Market form (ECO-R3-I1, goes with the bug ECO-R3-1). The price box accepts 0.005 although it says "min 0.1, step 0.1", and the
+  toast then disagrees with the stored price ("$0.01M per 1,000" with "$232M held"). Done on auto-test/fixes with the bug (492a985,
+  B3.1): the rules round to whole cents and refuse prices under $0.01, and the page refuses with a toast. Left: snap the box to 0.1 steps
+  as its own min/step say; a price slider (0.5x-2x the world price) is a later option.
+- (n) IMP-13 (c) root cause (P3-09): index.html:4558 prints the local end `pName(r.a === me ? r.pa : r.pb)` instead of the end whose
+  `r.via` entry is set.
+- (o) (h) seen again on the phone in round 3: "Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect." and
+  "Move: tap a destination. Esc cancels." (P3-15a).
+- (p) The won-with-no-capture and withdrew-not-ended texts are IMP-22.
+
+## Evidence added to earlier ideas (round 3)
+
+- **IMP-1 (sea legs):** Player hunter (P3-13), India.
+  - 7th Infantry Division, Chennai → Colombo by sea: legs 31 + 80 + 47 = 160 h, for 66.8 world units straight. That is about 580 km,
+    or about 43 h at 325 km/day: x3.7.
+  - Mumbai → Colombo: 174 h.
+  - "North Indian Ocean I" alone is an 80 h leg.
+  - The prototype `idea/sea-legs` (Q2) is still the answer to try.
+- **IMP-3 / IMP-11 (naval fire):** military 4x90 (seeds 3007-3034).
+  - Frigates: 10,587 volleys for 16 damage (0.0015 a volley). Submarines: 786 for 5. Cruisers: 32 for 0. Artillery: 20,815 for 801
+    (0.038).
+  - Frigates are 5.9% of units, 2,706 built, kill/loss 0.65.
+  - Fire per $1000M fielded a day: frigates 3.7, tanks 14.3, infantry 12.0.
+  - Economy 4x100 agrees: frigates 10,106 volleys for 38, kill/loss 0.65, 6.5% of units.
+  - This is the same picture as rounds 1 and 2, now with fleets at sea (B1.3). IMP-3 option 3 (re-tune `RANGED_F` for ships, a
+    **PROPOSAL** on CMB-5) has its numbers. Next step is a stack-duel scenario of 2 frigates against a 3-ship fleet.
+- **IMP-7 (interceptors):** 729 built in 4x90 and 543 in 4x100, 0 kills credited in both. Still the harness gap (IMP-20): dogfights are
+  not credited.
+- **IMP-8 (AI unit mix, missiles):**
+  - Infantry 72.8% (4x90) and 72.3% (4x100).
+  - Never built: mlrs, carr, heli, para, stealth.
+  - Missiles built and fired: 6 cruise and 1 ballistic built, 0 fired (4x90); 3 cruise built, 0 fired (4x100).
+  - Cause, read in rules/ai.js:125-129: `aiMissiles` scores targets from `provPowers()`. That function counts only **stationary**
+    forces (`a.to === null && !a.fly`, ai.js:140), so marching armies never score. The threshold is 30 (cruise) or 60 (ballistic) power
+    in one province at war. `{inf:10}` is 55, and only 8% of occupied provinces reach 30 at day 0 (military hunter, t11.js).
+  - Cheapest next step: a `--stats` line with missiles in stock per nation at war and the best target score seen. Then lower the cruise
+    threshold, or count forces arriving within 6 h (IMP-8 option 2).
+- **IMP-9 (research idle):** a slot empty a median 22% of hours (4x100); days with a free slot and an affordable open step: median 19,
+  most 59.
+- **IMP-12 (manpower):** at the cap on 68.5% of nation-days at 100 days (69.0% in round 2). Still the owner's call (Q7).
+- **IMP-16 (AI economy):** nothing under construction a median 72% of hours (4x100) and 71% (4x90), up from 63-65% in round 2. "No unit
+  in training" 54%, and 0% with more than $300M. Still cash-bound. Treasury at the end: median $136M.
+- **IMP-17 (Diplomacy open):**
+  - Unthrottled, as the owner now asks (P3-14): desktop 1440x900, key D to modal visible in 408 ms (India day 2). Phone viewport
+    440x900 at 2x: 913 ms (Greece day 1). The machine was loaded, so treat these as upper bounds.
+  - The page side is confirmed: `renderSide` calls `blocs()` every 0.25 s (index.html:9789, P3-08 merged into ECO-R3-8).
+  - B2.25 / ECO-R3-8 (the page writes rule state through `blocs()`) was confirmed and fixed on auto-test/fixes in **a405a5d** (B3.9):
+    pure `blocsView`, `blocOfView`, `sameBlocView` for every drawing caller; `blocs()` registers only from the rules and page orders.
+    That closes the UI-1 breach. It does not memoise, so the 0.4-0.9 s open and the 4-times-a-second recompute are unchanged (not
+    re-measured). Left for IMP-17: memoise the view per hour (`S.hour` plus a relations counter), then re-time Diplomacy.
+- **IMP-20 (harness):**
+  - Military hunter (MIL-R3-I4): none of MIL-R3-01, 02 or 03 is flagged by `--invariants` in plain games. Add these, all working in
+    scratch `mil/s/scan3.js` (about 40 lines, own observation, no `rng()`):
+    - `rout-no-route`: retreating, idle, empty path, in battle for more than 2 h (96 cases per 40 days on seed 3007).
+    - `jump-over-water`: a ground force in a land province not next to where it stood an hour earlier, with only sea between, and not
+      by a drop (17-22 per 40 days).
+    - `drop-cargo`: a force with `fly.kind === 'drop'` holding non-drop units.
+    - An "oscillating" line in `--stats` (IMP-25).
+  - Verifier (ECO-R3-9): book listings of a fallen nation for up to 24 h belong to the same noise class as war-with-fallen-nation.
+    Tidy them in `checkNation`, or leave them out of the check.
+  - Fixer's final 3x60: 2 `landed-off-port` sightings are false alarms. Both forces came ashore at a naval city (India at Yangon, Yemen
+    at Mogadishu) and were then moved home over land in the same hour by evict / sendHome. The check compares the start of the hour (at
+    sea) with the end; it should accept a naval city passed through in that hour (record the landing province when the landing ends).
+  - Not done this round: none of the four new checks above was added to tools/headless.js (the fixer kept to bug fixes). They remain
+    the first tools step of any later session.
+- **IMP-6 (older-phone side panel):** moved to the bottom by the owner's note (2026-11-21: no work aimed at old phones). On ordinary
+  devices, IMP-17's `blocs()` memo would remove the biggest part of `renderSide`'s cost anyway.

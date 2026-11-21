@@ -407,6 +407,205 @@ base/proto pairs ran before it.
 **New this round?** yes (20 new bug reports from the hunters: 17 confirmed and fixed, 3 rejected as design or polish; 6 known items fixed
 too; 2 more found after the fix step; 1 new hands-off bug; 7 ideas; 10 questions).
 
+## Round 3   (2026-11-21; fixes on auto-test/fixes 492a985..f673892 on top of d3670ca, docs in the commit after; the last round)
+
+**Owner's note this round** (2026-11-21): "we dont want to focus on bad phones becasue these players probably wont spend anyway". No bug
+hunt, fix or idea in this round aims at old or low-end phones; timings were taken without a CPU throttle. Earlier old-phone items (P1-05,
+IMP-6; rows 1-2 of "Bugs for other jobs") drop to the bottom of the list.
+
+**Runs.** (scratch reports under scratchpad `autotest/round3/`, not committed)
+- Military hunter: `headless.js --seeds 3007,3016,3025,3034 --days 90 --invariants --stats --provoke 3 --jobs 2` (1,105 s wall; rules 986 ms
+  CPU per game day, 891-1,054 per seed; machine load 12-16 on 4 cores) → `mil/long.json`, `mil/long.txt`; 4 runs of the test-only order fuzz
+  (`mil/s/fuzz.js`, seeds 3007/3043 12 days, 3052/3061 14 days, about 10,000 random orders each); `scan3.js` (rout without a route, jumps
+  over water, oscillating forces; own dice) on seeds 3007 and 3016, 40 days; probes `mil/s/t2-t11.js`; replays `rp3.js`; `headless.js
+  --scenarios` 37/41 (the 4 known warnings); stack-duel --scenarios 7/7.
+- Economy hunter: `headless.js --seeds 3500,3501,3502,3503 --days 100 --invariants --stats --provoke 3 --jobs 2` on d3670ca (1,155 s wall;
+  rules 995 ms per game day) → `eco/long4x100.*`; probes `eco/p/` (bidround, pagebid, rebelhome, rallyship, repeat, apiedge3, scan on seeds
+  3504/3505, replays of the ship-on-land and landed-off-port cases); old public saves v3.9 and v3.5 made in Playwright from `versions/` and
+  played 15 days (`mkold.js`, `loadplay.js`); eco-check and rebels-sim scenarios.
+- Player hunter: Playwright on `.test/page.html`: India on desktop 1440x900; Greece on a phone viewport 440x900 at 2x with touch; no CPU
+  throttle; driver `player/drv/`, screenshots `player/*.png`.
+- Verifier: every bug re-run from its repro, plus headless re-checks in `ver/` (v3.js identification at a pinpoint, v4.js rout wording).
+- Advisor: read-only `adv/forces0.js` (ground forces per nation at day 0) and a re-run of `eco/p/repeat.js` on d3670ca.
+- Fixer, after each fix: split-lint, mkpage + split-golden 10 12345, headless --check, --selftest, --scenarios, nations-balance --quick,
+  stack-duel, eco-check, rebels-sim where relevant, old saves (two 20-day world64 games with a war, saved under `pre-auto-test` rules, load
+  and play 48 h), Playwright smoke for page fixes (12 days with renders, Diplomacy, Market and Production opened). Final: `headless.js
+  --games 3 --days 60 --invariants --stats --provoke 3 --jobs 2 --check` (seeds 12345, 13354, 14363; 206 s wall) → `fix/final3x60.*`.
+- Prototype builder: `proto/` (group.js page test on phone and desktop, master against the branch; old-save test; screenshots).
+
+**Checks (head f673892).** split-lint OK; split-golden 10 12345: GOLDEN same, no errors (changed on purpose twice: eca1461 from day 8 and
+22d6d2b from day 5, both AI forces with no route home; `rs` and force counts the same every day; tools/golden-12345.txt updated in each of
+those commits); headless --check DETERMINISTIC (hash 88ab6d7d3ed04ec9 for seed 12345); --selftest 52/52; --scenarios 37/41 with the 4 known
+warnings (embark, fleet inland, walk into peace, war during truce), 0 failed; nations-balance --quick ALL PASS; stack-duel OK; eco-check:
+only the known FAIL "an Arms Industry must not raise the Army Base price: 18"; rebels-sim --scenarios OK 5; old saves load and play (above,
+and ECO-R3-S1 below). Build not run; `.test/assets` (315 MB) deleted after the page tests.
+
+**Found, confirmed and fixed** (one commit each on auto-test/fixes; verified by repro before and after):
+- B3.1 A buy offer typed below a whole cent multiplies the treasury: money held at the typed price, refunded at the price rounded to 2
+  decimals (ECO-R3-1) | rules/economy.js postOffer; real page: price 0.005, Post, Cancel: $232M → $0 → $464M, repeatable; 0.004 lost all
+  the money | fixed in **492a985** (round to cents first, refuse below $0.01 (`BOOK_MIN_PRICE`), hold, store and refund at that one price;
+  the page's Post offer refuses with a toast). bidround: 0.005 nets 0 (was +$1000M), 0.004 refused. Golden unchanged.
+- B3.2 A routed force whose nearest own province has no route stays "retreating" in the battle for good, never surrenders, and the
+  dispatch names a place it never heads for (MIL-R3-01; includes B2.24 from round 2 and MIL-R3-K2) | rules/movement.js armyUpkeep rout
+  block accepted the destination before pathFor; 96 cases / 1,684 force-hours in 40 days (seed 3007); 6 of 8 broken fleets got path [] |
+  fixed in **eca1461** (a province counts only when pathFor finds a route; retreating flag and dispatch only then, naming the city;
+  otherwise the encircled-surrender check runs; an old save's retreating force with no route is cleared). t2: all 8 fleets sail to an own
+  naval city. **Golden updated** (from day 8: a British force broken in Syddanmark and a New Zealand force had no route home).
+- B3.3 Forces sent home at peace with no land route jump over the sea to any coast and keep a running landing timer (MIL-R3-02) |
+  rules/diplomacy.js sendHome fallback, called by capture() since B2.12; 17-22 jumps per 40 days (Brussels → Norfolk, Baku → Aktau, Taipei
+  → Shanghai); India's landing party jumped from Muscat to Dayapar with `land` 0.31 | fixed in **22d6d2b** (helpers `jumpDest`/`jumpTo`: a
+  jump across water goes to the nearest own naval city and drops land/emb/oldLand/carry/sail; capture()'s "leaves" dispatch uses the city
+  name). t6: Ahmedabad, no timer. **Golden updated** (from day 5: a British force in Noord-Holland now jumps to London). Q25 for the
+  design.
+- B3.4 (Known setup-baseline ship-on-land, never fixed before) evict() on a truce jumps forces to the nearest own province with no port or
+  landing check: Algerian frigates inland at Sétif for 27 days (seed 3501), a Norwegian landing party inland with its timer (seed 3500)
+  (ECO-R3-7) | rules/diplomacy.js evict | fixed in **aee2fa5** (the same helpers: a fleet goes to the sea zone it sails to or beside its
+  port, else an own naval city; a jumped force drops its timers). evict.js: both fleets in Mediterranean Sea VIII. Golden unchanged.
+- B3.5 A ground force arriving at its airbase merges into a paratrooper force in the air: tanks and infantry are air-dropped (MIL-R3-03) |
+  rules/tick.js arrival join had no `!b.fly` | fixed in **6399e71** (the join skips flying forces both ways; the page's joinForces refuses
+  with a toast). t4: drop lands {para:3}, the tanks stay in Berlin. Seats only; golden unchanged.
+- B3.6 Paratroopers in the air take ground orders: Move makes them walk while airborne, they land with a stale leg and route; Split and
+  Merge offered but do nothing (MIL-R3-04) | tick.js movement loop, movement.js orderMove, air.js dropTick, index.html cmdBarHTML | fixed in
+  **df61648** (orderMove and haltArmy refuse "Paratroopers in the air: orders once they land."; the loop skips `a.fly`; dropTick clears
+  t/path/legFrom/dest/pos/wp/sail; merge and joinHour refuse; the command bar disables the order buttons). Golden unchanged.
+- B3.7 A new ship built in a port with a land rally point silently deletes the rally point; the next infantry stays in the city (MIL-R3-05
+  = ECO-R3-3) | rules/production.js spawn applied the rally to ships | fixed in **226c309** (rally for ground units only; a ground unit with
+  no route drops the rally point with a dispatch and joins the city's forces). t8: rally kept. Golden unchanged.
+- B3.8 Enemy forces you fight stay "? Unidentified army" for the whole battle when your force stands more than 50 km from them (pinpoint
+  orders) (P3-01) | rules/vision.js armyKnown gated on armyVisible before the battle clause of armyIdent | fixed in **14efd66** (`fightsMe`
+  and `armyShown`, screen only, listed in IM.api; armyKnown and armyView use them; armyVisible unchanged, so ranged fire, the AI and raids
+  play as before). v3: known true (was false). Golden unchanged.
+- B3.9 (B2.25, verified; P3-08 merged) Drawing the page writes coalition state: blocs() registers coalitions in `S.blocReg` and sends
+  "form the …" dispatches whenever the side panel (every 0.25 s) or Diplomacy renders (ECO-R3-8) | rules/diplomacy.js blocs, index.html
+  callers | fixed in **a405a5d** (pure `blocsView`, `blocOfView`, `sameBlocView` for every drawing caller and for acceptOffer; `blocs()`
+  stays for the rules and page orders). pgbloc: `S.blocReg` stays {} while the page renders. Golden unchanged. (Not memoised: the IMP-17
+  open time is not changed by this.)
+- B3.10 Partisans in a province that went back to its home nation without a fight (sale back, gift, peace cede, annexation) then make it
+  independent (ECO-R3-2) | rules/economy.js rebelHour | fixed in **0156928** (partisans stand down when the holder is the home nation, with
+  an 'info' dispatch to a seat; old partisan rule only, REB-2, the rebels branch untouched). rebelhome sale/gift/peace: the province stays
+  with its holder. Golden unchanged. Q27 for the peace-cede case.
+- B3.11 Repeat production never restarts once paused, and ticking it on an idle city trains nothing (ECO-R3-4) | Repeat ran only when a
+  unit finished | fixed in **33e8da9** (`repeatHour(n)` for seats after the production step; one "paused" and one "resumed" dispatch,
+  `desk.repP` per city). repeat.js: (a) 2 → 6 in 72 h (was 2 → 2); (b) trains again once money is back. Golden unchanged.
+- B3.12 A wing rebasing to an airbase the enemy takes while it flies lands in enemy land, then silently jumps elsewhere an hour later
+  (MIL-R3-06) | rules/air.js airTick rebase arrival | fixed in **03af914** (it turns back with "Rebase to Wiesbaden called off: Wiesbaden
+  fell to Poland. 1st Air Wing turns back."). Golden unchanged.
+- B3.13 IM.api fillOffer with no amount writes NaN into both nations' money and goods; postOffer with a type other than sell/buy lists a
+  phantom sell offer whose expiry creates goods (ECO-R3-6) | rules/economy.js | fixed in **a8dbc1f** (finite amount above 0; type sell or
+  buy only). API-only, the B1.13/B2.17 family. Golden unchanged.
+- B3.14 The 8-route trade limit existed only in the page (P3-07) | rules/trade.js tradeOpen | fixed in **088d222** (a seat's 9th route is
+  refused with a reason; AI routes unchanged). trmax: stops at 8 (was 13). Golden unchanged.
+- B3.15 One province, two names in the same chain of dispatches and in the force status ("Battle at Kirklareli" then "Battle of Tekirdağ";
+  "Moving to Kŏḷamba" for Colombo) (P3-03) | tick.js, movement.js, combat.js capture, index.html force status | fixed in **ce6352e**
+  (`cityName || name` everywhere). Text only; golden unchanged.
+- B3.16 The victory meter labels the capitals count "VP" ("1/11 VP" for Greece) (P3-06) | index.html | fixed in **9f54b56** ("4/5
+  capitals"; no overflow at 390 or 1300 px).
+- B3.17 Header chips show the daily change of money and manpower without units ("105k +72") (P3-05) | index.html resDay | fixed in
+  **f673892** ("+$278M", "+56k"; goods unchanged).
+
+**Found, not fixed this round** (found by the prototype builder after the fix step, on master and on auto-test/fixes; page only; not
+verified by the verifier; fixed on the idea branch only):
+- B3.18 After forces join into one, `sel.group` keeps the same id several times ([2,2,2,2]) and the group panel shows "Group · 4 forces"
+  for one force | index.html `IM.on('merged')` handler maps joined ids without removing duplicates (near line 11932 on master) | fix: dedupe
+  and collapse a group of one (done on `idea/phone-group`).
+- B3.19 A group ordered to the province its lead stands in: only the lead takes a small step, the others stay | index.html tap's
+  cmdMode path and the contextmenu (right-click) path | fix: another group member leads, so the group gathers (done on the idea branch for
+  Move-then-tap only; right-click left as on master).
+- Harness false alarm: the final 3x60 shows 2 `landed-off-port` (India at Monywa, seed 12345 h960; Yemen at Arta, seed 14363 h410).
+  Replays (`fix/replay4.js`) show both came ashore at a naval city (Yangon, Mogadishu) and were then moved home over land in the same hour
+  by evict / sendHome. The check compares the start and the end of the hour; teach it the landing province (IMP-20). Not a game bug.
+
+**Skipped.** None: the verifier confirmed 18 reports (17 distinct bugs), each fixed in its own commit (B3.1-B3.17).
+
+**Rejected (not bugs), and where they went.**
+- ECO-R3-3 duplicate of MIL-R3-05 (B3.7). MIL-R3-K2 folded into MIL-R3-01 (B3.2). P3-08 duplicate of ECO-R3-8 (B3.9).
+- MIL-R3-K1 the known baseline and round-2 kinds re-checked on new seeds: only harmless kinds remain (below, as the round-3 baseline).
+- P3-04 "Battle … ended" after your force fled: not reproduced as described (the verifier's v4.js reads "lost"); "ended" is the rule for a
+  battle both sides left → wording in IMP-22.
+- P3-02 one render exception freezes the game loop: reached only by the test-only call `__im.selectProv(-1)` → resilience idea IMP-27.
+- P3-09 "(via Ahmedabad)" names the local port: known IMP-13 (c); the root cause (index.html:4558) is added as IMP-13 (n).
+- ECO-R3-5 a coalition gift gives home title to captured land: a title rule, the owner's call → Q28.
+- ECO-R3-9 a fallen nation's offers and routes live up to 24 h: a fair exchange for the living side, dropped at the next daily step →
+  harness noise, IMP-20.
+
+**Hands-off.** P3-16 (province names with transliteration marks, and city names in the wrong province) → cities / map data job, row 6
+below; the partisan case of B3.10 under the new rebels rule → rebels job, row 7. Nothing in the map, cities, weather, research-screen,
+rebels or art code was edited. Rows 1-2 (older-phone frame rate) drop to the bottom by
+the owner's note.
+
+**Other results.**
+- ECO-R3-S1: old public saves v3.9 (35f87f7) and v3.5 (21260f2), never tried before, load and play 15 days on d3670ca rules with no new
+  violation (only the known save-load S.bt). The old-save list tried in this session: v1, v3.5, v3.9, v3.11, v3.12, pre-auto-test.
+- MIL-R3-K1 (round-3 baseline on new seeds, 4x90 on d3670ca): 27 distinct violations of 3 kinds, all known and harmless:
+  war-with-fallen-nation 15, save-load-adds-empty 8, save-load S.bt 4. force-in-closed-land, convoy-state, stuck-force, ship-on-land,
+  ship-on-land-leg, bad-timer, teleported, landed-off-port, air-out-of-range: 0 in 360 game-days (setup baseline: 242 / 61 / 59 / 1 in
+  300). The 4 fuzz runs: no exception, no ship on land, no bad timer; only the fuzz's own halts at sea, S.bt, and MIL-R3-02's landing.
+  The economy 4x100 on d3670ca: 37 distinct of 5 kinds; the 2 non-harmless ones were B3.4's ship-on-land (Sétif) and landed-off-port
+  (Windsor), both fixed.
+- Hunters' ideas and questions passed on: MIL-R3-I1 → IMP-3/IMP-11 evidence; MIL-R3-I2 → IMP-8, IMP-7; MIL-R3-I3 → IMP-25; MIL-R3-I4 →
+  IMP-20; ECO-R3-I1 → IMP-13 (m); ECO-R3-I2 → IMP-26; ECO-R3-I3 → IMP-23; P3-10 → IMP-24; P3-11 → IMP-21 (prototype); P3-12 → IMP-22;
+  P3-13 → IMP-1 evidence; P3-14 → IMP-17 evidence; P3-15 → IMP-13 (k), (l), (o); Q-R3-1 → Q25, Q-R3-2 → Q26, ECO-R3-Q1..Q3 → Q27-Q29,
+  P3-Q1 → Q30; the prototype's question → Q31.
+
+**Stats (3x60, seeds 12345, 13354, 14363; round-2 after = `round2/fix/after`, now = `round3/fix/final3x60` on f673892).**
+
+| Kind | Setup baseline (same seeds) | After round 2 | After round 3 |
+|---|---|---|---|
+| Total distinct (kinds) | 233 (7) | 14 (3) | 18 (4) |
+| force-in-closed-land | 141 | 0 | 0 |
+| convoy-state | 39 | 0 | 0 |
+| stuck-force | 42 | 0 | 0 |
+| ship-on-land, ship-on-land-leg, bad-timer, teleported, air-out-of-range | 0 | 0 | 0 |
+| war-with-fallen-nation | 2 | 5 (117) | 7 (156) (harmless, IMP-20; AI dynamics) |
+| save-load-adds-empty | 6 | 6 | 6 (harmless) |
+| save-load (S.bt) | 3 | 3 | 3 (rejected in round 2, harmless) |
+| landed-off-port | 0 | 0 | 2 (harness false alarm, above) |
+
+- Captures 4,585 → 4,296 (−6%); nations alive at day 60: 66/68/66 → 66/66/67. Wars 46 → 46; truces 20 → 18; ended wars lasted a median
+  20 → 7 days (5 to 46; one run of 3 games: the rout and send-home fixes change which forces stay at the front; the military 4x90 on
+  d3670ca reads 21 days, so treat the drop as noise until a longer run confirms it).
+- Units: infantry 75.5% → 75.2% of units (setup 75.6%); kill/loss tanks 3.68 → 3.45, artillery 2.02 → 1.70, frigates 0.70 → 0.59,
+  infantry 1.21 → 1.17. Never built: mlrs, carr, heli, para, mpa, stealth (awacs 2 and bombers 3 built); no missile fired. Interceptors
+  419 built, 0 kills credited (IMP-20). Orders lost when a city fell: 64 (IMP-23).
+- Ranged fire: artillery 6,769 volleys / 113 damage → 9,174 / 230; frigates 2,344 / 11 → 4,696 / 32; submarines 64 / 0 → 795 / 2. Air
+  strikes: jets 114 → 183 sorties (55 → 126 units killed).
+- Economy: median gross money x0.99 → x0.98 day 1 → 60 (setup x0.98); median treasury $141M → $140M; manpower at the cap 53.4% → 53.6%
+  of nation-days; money used 0.99 of income.
+- Idle: a research slot empty a median 25% → 23% of hours; nothing under construction 63% → 63%; no unit in training 36% → 37% (0% with
+  more than $300M); no force with orders 43% → 47%.
+- Long runs (d3670ca): military 4x90 manpower at the cap 66.7%, research slot empty 22%, nothing under construction 71%, no unit in
+  training 54%; economy 4x100: frigates 10,106 volleys for 38 damage, missiles 3 built and 0 fired.
+- Rules CPU per game day 838 → 834 ms (machine shared and loaded; wall 1,019 ms).
+- Player (unthrottled, ordinary devices): Diplomacy opens in 408 ms on desktop and 913 ms in a phone viewport (loaded machine; IMP-17);
+  desktop 8x clock 37 fps, 16x 46 fps.
+
+**Ideas.** IMP-21 to IMP-27 in docs/IMPROVEMENTS.md, ranked: IMP-21 phones cannot select several forces (small-medium, **prototyped**),
+IMP-22 "battle won" but nothing taken / "ended" when you fled (small, text), IMP-23 units in training lost on capture with no word (small),
+IMP-24 phone INTEL card opens a screen with no buttons (small), IMP-25 AI forces shuttle between two provinces (small; golden changes on
+purpose), IMP-26 Repeat production (small; option 1 done by B3.11), IMP-27 one drawing error freezes the game (small; agree with the map
+job), plus IMP-13 (k)-(p) and new evidence for IMP-1, 3, 6, 7, 8, 9, 11, 12, 16, 17, 20. IMP-6 and the old-phone part of P1-05 moved to
+the bottom. Questions Q25-Q31 in docs/QUESTIONS.md.
+
+**Prototype.** `idea/phone-group` @ **4ac62da** (IMP-21; one commit on master 9e1cd8c, pushed, never merged; index.html only, +29/-5). A
+long press by touch on your counter adds or removes its forces from the selection; Move and one tap send the whole group; "Merge forces
+here (N)" when the group stands idle together; phone wording in the group panel and hint bar. One 10-unit stack on a phone: 12 taps on
+master → 6 on the branch (14 → 7 with a Merge). Golden unchanged; controls.js 49 PASS, group.js 15 PASS; desktop Shift-click, box and
+right-click unchanged; a v3.12 save plays. Screenshots scratchpad `autotest/round3/proto/phone-group-*.png`. Also fixes B3.18 and B3.19
+(Move-then-tap) on the branch.
+
+**New this round?** yes (20 new bug reports from the hunters: 15 confirmed and fixed, 5 rejected as duplicates, design or polish; 2 known
+items fixed too: B2.25 from round 2 (B3.9) and the setup baseline's ship-on-land (B3.4), while B2.24 is fixed inside B3.2; 2 more page
+bugs found by the prototype builder; 2 hands-off items (cities job, rebels job); 7 ideas; 7 questions).
+
+**End of the session.** This was round 3 of at most 3 (owner's change 4), so the session stops here. For the owner's review:
+- `auto-test/fixes` (not merged): rounds 1-3 fixes, one commit each, plus the docs commits. The golden changed on purpose in d0c02b2
+  (round 2), eca1461 and 22d6d2b (round 3), each with its reason in the commit message.
+- Prototypes (never merged): `idea/sea-legs` (IMP-1), `idea/port-sortie` (IMP-14), `idea/phone-group` (IMP-21).
+- Open questions: docs/QUESTIONS.md Q1-Q31, each with the default the session used.
+- If a later session continues: first the two page bugs B3.18-B3.19 on auto-test/fixes, then IMP-20's harness checks (rout-no-route,
+  jump-over-water, drop-cargo, the landed-off-port false alarm), then the IMP-17 memo and re-timing Diplomacy, then IMP-22/23/24 (small
+  text and wiring), and a longer run to confirm the war-length change above.
+
 ## Bugs for other jobs
 
 Bugs found in parts this session must not touch (owner's changes 2026-11-21, item 6): map drawing (terrain, texture, jungle, sea, borders,
@@ -420,3 +619,7 @@ session changes nothing there.
 | 3 | Cities / map data (cities job) | Phnom Penh, Cambodia's capital, is not a city: `G.P[2227]` city=false, cityName ''; the nearest label is Vietnam's "Ho Chi Minh City" 14 world px east, so a route to Phnom Penh ends beside the "Ho Chi Minh City" label. The province name "Hồ Chí Minh city" (2245) also has a lowercase "city". | Start as Vietnam, read `__im.G.P[2227]`; select a force and Move to Phnom Penh (scratchpad `autotest/round2/player/vn-ph-target-phnompenh.png`) (P2-12) | 2 |
 | 4 | Research screen (RESEARCH-CON job) | The Research screen takes 1,214 ms from tap to visible on an older phone (440 px at 2x, CPU 4x, Israel day 2), against Market 732 ms and Cities 569 ms. Worth a budget in the rebuild (PRF-5). | Phone driver as row 2, Profiler.start, tap the Research tab, wait for the modal (P2-05) | 2 |
 | 5 | Rebels (REBELS job, branch rebels) | Under the old partisan rule, docked enemy ships still hold a port against rebels (owner −1): seed 4025 Dublin and Ahvaz 372 h, seed 2007 Dublin 130 h, the rebels never take it. Not changed here (REB-2: the rebels branch replaces the rule); check that the new rule does not let a docked fleet hold a city against rebels. | Advisor scratchpad `autotest/round2/adv/port3.js 4025` and the prototype's `proto/port2.js` (IMP-14) | 2 |
+| 6 | Cities / map data (cities job) | Province names with transliteration marks show in tooltips and force panels: Kŏḷamba (2369, label "Colombo"), Kilinŏchchi (2318), Mŏṇarāgala (2388), Hamgyŏng-bukto, P'yŏngan-namdo. Some city names sit in a province of another name or place: "Pirkanmaa / Helsinki", "Syddanmark / Copenhagen", "Kirklareli / Tekirdağ", "Stockport / Manchester". 359 of 714 cities have a city name different from the province name. (The session's dispatches and force status now use the city name, B3.15; the data is the cities job's.) | In the test page: `__im.G.P.filter(P=>P.city&&P.cityName!==P.name).map(P=>P.name+' / '+P.cityName)` (P3-16) | 3 |
+| 7 | Rebels (REBELS job, branch rebels) | Under the old partisan rule, partisans standing in a province that went back to its home nation without a fight (sold back, gift, peace cede, annexation) made it independent a day later; fixed for the old rule on auto-test/fixes (0156928, B3.10: they stand down when the holder is the home nation). Check the same case under the new rebels rule (REB-2), and Q27 for the owner's answer on peace-ceded land. | Economy hunter's scratchpad `autotest/round3/eco/p/rebelhome.js` with sale, gift, peace or annex (ECO-R3-2) | 3 |
+
+Rows 1 and 2 (older-phone frame rate) are low priority since the owner's note of 2026-11-21 (round 3): no work aimed at old or low-end phones.

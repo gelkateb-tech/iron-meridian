@@ -200,3 +200,101 @@ turns on the surprise attacker; each seat gets a dispatch.
 **Options.** **A: yes, keep it (betrayal has a price)** / B: a common ally stays out, as in a declared war.
 **Until you answer.** Unchanged.
 
+## Q25. A force that must go home at peace but has no land route (an expedition across the sea): jump, sail, or disband?   (round 3)
+
+**Why it matters.** Today `sendHome` and evict move such a force over the water at once to the nearest own province on any coast
+(MIL-R3-02: 17-22 jumps per 40 days, e.g. Brussels → Norfolk, Baku → Aktau). Since B2.12, a third nation's capture triggers it too. One
+case lands off a naval city (ECO-R3-7, Norway at Windsor), against EMB-1.
+
+**Options.**
+- A: keep the jump, but land only at an own naval city.
+- **B: the force puts to sea from the province's coast and sails home like any sea trip (slow, can be caught at sea) for people; A for
+  the AI.**
+- C: it stays where it is, able to move only towards home, until `strandedHour`.
+- D: it disbands after 72 h with no route (as B1.7 / Q12 for idle AI forces at sea).
+
+**Until you answer.** A, as the smallest bug fix that keeps EMB-1 (auto-test/fixes 22d6d2b, B3.3; the same helper for evict in
+aee2fa5, B3.4): a force whose way home crosses water is moved at once to the nearest own naval city (any own province only if the nation
+has no naval city) and drops its boarding and landing timers. B (sailing home) waits for you.
+
+## Q26. A routed force with no way home (a beachhead in an enemy port, an island garrison): surrender, last stand, or evacuate?   (round 3)
+
+**Why it matters.** MIL-R3-01: it stays "retreating" in the battle for good. The dispatch falsely says "retreating to …", and the force
+can never surrender (96 cases, 1,684 h per 40 days, seed 3007). B2.24 (a fleet that routs towards land) has the same root.
+
+**Options.**
+- A: it surrenders like an encircled force (the existing rule: unsupplied, morale under 10, outnumbered 2:1).
+- B: a "last stand": no retreat, it fights on, with a truthful dispatch ("cut off at X: no way back").
+- **C: invaders holding a port's coast put to sea in an emergency embark (longer than 45 min) and sail home; otherwise A. Fleets retreat
+  to the nearest own naval city or an open sea zone away from the battle.**
+
+**Until you answer.** A. The bug fix (auto-test/fixes eca1461, B3.2) makes the state truthful: a routed force retreats only to a
+province it has a route to (fleets to an own naval city), the dispatch names that city, and a force with no route is not marked
+"retreating" but goes to the existing encircled-surrender check. No evacuation (C) is built.
+
+## Q27. Partisans in land that went back to their own nation (sale back, annexation, gift back) or was ceded at peace: disband, or keep fighting?   (round 3)
+
+**Why it matters.** ECO-R3-2: today they make the province independent within 24 h, even when it went back to their own home nation.
+This also concerns the rebels branch (REB-2).
+
+**Options.**
+- **A: they disband when the province's holder is its home nation, and also after a peace cede (the peace settles it).**
+- B: they disband only when it returns to the home nation.
+- C: today's rule.
+
+**Until you answer.** A, both halves. The fix (auto-test/fixes 0156928, B3.10) stands the partisans down whenever the province is
+home land of its holder. A peace cede makes the ceded land the receiver's home land (cede() sets `S.home`), so it is covered too:
+rebelhome.js peace on the branch keeps Tromsø with Finland (it went independent before). If you want partisans to keep fighting in land
+ceded at peace (B), that is one condition to undo for the cede path.
+
+## Q28. A coalition gift of captured land: does it become the receiver's home land at once, or stay occupied land as in a territory sale?   (round 3)
+
+**Why it matters.** ECO-R3-5: `sendGift` (diplomacy.js:355) gives the receiver home title (`S.home`) and clears occupation. `terrSell`
+(territory.js:137-141) keeps sold land occupied unless it was the buyer's own home. ECO-13 settles who may gift, not the title.
+
+**Options.**
+- **A: follow terrSell: home title only when it was the receiver's home land; otherwise it stays occupied (rebels and integration
+  apply).**
+- B: keep the gift rule as it is (a reason to gift rather than sell).
+
+**Until you answer.** B (unchanged: gifts give home title as today).
+
+## Q29. Units in training when their city is captured: lose them silently, tell the loser, or give something back?   (round 3)
+
+**Why it matters.** 253 queued orders were lost in 4x100 games, with no dispatch naming them (IMP-23).
+
+**Options.**
+- A: lost, with a dispatch that names them.
+- **B: A, plus the goods (not money or manpower) of items that had not started come back to the old owner.**
+- C: the queue moves to the nearest own city with room.
+- D: today's rule (lost, no word).
+
+**Until you answer.** D (today's rule). IMP-23 option 1 (the dispatch) is suggested as a small change; no refund is built.
+
+## Q30. Should independent garrisons be known before you attack them, or should First Steps stop advising "look for a Favourable odds chip"?   (round 3)
+
+**Why it matters.** First Steps tells a new player to capture a weak independent neighbour and look for a Favourable odds chip. But
+independent garrisons are "Unknown (fog)" and the route chip shows no odds (P3-Q1, Lumbini). India lost a 2-infantry force at Seti to a
+2-infantry garrison it could never see. P3-01 (the forces you fight stay unidentified during the battle) is a separate bug and is being
+fixed. This question is only about before the battle.
+
+**Options.**
+- A, a **PROPOSAL** on UNI-9 / VIS-2: independent garrisons count as identified (they are not a rival nation), so odds show for them.
+- B, a PROPOSAL: they are identified when an own force stands next to them.
+- **C: no rule change. First Steps drops the odds advice for independents and says "independent garrisons are 2-6 infantry: send at
+  least twice that".**
+
+**Until you answer.** Unchanged (no rule or text change made). C is a small text change for whoever takes IMP-13. Separately, the
+forces you fight are now identified for the whole battle (P3-01, fixed in 14efd66, B3.8; page only).
+
+## Q31. Phones: how should a player select several forces?   (round 3)
+
+**Why it matters.** IMP-21: a phone has no multi-select, so a 10-unit stack takes about 15 taps (median 13 starting forces per nation).
+
+**Options.**
+- **A: long press adds or removes a force (prototype `idea/phone-group`).**
+- B: a "Select" toggle in the action bar.
+- C: a "Gather here" button on your own province that sends all idle forces within N hours.
+- A and C together are also possible.
+
+**Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
