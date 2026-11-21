@@ -139,6 +139,8 @@ function makeWatch(R, opts = {}){
       const P = G.P[a.at], sh = X.shipsN(a), gr = X.ground(a);
       if (sh > 0 && !P.sea && (!X.shipPlaceOk(a.at) || !shipOk(a.at))) flag('ship-on-land', o, [id], () => `${sh} ships of ${nm(o)} in ${P.name}, land that is not a port city`);
       if (sh > 0 && a.to !== null && G.P[a.to] && !G.P[a.to].sea && (!X.shipPlaceOk(a.to) || !shipOk(a.to))) flag('ship-on-land', o, [id, 'leg'], () => `ships of ${nm(o)} sailing into ${G.P[a.to].name}, land that is not a port city`);
+      // ships sail over water only (MOV-4): never a leg from land to land, not even from one port city to the next (round 2, MR2-01)
+      if (sh > 0 && a.to !== null && G.P[a.to] && !P.sea && !G.P[a.to].sea) flag('ship-on-land-leg', o, [id], () => `${sh} ships of ${nm(o)} on a land leg ${P.name} -> ${G.P[a.to].name}${X.shipsOnly(a) ? '' : ' with troops'}`);
       // aircraft: in wings only, a wing at its base unless it flies, missions within range
       let airN = 0; for (let i = 0; i < AIR.length; i++){ const v = a.u[AIR[i]]; if (v > 0) airN += v; }
       if (airN && !a.air) flag('air-outside-wing', o, [id], () => `${airN} aircraft in force ${id} (not a wing) at ${P.name}`);
@@ -508,6 +510,10 @@ const MUTANTS = [
     from:"  if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }",
     to:"  if (UNITS[t].cls === 'naval'){ const q = G.P[p].nbs.find(v => !G.P[v].sea && !G.P[v].coast); if (q != null) a = addArmy(n, q, {}); }\n  if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }",
     expect:['ship-on-land'], hours:4, setup:(S, G, X) => { const P = G.P.find(P => X.navalCity(P.id) && S.owner[P.id] >= 0 && P.nbs.some(v => !G.P[v].sea && !G.P[v].coast)); S.queue[P.id] = [{t:'frig', h:1, h0:24}]; }},
+  {key:'fleet-over-land', what:'(e) a ship on land: a fleet\'s route may run from one port city straight to the next over land (findPath ignores wet)', file:'rules/movement.js',
+    from:'if (wet && !SEA0[u] && !SEA0[v]) continue;', to:'', expect:['ship-on-land-leg'], hours:6,
+    setup:(S, G, X, api) => { for (const P of G.P){ const n = S.owner[P.id]; if (P.sea || n < 0 || !X.navalCity(P.id)) continue; const q = P.nbs.find(v => !G.P[v].sea && S.owner[v] === n && X.navalCity(v)); if (q == null) continue;
+      api.orderMove(X.addArmy(n, P.id, {frig:1}), q); return; } }},
   {key:'pay-ten-times', what:'(b) a resource goes negative: payC() takes ten times the price that was checked', file:'rules/data.js',
     from:'N[k] = (N[k] || 0) - q;', to:'N[k] = (N[k] || 0) - q*10;', expect:['bad-resource'], hours:24},
   {key:'boarding-never-ends', what:'(c) a timer never finishes: the boarding timer (the embark cooldown, 45 minutes) does not count down', file:'rules/movement.js',

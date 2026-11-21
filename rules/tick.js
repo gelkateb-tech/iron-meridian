@@ -32,9 +32,20 @@ function* tickHourG(){
     // landStep: a 45-minute landing leaves 15 minutes to walk, march on or capture); a boarding in a port takes its share below (embStep)
     let hr = landStep(a);
     if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js; before the checks below, so the next stop's route gets them like any route)
+    // ships on a leg from land to land (a save from before ships kept to the water, MOV-4): a fleet goes back to where it set out from and plans
+    // its route again over the water; ships marching with troops are left there as a fleet of their own
+    if (a.to !== null && !G.P[a.at].sea && !G.P[a.to].sea && shipsN(a)){
+      if (shipsOnly(a)){ const dest = a.path.length ? a.path[a.path.length - 1] : a.to; a.to = null; a.t = 0; a.legFrom = null; a.pos = null; a.path = pathFor(a, a.at, dest); if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; } }
+      else { const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; } }
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; if (a.wp) delete a.wp; }
-    if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
+    // ships never go on land (MOV-4): a mixed force leaves its ships behind before a leg into land they may not dock in, or a leg from land to land
+    // (troops march from port to port; the ships would sail round)
+    if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && (!portOk(a.owner, a.path[0]) || (!G.P[a.at].sea && !G.P[a.path[0]].sea))){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
+    // and a fleet whose next leg runs from land to land (an old route, or one copied from troops when a force split) or ashore where it may not
+    // dock (the port was lost) is planned again over the water (rules/movement.js pathFor), or stops where it is
+    if (a.to === null && a.path.length && shipsOnly(a) && !G.P[a.path[0]].sea && (!G.P[a.at].sea || !portOk(a.owner, a.path[0]))){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : [];
+      if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} stays at ${G.P[a.at].cityName || G.P[a.at].name}: no way by sea to ${G.P[dest].cityName || G.P[dest].name}${G.P[dest].sea || portOk(a.owner, dest) ? '' : ', which is no port of yours'}. Ships sail over water only.`, 'info', a.at); } }
     if (a.to === null && a.path.length && !G.P[a.at].nb.has(a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = dest !== a.at ? pathFor(a, a.at, dest) : []; }   // stale route after a retreat or relocation
     // ground forces embark only in a naval port (rules/movement.js embStep): a route that would board ships here, where there is no port of the
     // force's own or a friend's (the port was lost, or an old save's route), is planned again through a port, or the force stops

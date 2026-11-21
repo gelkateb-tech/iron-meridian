@@ -106,7 +106,7 @@ function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].s
   const am = amphib(a), pe = [], emb = so || a.air || am ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(a.owner, u); return r; };
   const lnd = so || a.air || am || !NAVAL_CITIES ? null : navalCity;   // (and land only at a naval city: rules/movement.js pathFor)
   if (emb && G.P[to].sea && !G.P[from].sea && !emb(from)) return {pth:[], viol:[]};
-  const pth = findPath(from, to, ok, pathMT(a), a.owner, emb, null, lnd); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
+  const pth = findPath(from, to, ok, pathMT(a), a.owner, emb, null, lnd, so); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
   return {pth, viol}; }
 function declareWar(a, b){
   if (a === b || atWar(a, b) || S.decl.some(d => d.by === a && d.to === b)) return false;

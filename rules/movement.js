@@ -193,9 +193,10 @@ function fpPatch(recs){ const inv = 1/(HS0*SQ3);
 const pathMT = a => a && ground(a) ? moveType(a) : 'none';
 // emb (ground forces): emb(u) says whether the force may embark in land province u, asked only for legs from land onto water (rules: a naval port);
 // lnd (ground forces, NAVAL CITIES): lnd(v) says whether it may come ashore in land province v, asked only for legs from water onto land (a naval city)
+// wet (ships): no leg from land to land (a fleet sails port to sea to port, never over the land between two ports)
 // memo (a Map, optional): only for a route whose answer depends on nothing but the map and the leg costs (ok and emb fixed by the caller, no
 // owner: no rails), such as a sea route between two sea zones: kept per (from, to, the heuristic's floor), handed out as a copy
-function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = null, lnd = null){
+function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = null, lnd = null, wet = false){
   if (a === b) return [];
   const n = G.P.length;
   if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), hc:new Float64Array(n), hg:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
@@ -205,7 +206,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = n
     else { FP.w = {};                                  // otherwise rebuild leg costs lazily per movement type
       FP.q = G.P.map(P => { if (P.sea || !P.lk.size) return null; let any = false; const Q = Float64Array.from([...P.nb].map(([v, w0]) => { const rl = railLv(P.lk.get(v)); if (!rl) return 0; any = true; return w0/RAIL_SPD[rl]; })); return any ? Q : null; }); } }
   const Wm = fpWeights(PATH_MT.includes(mt) ? mt : 'foot'), useRail = owner >= 0 && mt !== 'none';
-  let mk = null; if (memo){ if (memo.G !== G || memo.size > 20000){ memo.clear(); memo.G = G; } mk = a + ',' + b + ',' + mt + ',' + (useRail ? Wm.kq : Wm.k); const r = memo.get(mk); if (r) return r.slice(); }
+  let mk = null; if (memo){ if (memo.G !== G || memo.size > 20000){ memo.clear(); memo.G = G; } mk = a + ',' + b + ',' + mt + ',' + (useRail ? Wm.kq : Wm.k) + (wet ? ',w' : ''); const r = memo.get(mk); if (r) return r.slice(); }
   let fr = null; if (useRail){ fr = new Uint8Array(S.nations.length + 1); for (let i = 0; i < S.nations.length; i++) fr[i] = i === owner || allyOf(owner, i) ? 1 : 0; }
   const isFr = v => { const o = S.owner[v]; return o >= 0 && fr[o] === 1; };
   const d = FP.d, prev = FP.prev, gen = FP.gen, g = ++FP.g, B = G.P[b], inv = (useRail ? Wm.kq : Wm.k)/(HS0*SQ3);
@@ -220,6 +221,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = n
   while (hn){ const key = hk[0], u = pop(); if (u === b){ found = true; break; } const du = d[u]; if (key > du + h(u) + 1e-9) continue;   // stale heap entry
     const A = FP.adj[u], Wt = Wm[u], Qt = useRail ? FP.q[u] : null, ru = Qt && isFr(u), SEA0 = FP.sea, eL = emb && !SEA0[u], sL = lnd && SEA0[u]; let eu = -1;
     for (let j = 0; j < A.length; j++){ const v = A[j]; if (ok && v !== b && !ok(v)) continue;
+      if (wet && !SEA0[u] && !SEA0[v]) continue;   // (ships: no leg from land to land, not even between two ports: MOV-4)
       if (eL && SEA0[v]){ if (eu < 0) eu = emb(u) ? 1 : 0; if (!eu) continue; }   // (a leg onto water from land: only where the force may embark)
       if (sL && !SEA0[v] && !lnd(v)) continue;   // (a leg from water onto land: only where the force may come ashore, a naval city)
       let c = Wt[j]; if (ru && Qt[j] && Qt[j] < c && isFr(v)) c = Qt[j];
@@ -240,7 +242,7 @@ const landOk = (a, v) => !NAVAL_CITIES || navalCity(v) || amphib(a);
 const pathFor = (a, from, to, anyCoast = false) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
     let r = ce[o]; if (r === undefined) r = ce[o] = atWar(n, o) || friendly(n, o); return r; }, ok = v => enter(v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
   const mt = pathMT(a);
-  if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner);   // ships sail over water only: a port is where a route ends, never a way through land
+  if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner, null, null, null, true);   // ships sail over water only: a port is where a route ends, never a way through land (nor a leg from one port to the next)
   if (so || a.air) return findPath(from, to, ok, mt, a.owner);
   const am = amphib(a), pe = [], emb = anyCoast === true || am ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(n, u); return r; };
   const lnd = !NAVAL_CITIES || anyCoast || am ? null : navalCity;
