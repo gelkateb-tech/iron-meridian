@@ -16,7 +16,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     for (const k2 of [1, 2, 3]) for (const q of D.ST[k2]) pl(q, k2*0.7, '#555'); for (const a of D.av) pl(a, 3, '#c80');
     for (const q of D.PK){ g.fillStyle = '#9c6'; g.beginPath(); for (let i = 0; i < 8; i += 2) i ? g.lineTo(X(q[i]), X(q[i + 1])) : g.moveTo(X(q[i]), X(q[i + 1])); g.fill(); }
     for (const t of D.T){ g.fillStyle = ['#063', '#285', '#4a7'][t[3]]; g.beginPath(); g.arc(X(t[0]), X(t[1]), Math.max(1, t[2]*k), 0, 7); g.fill(); }
-    for (const [lv, q] of D.B){ g.fillStyle = ['#d22', '#26d', '#2a2'][lv]; g.beginPath(); for (let i = 0; i < 8; i += 2) i ? g.lineTo(X(q[i]), X(q[i + 1])) : g.moveTo(X(q[i]), X(q[i + 1])); g.fill(); }
+    for (const [lv, q, h] of D.B){ g.fillStyle = lv === 4 ? 'rgba(0,0,0,0)' : 'hsl(' + Math.max(0, 60 - h*3) + ',90%,45%)'; g.beginPath(); for (let i = 0; i < 8; i += 2) i ? g.lineTo(X(q[i]), X(q[i + 1])) : g.moveTo(X(q[i]), X(q[i + 1])); g.fill(); }
     for (const [x, y, d, m] of D.DC || []){ g.fillStyle = m ? 'rgba(0,0,0,' + (0.2 + d*0.8) + ')' : '#f0f'; g.fillRect(X(x) - 3, X(y) - 3, 6, 6); }
     for (const n of D.NB || []){ g.strokeStyle = '#f0f'; g.beginPath(); g.arc(X(n[0]), X(n[1]), n[2]*k, 0, 7); g.stroke(); }
     return c.toDataURL('image/png'); }, nm);

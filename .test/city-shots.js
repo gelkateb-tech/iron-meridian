@@ -30,7 +30,7 @@ const { chromium, devices } = require('playwright'); const path = require('path'
       v.s = s; v.x = R.width/2 - P.x*s; v.y = R.height/2 - P.y*s; im.redraw(); }, [nm, hx]);
     // every town over the crop on its own tier (by day; at night its lights too): a neighbour's stand-in would show as a soft patch
     for (let k = 0; k < 200; k++){ await p.waitForTimeout(200); if (await p.evaluate(([n, cr]) => { const im = window.__im, v = im.view; im.redraw(); const R = document.getElementById('map').getBoundingClientRect(), X = (R.width/2 - v.x)/v.s, Y = (R.height/2 - v.y)/v.s, ex = cr/2/v.s, ey = cr*0.35/v.s;
-      for (const P of im.G.P){ if (!P.city || P.sea) continue; const g = im.cityDbg.geo(P.id), E = g ? g.E : 25; if (P.x < X - ex || P.x > X + ex || P.y < Y - ey || P.y > Y + ey) continue; if (!g) return false;
+      for (const P of im.G.P){ if (!P.city || P.sea) continue; const g = im.cityDbg.geo(P.id), E = g ? g.E : 25; if (P.x + E < X - ex || P.x - E > X + ex || P.y + E < Y - ey || P.y - E > Y + ey) continue; if (!g) return false;   // (every town whose square reaches over the crop, not only those whose point is on it)
         const h = im.cityDbg.has(P.id); if (!h.exact) return false; if (n){ const q = im.cityDbg.night(P.id); if (!q || !q.exact) return false; } } return true; }, [night, crop])) break; }
     const tA = Date.now() - t0;
     for (let k = 0, ok = 0; k < 24 && ok < 5; k++){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; }

@@ -34,8 +34,8 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       px(I, x, y){ const L = I.L, s = L.s, dp = L.dp || 2, X0 = im.wrap.X0, WW = im.wrap.W, ox = L.vx + L.mx, oy = L.vy + L.my;
         for (const k of [0, -1, 1]){ const X = Math.round(dp*((x + k*WW)*s + ox)), Y = Math.round(dp*(y*s + oy)); if (X >= 2 && Y >= 2 && X < L.width - 2 && Y < L.height - 2){ const o = (Y*L.width + X)*4; return [I.d[o], I.d[o + 1], I.d[o + 2]]; } } return null; },
       onScr(x, y, m = 40){ const v = im.view, cw = innerWidth, sx = x*v.s + v.x, sy = y*v.s + v.y, r = document.getElementById('map').getBoundingClientRect(); for (const k of [0, -1, 1]){ const X = sx + k*im.wrap.W*v.s; if (X > m && X < r.width - m && sy > m && sy < r.height - m) return true; } return false; },
-      cells(p, n){ const G = im.G, P = G.P[p], out = [], st = Math.max(1, Math.floor(P.cells.length/(n*3)));
-        for (let i = 0; i < P.cells.length && out.length < n; i += st){ const q = cellCenter(P.cells[i]); if (Math.hypot(q[0] - P.x, q[1] - P.y) < 12 || im.isWet(q[0], q[1])) continue;   // (away from its town; not on a lake)
+      cells(p, n){ const G = im.G, P = G.P[p], out = [], st = Math.max(1, Math.floor(P.cells.length/(n*6)));
+        for (let i = 0; i < P.cells.length && out.length < n; i += st){ const q = cellCenter(P.cells[i]); if (Math.hypot(q[0] - P.x, q[1] - P.y) < 12 || im.isWet(q[0], q[1]) || (im.cityDbg.urban && im.cityDbg.urban(q[0], q[1]) > 0.3)) continue;   // (away from its town; not on a lake; on the land between the towns' buildings: the towns carry no owner's tint, owner 2026-11-21)
           if (this.onScr(q[0], q[1])) out.push(q); } return out; } }; });
   const G0 = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G; return {W:G.P.length, nn:S.nations.length, us:S.nations.findIndex(N => N.name === 'United States'), de:S.nations.findIndex(N => N.name === 'Germany'), ru:S.nations.findIndex(N => N.name === 'Russia'), ca:S.nations.findIndex(N => N.name === 'Canada'), map:S.map}; });
   checks.game = G0; if (G0.map !== 1 || G0.nn !== 68) fail('game', G0);
