@@ -140,7 +140,7 @@ function splitPlan(a, plan, spot = null){
   const pk = a.peak, h0 = effHP(a), out = [];
   G0.forEach((g, i) => { const b = addArmy(a.owner, a.at, {});
     b.to = a.to; b.t = a.t; b.path = a.path.slice(); b.m = a.m; b.stance = a.stance; b.from = a.from; b.froms = a.froms ? a.froms.slice() : undefined; b.landed = a.landed;
-    b.forced = a.forced; b.fire = a.fire; b.delay = a.delay; b.home = a.home; b.retreating = a.retreating; b.chase = a.chase; b.legFrom = a.legFrom; if (a.dest) b.dest = {...a.dest}; if (a.wp) b.wp = a.wp.map(q => ({...q}));
+    b.forced = a.forced; b.fire = a.fire; b.delay = a.delay; b.home = a.home; b.retreating = a.retreating; b.chase = a.chase; b.legFrom = a.legFrom; if (a.gate) b.gate = {...a.gate}; if (a.dest) b.dest = {...a.dest}; if (a.wp) b.wp = a.wp.map(q => ({...q}));
     if (a.emb != null) b.emb = a.emb; if (a.land > 0) b.land = a.land; if (a.hrt != null) b.hrt = a.hrt;   // (embarking, landing, and the heart reached: rules below)
     if (a.to === null && isSeat(a.owner)) b.pos = splitSpot(a, i, spot);   // a seat's groups get places of their own (the AI's stay on the province centre)
     for (const k in g){ const r = R.get(k), v = g[k]; b.u[r.t] += v; b.w[r.t] += v*r.wu; a.u[r.t] -= v; a.w[r.t] = Math.max(0, a.w[r.t] - v*r.wu); if (!a.u[r.t]) a.w[r.t] = 0; }
@@ -264,10 +264,63 @@ function ptIn(p, x, y){ if (!G.P[p] || !Number.isFinite(x) || !Number.isFinite(y
   let best = G.P[p].cc, bd = Infinity; for (const c of G.P[p].cells){ const [cx, cy] = cellCenter(c), d = (cx - x)*(cx - x) + (cy - y)*(cy - y); if (d < bd){ bd = d; best = c; } }
   return cellCenter(best); }
 const lerpPt = (p1, p2, t) => [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];
-// the two ends of force a's current leg: where it set out from (its spot, else the centre) and the exact point on the final leg, else the next centre
-function legEnds(a){ const A = G.P[a.at], B = G.P[a.to]; return [a.legFrom || [A.x, A.y], !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y]]; }
+/* SEA GATES (prototype idea/sea-legs, IMP-1): a leg into a sea zone that the force sails on from does not end at the zone's centre but where it
+   enters the zone: a water cell of the zone on its border with the province the force comes from (its GATE). The force then crosses the zone
+   from there to the next border, so a trip over the sea runs border to border, close to the real sailing line, at the same speed (MOV-3), and
+   the force is counted in the zone it is actually crossing. The leg's time follows its real length (legRatio, below). The last leg of a route
+   (the zone a force was sent to, or the coast it lands on) ends as before, at the centre or the exact point. Route choice is unchanged (pathFor).
+   Which cells (seaWay): for each zone of the route the force sails on from, one of GATE_N cells spread along that border, or the zone's centre,
+   so that the whole way from where the force sets off to the end of the route is the shortest, a km over other land (not the port left or the
+   coast landed on) counting GATE_LAND_K km. So a landing behind a cape or a crossing past an island is not cut across land where water will do,
+   and where no border cell does better a leg ends at the centre as before (a zone too bent for one straight crossing, such as the English
+   Channel from the North Sea to the Atlantic, is still cut short over land: one straight line per zone). Worked out backwards from the end of
+   the route (the cost to go from each cell), so the choice made at each leg is the one the forecast made (etaHours). The gate is kept with the
+   leg that uses it (a.gate {fr, to, x, y}: set when the leg starts, rules/tick.js, or on a new order, orderMove), so a leg begun before this rule
+   (an old save) runs on to the centre as it was. Derived from the map and the route only (cached), never random. */
+let SGC = {G:null, m:new Map()};
+const GATE_N = 12, GATE_LAND_K = 10;
+const sgcOk = () => { if (SGC.G !== G || SGC.m.size > 200000) SGC = {G, m:new Map()}; };
+// the cells of sea zone q on its border with province p (in the order of q's cells; cached per map)
+function gateCells(p, q){ if (!G.P[p] || !G.P[q] || !G.P[q].sea || p === q) return []; sgcOk();
+  const k = 'c' + p + ':' + q; let B = SGC.m.get(k); if (B) return B;
+  B = []; for (const c of G.P[q].cells) for (let d = 0; d < 6; d++){ const v = nbr(c, d); if (v >= 0 && G.prov[v] === p){ B.push(c); break; } }
+  SGC.m.set(k, B); return B; }
+// the points a leg from p into zone q may end at: its centre first, then up to GATE_N border cells, evenly spread
+function gatePts(p, q){ const B = gateCells(p, q), k = 'n' + p + ':' + q; if (SGC.m.has(k)) return SGC.m.get(k);
+  const out = [[G.P[q].x, G.P[q].y]], st = Math.max(1, Math.ceil(B.length/GATE_N)); for (let i = 0; i < B.length; i += st) out.push(cellCenter(B[i])); SGC.m.set(k, out); return out; }
+// the cost of sailing straight from point a to point b on a leg from province u to v: its length in km, a km over land other than u and v
+// counting GATE_LAND_K km
+function wayCost(a, b, u, v){ const k = 'w' + a[0] + ',' + a[1] + '>' + b[0] + ',' + b[1] + ':' + u + ':' + v; let w = SGC.m.get(k); if (w !== undefined) return w;
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1])/KM_W, n = Math.max(1, Math.ceil(L/10)); let o = 0;
+  for (let i = 0; i < n; i++){ const t = (i + 0.5)/n, c = worldToCell(a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t), x = c >= 0 ? G.prov[c] : -1; if (x >= 0 && !G.P[x].sea && x !== u && x !== v) o += L/n; }
+  w = L + (GATE_LAND_K - 1)*o; SGC.m.set(k, w); return w; }
+// the point each leg of a route ends at, for a force in province `from` setting off from point f over path (end: the exact point of the
+// route's last province, or null): [x, y] for a leg into a sea zone it sails on from that ends at a gate, else null (the centre, or `end`)
+function seaWay(from, f, path, end = null){ const n = path.length, out = new Array(n).fill(null); if (!n) return out; sgcOk();
+  const multi = i => i < n - 1 && G.P[path[i]].sea && gateCells(i ? path[i - 1] : from, path[i]).length > 0;
+  if (!path.some((q, i) => multi(i))) return out;
+  const fixedPt = j => j === n - 1 && end ? end : [G.P[path[j]].x, G.P[path[j]].y], pts = i => multi(i) ? gatePts(i ? path[i - 1] : from, path[i]) : [fixedPt(i)];
+  // the cost to go from each point of leg i's end to the end of the run of zones it belongs to (the next leg with one fixed end), backwards
+  const ctg = i => { let j = i; while (multi(j)) j++; const key = 'r' + (i ? path[i - 1] : from) + '>' + path.slice(i, j + 1).join('>') + '@' + fixedPt(j).join(',');
+    let T = SGC.m.get(key); if (T) return T; let nxt = [0];
+    for (let m = j - 1; m >= i; m--){ const P0 = pts(m), P1 = pts(m + 1); nxt = P0.map(c => { let b = Infinity; P1.forEach((d, z) => { const w = wayCost(c, d, path[m], path[m + 1]) + nxt[z]; if (w < b) b = w; }); return b; }); }
+    SGC.m.set(key, nxt); return nxt; };
+  let pf = f, pu = from;
+  for (let i = 0; i < n; i++){ const q = path[i];
+    if (multi(i)){ const P0 = pts(i), C = ctg(i); let bi = 0, bc = Infinity; P0.forEach((c, z) => { const w = wayCost(pf, c, pu, q) + C[z]; if (w < bc - 1e-9){ bc = w; bi = z; } }); if (bi > 0) out[i] = P0[bi]; pf = P0[bi]; }
+    else pf = fixedPt(i);
+    pu = q; }
+  return out; }
+// the gate force a's current leg ends at (null: the leg ends as it always did)
+const gateOf = a => a.gate && a.to !== null && a.gate.to === a.to && a.gate.fr === a.at ? a.gate : null;   // (kept to the leg's end even if the route is cut short meanwhile: the force stops at the gate, no jump)
+// set (or drop) the gate of force a's current leg: a leg into a sea zone the force sails on from
+function gateSet(a){ const L = a.path.length ? a.path[a.path.length - 1] : null, g = a.to !== null && a.path.length && G.P[a.to].sea ? seaWay(a.at, legEnds(a)[0], [a.to, ...a.path], a.dest && a.dest.p === L ? [a.dest.x, a.dest.y] : null)[0] : null; if (g) a.gate = {fr:a.at, to:a.to, x:g[0], y:g[1]}; else if (a.gate) delete a.gate; }
+// the two ends of force a's current leg: where it set out from (its spot, else the centre) and the exact point on the final leg, else its gate
+// into a sea zone it sails on from, else the next centre
+function legEnds(a){ const A = G.P[a.at], B = G.P[a.to], g = gateOf(a); return [a.legFrom || [A.x, A.y], g ? [g.x, g.y] : !a.path.length && a.dest && a.dest.p === a.to ? [a.dest.x, a.dest.y] : [B.x, B.y]]; }
 // the ends of the leg an idle force with a route starts next
-function nextLegEnds(a){ const A = G.P[a.at], n0 = a.path[0], B = G.P[n0]; return [a.sail ? sailXY(a) : a.pos || [A.x, A.y], a.path.length === 1 && a.dest && a.dest.p === n0 ? [a.dest.x, a.dest.y] : [B.x, B.y]]; }
+function nextLegEnds(a){ const A = G.P[a.at], n0 = a.path[0], B = G.P[n0], f = a.sail ? sailXY(a) : a.pos || [A.x, A.y], L = a.path[a.path.length - 1], end = a.dest && a.dest.p === L ? [a.dest.x, a.dest.y] : null;
+  return [f, a.path.length === 1 && end ? end : (a.path.length > 1 && B.sea && seaWay(a.at, f, a.path, end)[0]) || [B.x, B.y]]; }
 // a leg's real length over the centre-to-centre length its time is reckoned on (1 between centres)
 function legRatio(from, to, p1, p2){ const A = G.P[from], B = G.P[to]; if (p1[0] === A.x && p1[1] === A.y && p2[0] === B.x && p2[1] === B.y) return 1;
   const D = Math.hypot(B.x - A.x, B.y - A.y); return D > 1e-9 ? Math.max(0.02, Math.min(3, Math.hypot(p2[0] - p1[0], p2[1] - p1[1])/D)) : 1; }
@@ -282,10 +335,10 @@ function orderMove(a, target, pt = null){ delete a.tgt; if (a.wp) delete a.wp; i
   const q = pt && !a.air && G.P[target] && !(shipsOnly(a) && !G.P[target].sea) ? ptIn(target, pt[0], pt[1]) : null;
   if (q && a.to === null && target === a.at){ a.dest = null; orderSpot(a, q[0], q[1]); IM.emit('ordered', a); return; }
   if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a force walking or sailing inside its province sets off from where it is now)
-  const end0 = a.to !== null ? legEnds(a)[1] : null;
+  const end0 = a.to !== null ? legEnds(a)[1] : null, spot0 = a.to !== null ? legSpot(a) : null;
   if (q) a.dest = {p:target, x:q[0], y:q[1]}; else if (a.dest) a.dest = null;
-  if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target);
-    const end1 = legEnds(a)[1]; if (end1[0] !== end0[0] || end1[1] !== end0[1]){ a.legFrom = legSpot(a); a.t = 0; } }   // the leg now ends elsewhere: it runs on from where the force is
+  if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target); gateSet(a);   // (a sea leg that now goes on ends at its gate; one that now ends in the zone, at its centre or point)
+    const end1 = legEnds(a)[1]; if (end1[0] !== end0[0] || end1[1] !== end0[1]){ a.legFrom = spot0; a.t = 0; } }   // the leg now ends elsewhere: it runs on from where the force is
   else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
   IM.emit('ordered', a);   // (display only: the client marks where the counter starts from)
 }
@@ -345,7 +398,8 @@ function stopsEta(a){ const S0 = stopsOf(a); if (!S0.length) return []; const gr
   for (let k = now ? 1 : 0; k < S0.length; k++){ const q = S0[k], p2e = [q.x, q.y];
     if (q.p === from){ h += Math.max(1, Math.hypot(p2e[0] - p1[0], p2e[1] - p1[1])/KM_W*24/(walkSpeed(a, from)*KM_HEX)); out.push(Math.ceil(h)); p1 = p2e; continue; }
     const path = pathFor(a, from, q.p); if (!path.length){ out.push(null); continue; }
-    for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 ? p2e : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
+    const sw = seaWay(from, p1, path, p2e);
+    for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 ? p2e : sw[i] || [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
       if (gr && !G.P[from].sea && G.P[p].sea) h += embarkH(a); else if (gr && G.P[from].sea && !G.P[p].sea) h += landH(a, p); from = p; p1 = p2; }
     out.push(Math.ceil(h)); }
   return out; }
@@ -382,11 +436,11 @@ function sailHour(a, hr = 1){ const s = a.sail; if (!s) return; if (a.to !== nul
   if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; if (s.nx) a.sail = {f:a.pos, to:s.nx, t:0, h:Math.max(1e-6, s.h2)}; else delete a.sail; } }   // (sailTo: on from the heart to the point)
 // the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
 // (troops coming ashore from the sea start their landing here: a.land, the time in hours, 0.75 = 45 minutes, before they can move on or capture)
-function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); if (ground(a)) a.land = landH(a, a.to); if (a.oldLand) delete a.oldLand; }
+function legArrive(a, cross = false){ const f0 = legEnds(a)[0], g = gateOf(a); if (a.gate) delete a.gate; if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); if (ground(a)) a.land = landH(a, a.to); if (a.oldLand) delete a.oldLand; }
   a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null; delete a.hrt;
   if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null;
     if (!cross && a.pos && heartVia(a, a.at, f0, a.pos)) a.hrt = a.at; }   // (a leg done within the hour went by the heart on its way to the point beyond it; cross: legCross walks on)
-  else a.pos = null; }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land)
+  else a.pos = g ? [g.x, g.y] : null; }   // (ships docking in a port take no pinpoint: they sit at the quay, never on land; a force sailing on stands at its gate)
 // the final leg of a pinpoint move crossing into its province (rules/tick.js movement, after the hour's progress lh): the force arrives there now,
 // at the spot it has reached, and walks the rest of the leg's time inside it. Not for ships docking in a port (no point on land)
 function legCross(a, lh){ if (a.path.length || !a.dest || a.dest.p !== a.to || a.t >= 1) return false;
@@ -482,8 +536,9 @@ function etaHours(a, path = a.path, end = path === a.path ? a.dest : null){
   const lw = a.land > 0 && a.to === null ? a.land : 0, gr = ground(a);
   if (a.to === null && !path.length) return a.sail ? Math.max(1, Math.ceil((1 - a.sail.t)*a.sail.h + (a.sail.h2 || 0) + lw - 1e-9)) : Math.ceil(lw - 1e-9);
   let h = lw, from = a.at, p1 = a.sail ? sailXY(a) : a.pos || [G.P[a.at].x, G.P[a.at].y];
-  if (a.to !== null){ h += (1 - a.t)*legH(a); if (gr && G.P[a.at].sea && !G.P[a.to].sea) h += landH(a, a.to); from = a.to; p1 = [G.P[a.to].x, G.P[a.to].y]; }
-  for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 && end && end.p === p ? [end.x, end.y] : [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
+  if (a.to !== null){ h += (1 - a.t)*legH(a); if (gr && G.P[a.at].sea && !G.P[a.to].sea) h += landH(a, a.to); from = a.to; const g = gateOf(a); p1 = g ? [g.x, g.y] : [G.P[a.to].x, G.P[a.to].y]; }
+  const sw = seaWay(from, p1, path, path.length && end && end.p === path[path.length - 1] ? [end.x, end.y] : null);
+  for (let i = 0; i < path.length; i++){ const p = path[i], p2 = i === path.length - 1 && end && end.p === p ? [end.x, end.y] : sw[i] || [G.P[p].x, G.P[p].y]; h += legHours(a, from, p)*legRatio(from, p, p1, p2);
     if (gr && !G.P[from].sea && G.P[p].sea) h += i === 0 && a.to === null && a.emb != null ? a.emb : embarkH(a); else if (gr && G.P[from].sea && !G.P[p].sea) h += landH(a, p);
     from = p; p1 = p2; }
   return Math.ceil(h - 1e-9);

@@ -5216,6 +5216,11 @@ function roadFind(N, from, to){ const A = G.P[from], B = G.P[to], d = Math.hypot
 function roadRoute(kind, from, to){ const key = kind + from + '>' + to; let r = RROUTE.get(key); if (r !== undefined) return r; if (!RNET[kind]){ rnetSoon(); return null; }
   const rv = RROUTE.get(kind + to + '>' + from); if (rv !== undefined) r = rv && rv.slice().reverse(); else { try { r = roadFind(rnetBuild(kind), from, to); } catch (e) { r = null; } }
   RROUTE.set(key, r); return r; }
+// SEA GATES (prototype idea/sea-legs, rules/movement.js seaGate): a leg that ends at a zone's gate, or sets off from the gate the force entered its
+// zone by, runs straight between its two points, not along the centre-to-centre sea lane (the lane would show a detour the force does not sail)
+const ptEq = (p, q) => !!p && !!q && Math.abs(p[0] - q[0]) < 1e-6 && Math.abs(p[1] - q[1]) < 1e-6;
+const isGate = (p, q, pt) => { if (!pt || !G.P[q] || !G.P[q].sea || p == null || p === q) return false; const c = worldToCell(pt[0], pt[1]); return c >= 0 && ptEq(cellCenter(c), pt) && gateCells(p, q).includes(c); };   // (pt: a gate of zone q toward p)
+const gateLeg = (a, from, to, p1, p2) => isGate(from, to, p2) || (a.from != null && isGate(a.from, from, p1));
 // a leg's drawn way for force a, as legCurve draws it (world points, `from`'s centre to `to`'s; straight where it has none): route lines
 function legGeom(a, from, to){ const A = G.P[from], B = G.P[to]; if (from === to || a.air) return [[A.x, A.y], [B.x, B.y]];
   const sea = A.sea || B.sea, md = sea ? 'sea' : legMode(a, from, to), kind = md === 'sea' ? 'sea' : md === 'rail' ? 'rail' : md === 'hw' || md === 'road' || md === 'track' ? 'road' : null;
@@ -5229,6 +5234,7 @@ function legCurve(a, from, to, p0, p1, p2, p3, t){ let kind = null;
   if (to != null && from !== to && !a.air){ const kk = from + '>' + to; let E = RLKIND.get(a.id);
     if (!E || E.k !== kk){ const sea = G.P[from].sea || G.P[to].sea, md = sea ? 'sea' : legMode(a, from, to); E = {k:kk, kind:md === 'sea' ? 'sea' : md === 'rail' ? 'rail' : md === 'hw' || md === 'road' || md === 'track' ? 'road' : null}; RLKIND.set(a.id, E); if (RLKIND.size > 3000) RLKIND.clear(); }
     kind = E.kind; }
+  if (kind === 'sea' && gateLeg(a, from, to, p1, p2)) return [p1[0] + (p2[0] - p1[0])*t, p1[1] + (p2[1] - p1[1])*t];   // (a leg to or from a sea gate: straight, as the rules reckon it)
   const R = kind ? legWay(kind, from, to) : null; if (!R) return catmull(p0, p1, p2, p3, t);
   const key = kind + from + '>' + to + '|' + p1[0].toFixed(3) + ',' + p1[1].toFixed(3) + '|' + p2[0].toFixed(3) + ',' + p2[1].toFixed(3); let W = RLEG.get(key);
   if (!W){ const n = R.length, near = (p, i0, i1) => { let bi = i0, bd = Infinity; for (let i = i0; i <= i1; i++){ const q = R[i], dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd){ bd = dd; bi = i; } } return bi; };
@@ -8482,9 +8488,14 @@ function draw(now){ draw.now = now;
     const near = (G0, q) => { let bi = 0, bd = Infinity; for (let i = 0; i < G0.length; i++){ const d = (G0[i][0] - q[0])**2 + (G0[i][1] - q[1])**2; if (d < bd){ bd = d; bi = i; } } return bi; };
     const from = (G0, q) => G0.slice(near(G0, q) + 1);   // (the part of a leg after the point nearest q)
     let wp = s0, u = a.at, first = true;
-    if (a.to !== null && path.length && path[0] !== a.to){ W.push(...from(legGeom(a, a.at, a.to), s0)); wp = [G.P[a.to].x, G.P[a.to].y]; u = a.to; first = false; }
+    let gw = false, rp = a.to !== null ? legEnds(a)[0] : a.sail ? sailXY(a) : a.pos || [G.P[a.at].x, G.P[a.at].y];   // (gw: the last point is a sea gate, so the next leg runs straight from it; rp: the rules' own last point, rules/movement.js seaWay)
+    if (a.to !== null && path.length && path[0] !== a.to){ const e1 = legEnds(a)[1]; gw = !!gateOf(a); if (gw || gateLeg(a, a.at, a.to, rp, e1)) W.push(e1); else W.push(...from(legGeom(a, a.at, a.to), s0)); wp = rp = e1; u = a.to; first = false; }
+    else if (a.to === null && a.from != null && isGate(a.from, a.at, a.pos)) gw = true;
     let exact = !path.length; if (exact){ W.push(endPt); if (a.sail && a.sail.nx && endPt === a.sail.to) W.push(a.sail.nx); }   // (a walk inside the province: straight to its point, by the city when it goes there first)
+    const sw = a.air || !path.length ? [] : seaWay(u, rp, path, endPt || (a.dest && a.dest.p === path[path.length - 1] ? [a.dest.x, a.dest.y] : null));   // (where each sea leg ends: rules/movement.js seaWay)
     path.forEach((p, i) => { const fin = i === path.length - 1, e = fin ? (endPt || (a.dest && a.dest.p === p ? [a.dest.x, a.dest.y] : null)) : null; if (e) exact = true;
+      const g = sw[i] || null, c = [G.P[p].x, G.P[p].y];
+      if (g || (gw && !a.air)){ const q = g || e || c; if (!g && e && heartVia(a, p, wp, e)) W.push(c); W.push(q); gw = !!g; wp = q; u = p; first = false; return; }   // (to or from a sea gate: straight)
       const G0 = legGeom(a, u, p), G1 = first ? from(G0, s0) : G0.slice(1); first = false;
       if (e && heartVia(a, p, wp, e)) W.push(...G1, e);   // (a point beyond the heart of land to capture: the route goes by the city, rules/movement.js sailTo)
       else if (e){ const k = near(G1, e); W.push(...G1.slice(0, k), e); }

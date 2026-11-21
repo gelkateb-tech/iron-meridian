@@ -48,7 +48,7 @@ function* tickHourG(){
     if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js)
     if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a, hr); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
     let e = -1;
-    if (a.to === null && a.path.length && canProceed(a) && (e = embStep(a, hr)) >= 0){ hr = e; a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;   // (boarding ships: what is left of the hour once aboard)
+    if (a.to === null && a.path.length && canProceed(a) && (e = embStep(a, hr)) >= 0){ hr = e; a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false; gateSet(a);   // (boarding ships: what is left of the hour once aboard)
       if (a.carry && a.carryH === S.hour - 1 && (legMode(a, a.at, a.to) === 'rail' || seaCarry(a))) a.t = a.carry/legH(a); a.carry = 0; }   // trains run through: no stop at every station (and troops at sea: rules/movement.js seaCarry)
     if (a.to !== null && !G.P[a.to].sea && !canEnter(a.owner, a.to)){ a.pos = a.legFrom && provOfPt(a.legFrom[0], a.legFrom[1]) === a.at ? a.legFrom : null; a.to = null; a.t = 0; a.path = []; a.legFrom = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} turned back: ${placeOwner(a.at)} is no longer open to you.`, 'info', a.at); }
     if (a.to !== null){ const lh = legH(a); a.t += hr/lh;   // (a leg takes time in proportion to its real length: rules/movement.js legRatio)
