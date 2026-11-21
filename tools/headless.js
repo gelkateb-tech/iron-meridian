@@ -186,7 +186,9 @@ function makeWatch(R, opts = {}){
       if (a.to !== null && (!Number.isFinite(a.t) || a.t < -1e-9 || a.t > 1.5)) flag('bad-timer', o, [id, 'leg'], `force ${id} leg progress ${a.t}`);
       // stuck: an order (a route, a leg, a walk) and no progress for STUCK_H hours, outside a battle
       if (!a.air && (a.path.length || a.to !== null || a.sail)){ const s = a.at + '|' + a.to + '|' + (+a.t || 0).toFixed(5) + '|' + a.path.length + '|' + (a.sail ? (+a.sail.t || 0).toFixed(5) : '') + '|' + (a.emb ?? '') + '|' + (a.land || 0);
-        const g = sig.get(id); if (g && g.s === s){ if (S.hour - g.h >= STUCK_H && !S.battles.includes(a.at)) flag('stuck-force', o, [id], () => { const nx = a.to ?? a.path[0], ow = nx != null && G.P[nx] ? S.owner[nx] : null;
+        // (the clock starts again every hour the force fights, lands or boards: a long battle that has just ended is no stuck force; round 2, MIL-R1-T1)
+        const g = sig.get(id), busy = S.battles.includes(a.at) || a.land > 0 || a.emb != null; if (g && g.s === s && busy) g.h = S.hour;
+        if (g && g.s === s){ if (S.hour - g.h >= STUCK_H && !busy) flag('stuck-force', o, [id], () => { const nx = a.to ?? a.path[0], ow = nx != null && G.P[nx] ? S.owner[nx] : null;
             const others = [...new Set(S.armies.filter(b => b.at === a.at && b.to === null && !b.air && b.owner !== o && b.owner !== S.owner[a.at] && X.count(b)).map(b => b.owner))].map(nm);
             const hold = S.owner[a.at], why = a.delay > 0 ? 'waiting (delay)' : a.land > 0 ? 'landing' : ow != null && !G.P[nx].sea && ow >= 0 && ow !== o && relSt(S, o, ow) !== 'war' && !friendlyRO(S, o, ow) ? `next province ${G.P[nx].name} is ${nm(ow)}'s, closed to it`
               : !P.sea && hold !== o && relSt(S, o, hold) === 'war' ? `standing in ${nm(hold)} land it has not taken${others.length ? ', with forces of ' + others.join(', ') + ' there too (one taker at a time)' : ''}${a.forced ? '' : ' (not ordered on until it is taken: canProceed)'}`
