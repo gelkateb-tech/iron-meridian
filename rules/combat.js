@@ -405,7 +405,7 @@ function capture(p, O){
   // ground forces of nations at peace with the new holder (neither at war with it nor its friend) may not stand in its land: they go home now, as
   // strandedHour would send them in a few hours (rules/diplomacy.js sendHome: along a route, or a jump when there is none). MOV-6
   for (const w of S.armies){ const m = w.owner; if (w.at !== p || w.air || w.fly || w.to !== null || m < 0 || m === O || shipsN(w) || !count(w) || atWar(m, O) || friendly(m, O)) continue;
-    if (sendHome(w) && isSeat(m)) tell(m, `${armyName(w)} leaves ${nm}: ${nationName(O)} took it, and you are not at war with them.`, 'info', w.at); }
+    if (sendHome(w) && isSeat(m)) tell(m, `${armyName(w)} leaves ${G.P[p].cityName || nm}: ${nationName(O)} took it, and you are not at war with them.`, 'info', w.at); }
   if (isSeat(prev)){ bump(prev, 'lost'); cue(prev, 'lose'); }
   tellAll(me => O === me ? `You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.` : prev === me ? `${nationName(O)} captured ${nm}.` : wasCap ? `${nationName(O)} took ${nm}, capital of ${nationName(prev)}.` : null, me => O === me ? 'good' : prev === me ? 'bad' : '', p);
   if (prev >= 0) checkNation(prev, O);

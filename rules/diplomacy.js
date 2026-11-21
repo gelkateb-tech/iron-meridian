@@ -69,7 +69,20 @@ function setRel(a, b, st, days = null, by = null){
 // a force left standing in land it may not be in (peace, or too small to capture) walks to its nearest own province
 function sendHome(a){ const seen = new Set([a.at]), q = [a.at]; let dest = -1;
   for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === a.owner){ dest = v; break; } q.push(v); }
-  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (a.wp) delete a.wp; if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; } atMove(a, dest); a.path = []; if (a.pos) a.pos = null; if (a.dest) a.dest = null; delete a.sail; return true; } return false; }
+  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (a.wp) delete a.wp; if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; }
+    const j = jumpDest(a); if (j < 0) return false; jumpTo(a, j); return true; } return false; }
+// a force that must leave and has no route jumps (sendHome, evict). Where to: a fleet to the sea zone it is sailing to or the one beside it, else the
+// nearest own naval city; troops (and wings) to the nearest own province, but when that means crossing water, troops come ashore only at an own naval
+// city (EMB-1): the nearest one, or the nearest own province when the nation has none. -1: nowhere
+function jumpDest(a, n = a.owner){ const so = shipsOnly(a);
+  if (so){ if (a.to !== null && G.P[a.to].sea) return a.to; if (G.P[a.at].sea) return a.at; const sz = G.P[a.at].nbs.find(v => G.P[v].sea); if (sz != null) return sz; }
+  const gr = !so && !a.air, seen = new Set([a.at]), wet = new Set(G.P[a.at].sea ? [a.at] : []), q = [a.at]; let first = -1;
+  for (let h = 0; h < q.length; h++){ const u = q[h]; for (const v of G.P[u].nbs){ if (seen.has(v)) continue; seen.add(v); const w = wet.has(u) || G.P[v].sea; if (w) wet.add(v);
+    if (S.owner[v] === n && !G.P[v].sea){ if (so ? portOk(n, v) : !gr || !w || navalCity(v)) return v; if (first < 0 && !so) first = v; } q.push(v); } }
+  return first; }
+// the jump itself: no leg, route, landing, boarding or carried time goes with it
+function jumpTo(a, d){ atMove(a, d); a.to = null; a.t = 0; a.path = []; if (a.carry) a.carry = 0; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; if (a.wp) delete a.wp;
+  delete a.sail; delete a.land; delete a.emb; delete a.oldLand; }
 function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea || shipsN(a)) continue;
     const o = S.owner[a.at]; if (o === a.owner) continue;
     const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
