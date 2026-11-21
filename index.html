@@ -9777,7 +9777,7 @@ function renderSide(force){
     const day = Math.floor(S.hour/24) + 1, lc = localClock(S.hour).split(' · ');
     setHTML($('hday'), `${HB_ICO.cal}<b>${day}</b>`); setTip($('hday'), `Day ${day} of the war\nThe war began on day 1; every game day is 24 game hours.`);
     setHTML($('clock'), `${HB_ICO.clk}<b><span class="cd">${lc[0]} </span>${lc[1]}</b>`); setTip($('clock'), `Capital local time\n${lc[0]}, ${lc[1]} in ${G.P[N.capital].cityName || G.P[N.capital].name} · day ${day} of the war`);
-    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS}`}<small> VP</small></b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
+    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}<small> VP</small>` : `${capsHeld(PLAYER)}/${WIN_CAPS}<small> capitals</small>`}</b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
     $('vbar').setAttribute('aria-label', `Victory ${Math.round(Math.min(1, best)*100)}%`); }
   mslDDSync(N);
   $('seedlbl').textContent = '';
