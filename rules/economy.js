@@ -184,7 +184,7 @@ function aiBookNeed(N, ask){ return (ask.res === 'oil' ? Math.max(AI_NEED.oil, 2
 // nation n takes q units of order-book offer id (buys from a sell offer, sells into a buy offer); returns the amount traded
 function fillOffer(n, id, q){ const o = (S.book || []).find(x => x.id === id), N = S.nations[n]; if (!o || o.seller === n || !canSee(o, n)) return 0;
   if (embargoed(o.seller, n)) return 0;   // an embargo either way closes the deal
-  q = kFloor(q);   // whole lots of MKT_LOT units
+  if (!Number.isFinite(+q) || !(+q > 0)) return 0; q = kFloor(+q);   // whole lots of MKT_LOT units (no amount, or not a number: nothing)
   if (!isBid(o)){ q = Math.min(q, o.qty, lotsFor(N.cash, o.price), kFloor(stockCap(n) - N[o.res])); if (q <= 0) return 0; N.cash -= lotCash(q, o.price); N[o.res] += q; S.nations[o.seller].cash += lotCash(q, o.price); }
   else { q = Math.min(q, o.qty, kFloor(N[o.res])); if (q <= 0) return 0; N[o.res] -= q; N.cash += lotCash(q, o.price); S.nations[o.seller][o.res] += q; }
   o.qty -= q; addMem(o.seller, n, 1); if (o.qty <= 0) S.book = S.book.filter(x => x !== o); return q; }
@@ -192,7 +192,7 @@ const buyOffer = fillOffer;
 // nation n posts an offer on the order book; returns the quantity listed (what it holds or can pay for), 0 when nothing was
 // (the price is rounded to whole cents first and the money held at that price, so the listing, its fills and its refund all use one price; below BOOK_MIN_PRICE nothing is listed)
 const BOOK_MIN_PRICE = 0.01;   // the lowest price per lot an offer can carry ($M per MKT_LOT units)
-function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0) || !MKT_BASE[k]) return 0;   // (market goods only)
+function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0) || !MKT_BASE[k] || (type !== 'sell' && type !== 'buy')) return 0;   // (market goods only; a sell or a buy offer)
   const pr = Math.round(price*100)/100; if (!(pr >= BOOK_MIN_PRICE)) return 0;
   qty = kFloor(qty);   // whole lots of MKT_LOT units, priced per lot
   if (type === 'sell'){ qty = Math.min(qty, kFloor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
