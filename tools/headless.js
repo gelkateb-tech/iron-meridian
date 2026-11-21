@@ -167,10 +167,11 @@ function makeWatch(R, opts = {}){
       // A force sent home from foreign land (evict, on peace or a territory sale) lands in its own land: that is allowed
       if (!a.air && pa != null && pa !== a.at && G.P[pa] && !flyPrev.has(id) && !a.fly && !near3(pa, a.at) && !(pt != null && near3(pt, a.at)) && !(S.owner[a.at] === o && prevOwn.get(id) !== o))
         flag('teleported', o, [id, pa, a.at], () => `force ${id} of ${nm(o)} went from ${G.P[pa].name} to ${P.name} in one hour, more than three legs apart`);
-      // a force (not a wing) in the land of a nation it is neither at war with nor allowed in (ally, passage) for 2 hours: the rules evict such
-      // forces (rules/diplomacy.js evict) and never let one walk in (canEnter)
-      if (!a.air && o >= 0 && !P.sea){ const ho = S.owner[a.at]; if (ho >= 0 && ho !== o && relSt(S, o, ho) !== 'war' && !friendlyRO(S, o, ho)){ const h0 = closedT.get(id) ?? S.hour; closedT.set(id, h0);
-          if (S.hour - h0 >= 2) flag('force-in-closed-land', o, [id, a.at], () => `force ${id} of ${nm(o)} (${X.count(a)} units) in ${P.name}, ${nm(ho)}'s land (${relSt(S, o, ho)}), since hour ${h0}`); } else closedT.delete(id); } else closedT.delete(id);
+      // a force (not a wing) standing idle in the land of a nation it is neither at war with nor allowed in (ally, passage) for more than 6 hours:
+      // the rules evict such forces (rules/diplomacy.js evict, on a relation change; combat.js capture, when a third nation takes the province;
+      // strandedHour, every 6 hours) and never let one walk in (canEnter). A force walking out (a route, a leg) is not counted (round 2, MIL-R1-T1)
+      if (!a.air && o >= 0 && !P.sea && a.to === null && !a.path.length){ const ho = S.owner[a.at]; if (ho >= 0 && ho !== o && relSt(S, o, ho) !== 'war' && !friendlyRO(S, o, ho)){ const h0 = closedT.get(id) ?? S.hour; closedT.set(id, h0);
+          if (S.hour - h0 > 6) flag('force-in-closed-land', o, [id, a.at], () => `force ${id} of ${nm(o)} (${X.count(a)} units) in ${P.name}, ${nm(ho)}'s land (${relSt(S, o, ho)}), since hour ${h0}`); } else closedT.delete(id); } else closedT.delete(id);
       // the timers of a force: boarding, landing, delay, leg progress
       if (a.emb != null && (!Number.isFinite(a.emb) || a.emb < 0 || a.emb > X.embarkH(a)*1.001 + 1e-6)) flag('bad-timer', o, [id, 'emb'], () => `force ${id} boarding timer ${a.emb} (boarding takes ${X.embarkH(a)} h)`);
       if (a.land != null && a.land !== 0 && (!Number.isFinite(a.land) || a.land < 0 || a.land > Math.max(X.LAND_H || 0.75, X.LAND_PORT_H || 0.75)*2 + 1e-6)) flag('bad-timer', o, [id, 'land'], `force ${id} landing timer ${a.land}`);
@@ -472,7 +473,7 @@ function selftest(){ const R = new Function(SRCX)(), api = R.IM.api, X = R.X; ap
     ['an exception in the rules (a force in a province that does not exist)', 'exception', S => { S.armies.find(x => x.owner >= 0).at = 1e9; }, 'tick'],
     ['a force that jumped across the map in one hour', 'teleported', (S, G, W) => { const N = own(S), P = land(G, P => S.owner[P.id] === N.id); const a = X.addArmy(N.id, P.id, {inf:2}); W.start();
       a.at = G.P.find(Q => !Q.sea && S.owner[Q.id] >= 0 && S.owner[Q.id] !== N.id && X.hexDist(P.cc, Q.cc) > 30).id; }],
-    ['a force standing in the land of a nation it is at peace with', 'force-in-closed-land', (S, G) => { const N = own(S), Q = land(G, Q => S.owner[Q.id] >= 0 && S.owner[Q.id] !== N.id && relSt(S, N.id, S.owner[Q.id]) === 'peace'); X.addArmy(N.id, Q.id, {inf:2}); return () => { S.hour++; }; }, 4],
+    ['a force standing in the land of a nation it is at peace with', 'force-in-closed-land', (S, G) => { const N = own(S), Q = land(G, Q => S.owner[Q.id] >= 0 && S.owner[Q.id] !== N.id && relSt(S, N.id, S.owner[Q.id]) === 'peace'); X.addArmy(N.id, Q.id, {inf:2}); return () => { S.hour++; }; }, 9],
     ['a boarding timer (the embark cooldown) that does not count down', 'bad-timer#emb-stuck', S => { groundF(S).emb = 0.5; return () => { S.hour++; }; }, 5],
     ['a rearm timer (the air cooldown) that does not count down', 'bad-timer#cd-stuck', S => { const N = own(S), a = X.addArmy(N.id, N.capital, {jet:1}); a.air = {base:N.capital, cd:4}; return () => { S.hour++; }; }, 4],
     ['the game clock skips an hour', 'clock', S => () => { S.hour += 2; }, 3],
