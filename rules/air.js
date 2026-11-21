@@ -229,11 +229,13 @@ function resolveStrike(a, p){
   const BF = rBombF(a.owner, T);   // bomb load: 1 Heavy Bomber, 0.6 Stealth Bomber, 0 anything else
   let preLost = 0; if (BF){ const aaD = defs.filter(b => (b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0); if (aaD.length){ const b0 = count(a); aaFire(a, aaD, 1.2); preLost = b0 - count(a);
       if (!count(a)){ if (isSeat(o)) tell(o, `Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
-  warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
+  // (checked again over the target: the land is hurt only where it is hostile, an enemy's or nobody's, or where enemy forces stand)
+  const landHit = S.owner[p] < 0 || (S.owner[p] !== o && atWar(o, S.owner[p])) || defs.length > 0;
+  if (landHit) warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
   const enemyLand = S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]);
   let bnote = '';
   if (enemyLand){ if (BF) bnote = bombBuildings(p, a.u[T], BF); else if (T === 'sdrone') bnote = preciseHit(p, a.u.sdrone >= 2 ? 0.35 : 0.15, rKoHours(a.owner)); if (bnote) noteHit(S.owner[p], T, p); }
-  const cut = S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
+  const cut = landHit && S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
   if (cut && !defs.length) for (const me of new Set([o, S.owner[p]])) if (isSeat(me)) tell(me, o === me ? `Strike on ${G.P[p].cityName || G.P[p].name} cut ${cut} road and rail link${cut > 1 ? 's' : ''} for ${LINK_DMG.strike} h.` : `${nationName(o)} bombed the roads and railways at ${G.P[p].cityName || G.P[p].name}: ${cut} link${cut > 1 ? 's' : ''} out for ${LINK_DMG.strike} h.`, o === me ? 'good' : 'bad', p);
   const label = T === 'stealth' ? 'Stealth raid' : BF ? 'Bombing raid' : T === 'swarm' ? 'Swarm attack' : T === 'sdrone' ? 'Drone strike' : 'Air strike';
   if (!defs.length){ if (isSeat(o) && (bnote || !cut)) tell(o, bnote ? `${label} on ${where}: ${bnote}${adLost ? `; ${adLost} drones lost to air defence` : ''}.` : `Strike on ${where} found no targets.`, bnote ? 'good' : 'info', p);
@@ -325,12 +327,15 @@ function missileImpact(m){
     if (isSeat(m.owner)) tell(m.owner, `Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
     if (S.owner[m.to] !== m.owner && isSeat(S.owner[m.to])) tell(S.owner[m.to], `Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
     return; }
-  warDamage(m.to, m.k === 'bm' ? 22 : 12); if (S.owner[m.to] !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48);
+  // checked again at impact (a peace, or the province changing hands, while it flew): the land is hurt only where it is hostile, an enemy's or
+  // nobody's, or where enemy forces stand (a target in one's own land held by enemies); otherwise only troops at war with the launcher are hit
+  const o0 = S.owner[m.to], foesHere = stationaryAt(m.to).some(b => atWar(m.owner, b.owner) && count(b) > 0), landHit = o0 < 0 || (o0 !== m.owner && atWar(m.owner, o0)) || foesHere;
+  if (landHit){ warDamage(m.to, m.k === 'bm' ? 22 : 12); if (o0 !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48); }
   const M0 = mslOf(m.owner, m.k), defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
   if (defs.length){ const tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1, f0 = K*M0.power*(0.85 + rng()*0.3)*12;
     const av = {soft:f0*MSL_VS.soft, armored:f0*MSL_VS.armored, air:f0*MSL_VS.air, naval:f0*MSL_VS.naval}; for (const b of defs){ hurt(b, av, bunkerF(b, m.to)/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }   // (the garrison's Bunker)
   let wrecked = '';
-  if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)], h = bldHit(m.to, k); bunkerNews(m.to, [h], 'Ballistic missile'); if (h.lost && !h.bunker) wrecked = BUILD[k].name; } }
+  if (m.k === 'bm' && S.owner[m.to] >= 0 && landHit){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)], h = bldHit(m.to, k); bunkerNews(m.to, [h], 'Ballistic missile'); if (h.lost && !h.bunker) wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
   IM.emit('fxMissile', {m, hit:true, dealt, owner:S.owner[m.to]});
   const where = P.cityName || P.name;
