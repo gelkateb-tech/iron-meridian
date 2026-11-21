@@ -73,7 +73,8 @@ function* tickHourG(){
     for (const a of S.armies) if (a.to !== null && !a.air && !a.fly && count(a)){ const k = ek(a.at, a.to), l = edge.get(k); if (l) l.push(a); else edge.set(k, [a]); }
     for (const a of S.armies){ if (a.to === null || a.air || a.fly || !count(a)) continue; const opp = edge.get(ek(a.to, a.at)); if (!opp) continue;
       const b = opp.find(x => x.to !== null && atWar(a.owner, x.owner) && a.t + x.t >= 1); if (!b) continue;
-      const meet = a.t >= 0.5 ? a.to : a.at, [mx, my] = legSpot(a);
+      // on a leg between sea and land the columns meet on the water (troops on such a leg are still aboard: they come ashore only by a landing, EMB-2)
+      const sl = !!G.P[a.at].sea !== !!G.P[a.to].sea, meet = sl ? (G.P[a.at].sea ? a.at : a.to) : a.t >= 0.5 ? a.to : a.at, [mx, my] = legSpot(a);
       for (const x of [a, b]){ x.from = x.at; atMove(x, meet); delete x.hrt; x.to = null; x.t = 0; x.path = []; x.legFrom = null; x.dest = null; if (x.wp) delete x.wp; x.pos = ptIn(meet, (mx + G.P[meet].x)/2, (my + G.P[meet].y)/2); x.forced = false; }
       for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[meet].cityName || G.P[meet].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', meet); } }
   // a seat's forces that arrive where another idle force of its own stands join it (same kind: ground with ground, fleets with fleets), as long as
