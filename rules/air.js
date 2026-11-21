@@ -260,7 +260,9 @@ function airTick(){
     if (a.air.car != null){ const cv = armyById(a.air.car); if (cv && cv.u.carr > 0){ if (!a.fly){ a.air.base = cv.at; atMove(a, cv.at); } else a.air.base = cv.to ?? cv.at; }   // (then on: rearm and deck repairs, or the flight)
       else {
       a.air.car = null; const nb = nearestAirbase(a.owner, a.at); if (nb >= 0){ a.air.base = nb; if (!a.fly){ atMove(a, nb); } if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} lost its carrier and diverted to ${G.P[nb].cityName || G.P[nb].name}.`, 'bad', nb); } else for (const t of UT) a.u[t] = 0; } }
-    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; else if (a.air.wear){ a.air.wear = Math.max(0, a.air.wear - maintRate(a)/24); if (a.air.wear < 1e-4) delete a.air.wear; } if (!G.P[a.air.base].sea && S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; atMove(a, nb); } continue; }
+    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; else if (a.air.wear){ a.air.wear = Math.max(0, a.air.wear - maintRate(a)/24); if (a.air.wear < 1e-4) delete a.air.wear; } if (!G.P[a.air.base].sea && S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; atMove(a, nb); }
+      if (a.air.car == null && a.at !== a.air.base) atMove(a, a.air.base);   // (a wing left over the sea when its carrier sank: a save from before this was fixed)
+      continue; }
     const f = a.fly, B = G.P[a.air.base], T = G.P[f.tgt], dist = Math.max(1, hexDist(B.cc, T.cc)), dt = wingSpd(a)/dist;
     if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (isSeat(a.owner)) tell(a.owner, `Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
@@ -280,7 +282,7 @@ function airTick(){
         if (f.kind === 'hunt' && ++f.nx >= 3){ f.nx = 0; mpaHunt(a, f.tgt); if (!count(a)) continue; }
         if (f.kind === 'recon' && f.salvo > 0 && f.hrs === Math.ceil((f.h0 || 12)/2)){ f.salvo--; uavSalvo(a, f.tgt); if (!count(a)) continue; } }
       if (--f.hrs <= 0){ f.ph = 'back'; f.t = 0; visCache = null; } }
-    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (a.air.car != null){ atMove(a, a.air.base); } else if (S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; atMove(a, nb); } } } }
+    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (a.air.car != null){ atMove(a, a.air.base); } else if (S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; atMove(a, nb); } } else if (a.at !== a.air.base) atMove(a, a.air.base); } }   // (the last: a carrier wing whose carrier sank while it flew lands at the base it was given)
   }
   removeEmpty();
 }
