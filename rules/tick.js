@@ -31,6 +31,7 @@ function* tickHourG(){
     // the part of this hour the force has to move in (hr): all of it, or what is left once a landing from the sea ends within the hour (rules/movement.js
     // landStep: a 45-minute landing leaves 15 minutes to walk, march on or capture); a boarding in a port takes its share below (embStep)
     let hr = landStep(a);
+    if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js; before the checks below, so the next stop's route gets them like any route)
     if (a.to === null && a.path.length && !canEnter(a.owner, a.path[0])){ if (isSeat(a.owner)) tell(a.owner, `Your force halted: ${placeOwner(a.path[0])} is not open to you.`, 'info', a.at); a.path = []; if (a.wp) delete a.wp; }
     if (a.to === null && a.path.length && shipsN(a) && !shipsOnly(a) && !portOk(a.owner, a.path[0])){
       const f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
@@ -45,7 +46,6 @@ function* tickHourG(){
     if (NAVAL_CITIES && a.to === null && a.path.length && G.P[a.at].sea && !G.P[a.path[0]].sea && !a.oldLand && ground(a) && !landOk(a, a.path[0])){ const dest = a.path[a.path.length - 1]; a.path = pathFor(a, a.at, dest);
       if (!a.path.length){ a.dest = null; if (a.wp) delete a.wp; if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} stays at sea: ${G.P[dest].cityName || G.P[dest].name} has no naval city to land at on the way. Troops come ashore only at a naval city; Marines land on any coast.`, 'info', a.at); } }
     if (a.emb != null && !embLeg(a)) delete a.emb;   // (no longer about to board: the embarking starts again next time)
-    if (a.wp && a.to === null && !a.path.length && !a.sail) stopNext(a);   // waypoints: a force at its stop sets off for the next one (rules/movement.js)
     if (a.sail){ if (a.path.length){ a.pos = sailXY(a); delete a.sail; } else { sailHour(a, hr); continue; } }   // (a force walking, or a fleet sailing, to a spot inside its province: rules/movement.js)
     let e = -1;
     if (a.to === null && a.path.length && canProceed(a) && (e = embStep(a, hr)) >= 0){ hr = e; a.legFrom = a.pos || null; a.pos = null; a.to = a.path.shift(); a.t = 0; a.forced = false;   // (boarding ships: what is left of the hour once aboard)
