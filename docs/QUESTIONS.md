@@ -125,3 +125,78 @@ wing's mission from where it took off.
 **Options.** **A: allowed (the carrier is the base; nothing new)** / B: a carrier wing's return is limited to its range, and a wing that
 cannot reach the carrier lands at the nearest own base.
 **Until you answer.** A (what the fixed code does).
+
+## Q15. Should warships docked in a port count as its garrison and stop land forces from taking it?   (round 2)
+
+**Why it matters.** Today they do, land units barely hurt them and they barely hurt back, so one frigate holds a port for good (600 h against
+18 units; 10 AI cases / 597 h on 2 seeds). IMP-14.
+**Options.** **A: no: docked ships sortie to sea when the port falls (try `idea/port-sortie`)** / B: they defend, but as soft targets / C: they
+are captured or scuttled.
+**Until you answer.** A is only on the prototype branch `idea/port-sortie` (d7a2ea0, not merged); auto-test/fixes keeps today's rule (ships
+hold the port).
+
+## Q16. May fleets pass between neighbouring port cities over land (canals such as Kiel, Corinth), or only by sea?   (round 2)
+
+**Why it matters.** MR2-01: all 187 neighbouring port pairs are land shortcuts for fleets today (Ipoh → Kuantan across Malaya, Carlisle →
+Leeds across England). Suez and Panama are already sea links (MAP-8).
+**Options.** **A: only by sea; Suez and Panama as they are** / B: also a short list of canals (name them).
+**Until you answer.** A: fixed as a bug on auto-test/fixes (a9e2226, MOV-4): fleets sail over water only, no canal shortcuts. Name any
+canals you want and they can be added as allowed pairs.
+
+## Q17. Should artillery and warships be able to fire at independent garrisons?   (round 2)
+
+**Why it matters.** rangedFoe requires an owner ≥ 0, so ranged fire never aims at independents although land battles with them happen
+(m19.js: 4 artillery next to Tartu, 0 targets). Independent land is then harder to take than enemy land.
+**Options.** **A: yes, like any enemy at war** / B: no (keeps the AI from wasting fire on rebels).
+**Until you answer.** Unchanged (no ranged fire at independents).
+
+## Q18. Paratroopers in the air when peace is made or the target changes hands: abort, land at home, or drop anyway?   (round 2; extends Q8)
+
+**Why it matters.** MR2-06: they drop into a nation at peace and are walked home within 6 h by strandedHour.
+**Options.** **A: abort and land back at the airbase (same answer as Q8 A)** / B: drop anyway (today).
+**Until you answer.** A: fixed as a bug on auto-test/fixes (9c3af00): the drop is called off and the paratroopers stay at their airbase,
+with a dispatch. The same happens when the target changed hands to a nation they are not at war with; otherwise they drop as before.
+
+## Q19. A captured missile silo: does its stock pass to the captor, and may the captor fire missiles it has not researched?   (round 2)
+
+**Why it matters.** ECO-R2-Q1: the US took Krasnoyarsk (2 ballistic, 1 cruise) with no missile research and fired a ballistic missile; capture()
+clears the queue and construction but not `S.mstock[p]`.
+**Options.** **A: the stock is destroyed on capture** / B: it passes to the captor, fired only with the research / C: it passes and may be fired
+(today).
+**Until you answer.** Unchanged.
+
+## Q20. Should the coalition-offensive reward ($150M) come out of the leader's treasury?   (round 2)
+
+**Why it matters.** ECO-R2-Q2: diplomacy.js:229 creates the money; the message says "$150M from <leader>", who pays nothing.
+**Options.** **A: the leader pays; no reward if it cannot** / B: keep it created (a coalition bonus); fix the message.
+**Until you answer.** Unchanged.
+
+## Q21. What should an empty treasury do?   (round 2)
+
+**Why it matters.** IMP-15: nothing reads it; Thailand left about $2B of upkeep unpaid over 60 days at full strength; a person can do the same.
+**Options.** **A: forces lose 5 morale a day while upkeep is unpaid (floor 30); the AI disbands its weakest units after 3 days** / B: disband
+the dearest units / C: debt, no new orders until repaid / D: nothing (today).
+**Until you answer.** Unchanged.
+
+## Q22. The day number rolls over at 10:00 (the game's start hour) while the calendar date changes at midnight: align them?   (round 2)
+
+**Why it matters.** P2-14: at hour 43 the top bar shows day 2 at 05:00 on the third calendar date; research says "opens on day 3", trade
+routes "end at 0:00". RES-2 fixes the day as 1 + floor(hours/24), so the rule stays.
+**Options.** **A: display only: start the game clock at 00:00 so day and date turn together** / B: show only "Day N, hh:00" (drop the date) /
+C: keep.
+**Until you answer.** Unchanged.
+
+## Q23. One confirm style for war everywhere?   (round 2)
+
+**Why it matters.** P2-15: a move across a border opens a clear "DECLARE WAR?" dialog; Diplomacy's Declare war only relabels its button for
+3 s, which a phone user does not see (the first tap looks dead).
+**Options.** **A: the same dialog in both places (with IMP-5's empty-border-cities list)** / B: keep both.
+**Until you answer.** B. The phone menu is fixed (0298973: the menu stays on screen and "Confirm war?" shows); the two styles stay.
+
+## Q24. In a surprise war, should an ally of both sides join against the attacker?   (round 2)
+
+**Why it matters.** ECO-R2-8 (rejected as a bug): surpriseWar's skip list leaves out allies while startWar includes them, so a common ally
+turns on the surprise attacker; each seat gets a dispatch.
+**Options.** **A: yes, keep it (betrayal has a price)** / B: a common ally stays out, as in a declared war.
+**Until you answer.** Unchanged.
+

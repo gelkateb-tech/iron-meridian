@@ -239,6 +239,174 @@ To watch: stuck-force 30 → 48 on 3x60 (war and AI dynamics; re-check). Screens
 fix step; 13 ideas). Q1 follow-up: the first-day landing penalty is now checked by script (t5: an assault is stamped and penalised for
 24 h; t1: ships no longer are).
 
+## Round 2   (2026-11-21; fixes on auto-test/fixes a9e2226..927796a, docs in the commit after)
+
+**Runs.** (scratch reports under scratchpad `autotest/round2/`, not committed)
+- Military hunter: `headless.js --seeds 2007,3016,4025,5034 --days 90 --invariants --stats --provoke 3 --jobs 2`; the test-only order fuzz
+  (`mil/s/fuzz.js`, as in round 1); probes `mil/s/m1-m21.js`, `scan.js` (AI games: fleet legs, ports held by ships, fleets in enemy ports),
+  replays `rp.js`.
+- Economy hunter: `headless.js --seeds 2500,2501,2502,2503 --days 100 --invariants --stats --provoke 3 --jobs 2` (983.6 s wall; rules 895 ms
+  CPU per game day, observer 269) → `eco/long4x100.json`; probes `eco/p/` (order book, spies, annexation, missiles, API edges, surprise
+  war, a trading seat over 40 days, a money/goods ledger over 30 days); old saves: a public-v3.11 save made with Playwright from tag
+  `public-v3.11` (seed 2500, day 20), a v1 save, the round-1 v3.12 save, save-v38 and a pre-auto-test world64 mid-war save, each loaded and
+  played 10-15 days.
+- Player hunter: Playwright on `.test/page.html`: USA on desktop 1440x900; Israel and Vietnam on a phone 440x900 at 2x with touch and CPU 4x
+  throttle; CDP profiles; driver `player/drv/`, screenshots `player/*.png`.
+- Verifier: every bug re-run from its repro (`v_*.txt`).
+- Advisor: read-only what-ifs `adv/` (port.js, port2.js, port3.js, bk.js; rules patched in memory only).
+- Fixer, after each fix: split-lint, mkpage + split-golden 10 12345, headless --check, --selftest, --scenarios, nations-balance --quick,
+  stack-duel, eco-check, old saves. Before/after: `headless.js --games 3 --days 60 --invariants --stats --provoke 3 --jobs 2 --check` (seeds
+  12345, 13354, 14363): `fix/base0.*` on the round-1 head, `fix/after.*` on the round-2 rules (341 s wall).
+- Prototype builder: `proto/` (port-sortie checker, port2.js on the real code, headless 3x60 master v branch, page driver, old saves).
+
+**Checks (head 927796a).** split-lint OK; split-golden 10 12345: GOLDEN same, no errors (changed on purpose once, in d0c02b2, from day 6;
+'rs' the same through day 7); headless --check DETERMINISTIC; --selftest OK, 52 of 52 flagged (new mutant "fleet route over land");
+--scenarios 37/41 with the 4 known warnings, 0 failed; nations-balance --quick ALL PASS; stack-duel OK (11); eco-check: only the known FAIL
+"an Arms Industry must not raise the Army Base price: 18"; old saves (pre-auto-test world64 s2501 d30, v1 s2500 d15, v3.11 s2500 d20) load
+and play with no error. Build not run this round.
+
+**Found, confirmed and fixed** (one commit each on auto-test/fixes; verified by repro before and after):
+- B2.1 Fleets sail over land between neighbouring port cities, also across peninsulas into another sea (MR2-01) | pathFor's ships-only
+  filter checked only the far end of a leg; tick.js split ships off a mixed force only when the next port was not portOk; 187 neighbouring
+  port pairs on the map; Trondheim → Oslo docked after 12 h over land, Ipoh → Kuantan across Malaya in 6 h; AI cases (Pakistan, Italy, South
+  Korea) | fixed in **a9e2226** (findPath `wet` flag for ships-only routes and surprisePath; a tick.js guard splits ships off before a
+  land-to-land leg and makes a fleet re-plan or stop; new invariant `ship-on-land-leg` and selftest mutant). Trondheim → Oslo now by sea,
+  60 h; the frigate stays in Hamburg in m5. Golden unchanged.
+- B2.2 A ships-only group split off a mixed force keeps the troops' inland route (MR2-K1 = B1.17 from round 1) | splitPlan copied a.path |
+  fixed in **7ab8826** (the ships part plans its own sea route; safety net beside B2.1). m20: no frigate in Cologne.
+- B2.3 Old saves from before NAVAL CITIES (public v3.11/v3.12): ships on a coast that is not a naval city stay there for good, ships-only
+  fleets walk saved land routes (ECO-R2-1) | restore()'s migration skipped every force with ships | fixed in **f2e7703** (on load, such
+  ships put out to the sea zone beside them and re-plan over water; a mixed force's ships become their own fleet; only saves without
+  `S.nc`). save311 15-day play: ship-on-land 8 → 1 (the one left: 2 submarines saved under way on a 55 h boarding leg; it ends at sea).
+- B2.4 A head-on clash on a sea-to-port leg puts invading troops ashore with no landing timer, no first-day stamp, no −5 morale (MR2-03) |
+  tick.js clash block moved both columns to the leg's end with atMove | fixed in **27ccf9d** (on a sea↔land leg the clash is fought at the
+  sea end). m2: the invader fights at sea.
+- B2.5 A carrier wing in flight when its carrier sinks gets a land base on paper and stays in the sea zone for good (MR2-04) | air.js 'back'
+  branch moved the wing only while it had a carrier | fixed in **3113f4f** (it flies back to its new base; the idle branch also recovers
+  wings already stranded in saves). m8: wing at Kokkola.
+- B2.6 A fleet heading home docks in its port after the enemy took it mid-voyage, then sits in an enemy port (MR2-05) | only canEnter was
+  re-checked on the way | fixed in **c3bc1ad** (it turns back on the water, with a message). m16: no Norwegian fleet in Finnish Tromsø.
+- B2.7 Paratroopers in the air land in a nation that made peace while they flew (MR2-06) | dropTick had no war re-check (B1.6 covered
+  missiles and strikes only) | fixed in **9c3af00** (the drop is called off, the force stays at its airbase; no rng drawn; Q8/Q18 answer A).
+- B2.8 A sated AI nation's forces stay stuck in independent land they may not take (MR2-K2, the gap in B1.2) | ai.js skipped `o < 0` |
+  fixed in **ff24881** (they head home too). Golden may change; it did not.
+- B2.9 A person's buy offer pays for goods past the storage cap; the excess is destroyed at the next daily step (~$803M in the probe)
+  (ECO-R2-2) | economy.js bookDay had no room check when the AI sells into a seat's bid | fixed in **fe149c1** (capped by the free room; the
+  rng draw count unchanged).
+- B2.10 An agent's operation finishes on whatever the province is now: after its own nation takes the target it sabotages its own Army Base
+  (ECO-R2-3) | diplomacy.js spyHour never checked o === n | fixed in **1b3c5f1** (called off with a message, before the rng roll).
+- B2.11 Annexation after a nation falls marks the annexer's own home provinces as occupied (output 25%, rising over 10 days) (ECO-R2-4) |
+  state.js checkNation set S.occ for every province | fixed in **669ef55** (home land: occ null, unrest 0, as capture does).
+- B2.12 (Known baseline force-in-closed-land) a third nation's capture leaves forces of nations at peace with it in the new province until
+  strandedHour (MR2-K3a; seen by the player as Egypt's army parked in Israel's new West Bank, P2-10) | combat.js capture() | fixed in
+  **d0c02b2** (capture() sends home idle ground forces of nations at peace with the new holder and not friendly; golden updated in the same
+  commit, it differs from day 6). Harness in the same commit: force-in-closed-land flagged only for an idle force after more than 6 h.
+- B2.13 (Known baseline convoy-state) raid orders stay on fleets after their trade route ended; blockade orders stay on forces that are no
+  longer fleets (MR2-K3b) | trade.js trEnded, movement.js merge | fixed in **ad4b714**.
+- B2.14 (Known) IM.emit passes 4 arguments, fxRanged sends 6: the page never got the aim point or kill details (MR2-K3c) | rules/core.js |
+  fixed in **3ff912d** (up to six values). Golden unchanged.
+- B2.15 (Harness, known MIL-R1-T1) stuck-force counted battle hours, so a force was flagged the hour a long battle ended ("no reason found")
+  (MR2-K3d) | tools/headless.js | fixed in **da4f05f** (the clock resets during battle hours; the selftest mutant is still caught).
+- B2.16 IM.api launchMissile fires from another nation's silo (the US fired Canada's cruise missile from Toronto) (ECO-R2-5) | air.js
+  missileCheck | fixed in **a8fa21c** ("Not your silo."). API-only, B1.13 family.
+- B2.17 IM.api dealOK/applyTrade accept negative amounts (a seat's money to −$4,750M) (ECO-R2-6) | diplomacy.js | fixed in **7ef33e8**
+  (amounts must be finite and ≥ 0; applyTrade checks dealOK first). API-only.
+- B2.18 A design stolen by an agent while the same level is being researched: the paid project then gives nothing (ECO-R2-7) | diplomacy.js
+  steal filter | fixed in **aecb447** (a design being researched is not stolen; the rng pick count unchanged).
+- B2.19 Speed button tooltips say "game minutes" where they mean game hours (P2-03) | index.html | fixed in **67c950f**.
+- B2.20 "1 sea zones" on sea trade routes (P2-06) | index.html | fixed in **0d102e2** (pluN).
+- B2.21 The move hint says "Tap X again or press Send to march" while Send is disabled (no naval city to land at) (P2-04) | index.html |
+  fixed in **c58af78** (the hint gives the no-route reason).
+- B2.22 Phone: the Diplomacy "More ▾" menu opens off the left edge; Declare war, passage, alliance, trade route and Embargo are cut off and
+  the two-tap "Confirm war?" is invisible (P2-01) | index.html `.morebox{right:0}` on a wrapped row | fixed in **0298973** (anchored left on
+  phones; Playwright at 360/400/440 px all buttons and "Confirm war?" visible; 1300 px desktop unchanged).
+- B2.23 Phone: own force counters drawn in a neighbouring country (Israeli divisions in Sinai and Jordan) (P2-02) | index.html counter
+  layout (tmGround): a foreign spot cost less than the overlap sum | fixed in **927796a** (a spot in foreign land, at sea or over a border is
+  dropped whenever a spot in the holder's own land exists). Israel zoom 8: 2 counters abroad → 0; Vietnam zoom 6: 0 → 0. Not hands-off
+  (counter layout, not map drawing).
+
+**Found, not fixed this round** (found after the fix step; not yet verified; round 3):
+- B2.24 A ships-only force that routs is sent to the nearest supplied own **land** province: "1st Submarine Flotilla broke at Norwegian Sea
+  IV and is retreating to Muonio" (inland) | prototype builder in the page (Russia seat, world64, seed 2007, on master); rules/movement.js
+  ~540-547 rout target ignores ships | on auto-test/fixes the B2.1 guard probably keeps the ship on the water, but the dispatch is false;
+  re-check there and pick the nearest own port or sea zone.
+- B2.25 Drawing Diplomacy changes rule state: the page calls blocs(), which writes `S.blocReg` and can `tell()` a seat "form the …"
+  (rules/diplomacy.js:197-207), so opening the screen moves coalition registration and dispatch timing (UI-1) | advisor, from the player
+  hunter's profile (P2-05) | verify in round 3; the IMP-17 split (pure read + `blocSync` in the hourly step) fixes it and the 1.5 s open.
+- Residual: save311 keeps 1 ship-on-land (2 submarines saved mid-way on a 55 h boarding leg; they end at sea). Harmless; noted under B2.3.
+
+**Skipped.** None: the verifier confirmed 23 bugs and each has its own commit (B2.1-B2.23).
+
+**Rejected (not bugs), and where they went.**
+- MR2-02 one docked frigate holds a port for good against any land army: a design reading (docked ships count as defenders; land units do
+  x0.2-0.3 to ships, data.js CLASS_M) → IMP-14 (prototyped) and Q15.
+- MR2-07 a drop is accepted while landing or boarding: no broken state (timers carry on, no stuck state, no AI impact) → IMP-13 (j).
+- ECO-R2-8 a common ally turns on a surprise attacker: fits the betrayal theme and each seat gets a dispatch → Q24.
+- MR2-K3 parts war-with-fallen-nation and save-load S.bt: harmless (warsOf filters fallen nations, which never revive; restore resets S.bt
+  with S.battles on purpose, battles restart after a load) → harness noise, IMP-20.
+- ECO-R2-K1 known baseline items re-seen on 4x100 (410 distinct, 6 kinds, no new kind): the round-2 regression baseline.
+- P2-10 Egypt's army idle in Israel's new West Bank: the same root as MR2-K3a, fixed in B2.12.
+- Ideas and questions passed on, not bugs: IMP-R2-1 → IMP-14, IMP-R2-2 → IMP-19, IMP-R2-3 → IMP-20, ECO-R2-I1 → IMP-15, ECO-R2-I2 →
+  IMP-16, P2-05 → IMP-17, P2-13 → IMP-18, P2-07/08/09 → IMP-13 (g)-(i); Q-R2-1..4 → Q15-Q18, ECO-R2-Q1..3 → Q19-Q21, P2-14 → Q22, P2-15 → Q23.
+
+**Hands-off.** P2-11 (older-phone frame rate with the clock running, mostly map drawing) → map job, row 2 below (update of row 1); P2-12
+(Phnom Penh is not a city) → cities job, row 3; the Research screen opens in 1.2 s on the throttled phone → research-screen job
+(RESEARCH-CON), row 4; docked ships still hold off rebels under the old partisan rule → rebels job, row 5. Nothing in the map, cities,
+weather, research-screen or art code was edited.
+
+**Stats (3x60, seeds 12345, 13354, 14363; before = round-1 head `fix/base0`, after = round-2 rules `fix/after`).**
+
+| Kind | Setup baseline (same seeds) | Before round 2 | After round 2 |
+|---|---|---|---|
+| Total distinct (kinds) | 233 (7) | 252 (7) | **14 (3)** |
+| force-in-closed-land | 141 | 151 (988 sightings) | **0** |
+| convoy-state | 39 | 53 (1,978) | **0** |
+| stuck-force | 42 | 25 | **0** |
+| war-with-fallen-nation | 2 | 12 (205) | 5 (117) (harmless, IMP-20) |
+| save-load-adds-empty | 6 | 6 | 6 (harmless) |
+| save-load (S.bt) | 3 | 3 | 3 (rejected, harmless) |
+| troops-idle-at-sea | 0 | 2 | 0 |
+| ship-on-land-leg (new invariant) | — | — | 0 |
+| ship-on-land, bad-timer, landed-off-port, teleported, air-out-of-range | 0 | 0 | 0 |
+
+Part of the force-in-closed-land and stuck-force drop is the harness narrowing (an idle force after more than 6 h only; battle hours not
+counted: d0c02b2, da4f05f); the rest is the capture fix (B2.12).
+- Captures 3,867 → 4,585 (+19%): forces at peace no longer block or linger in captured land, sated forces leave independent land.
+- Units: infantry 75.5% → 75.5% of units (setup 75.6%); kill/loss tanks 3.40 → 3.68, artillery 1.62 → 2.02, frigates 0.42 → 0.70, infantry
+  1.26 → 1.21. Never built: mlrs, carr, heli, para, mpa, awacs, stealth (before: mlrs, carr, heli, para, bomb, stealth; mpa and awacs were 1
+  each before, bombers 3 now); no missile fired. Interceptors 401 built, 0 kills credited (harness gap, IMP-20).
+- Ranged fire: artillery 10,854 volleys / 189 damage → 6,769 / 113; frigates 6,418 / 6 → 2,344 / 11 (fewer ships firing from inside land
+  garrisons). Air strikes: jets 80 → 114 sorties.
+- Wars: 48 (20 truces after a median 21 days) → 46 (20 truces after a median 20 days); setup baseline 77 wars in 5 games, median 21.
+- Economy: median gross money x0.99 → x0.99 day 1 → 60 (setup x0.98); median treasury $142M → $141M; manpower at the cap 53.7% → 53.4% of
+  nation-days; money used 0.99 of income. 4x100 (economy hunter): 1.2% of nation-days broke while holding over $2B of goods, 311 of 318 in
+  nations under 40 provinces (IMP-16); manpower at the cap 69.0% at 100 days (IMP-12).
+- Idle: a research slot empty a median 24% → 25% of hours; nothing under construction 65% → 63%; no force with orders 52% → 43%.
+- Rules CPU per game day 765 → 838 ms (+9.5%; the machine is shared and loaded, wall 1,820 → 2,375 ms). Check with perf.js in round 3
+  whether the `wet` path search or the new guards cost this.
+- Player: Diplomacy opens in 1.5 s on the throttled phone (IMP-17); 8x clock 4.7 fps there (map job).
+
+**Ideas.** IMP-14 to IMP-20 in docs/IMPROVEMENTS.md, ranked: IMP-14 docked warships hold a port forever (small-medium, **prototyped**),
+IMP-15 an empty treasury has no consequence (small; owner picks the rule, Q21), IMP-16 small nations' goods have no outlet, IMP-2 option 1
+measured useless (small), IMP-17 Diplomacy 1.5 s on an older phone and the page writes rule state (small), IMP-18 little to do on days 1-2
+(small text; NAT-5 and RES-2 proposals), IMP-19 march ETA up to 4 h late (small), IMP-20 harness invariants and `--fuzz` (small; three parts
+done this round), plus IMP-13 (g)-(j) and new evidence for IMP-2, 3, 6, 7, 8, 9, 11, 12. Questions Q15-Q24 in docs/QUESTIONS.md.
+
+**Prototype.** `idea/port-sortie` @ **d7a2ea0** (IMP-14 option 1; one commit on master cb1730a, never merged). Docked ships-only fleets no
+longer stop land forces or block a capture; when a port falls they sail out to its sea zone at −10 morale with a dispatch; ground defenders
+and mixed forces still hold. Tromsø cases: "held after 300 h" → taken in 22-34 h; ground defenders hold until beaten (50-52 h); all-AI
+45 days seed 4025: 43 h of ports held only by ships → 0; 3x60 harness: no new violation kind, captures +1.7%, deterministic; golden
+unchanged; old saves play. The page's move preview no longer shows "Likely defeat" against ships alone. Checker `tools/port-sortie.js`
+(branch only). Note: the rebels-sim scenario "partisans … (Tromsø) take it after a day" fails on master and the branch alike, because the
+partisan fix B1.4 is only on auto-test/fixes. Screenshots scratchpad `autotest/round2/proto/shots/`.
+
+**Note.** The advisor saw an uncommitted rules/tick.js change in this worktree during its runs (columns on a sea-land leg meet on the
+water): the fixer's B2.4 work in progress, committed in 27ccf9d. It may be in the advisor's last two `bk.js hoard7` runs only; the
+base/proto pairs ran before it.
+
+**New this round?** yes (20 new bug reports from the hunters: 17 confirmed and fixed, 3 rejected as design or polish; 6 known items fixed
+too; 2 more found after the fix step; 1 new hands-off bug; 7 ideas; 10 questions).
+
 ## Bugs for other jobs
 
 Bugs found in parts this session must not touch (owner's changes 2026-11-21, item 6): map drawing (terrain, texture, jungle, sea, borders,
@@ -248,3 +416,7 @@ session changes nothing there.
 | # | Area / job | Bug | How to see it (file:line, steps, seed) | Found in round |
 |---|---|---|---|---|
 | 1 | Map drawing (map job) | Older phone: panning at about 12 fps and the 8x clock at 13 fps (50 fps unthrottled); 67.5% of a pan profile is native canvas raster and compositing at pixel ratio 2, frame/rdDraw/draw 23-31%. Supports the owner's open "phone map drawn at pixel ratio 1.5" item. (The side-panel part is IMP-6, not the map job's.) | index.html:11774/11765/8277 (frame, rdDraw, draw). Playwright 440x900, deviceScaleFactor 2, touch, CDP `Emulation.setCPUThrottlingRate` 4, Brazil, 4 touch drags; driver scratchpad `autotest/round1/player/drv/server.js --phone` (P1-05) | 1 |
+| 2 | Map drawing (map job) | Update of row 1, round 2: older phone with the clock running, Israel at zoom 5, CPU 4x: 1x clock 9.1 fps (median frame 117 ms), 8x 4.7 fps (233 ms, longest task 350 ms), paused 28 fps; unthrottled 43.8 / 22.2 / 29 fps. Profile at 8x: drawImage 42.7% self, frame→rdDraw→draw 55% inclusive, drawSeaSurface→drawImage 10.5%; the rules (tickQSlice) only 3.4%, so the 8x slowdown is drawing. Machine load 4-8 on 4 cores, so absolute numbers are lower than round 1. | index.html draw / drawSeaSurface. Phone driver scratchpad `autotest/round2/player/drv/server.js --phone`, CDP `Emulation.setCPUThrottlingRate` 4, click #sp4, Profiler 10 s (P2-11) | 2 |
+| 3 | Cities / map data (cities job) | Phnom Penh, Cambodia's capital, is not a city: `G.P[2227]` city=false, cityName ''; the nearest label is Vietnam's "Ho Chi Minh City" 14 world px east, so a route to Phnom Penh ends beside the "Ho Chi Minh City" label. The province name "Hồ Chí Minh city" (2245) also has a lowercase "city". | Start as Vietnam, read `__im.G.P[2227]`; select a force and Move to Phnom Penh (scratchpad `autotest/round2/player/vn-ph-target-phnompenh.png`) (P2-12) | 2 |
+| 4 | Research screen (RESEARCH-CON job) | The Research screen takes 1,214 ms from tap to visible on an older phone (440 px at 2x, CPU 4x, Israel day 2), against Market 732 ms and Cities 569 ms. Worth a budget in the rebuild (PRF-5). | Phone driver as row 2, Profiler.start, tap the Research tab, wait for the modal (P2-05) | 2 |
+| 5 | Rebels (REBELS job, branch rebels) | Under the old partisan rule, docked enemy ships still hold a port against rebels (owner −1): seed 4025 Dublin and Ahvaz 372 h, seed 2007 Dublin 130 h, the rebels never take it. Not changed here (REB-2: the rebels branch replaces the rule); check that the new rule does not let a docked fleet hold a city against rebels. | Advisor scratchpad `autotest/round2/adv/port3.js 4025` and the prototype's `proto/port2.js` (IMP-14) | 2 |
