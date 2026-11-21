@@ -9735,7 +9735,7 @@ const RCNT = {}; let rcntRaf = 0;
 // compact like CoN's strip: below 1,000 the plain figure, then one decimal under 10 of the next unit ('3.2B', '4.5k'), whole numbers above ('53k', '249k')
 const RES_UNITS = {cash:['M', 'B', 'T'], mp:['k', 'M', 'B']};
 // a day's change as a chip shows it (+34K, -1.2K; money and manpower as before) and a resource chip's tooltip: the full amount with its unit
-const resDay = (k, d) => isGood(k) ? (d >= 0 ? '+' : '') + fmtQ(d) : (d >= 0 ? '+' : '') + fmt(d);
+const resDay = (k, d) => { if (isGood(k)) return (d >= 0 ? '+' : '') + fmtQ(d); const R = RES.find(x => x.k === k); return (d >= 0 ? '+' : '-') + R.pre + fmt(Math.abs(d)) + R.unit; };   // (money and manpower with their units, as the stock beside: +$278M, +56k)
 const resChipTip = (k, v, d) => { const R = RES.find(x => x.k === k); return isGood(k) ? `${resFull(k, v)}, ${d >= 0 ? '+' : '-'}${fmt(Math.abs(d))} a day` : `${R.name}: ${R.pre}${fmt(v)}${R.unit}${k === 'mp' ? ` (${resFull('mp', v)})` : ''}, ${d >= 0 ? '+' : ''}${fmt1(d)}${R.unit} a day`; };
 function resText(R, v){ if (isGood(R.k)) return fmtQ(v); const a = Math.abs(v); if (a < 1000) return R.pre + fmt(v) + R.unit; const U = RES_UNITS[R.k] || ['', 'k', 'M']; let q = v, i = 0;
   while (Math.abs(q) >= 1000 && i < U.length - 1){ q /= 1000; i++; }
