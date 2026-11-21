@@ -256,6 +256,7 @@ function restore(data){
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
+  for (const a of S.armies){ if (a.raid && a.raid.r != null && !routeById(a.raid.r)) delete a.raid; if (a.blk && !shipsOnly(a)) delete a.blk; }   // (saves from before these orders were dropped with their route or fleet: rules/trade.js trEnded, movement.js merge)
   for (const N of S.nations) if (N.ai === undefined) N.ai = N.id !== 0;   // (every save so far carries the flag: nation 0 is the seat of a one-player game)
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
   for (const me of seats()){ const D = desk(me); if (D.sunOff == null) D.sunOff = sunOffFor(me); }   // older saves: the same display-only daylight offset
