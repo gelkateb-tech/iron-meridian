@@ -20,6 +20,10 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
+| **SEA MIX** (2026-11-21) | sea B as default plus three blends of the original sea colour (patches / by region / by depth); critique, repair, sheets; NOTHING merged | Opus | map-sea-mix |
+| **JUNGLE C REWORK** (2026-11-21) | rework jungle C from the owner's Google Earth screenshots (game look, not photo-real); art and tech critique, repair, sheets; NOTHING merged | Opus | map-jungle-c |
+| **TEXTURE EXPLAIN** (2026-11-21) | pictures only: the texture fix before/after, items 4, 5, 7, 8 one at a time and together | Opus | none |
+| **AUTOTEST** (2026-11-21) | autonomous playtest session (owner brief quoted in each workflow): rollback point pre-auto-test (tag local, branch on origin) at 2dc5573; setup (DECISIONS.md, LATER.md section, headless harness, sanity breaks), then up to 5 rounds: bug fixes straight to master one at a time, IMPROVEMENTS.md, prototypes on idea/* branches (never merged), ROUND_LOG.md, QUESTIONS.md | Opus | autotest -> master, idea/* |
 
 ## Next free slots (in this order)
 
