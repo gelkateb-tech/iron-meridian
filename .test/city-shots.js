@@ -2,7 +2,8 @@
 // stopped, the side panel closed, no toasts, no forces on the map (S.armies emptied: a town is shown, not the troops), no storms, Math.random
 // seeded (both pages start the same game and weather). Each shot: the town centred at hexPx, its own tier (and every town's over the crop)
 // made, the map settled; clip CROPxCROP*0.7 CSS px round the centre, at dpr 2.
-//   node .test/city-shots.js <outdir> <tag> City:hexPx[:d|n] ...   (PAGE=page-before.html for the old page; PHONE=1 for a phone profile)
+//   node .test/city-shots.js <outdir> <tag> City:hexPx[:d|n] ...   (PAGE=page-before.html for the old page; PHONE=1 for a phone profile;
+//   PRE='js' run once with im = window.__im after the game starts; CROP css px wide, 0.7 of it high)
 const { chromium, devices } = require('playwright'); const path = require('path'); const pickNation = require('./pick-nation.js');
 (async () => { const out = process.argv[2], tag = process.argv[3], shots = process.argv.slice(4).map(a => a.split(':')), PHONE = !!process.env.PHONE, errs = [];
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
@@ -19,6 +20,7 @@ const { chromium, devices } = require('playwright'); const path = require('path'
   await p.waitForTimeout(3000);
   await p.evaluate(() => { const im = window.__im; im.S.speed = 0; im.S.storms = []; im.S.armies.length = 0; im.SET.tipsOff = true; im.SET.cityLights = true; im.SET.saver = false; document.querySelectorAll('.toast').forEach(t => t.remove());
     const x = document.querySelector('[data-act="side-x"]'); if (x && x.offsetParent) x.click(); });
+  if (process.env.PRE) await p.evaluate(src => { new Function('im', src)(window.__im); }, process.env.PRE);   // (a shot's own setup, the same on both pages: e.g. buildings for the follow-up sheet)
   const crop = +(process.env.CROP || (PHONE ? 400 : 600)), res = [];
   for (const [nm, hx0, dn] of shots){ const hx = +hx0, night = dn === 'n';
     await p.evaluate(([nm, night]) => { const im = window.__im, S = im.S, P = im.G.P.find(q => q.cityName === nm), h0 = 24*10; let bh = h0, be = night ? 9 : -9;
