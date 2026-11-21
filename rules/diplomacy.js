@@ -158,7 +158,7 @@ function acceptOffer(ai, from, kind){
   if (kind === 'pass') return op >= 25 ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs 25`};
   if (kind === 'ally'){
     if (alliesOf(ai).length >= 3 || alliesOf(from).length >= 3) return {ok:false, why:'too many allies'};
-    { const Ba = blocOf(ai), Bf = blocOf(from); if (Ba !== Bf && (Ba ? Ba.members.length : 1) + (Bf ? Bf.members.length : 1) > 4) return {ok:false, why:'their coalition is full (4 members)'}; }
+    { const Ba = blocOfView(ai), Bf = blocOfView(from); if (Ba !== Bf && (Ba ? Ba.members.length : 1) + (Bf ? Bf.members.length : 1) > 4) return {ok:false, why:'their coalition is full (4 members)'}; }
     const common = S.nations.some(c => c.alive && c.id !== ai && c.id !== from && atWar(ai, c.id) && atWar(from, c.id));
     if (!common) return {ok:false, why:'no common enemy'};
     if (score(from) > 2*score(ai)) return {ok:false, why:'they fear your size'};
@@ -206,6 +206,18 @@ function blocs(){ const seen = new Set(), out = [];
   for (const k in reg) if (!res.some(B => B.id === k)) reg[k].members = [];   // dissolved coalitions: nobody is a member any more
   return res; }
 const blocOf = n => blocs().find(b => b.members.includes(n)) || null;
+// the same coalitions for the screen, written nowhere (UI-1): the components as blocs() finds them, with the ids and names already in
+// S.blocReg; a group blocs() has not registered yet shows with id null and the name it will get. No dispatch
+function blocsView(){ const seen = new Set(), out = [];
+  for (const N of S.nations){ if (!N.alive || seen.has(N.id) || !alliesOf(N.id).length) continue; const comp = [N.id]; seen.add(N.id);
+    for (let i = 0; i < comp.length; i++) for (const m of alliesOf(comp[i])) if (!seen.has(m)){ seen.add(m); comp.push(m); }
+    if (comp.length >= 2) out.push(comp.sort((a, b) => a - b)); }
+  const reg = S.blocReg || {}, used = new Set(Object.values(reg).map(r => r.name));
+  return out.map(m => { const leader = m.slice().sort((a, b) => score(b) - score(a))[0];
+    const id = Object.keys(reg).find(k => reg[k].members && reg[k].members.some(x => m.includes(x)) && !out.some(o => o !== m && reg[k].members.every(x => o.includes(x)))) || null;
+    const name = id ? reg[id].name : (nm => (used.add(nm), nm))(BLOC_NAMES.find(nm => !used.has(nm)) || `Coalition ${Object.keys(reg).length + 1}`);
+    return {id, name, members:m, leader, focus:id ? reg[id].focus ?? null : null}; }); }
+const blocOfView = n => blocsView().find(b => b.members.includes(n)) || null;
 function blocDay(){ const reg = S.blocReg || (S.blocReg = {}), day = Math.floor(S.hour/24);
   for (const B of blocs()){ const R = reg[B.id];
     // the leader names a common enemy: the power at war with most members, else the weakest bordering rival
@@ -345,6 +357,7 @@ function aiProposeTrade(n, me){ const DK = desk(me); if ((DK.offers || (DK.offer
   { const k = MKT_K[Math.floor(rng()*MKT_K.length)], lots = M.p[k] > 4 ? 20 : 40, q = lots*MKT_LOT; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(lots*M.p[k]*0.95); }
   if (dealOK(me, n, D)) return; DK.offers.push({id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}); say(me, n, n, `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`); }
 const sameBloc = (me, n) => { blocs(); const a = blocIdOf(me); return !!a && n !== me && a === blocIdOf(n); };   // fresh: alliances can break mid-day
+const sameBlocView = (me, n) => { const B = n !== me && blocOfView(me); return !!B && B.members.includes(n); };   // (the screen's: writes nothing)
 const GIFT_K = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'];
 const giftRoom = (n, k) => k === 'cash' ? 1e9 : k === 'mp' ? Math.max(0, Math.floor(stockCap(n, k) - S.nations[n][k])) : Math.max(0, kFloor(stockCap(n) - S.nations[n][k]));   // what the recipient can store (goods in whole RES_K)
 // nation `me` gives stocks and provinces (g) to its coalition partner n
