@@ -472,7 +472,9 @@ function embarkWhy(a, to){ if (!a || a.air || !G.P[to] || shipsOnly(a) || !groun
 function canProceed(a){
   if (a.delay > 0 || a.land > 0) return false;   // (a force still landing from the sea stays where it came ashore)
   if (a.forced) return true;
-  if ((byAt(a.at) || S.armies).some(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner) && count(b) > 0)) return false;
+  // (a fleet docked in a port does not stop a ground force on land: ships cannot hold a city, rules/combat.js sortieFleets; a fleet at sea still stops
+  // a fleet, and a fleet with troops aboard still holds the port)
+  if ((byAt(a.at) || S.armies).some(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner) && count(b) > 0 && !(shipsOnly(b) && ground(a) && !G.P[a.at].sea))) return false;
   if (!G.P[a.at].sea && S.owner[a.at] !== a.owner && ground(a) && atWar(a.owner, S.owner[a.at])) return false;
   return true;
 }

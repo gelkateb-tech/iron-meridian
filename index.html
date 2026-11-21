@@ -8884,7 +8884,7 @@ function etaChip(a){ if (a.air || a.fly) return; const st = stopsOf(a); if (!st.
   ctx.fillStyle = '#f6e7c4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 24.5); ctx.restore(); /*@TEST*/PATHDBG.eta = {txt, x:Math.round(x), y:Math.round(y)};/*@ENDTEST*/ }
 function routeChip(a, t, path){
   const v0 = visibleSet(PLAYER), foes0 = stationaryAt(t).filter(b => armyVisible(b, v0) && atWar(PLAYER, b.owner)), foes = foes0.filter(b => knowA(b, v0)), [x, y] = toScreen(G.P[t].x, G.P[t].y), rn = routeNotes(a, t, path, sel.targetPt);
-  const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${foes0.length > foes.length ? ' · ? unidentified army' : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}${rn.length ? ' · ' + rn.join(' · ') : ''}`;
+  const fw = a.air ? 0 : fightsOnWay(a, path), r = portShipsOnly(a, t, foes) ? Infinity : odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${foes0.length > foes.length ? ' · ? unidentified army' : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}${rn.length ? ' · ' + rn.join(' · ') : ''}`;
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(txt).width + 14;
   roundRect(ctx, x - w/2, y - 38, w, 20, 4); ctx.fillStyle = !foes.length ? (fw ? '#4a3a1a' : '#1b2a2e') : r >= 1.5 ? '#24452a' : r >= 0.9 ? '#4a3a1a' : '#4a1d1a'; ctx.fill();
   ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 28);
@@ -9025,7 +9025,7 @@ function tap(x, y, shift = false, long = false){
       if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; }   // (a spot in its own province or sea zone: it walks, or sails, there)
       setTarget(a, p);
       if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => knowA(b) && armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
-        if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
+        if (foes.length && !portShipsOnly(a, p, foes) && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
       if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
@@ -10518,8 +10518,11 @@ function statusText(a){
     if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${P[a.at].name}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
   return {cls:'', short:'holding', long:`Holding ${P[a.at].name}`};
 }
+// a ground force's target held only by enemy ships docked in its port: no odds to weigh (ships cannot hold a city: rules/combat.js sortieFleets)
+const portShipsOnly = (a, t, foes) => foes.length > 0 && ground(a) && capturable(a.owner, t) && foes.every(b => shipsOnly(b));
 function oddsHTML(a, t, foes){
   if (!foes.length) return G.P[t].sea || S.owner[t] === PLAYER ? '' : `<br><span class="small">No defenders seen${visibleSet(PLAYER).has(t) ? '' : ' (fog: there may be some)'}.</span>`;
+  if (portShipsOnly(a, t, foes)) return `<br><span class="small">Only ships in port: they cannot hold it. Your troops take it on reaching the city, and the fleet sails out.</span>`;
   const r = odds(a, t, foes, undefined, viaOf(a)), cls = r >= 1.5 ? 'good' : r >= 0.9 ? 'even' : 'bad', label = r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even fight' : 'Likely defeat';
   const T0 = G.P[t].sea ? null : terr(t);
   const F = frontage(t), extra = count(a) > F ? `<br><span class="small">Only ${F} of your ${count(a)} units fit this front; the rest fight at 25%. Attack from a second province to widen it.</span>` : '';
@@ -10723,7 +10726,7 @@ function armyHTML(a){
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned route</div>
       <b>${G.P[t].name}</b> · ${placeOwner(t)}${ok ? ` · about ${etaHours(a, targetPath, tgtEnd(t))} h${targetPath.some(q => G.P[q].sea) ? ' (by sea)' : ''}${(mx => mx ? ` · <span title="Share of the route by rail (×2.6, friendly lines only) and by road">${mx}</span>` : '')(a.air ? '' : mixText(routeMix(a, targetPath)))}${!a.air && riverLegs(a, targetPath).length ? (n0 => ` · crosses ${n0} river${n0 > 1 ? 's' : ''} (slower)`)(riverLegs(a, targetPath).length) : ''}` : !canEnter(PLAYER, t) ? `<br><span class="small">You are at ${REL[rel(PLAYER, S.owner[t]).st].toLowerCase()} with ${nationName(S.owner[t])}. Declare war in Diplomacy (D) to attack.</span>` : embarkWhy(a, t) ? `<br><span class="small">${embarkWhy(a, t)}</span>` : ' · no route'}${ok && routeNotes(a, t, targetPath, sel.targetPt).length ? `<br><span class="small">${routeNotes(a, t, targetPath, sel.targetPt).join(' · ')}</span>` : ''}${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? `<div class="small" style="color:var(--danger-t);margin-top:4px">⚠ This route crosses into ${sel.surprise.filter(n => !atWar(PLAYER, n)).map(nationName).join(' and ')}: sending it declares war (surprise attack).</div>` : ''}
       ${unkT && !foes.length ? '' : oddsHTML(a, t, foes)}${unkT ? '<br><span class="small" style="color:#9fd8ff">? An unidentified army is there: its strength is not in these odds. Send recon to identify it.</span>' : ''}${rkHTML}</div>
-      <div class="row">${bomb ? '<button class="btn primary" data-act="bombard" title="Fire at this target from where the force stands; it does not move">Bombard</button>' : ''}<button class="btn ${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'war' : bomb ? '' : 'primary'}" data-act="send" ${ok ? '' : 'disabled'}>${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'Attack (declares war)' : odds(a, t, foes, undefined, viaOf(a)) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
+      <div class="row">${bomb ? '<button class="btn primary" data-act="bombard" title="Fire at this target from where the force stands; it does not move">Bombard</button>' : ''}<button class="btn ${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'war' : bomb ? '' : 'primary'}" data-act="send" ${ok ? '' : 'disabled'}>${sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n)) ? 'Attack (declares war)' : !portShipsOnly(a, t, foes) && odds(a, t, foes, undefined, viaOf(a)) < 0.9 ? 'Attack anyway' : 'Send force here'}</button>
       <button class="btn" data-act="prov" data-id="${t}" ${G.P[t].sea ? 'disabled' : ''}>View province</button>
       <button class="btn" data-act="untarget">Cancel route</button></div>`;
   }

@@ -629,6 +629,7 @@ const TIER_DOWN_A = 1.6, TIER_UP = 1.3, TIER_BULLY = 2;
 const TIER_WIN_UP = 0.5;
 let DAY_LIMIT = Infinity;             // no day limit: the war runs until someone wins by land share or capitals
 const CAP_MIN = 1;                    // ground units needed to capture (one, as in Conflict of Nations; it was 2)
+const SORTIE_M = 10;                  // morale a fleet docked in a port loses when the port falls and it has to sail out (rules/combat.js sortieFleets)
 const OX = HS*SQ3/2 + 8, OY = HS + 8;
 const WORLD_W = HS*SQ3*(W + 0.5) + 16, WORLD_H = HS*1.5*(H - 1) + 2*HS + 16;
 /* ---------------- Resource scale ---------------- */

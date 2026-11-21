@@ -98,7 +98,9 @@ function* tickHourG(){
     const list = by[p], owners = new Set(list.map(a => a.owner));
     let hostileToOwner = [...owners].filter(o => o !== S.owner[p] && atWar(o, S.owner[p]));
     if (hostileToOwner.length > 1 && !hostileToOwner.some(x => hostileToOwner.some(y => x !== y && atWar(x, y)))){ const sz = o => list.filter(a => a.owner === o).reduce((s0, a) => s0 + groundN(a), 0); hostileToOwner = [hostileToOwner.sort((x, y) => sz(y) - sz(x))[0]]; }
-    if (owners.size >= 1 && hostileToOwner.length === 1 && ![...owners].some(o => o !== hostileToOwner[0] && atWar(o, hostileToOwner[0]))){
+    // (no ground defender at war with the attacker here: ships docked in the port do not hold it, they sail out when it falls, rules/combat.js
+    // sortieFleets; a fleet with troops aboard counts as a ground defender)
+    if (owners.size >= 1 && hostileToOwner.length === 1 && ![...new Set(list.filter(a => !shipsOnly(a)).map(a => a.owner))].some(o => o !== hostileToOwner[0] && atWar(o, hostileToOwner[0]))){
       const O = hostileToOwner[0];
       const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
       // (the nations world: a computer nation that has grown enough for now, isSated, takes back its own lost land but no more: in the step 4

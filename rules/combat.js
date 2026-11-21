@@ -390,10 +390,24 @@ function hurt(a, d, f){
     while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; }
     if (!a.u[t]) a.w[t] = 0; }
 }
+// the fleets docked in port p when it falls to O: ships cannot hold a city (rules/movement.js canProceed and the capture step in rules/tick.js leave
+// them out), so every ships-only force of a nation that is not O's friend sails out to the sea beside the port, its route dropped (as a sold
+// province's fleets do, rules/territory.js terrMoveOut), and loses SORTIE_M morale. With no sea beside it (a naval city always has one) it goes to
+// its owner's nearest port; with none, the ships are lost, like an air wing with no base. No randomness; nothing new is saved
+function sortieFleets(p, O){ const nm = G.P[p].cityName || G.P[p].name;
+  for (const a of S.armies){ if (a.at !== p || a.air || !shipsOnly(a) || !count(a) || a.owner === O || friendly(a.owner, O)) continue;
+    let z = G.P[p].nbs.find(v => G.P[v].sea);
+    if (z == null){ const seen = new Set([p]), q = [p]; z = -1;
+      for (let h = 0; h < q.length && z < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === a.owner && !G.P[v].sea && portOk(a.owner, v)){ z = v; break; } q.push(v); } }
+    if (z < 0){ for (const t of UT) a.u[t] = 0; if (isSeat(a.owner)) tell(a.owner, `Your fleet at ${nm} was lost: ${nationName(O)} took the port and there was no way out to sea.`, 'bad', p); continue; }
+    atMove(a, z); a.to = null; a.t = 0; a.path = []; a.pos = null; a.legFrom = null; a.dest = null; if (a.wp) delete a.wp; delete a.sail; a.forced = false;
+    a.m = Math.max(0, (a.m ?? 80) - SORTIE_M);
+    if (isSeat(a.owner)) tell(a.owner, `Your fleet sailed out of ${nm} as it fell to ${nationName(O)}.`, 'bad', z); } }
 function capture(p, O){
   const prev = S.owner[p], wasCap = isCapital(p);
   IM.emit('fxCapture', p, O, prev);   // before the owner changes: the client marks the capture on the map
   S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1); bunkerFull(p);   // (a captured bunker loses a level; the new holder now knows it)
+  sortieFleets(p, O);
   for (const a of S.armies) if (a.hrt === p) delete a.hrt;   // (the heart reached: done with, rules/movement.js atHeart)
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
