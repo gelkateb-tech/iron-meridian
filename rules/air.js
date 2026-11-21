@@ -101,6 +101,8 @@ function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:f
   return {ok:true, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))}; }
 function orderDrop(a, p){ const c = canDrop(a, p); if (!c.ok){ refuse(a.owner, c.why); return false; } a.fly = {kind:'drop', from:a.at, tgt:p, t:0, dt:AIR_SPEED/Math.max(1, c.d)}; a.path = []; cue(a.owner, 'order'); return true; }
 function dropTick(){ for (const a of S.armies){ const f = a.fly; if (!f || f.kind !== 'drop') continue; f.t += f.dt; if (f.t < 1) continue;
+    // peace made while they flew (the same test as canDrop): the drop is called off, the force never left its airbase (MOV-6; Q8 answer A)
+    { const o = S.owner[f.tgt]; if (o >= 0 && o !== a.owner && !atWar(a.owner, o)){ a.fly = null; if (isSeat(a.owner)) tell(a.owner, `Drop on ${G.P[f.tgt].cityName || G.P[f.tgt].name} called off: no longer at war with ${nationName(o)}. The paratroopers stay at ${G.P[a.at].cityName || G.P[a.at].name}.`, 'info', a.at); continue; } }
     const p = f.tgt, sams = stationaryAt(p).filter(b => atWar(a.owner, b.owner)).reduce((s0, b) => s0 + (b.u.sam || 0), 0), lossF = Math.min(0.6, sams*0.15);
     if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; if (!a.u[t]) a.w[t] = 0; else a.w[t] = Math.min(a.w[t], a.u[t]*UNITS[t].hp*0.9); }   // (the wounds go with the units lost, as on every other loss)
     a.fly = null; a.from = f.from; a.froms = [f.from]; atMove(a, p); a.to = null; a.m = Math.max(0, (a.m ?? 80) - 10); a.lastAt = null;
