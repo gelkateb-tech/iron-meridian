@@ -392,7 +392,9 @@ function tradeGen(){ const T = trS(); NEUP = null;
   T.ver = (T.ver || 0) + 1; }
 // nation n opens a route with nation b (or with the unaligned country nc), or closes its route id
 function tradeOpen(n, b, nc = null, kind = null){ if (b === n) return 'not with yourself';   // (a route of a nation with itself would make money and goods from nothing)
-  const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
+  const T = trS(), key = trKey(n, b, nc);
+  if (isSeat(n) && !T.routes.some(r => r.key === key) && routesOf(n).length >= TR_MAX) return `you can run at most ${TR_MAX} trade routes: close one first`;   // (a player's limit, NAV-4)
+  delete T.closed[key]; T.want[key] = kind || 1;
   if (T.routes.some(r => r.key === key)) return true;
   if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
   const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);
