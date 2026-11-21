@@ -269,6 +269,16 @@ function restore(data){
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
   for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
+  // saves from before NAVAL CITIES (S.nc unset): ships standing on land that is no naval city (they docked on any coast then) put out to sea: to the first sea zone next to
+  // them (else the nearest naval city of their own); ships sailing into such land stay on the water they sail from. A fleet plans its old
+  // destination again over the water; ships in a force with troops leave it as a fleet of their own (the troops stay, or land where they were going)
+  if (NAVAL_CITIES && !S.nc) for (const a of S.armies.slice()){ if (a.air || a.fly || !shipsN(a)) continue;
+    const ashore = !G.P[a.at].sea && !navalCity(a.at) && !(a.to !== null && G.P[a.to].sea), docking = G.P[a.at].sea && a.to !== null && !G.P[a.to].sea && !navalCity(a.to); if (!ashore && !docking) continue;
+    let z = docking ? a.at : G.P[a.at].nbs.find(v => G.P[v].sea); if (z === undefined){ z = -1; const seen = new Set([a.at]), Q = [a.at]; for (let i = 0; i < Q.length && z < 0; i++) for (const v of G.P[Q[i]].nbs){ if (seen.has(v)) continue; seen.add(v); if (!G.P[v].sea && navalCity(v) && S.owner[v] === a.owner){ z = v; break; } Q.push(v); } }
+    if (z < 0) continue;
+    let f = a, dest = null; if (shipsOnly(a)){ dest = a.path.length ? a.path[a.path.length - 1] : a.to; a.to = null; a.t = 0; a.legFrom = null; a.pos = null; delete a.sail; a.dest = null; if (a.wp) delete a.wp; }
+    else { f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
+    atMove(f, z); f.path = dest != null && dest !== z ? pathFor(f, z, dest) : []; }
   // saves from before NAVAL CITIES (S.nc unset): troops already at sea (or sailing out) whose route comes ashore away from a naval city still land
   // there (a.oldLand: rules/tick.js; it goes with the landing, or with a new order). A force still on land with such a route is planned again now
   // through a naval city (keeping its old route only when there is none: the hourly check then stops it at sea, with a message). A save of this
