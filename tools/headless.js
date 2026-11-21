@@ -147,7 +147,7 @@ function makeWatch(R, opts = {}){
         else { if (!a.fly && a.air.car == null && a.at !== b) flag('wing-not-at-base', o, [id], () => `wing ${id} at ${P.name} but its base is ${G.P[b].name}`);
           const f = a.fly; if (f && !flySeen.has(f)){ flySeen.add(f);
             if (!G.P[f.tgt]) flag('invalid-ref', o, [id, 'tgt'], `wing ${id} flies to province ${f.tgt}, which does not exist`);
-            else if (f.kind !== 'drop'){ const d = X.hexDist(G.P[b].cc, G.P[f.tgt].cc), r = X.wingRange(a); if (d > r + 1e-9) flag('air-out-of-range', o, [id], () => `${f.kind} mission to ${G.P[f.tgt].name}: ${d.toFixed(1)} hexes from base ${G.P[b].name}, range ${r}`); } } }
+            else if (f.kind !== 'drop'){ const b0 = a.air.car != null && G.P[a.at] ? a.at : b, d = X.hexDist(G.P[b0].cc, G.P[f.tgt].cc), r = X.wingRange(a); if (d > r + 1e-9) flag('air-out-of-range', o, [id], () => `${f.kind} mission to ${G.P[f.tgt].name}: ${d.toFixed(1)} hexes from base ${G.P[b0].name}, range ${r}`); } } }   // (a carrier wing: from where it took off, a.at; its base follows the carrier's next stop)
         const cd = a.air.cd; if (cd != null && (!Number.isFinite(cd) || cd < 0 || cd > 72)) flag('bad-timer', o, [id, 'air.cd'], `wing ${id} rearm timer ${cd}`); }
       if (a.fly && a.fly.kind === 'drop' && !flySeen.has(a.fly)){ const f = a.fly; flySeen.add(f); if (X.dropRange && G.P[f.from] && G.P[f.tgt]){ const d = X.hexDist(G.P[f.from].cc, G.P[f.tgt].cc), r = X.dropRange(a); if (d > r + 1e-9) flag('air-out-of-range', o, [id, 'drop'], `air drop ${d.toFixed(1)} hexes, reach ${r}`); } }
       // ground forces board ships only at a naval port of their own or a friend's (Marines alone anywhere) and come ashore at a naval city
