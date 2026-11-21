@@ -210,6 +210,7 @@ function trPortsOk(r){ if (r.kind === 'land') return S.owner[r.pa] === r.a && S.
   return okP(r.pa, r.a) && okP(r.pb, r.b, r.nc); }
 // why a route can no longer run (null if it can)
 function trInvalid(r){ const T = trS(), M = mkt();
+  if (r.a === r.b) return 'gone';   // (a route of a nation with itself: an old save's, from before tradeOpen refused it)
   if (!S.nations[r.a].alive || S.owner[S.nations[r.a].capital] !== r.a) return 'gone';
   if (r.b >= 0){ if (!S.nations[r.b].alive || S.owner[S.nations[r.b].capital] !== r.b) return 'gone';
     if (atWar(r.a, r.b) || S.decl.some(d => (d.by === r.a && d.to === r.b) || (d.by === r.b && d.to === r.a))) return 'war';
@@ -390,7 +391,8 @@ function tradeGen(){ const T = trS(); NEUP = null;
   for (const r of T.routes) trValue(r);
   T.ver = (T.ver || 0) + 1; }
 // nation n opens a route with nation b (or with the unaligned country nc), or closes its route id
-function tradeOpen(n, b, nc = null, kind = null){ const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
+function tradeOpen(n, b, nc = null, kind = null){ if (b === n) return 'not with yourself';   // (a route of a nation with itself would make money and goods from nothing)
+  const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
   if (T.routes.some(r => r.key === key)) return true;
   if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
   const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);
