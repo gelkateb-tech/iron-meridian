@@ -7170,8 +7170,8 @@ function* cityLightsPaint(c, I, S, X0, Y0, day){ const g = c.getContext('2d'), W
   // point, matched tier to tier; these are its detail, finer as you zoom in)
   yield; if (!I.lo){ yield* cityPlanDraw(g, I, S, X0, Y0, true);
     // (kept short of the half-way line to the nearest other town, as the glow is: two towns' lights never meet, the country between stays dark)
-    cityNightR(I.p); const D = (CNR.d[I.p] || KM_W*20)*S/(2*I.E), mx = S/2 - X0, my = S/2 - Y0, f = g.createRadialGradient(mx, my, 0, mx, my, D);
-    f.addColorStop(0, '#fff'); f.addColorStop(0.55, '#fff'); f.addColorStop(0.85, 'rgb(90,90,90)'); f.addColorStop(1, '#000');
+    cityNightR(I.p); const D = 1.12*(CNR.d[I.p] || KM_W*20)*S/(2*I.E), mx = S/2 - X0, my = S/2 - Y0, f = g.createRadialGradient(mx, my, 0, mx, my, D);   // (the half-way line is at 1.19 of CNR.d)
+    f.addColorStop(0, '#fff'); f.addColorStop(0.72, '#fff'); f.addColorStop(0.92, 'rgb(90,90,90)'); f.addColorStop(1, '#000');
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'multiply'; g.fillStyle = f; g.fillRect(0, 0, c.width, c.height); g.restore(); }
   return c; }
 // the brightness of a light canvas matched to the town's low tier over the same ground: both measured on a grid of cells (S/32 px of the
