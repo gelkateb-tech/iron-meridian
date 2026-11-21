@@ -221,6 +221,7 @@ function rebelHour(){
     a.hold = (a.hold || 0) + 1; if (a.hold < 24) continue;   // (|| 0: older saves carry no count, or NaN saved as null)
     const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
     S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
+    if (S.occ && to >= 0 && to === home) S.occ[p] = null;   // (back with its home nation: no longer occupied, as capture and cede do)
     if (to >= 0) addArmy(to, p, {inf:2});
     if (isSeat(prev)) tell(prev, `${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
     if (isSeat(to)) tell(to, `Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);
