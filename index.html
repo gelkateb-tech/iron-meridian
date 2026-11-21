@@ -3698,23 +3698,27 @@ function dtRivField(lat){ try { if (typeof LINES === 'undefined' || !LINES || !L
   return {a, w, h, y0, S}; } catch (e) { return null; } }
 // JUNGLE (C reworked, owner 2026-11-21, from Google Earth: the rainforest darker in its basin cores, lighter on its rim, wrinkled in the hills,
 // smooth over the swamp lowlands): three soft fields over the cells of the tropics' band, each blurred (a running box, twice: a few ms): the
-// share of forest around (radius about 8 cells), of hills and mountains (about 2) and of marsh (about 3); bytes, interleaved (f, h, m) per cell;
+// share of forest around (radius about 8 cells), of hills and mountains (about 2), of marsh (about 3), and of forest and of open plains close
+// by (about 4: the edge's mosaic between the two reaches about two cells either way); bytes, interleaved (f, h, m, n, p) per cell;
 // made by each tile worker on its first jungle tile (off the main thread: about 80 ms on a slow phone), or here on the first tile made here
 function dtJungleField(cls, lat){ let r0 = -1, r1 = -1; for (let r = 0; r < H; r++) if (lat[r] < 34){ if (r0 < 0) r0 = r; r1 = r; } if (r0 < 0) return null;
-  const nR = r1 - r0 + 1, N = W*nR, out = new Uint8Array(N*3), a = new Float32Array(N), b = new Float32Array(Math.max(W, nR));
+  const nR = r1 - r0 + 1, N = W*nR, out = new Uint8Array(N*5), a = new Float32Array(N), b = new Float32Array(Math.max(W, nR));
   const blur = (rad, pass) => { const k = 1/(2*rad + 1); for (let p = 0; p < pass; p++){
       for (let j = 0; j < nR; j++){ const o = j*W; let t = 0; for (let i = -rad; i <= rad; i++) t += a[o + (i < 0 ? i + W : i)];   // (across: wraps round the world)
         for (let i = 0; i < W; i++){ b[i] = t*k; let ip = i + rad + 1, im = i - rad; if (ip >= W) ip -= W; if (im < 0) im += W; t += a[o + ip] - a[o + im]; } for (let i = 0; i < W; i++) a[o + i] = b[i]; }
       for (let i = 0; i < W; i++){ let t = 0; for (let j = -rad; j <= rad; j++) t += a[Math.max(0, Math.min(nR - 1, j))*W + i];
         for (let j = 0; j < nR; j++){ b[j] = t*k; t += a[Math.min(nR - 1, j + rad + 1)*W + i] - a[Math.max(0, j - rad)*W + i]; } for (let j = 0; j < nR; j++) a[j*W + i] = b[j]; } } };
-  const F = [[c => c === 1, 4], [c => c === 5 || c === 2, 1], [c => c === 6, 2]];
-  for (let f = 0; f < 3; f++){ const [is, rad] = F[f]; for (let k = 0; k < N; k++) a[k] = is(cls[r0*W + k]) ? 1 : 0; blur(rad, 2); for (let k = 0; k < N; k++) out[k*3 + f] = Math.round(Math.min(1, a[k])*255); }
+  const F = [[c => c === 1, 4], [c => c === 5 || c === 2, 1], [c => c === 6, 2], [c => c === 1, 2], [c => c === 0, 2]];
+  for (let f = 0; f < 5; f++){ const [is, rad] = F[f]; for (let k = 0; k < N; k++) a[k] = is(cls[r0*W + k]) ? 1 : 0; blur(rad, 2); for (let k = 0; k < N; k++) out[k*5 + f] = Math.round(Math.min(1, a[k])*255); }
   return {a:out, r0, nR}; }
-// the three fields at world (x, y), into o[0..2] (0..1; bilinear over the cells, the odd rows' half-cell offset taken)
-function dtJfAt(x, y, o){ let R = DTC.jf; if (R === undefined) R = DTC.jf = dtJungleField(DTC.cls, DTC.lat); o[0] = o[1] = o[2] = 0; if (!R) return; const cy = (y - OY)/(1.5*HS) - R.r0, j0 = Math.floor(cy), fy = cy - j0, a = R.a;
+// the five fields at world (x, y), into o[0..4] (0..1; bilinear over the cells, the odd rows' half-cell offset taken); with f, that field alone, returned
+function dtJfAt(x, y, o, f1){ let R = DTC.jf; if (R === undefined) R = DTC.jf = dtJungleField(DTC.cls, DTC.lat); if (!R){ o[0] = o[1] = o[2] = o[3] = o[4] = 0; return 0; } const cy = (y - OY)/(1.5*HS) - R.r0, j0 = Math.floor(cy), fy = cy - j0, a = R.a;
+  if (f1 !== undefined){ let v = 0; for (let q = 0; q < 2; q++){ const jj = Math.max(0, Math.min(R.nR - 1, j0 + q)), cx = (x - OX)/(HS*SQ3) - 0.5*((jj + R.r0) & 1), c0 = Math.floor(cx), fx = cx - c0, i0 = ((c0 % W) + W) % W, i1 = (i0 + 1) % W;
+    v += (q ? fy : 1 - fy)*(a[(jj*W + i0)*5 + f1]*(1 - fx) + a[(jj*W + i1)*5 + f1]*fx)/255; } return v; }
+  o[0] = o[1] = o[2] = o[3] = o[4] = 0;
   for (let q = 0; q < 2; q++){ const jj = Math.max(0, Math.min(R.nR - 1, j0 + q)), wk = q ? fy : 1 - fy, cx = (x - OX)/(HS*SQ3) - 0.5*((jj + R.r0) & 1), c0 = Math.floor(cx), fx = cx - c0;
-    const i0 = ((c0 % W) + W) % W, i1 = (i0 + 1) % W, p = (jj*W + i0)*3, s = (jj*W + i1)*3;
-    for (let f = 0; f < 3; f++) o[f] += wk*(a[p + f]*(1 - fx) + a[s + f]*fx)/255; } }
+    const i0 = ((c0 % W) + W) % W, i1 = (i0 + 1) % W, p = (jj*W + i0)*5, s = (jj*W + i1)*5;
+    for (let f = 0; f < 5; f++) o[f] += wk*(a[p + f]*(1 - fx) + a[s + f]*fx)/255; } }
 // gradient noise (quintic Perlin, about -0.7..0.7) and an integer hash in [0, 1)
 const DTP = (() => { const r = mulberry(4242), p = new Uint8Array(256), P = new Uint8Array(514), GX = new Float32Array(256), GY = new Float32Array(256);
   for (let i = 0; i < 256; i++) p[i] = i; for (let i = 255; i > 0; i--){ const j = Math.floor(r()*(i + 1)), t = p[i]; p[i] = p[j]; p[j] = t; }
@@ -3756,15 +3760,18 @@ const DT_ROT = [0, 0.71, 1.93, 2.62, 4.1, 5.3].map(a => [Math.cos(a), Math.sin(a
 // A deep, slightly cool green (less red: it no longer greys out under the foreign tint), darker in the basins' cores, lighter and a little warmer
 // on their rims, darker and cooler by the swamps, with a very broad soft mottle (about 80 world units) (dtJungleField: the forest, hills and
 // marsh around); the drainage creases strong in the hills and faint over the lowlands; softer, lower crown clumps (no raised plateau or bright
-// sparkle); the rivers a thin darker channel in a narrow lighter floodplain; and the forest's edge a mosaic instead of a blur: the forest opens
-// into olive clearings and closes into islands and fingers along the rivers in the savanna next to it (only the plains within about two cells
-// of the forest, in the tropics). The far texture takes fewer crown clumps (the world view stays smooth).
+// sparkle); the rivers a thin darker channel in a narrow lighter floodplain; and the forest's edge with the open plains a mosaic instead of a
+// blur (about two cells either way, in the tropics; by hills, marsh, desert and the sea the soft blend stays): the forest opens into clearings
+// of the savanna's own ground and pasture, and closes into whole forest (its colour, canopy and relief) in islands and in gallery fingers
+// along the rivers; a soft cut of a slow field (en, eN) with finer noise near it (eF, eF2), so no node lines and no rims (eW, eWf).
+// Reviews (2026-11-21): the crowns' light kept off the screened range (darker base, highlights yellower, crowns more even: hy, hyb, ha), so
+// the rims are a shade lighter, not a brighter texture. The far texture takes fewer crown clumps (the world view stays smooth).
 let DT_JV = 'c2';
 const DT_JP = {
   a:{base:[0.52, 0.68, 0.76], pl:[0.14, 0.1, 0.08], hu:0.08, cl:0.08, sec:0, clr:0, cf:[0.25, 0.6, 1.3], ca:[0.45, 0.4, 0.3], ct:0, cw:0.32, hc:1.0, cL:0.16, sp:[0.62, 0.27], rr:0.3, cv:0.26, hk:0.55, gap:0.3, soft:0, dr:[0.35, 0.2], drw:0.16, drk:0.12, drh:0.35, rvT:[1.3, 1.36, 0.84], rvS:0.6, rvW:1.3, kc:[[1.056,  1.068,  1.049],  [1.063,  1.064,  1.007],  [1.152,  1.119,  1.025],  [1.197,  1.157,  1.046]]},
   b:{base:[0.6, 0.75, 0.74], pl:[0.18, 0.13, 0.1], hu:0.12, cl:0.08, sec:0.9, secT:0.25, clr:0.6, cf:[0.22, 0.5, 1.1], ca:[0.5, 0.4, 0.25], ct:0.1, cw:0.3, hc:0.9, cL:0.12, sp:[0.7, 0.3], rr:0.34, cv:0.28, hk:0.5, gap:0.26, soft:0, dr:[0.3, 0.15], drw:0.14, drk:0.1, drh:0.3, rvT:[1.28, 1.32, 0.88], rvS:0.8, rvW:1.3, kc:[[1.088,  1.069,  1.052],  [1.081,  1.053,  1.029],  [1.11,  1.092,  1.049],  [1.134,  1.121,  1.073]]},
-  c2:{v2:1, base:[0.5, 0.93, 0.86], pl0:0.1, pl:[0.09, 0.06, 0.04], hu:0.05, cl:0.04, sec:0, clr:0, cf:[0.28, 0.65, 1.4], ca:[0.4, 0.42, 0], ct:-0.05, cw:0.45, hc:0.4, cL:0.08, sp:[0.56, 0.25], rr:0.32, cv:0.1, hk:0.3, gap:0.2, soft:1, dr:[0.45, 0.3], drw:0.28, drk:0.12, drh:0.4, rvT:[1.16, 1.07, 0.92], rvS:0.6, rvW:1, rc0:0.8, rcK:[0.08, 0.15, 0.13],
-    core:0.18, rim:0.1, mar:0.08, cvar:0.12, en:1.4, eR:1, eI:0.6, eRim:0.25, open:[1.1, 1.08, 1.0], farCl:0.4, kc:[[1.026, 1.026, 1.007], [1.028, 1.025, 1.007], [1.08, 1.063, 1.045], [1.104, 1.08, 1.064]]},
+  c2:{v2:1, base:[0.45, 0.78, 0.73], hy:0.1, hyb:0.1, ha:0.6, pl0:0.1, pl:[0.09, 0.06, 0.04], hu:0.05, cl:0.04, sec:0, clr:0, cf:[0.28, 0.65, 1.4], ca:[0.4, 0.42, 0], ct:-0.05, cw:0.45, hc:0.7, cL:0.05, sp:[0.56, 0.25], rr:0.32, cv:0.15, hk:0.36, gap:0.24, soft:1, dr:[0.55, 0.3], drw:0.28, drk:0.12, drh:0.5, rvT:[1.16, 1.07, 0.92], rvS:0.6, rvW:1, rc0:0.8, rcK:[0.08, 0.15, 0.13],
+    core:0.18, rim:0.03, mar:0.1, cvar:0.03, mcl:0.5, eN:0.6, en:0.85, eR:0.7, eF:0.3, eF2:0.12, eW:0.12, eWf:0.22, eS:0.06, op:0.85, farCl:0.4, kc:[[1.026, 1.026, 1.007], [1.028, 1.025, 1.007], [1.08, 1.063, 1.045], [1.104, 1.08, 1.064]]},
   c:{base:[0.47, 0.62, 0.7], pl:[0.12, 0.09, 0.06], hu:0.03, cl:0.1, sec:0, clr:0, cf:[0.28, 0.65, 1.4], ca:[0.45, 0.4, 0.3], ct:-0.05, cw:0.45, hc:0.8, cL:0.08, sp:[0.56, 0.25], rr:0.3, cv:0.12, hk:0.4, gap:0.2, soft:1, dr:[0.6, 0.3], drw:0.28, drk:0.14, drh:0.6, rvT:[1.14, 1.2, 1.06], rvS:0.4, rvW:1.2, kc:[[1.021,  1.036,  1.035],  [1.02,  1.037,  1.003],  [1.086,  1.094,  1.017],  [1.116,  1.119,  1.02]]}};
 // the tropics' share of a forest at latitude la (degrees from the equator)
 const dtTrop = la => 1 - dtSm((la - 17)/9);
@@ -3788,16 +3795,19 @@ function dtCrown(x, y, sp, seed){ const cx = x/sp, cy = y/sp, ix = Math.floor(cx
 // a tile job: a coarse grid of nodes every cs px (node (i, j) at tile px (i*cs - 1, j*cs - 1), px centres at +0.5) holding everything that varies
 // slowly (warped and patch-sharpened class weights, the low relief's shading, low-frequency tones, field and dune strength, the dunes' warp),
 // interpolated per px under the fine relief, crowns, parcels, ripples, pools and grain
-const DT_NF = 33;   // node floats: 0-8 class weights, 9 low relief, 10 its shading, 11-13 tone, 14 farmland, 15 dune sea, 16-17 dune warp, 18 jungle, 19-20 its warp, 21 crown clusters, 22 secondary forest ('c2': the relief's strength), 23 and 26 the clumps' two coarser octaves, 24-25 the drainage noise, 27-29 the jungle's tones, 30 its floodplains, 31 ('c2') the edge's mosaic field, 32 ('c2') the forest's own share of 18
+const DT_NF = 34;   // node floats: 0-8 class weights, 9 low relief, 10 its shading, 11-13 tone, 14 farmland, 15 dune sea, 16-17 dune warp, 18 jungle, 19-20 its warp, 21 crown clusters, 22 secondary forest ('c2': the relief's strength), 23 and 26 the clumps' two coarser octaves, 24-25 the drainage noise, 27-29 the jungle's tones, 30 its floodplains, 31 ('c2') the edge's mosaic field, 32 ('c2') the forest's own share of 18, 33 ('c2') how much of the mosaic is made
 function dtStart(k, tx, ty, mo = 5, jv = DT_JV){ const C = dtCells(); if (!C) return null; const vN = DT_MV[mo % 12], vS = DT_MV[(mo + 6) % 12];
   const r = k < 0 ? DT_RF : DT_R[k], n = DT_N + 2*DT_A, cs = r < 4 ? 3 : Math.round(r*0.4), gw = Math.ceil((n + 2)/cs) + 2;
   if (!DT.buf || DT.buf.gw < gw){ DT.buf = {gw, g:new Float32Array(gw*gw*DT_NF)}; }
   if (!DT.Hb){ DT.Hb = new Float32Array((n + 2)*(n + 2)); DT.Tb = new Float32Array(n*n*3); }
   const g = DT.buf.g; g.fill(0, 0, gw*gw*DT_NF);
   let JP = DT_JP[jv] || null; if (JP){ const ya = (ty*DT_N - DT_A)/r, rs = 1.5*HS, ra = Math.max(0, Math.floor((ya - OY)/rs) - 1), rb = Math.min(H - 1, Math.ceil((ya + n/r - OY)/rs) + 1); let lm = 90;
-    for (let q = ra; q <= rb; q++) lm = Math.min(lm, C.lat[q]); if (lm >= 26.5) JP = null; }   // (JUNGLE: a tile wholly outside the tropics' band does none of the jungle's work; dtTrop is 0 there)
-  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq, gn:k < 0 ? DT_FG : 1, jv, JP, half:k >= 0 && cs/r < 0.6, halfT:k === 0}; }   // (k -1: a far texture tile, k*DT_N texels; jv, JP: the jungle's look)
-function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT_NF, rowStep = 1.5*HS, colStep = HS*SQ3, wq = colStep*1.15, w = new Float32Array(9), JF = new Float32Array(3);
+    for (let q = ra; q <= rb; q++) lm = Math.min(lm, C.lat[q]); if (lm >= 26.5) JP = null;   // (JUNGLE: a tile wholly outside the tropics' band does none of the jungle's work; dtTrop is 0 there)
+    if (JP && JP.v2){ const xa = (tx*DT_N - DT_A)/r, cw = HS*SQ3, ca = Math.max(0, Math.floor((xa - OX)/cw) - 5), cb = Math.min(W - 1, Math.ceil((xa + n/r - OX)/cw) + 5); let f = 0;
+      for (let q = Math.max(0, ra - 4); q <= Math.min(H - 1, rb + 4) && !f; q++) for (let c = ca; c <= cb; c++) if (C.cls[q*W + c] === 1){ f = 1; break; } if (!f) JP = null; } }   // ('c2': nor one with no forest within about four cells: its edge's mosaic reaches less far)
+  return {k, tx, ty, key:k + '|' + tx + '|' + ty, r, n, x0:(tx*DT_N - DT_A)/r, y0:(ty*DT_N - DT_A)/r, cs, gw, g, has:new Uint8Array(9), pres:null, lat:null, y:0, stage:0, mv:vN*5 + vS, fN:DT_FP[vN], fS:DT_FP[vS], eq:C.eq, gn:k < 0 ? DT_FG : 1, jv, JP, half:k >= 0 && cs/r < 0.6, halfT:k === 0, jrow:JP ? new Uint8Array(gw) : null}; }   // (k -1: a far texture tile, k*DT_N texels; jv, JP: the jungle's look)
+function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT_NF, rowStep = 1.5*HS, colStep = HS*SQ3, wq = colStep*1.15, w = new Float32Array(9), JF = new Float32Array(5);
+  const nq = r/(cs*(J.half || J.halfT ? 2 : 1)), nb = f => Math.max(0, Math.min(1, (0.32*nq - f)/(0.12*nq)));   // (JUNGLE: an octave's strength at this node spacing, below)
   const MC = cs/r < 0.5 && DT_N % (2*cs) === 0 ? J.mc || (J.mc = new Float32Array(gw*2)) : null;   // (MAP-TEXTURE: the mottle's slow noises, see below)
   const b0 = Math.max(0, Math.min(1, (r/3 - 0.45)/(r/6))), bh0 = Math.max(0, Math.min(1, (r/3 - 0.22)/(r/6))), bh1 = Math.max(0, Math.min(1, (r/3 - 0.46)/(r/6)));
   for (let j = J.y; j < j1; j++){ const wy = y0 + (j*cs - 0.5)/r, la = C.lat[Math.min(H - 1, Math.max(0, Math.round((wy - OY)/rowStep)))], latF = dtSm((la - 27)/9)*(1 - dtSm((la - 54)/6));
@@ -3841,12 +3851,24 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
       // its tones: the base green, patches at three sizes, a warmer or cooler cast, lighter clusters; 'b' its secondary forest and clearings.
       // Finer than the node grid (nb) is left out here: the far texture (k -1) takes the finer patches per texel in dtRows instead
       g[o + 11] = tr; g[o + 12] = tg; g[o + 13] = tb;
-      const wJ = wF*tJ, V2 = J.JP && J.JP.v2; g[o + 18] = wJ; if (J.JP){ g[o + 27] = g[o + 28] = g[o + 29] = 1; }
-      // ('c2': the savanna next to the forest (the plains within about two cells of it, in the tropics) takes the jungle's work too: the
-      // forest's fingers along its rivers and its islands are there; 18 is then the jungle's whole share, 32 the forest's own)
-      let wO2 = 0; if (V2){ g[o + 32] = wJ; g[o + 31] = wJ; const oP = wP; if (oP > 0.02 && wJ < 0.995){ const tL = dtTrop(la); if (tL > 0.005){ dtJfAt(wx, wy, JF); wO2 = Math.min(1 - wJ, oP*tL*dtSm((JF[0] - 0.05)/0.2)); } } g[o + 18] = wJ + wO2; }
-      if (wJ + wO2 > 0.005){ const JP = J.JP, nq = r/(cs*(J.half || J.halfT ? 2 : 1)), nb = f => Math.max(0, Math.min(1, (0.32*nq - f)/(0.12*nq)));
-        if (J.half && (i & 1 || j & 1)){ g[o + 27] = -1; continue; }   // (fine node grids: the slow parts at every other node only, the rest filled in by dtNodeShade)
+      const wJ = wF*tJ, V2 = J.JP && J.JP.v2; g[o + 18] = wJ; if (J.JP){ g[o + 27] = g[o + 28] = g[o + 29] = V2 ? 0 : 1; }
+      // ('c2': the forest's edge with the savanna as a mosaic. Its field, 31: the forest's share of the two here (s), drawn towards their shares
+      // close by (about two cells either way), a slow noise (about 13 world units) where the forest is near, and the rivers' floodplains in the
+      // savanna (gallery forest); dtRows adds finer noise and cuts it per px. 33: how much of the mosaic is made (only where the forest and the
+      // open plains are both near and hold the ground: by hills, marsh, desert or the sea the soft blend stays). The savanna's share takes the
+      // jungle's work (18 then the jungle's whole share, 32 the forest's own) only where the field can close it into forest)
+      // (fine node grids, J.half: made at every other node only, like the jungle's slow parts below; the rest filled in by dtNodeShade, which
+      // also gives them their savanna's share)
+      let wO2 = 0, jfd = 0, jsk = 0; if (V2){ const JP = J.JP; if (J.eO === undefined) J.eO = 0.42 - (J.k < 0 ? JP.eWf : JP.eW) - 0.75*(cs/r < 0.7 ? (r >= 15 ? JP.eF2 : 0) : JP.eF); g[o + 32] = g[o + 31] = wJ; const tL = wJ > 0.005 ? tJ : wP > 0.02 ? dtTrop(la) : 0, wPt = wP*tL;
+        if (tL > 0.005 && (wJ > 0.005 || wPt > 0.02)){ if (J.half && (i & 1 || j & 1)) jsk = 1; else if (wJ > 0.005 || dtJfAt(wx, wy, JF, 3) > 0.01){ dtJfAt(wx, wy, JF); jfd = 1; const nr = JF[3], np = JF[4], gl = np > 0.01 && nr > 0.01 ? dtSm(((wJ + wPt)/Math.max(0.05, 1 - wO) - 0.7)/0.2)*dtSm((nr + np - 0.5)/0.3)*dtSm(np/0.12)*dtSm(nr/0.12) : 0;
+          if (gl > 0.002){ const s = wJ/Math.max(0.02, wJ + wPt), rs = nr/(nr + np), pr = Math.max(s, dtSm((nr - 0.03)/0.3)), rv = dtRvAt(wx, wy);
+            let E = s + gl*(JP.eN*(rs - s) - JP.eS + JP.en*pr*1.4*dtPn(wx*0.075 + 33.3, wy*0.075 + 71.7) + JP.eR*(1 - s)*dtSm((rv - 0.08)/0.3)*dtSm((nr - 0.02)/0.15));
+            if (cs/r < 0.7 && E > 0.5 - JP.eF - JP.eW - 0.25 && E < 0.5 + JP.eF + JP.eW + 0.25) E += gl*JP.eF*1.4*dtPn(wx*0.19 + 12.7, wy*0.19 + 3.1);   // (the first finer noise here, near the cut, where the nodes are close enough for it; else per px)
+            g[o + 31] = E; g[o + 33] = gl; if (wPt > 0.02 && E > J.eO) wO2 = Math.min(1 - wJ, wPt); } } }   // (J.eO: the least field the finer noise made per px and the cut can close)
+        g[o + 18] = wJ + wO2; }
+      if (J.JP && (wJ + wO2 > 0 || jsk)) J.jrow[j] = 1;   // (the node rows with any jungle, or that may have: dtRows blends its fields there only)
+      if (wJ + wO2 > 0.005 || jsk){ if (J.half && (i & 1 || j & 1)){ g[o + 27] = -1; continue; }   // (fine node grids: the slow parts at every other node only, the rest filled in by dtNodeShade)
+        const JP = J.JP;
         const odT = J.halfT && (i & 1 || j & 1);
         g[o + 19] = 0.75*dtPn(wx*0.45 + 3.1, wy*0.45 + 7.7); g[o + 20] = 0.75*dtPn(wx*0.45 + 9.4, wy*0.45 + 1.3);
         if (J.k >= 0){ const qx = wx + g[o + 19], qy = wy + g[o + 20], R = DT_ROT[1], f = JP.cf[0], R2 = DT_ROT[2], f2 = JP.cf[1];   // (the slow noises of dtRows' canopy, signed, at the nodes: smooth at the
@@ -3854,39 +3876,40 @@ function dtNodes(J, j1){ const C = DTC, {r, x0, y0, cs, gw, g, has} = J, NF = DT
           g[o + 24] = dtPn(qx*0.16 + 17.1, qy*0.16 + 3.3); g[o + 25] = dtPn(qx*0.42 + 48.1, qy*0.42 - 13.7); g[o + 30] = dtRvAt(wx, wy); } else g[o + 30] = dtRvAt(wx, wy);   // the creases' kink taken per px; the far texture's nodes are too coarse: there per texel, but the floodplains (a texel per two world units))
         if (odT){ g[o + 27] = -2; continue; }   // (the coarsest close tiles: the slow tones only at every other node, filled in by dtNodeShade)
         const bc = nb(0.26), cl = bc > 0 ? bc*(dtPn(wx*0.26 + 51.7, wy*0.26 + 12.9) + 0.5*nb(0.62)*dtPn(wx*0.62 + 8.8, wy*0.62 + 44.4))*1.4 : 0; g[o + 21] = cl;
-        const p1 = dtPn(wx*0.045 + 61.3, wy*0.045 + 27.1), p2 = dtPn(wx*0.12 + 14.2, wy*0.12 + 88.6), b3 = nb(0.3), p3 = b3 > 0 ? b3*dtPn(wx*0.3 + 70.4, wy*0.3 + 5.5) : 0, hu = 1.4*dtPn(wx*0.07 + 39.9, wy*0.07 + 71.3);
+        const p1 = dtPn(wx*0.045 + 61.3, wy*0.045 + 27.1), p2 = dtPn(wx*0.12 + 14.2, wy*0.12 + 88.6), b3 = V2 ? 0 : nb(0.3), p3 = b3 > 0 ? b3*dtPn(wx*0.3 + 70.4, wy*0.3 + 5.5) : 0, hu = 1.4*dtPn(wx*0.07 + 39.9, wy*0.07 + 71.3);
         let lj = 1 + 1.4*(JP.pl[0]*p1 + JP.pl[1]*p2 + JP.pl[2]*p3) + JP.cl*cl, wm = 1;
         if (V2){   // 'c2': the basin's dark core, its lighter, warmer rim, darker and cooler by the swamps, a very broad mottle (about 80 world units), the
           // relief's strength (22: the hills wrinkled, the swamp lowlands smooth), the clumps' density by region (into 21), the edge's mosaic (31)
-          if (wO2 <= 0) dtJfAt(wx, wy, JF); const fi = JF[0], core = dtSm((fi - 0.62)/0.3), rim = dtSm((fi - 0.12)/0.3)*(1 - dtSm((fi - 0.5)/0.25)), p0 = dtPn(wx*0.013 + 7.7, wy*0.013 + 31.9);
+          if (!jfd) dtJfAt(wx, wy, JF); const fi = JF[0], core = dtSm((fi - 0.62)/0.3), rim = dtSm((fi - 0.05)/0.45)*(1 - dtSm((fi - 0.4)/0.45)), p0 = dtPn(wx*0.013 + 7.7, wy*0.013 + 31.9);
           lj *= (1 - JP.core*core)*(1 + JP.rim*rim)*(1 - JP.mar*JF[2])*(1 + 1.4*JP.pl0*p0); wm = 1 + JP.rim*0.6*rim - JP.hu*0.5*p0*1.4;
-          g[o + 22] = (0.25 + 0.95*Math.min(1, JF[1]*1.6))*(1 - 0.75*JF[2])*(1 - 0.35*core);
-          g[o + 21] += 4*JP.cvar*p2;   // (the clumps' density: the 8 world unit patches' own noise)
-          const wJl = Math.min(1, wJ/Math.max(0.05, 1 - wO));   // (the forest's share of the land: the coast does not open it)
-          if (wJl < 0.97 || wO2 > 0){ const e1 = nb(0.2), e2 = nb(0.5), en = 1.4*(0.5*dtPn(wx*0.075 + 33.3, wy*0.075 + 71.7) + (e1 > 0 ? 0.3*e1*dtPn(wx*0.2 + 5.9, wy*0.2 + 47.1) : 0) + (e2 > 0 ? 0.2*e2*dtPn(wx*0.5 + 81.3, wy*0.5 + 19.5) : 0)), rvB = dtSm((g[o + 30] - 0.1)/0.3);
-            g[o + 31] = wJl + (JP.en*en + JP.eR*rvB + JP.eI*wO2*dtSm((fi - 0.1)/0.35) - JP.eRim*rim*wJl)*Math.min(1, wJl + wO2)*(1 - core) + 0.4*core; } else g[o + 31] = 1; }   // (the forest's own body: no mosaic to make)
+          g[o + 22] = (0.5 + 0.7*Math.min(1, JF[1]*1.6))*(1 - 0.75*JF[2]);
+          g[o + 21] += 4*JP.cvar*p2 - JP.mcl*JF[2]; }   // (the clumps' density: the 8 world unit patches' own noise; fewer, lower clumps by the swamps)
         let jr = JP.base[0]*lj*(1 + JP.hu*hu)*wm, jg = JP.base[1]*lj*(1 + 0.3*JP.hu*hu), jb = JP.base[2]*lj*(1 - JP.hu*hu)/wm;
         if (JP.sec > 0){ const sn = 1.4*(dtPn(wx*0.17 + 23.3, wy*0.17 + 9.1) + 0.45*nb(0.42)*dtPn(wx*0.42 + 2.2, wy*0.42 + 61.6)), sf = dtSm((sn - JP.secT)/0.25), cf = JP.clr*dtSm((sn - JP.secT - 0.62)/0.1);
           g[o + 22] = sf; jr *= 1 + JP.sec*sf*0.16; jg *= 1 + JP.sec*sf*0.22; jb *= 1 + JP.sec*sf*0.05;
           if (cf > 0){ jr += (1.34 - jr)*cf; jg += (1.16 - jg)*cf; jb += (1.1 - jb)*cf; } }   // (clearings: bare tan earth and grass, not lime under a green tint)
         if (J.k < 0){ const gn = J.gn, gb = 1 + (gn - 1)*0.3; jr = 1 + (jr - 1)/(jr < 1 ? gn : gb); jg = 1 + (jg - 1)/(jg < 1 ? gn : gb); jb = 1 + (jb - 1)/(jb < 1 ? gn : gb); }   // (the far texture's gain is for its detail, not this shift)
-        g[o + 27] = 1 + (jr - 1)*wJ; g[o + 28] = 1 + (jg - 1)*wJ; g[o + 29] = 1 + (jb - 1)*wJ; } } }   // (laid into the tones by dtNodeShade)
+        if (V2){ g[o + 27] = jr - 1; g[o + 28] = jg - 1; g[o + 29] = jb - 1; } else { g[o + 27] = 1 + (jr - 1)*wJ; g[o + 28] = 1 + (jg - 1)*wJ; g[o + 29] = 1 + (jb - 1)*wJ; } } } }   // (laid into the tones by dtNodeShade; 'c2': the change itself, laid per px on the jungle's share there (dtRows))
   J.y = j1; }
 // the low relief's shading at the nodes (central differences), then the per-row latitude
 function dtNodeShade(J){ const {r, cs, gw, g, has} = J, NF = DT_NF, K = 0.26, d = cs/r;
   if (J.JP){ const JP = J.JP, R2 = DT_ROT[2], f2 = JP.cf[1];   // JUNGLE: the slow parts of the nodes skipped (J.half, J.halfT) from the even nodes around them
     // (J.half: the warp, the clump octave at about 4 world units, the coarse creases, the floodplains and the tones; the finer clump octave and
     // creases made at the node itself, on the warp so filled in; J.halfT: the tones alone), then into the tones
-    if (J.half || J.halfT){ const mk = J.half ? -1 : -2, SL = J.half ? [19, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31] : [21, 22, 27, 28, 29, 31], nS = SL.length, x0 = J.x0 - 0.5/r, y0 = J.y0 - 0.5/r, dc = cs/r;
+    if (J.half || J.halfT){ const V2 = !!JP.v2, mk = J.half ? -1 : -2, SL = J.half ? (JP.v2 ? [19, 20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 33] : [19, 20, 21, 22, 23, 24, 27, 28, 29, 30]) : [21, 22, 27, 28, 29], nS = SL.length, x0 = J.x0 - 0.5/r, y0 = J.y0 - 0.5/r, dc = cs/r;
       for (let j = 0; j < gw; j++){ const j0 = j & ~1, j1 = j0 + 2 < gw ? j0 + 2 : j0, fy = j1 > j0 ? (j - j0)/2 : 0;
         for (let i = (j & 1) ? 0 : 1; i < gw; i += (j & 1) ? 1 : 2){ const o = (j*gw + i)*NF; if (g[o + 27] !== mk) continue;
           const i0 = i & ~1, i1 = i0 + 2 < gw ? i0 + 2 : i0, fx = i1 > i0 ? (i - i0)/2 : 0, a = (j0*gw + i0)*NF, b = (j0*gw + i1)*NF, c = (j1*gw + i0)*NF, e = (j1*gw + i1)*NF;
+          if (V2 && mk === -1 && g[o + 32] <= 0.005){ const u = g[a + 33] + (g[b + 33] - g[a + 33])*fx; if (u + (g[c + 33] + (g[e + 33] - g[c + 33])*fx - u)*fy <= 0.002){ g[o + 27] = 0; continue; } }   // ('c2': savanna with no mosaic near: nothing to fill)
           for (let t = 0; t < nS; t++){ const q = SL[t], u = g[a + q] + (g[b + q] - g[a + q])*fx; g[o + q] = u + (g[c + q] + (g[e + q] - g[c + q])*fx - u)*fy; }
           if (mk === -1){ const qx = x0 + i*dc + g[o + 19], qy = y0 + j*dc + g[o + 20];
-            g[o + 26] = dtPn((qx*R2[0] - qy*R2[1])*f2 + 18.3, (qx*R2[1] + qy*R2[0])*f2 + 2.1); g[o + 25] = dtPn(qx*0.42 + 48.1, qy*0.42 - 13.7); } } } }
+            g[o + 26] = dtPn((qx*R2[0] - qy*R2[1])*f2 + 18.3, (qx*R2[1] + qy*R2[0])*f2 + 2.1); if (!V2) g[o + 25] = dtPn(qx*0.42 + 48.1, qy*0.42 - 13.7);
+            if (V2){ const a = g[o + 32], wPt = g[o]*dtTrop(DTC.lat[Math.min(H - 1, Math.max(0, Math.round((y0 + j*dc - OY)/(1.5*HS))))]);   // ('c2': the savanna's share the mosaic can close, as in dtNodes)
+              g[o + 18] = a + (g[o + 33] > 0.002 && wPt > 0.02 && g[o + 31] > J.eO ? Math.min(1 - a, wPt) : 0); } } } } }
     // (close tiles: the clusters' two coarser octaves and the tones' clusters made one value, as dtRows takes them: two fewer to carry per px)
     const bd = f => Math.max(0, Math.min(1, (r/3 - f)/(r/6))), cA0 = JP.ca[0]*bd(JP.cf[0]), cA1 = JP.ca[1]*bd(JP.cf[1]), cb = cA0 + cA1 + (r >= 8 ? JP.ca[2]*bd(JP.cf[2]) : 0), k0 = cb > 0 ? 1.4*cA0/cb : 0, k1 = cb > 0 ? 1.4*cA1/cb : 0;
-    for (let i = 0, o = 0; i < gw*gw; i++, o += NF){ g[o + 11] *= g[o + 27]; g[o + 12] *= g[o + 28]; g[o + 13] *= g[o + 29]; if (J.k >= 0) g[o + 21] = k0*g[o + 23] + k1*g[o + 26] + 0.25*g[o + 21]; } }
+    for (let i = 0, o = 0, V2 = !!JP.v2; i < gw*gw; i++, o += NF){ if (V2){ const a = g[o + 32]; g[o + 11] *= 1 + g[o + 27]*a; g[o + 12] *= 1 + g[o + 28]*a; g[o + 13] *= 1 + g[o + 29]*a; } else { g[o + 11] *= g[o + 27]; g[o + 12] *= g[o + 28]; g[o + 13] *= g[o + 29]; }
+      if (J.k >= 0) g[o + 21] = k0*g[o + 23] + k1*g[o + 26] + 0.25*g[o + 21]; } }   // ('c2': the change laid on the forest's own share here; dtRows moves it with the mosaic)
   for (let j = 0; j < gw; j++) for (let i = 0; i < gw; i++){ const o = (j*gw + i)*NF, il = i > 0 ? o - NF : o, ir = i < gw - 1 ? o + NF : o, ju = j > 0 ? o - gw*NF : o, jd = j < gw - 1 ? o + gw*NF : o;
     const gx = (g[ir + 9] - g[il + 9])/(d*((i > 0) + (i < gw - 1))), gy = (g[jd + 9] - g[ju + 9])/(d*((j > 0) + (j < gw - 1))); g[o + 10] = -K*(gx + gy); }
   J.pres = []; for (let c = 0; c < 9; c++) if (has[c]) J.pres.push(c);
@@ -3896,26 +3919,48 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
   const band = f => { const fm = r/3; return Math.max(0, Math.min(1, (fm - f)/(0.5*fm))); }, fmic = r/2.6, lw = Math.max(0.05, 0.9/r), ri = 1/r;
   const bR = []; for (let o = 0, f = 0.45; o < 6; o++, f *= 2) bR.push(band(f)); const spA = r < 4 ? 1.7 : 0.8, bCA = r < 4 ? 0.7 : Math.max(0, Math.min(1, (0.8*r - 2.5)/2)), bCB = Math.max(0, Math.min(1, (0.36*r - 2.5)/2)), bH2 = band(0.97), bH3 = band(2.04), dper = 1.1, bDn = Math.max(0, Math.min(1, (1.1*r - 3)/3)), bSt = band(2.6), bRk = band(1.7);
   let rci = 1e9, rcj = 1e9; const SX = new Float64Array(9), SY = new Float64Array(9), SI = new Int32Array(9); let rid = -1, rca = 1, rsa = 0, rsz = 1, rasp = 1, pci = 1e9, pcj = 1e9, qci = 1e9, qcj = 1e9; const PX = new Float64Array(9), PY = new Float64Array(9), QX = new Float64Array(9), QY = new Float64Array(9), QI = new Int32Array(9);
-  const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat([9, 10, 11, 12, 13, 14, 15, 16, 17], !J.JP ? [] : J.k < 0 ? [18, 19, 20, 30] : [18, 19, 20, 21, 24, 25, 30], J.JP && (J.JP.sec > 0 || J.JP.v2) ? [22] : [], J.JP && J.JP.v2 ? [31, 32] : []), NQ = QS.length, FC = J.k < 0 ? DT_FC : null, JP = J.JP, far = J.k < 0;
+  const V = J.V || (J.V = new Float32Array(gw*NF)), QS = pres.concat([9, 10, 11, 12, 13, 14, 15, 16, 17]), NQ = QS.length, jrow = J.jrow, FC = J.k < 0 ? DT_FC : null, JP = J.JP, far = J.k < 0;
   // JUNGLE: the look's numbers as locals for the px loop; its octaves and crown layers by resolution (a crown layer once its crowns are 3.6 px
   // and more, the finest clumps from 8 px a world unit: no work on detail that hardly shows)
   const JQ = JP || DT_JP.a, bD0 = band(0.16), bD1 = band(0.42), cF0 = JQ.cf[0], cF1 = JQ.cf[1], cF2 = JQ.cf[2], cA0 = JQ.ca[0]*band(cF0), cA1 = JQ.ca[1]*band(cF1), cA2 = r >= 8 ? JQ.ca[2]*band(cF2) : 0, cb = cA0 + cA1 + cA2, cbk = Math.min(1, cb*2);
   const jD0 = JQ.dr[0]*bD0, jD1 = JQ.dr[1]*bD1, jDw = JQ.drw, jDh = JQ.drh, jDk = JQ.drk, jS0 = JQ.sp[0], jS1 = JQ.sp[1], bK0 = Math.max(0, Math.min(1, (jS0*r - 3.6)/2)), bK1 = Math.max(0, Math.min(1, (jS1*r - 3.6)/2));
+  // (the jungle's node fields blended per px row: its warp only where crowns or the finest clumps take it; 'c2': its tones' change, 27-29,
+  // is taken from the nodes only where the edge's mosaic moves it)
+  const QJ = !JP ? [] : [].concat(far ? [18, 19, 20, 30] : bK0 > 0 || bK1 > 0 || cA2 > 0 || !JP.v2 ? [18, 19, 20, 21, 24, 25, 30] : [18, 21, 24, 25, 30], JP.sec > 0 || JP.v2 ? [22] : [], JP.v2 ? [31, 32, 33] : []), NJ = QJ.length;
   const jRr = JQ.rr, jCv = JQ.cv, jHk = JQ.hk, jGap = JQ.gap, jSoft = JQ.soft, jCt = JQ.ct, jCw = JQ.cw, jHc = JQ.hc, jCL = JQ.cL, jRvS = JQ.rvS, jRvW = JQ.rvW, jRt0 = JQ.rvT[0] - 1, jRt1 = JQ.rvT[1] - 1, jRt2 = JQ.rvT[2] - 1, jP3 = 1.4*JQ.pl[2], jCl = JQ.cl;
   const KC = far ? [1, 1, 1] : JQ.kc[J.k], jK0 = KC[0] - 1, jK1 = KC[1] - 1, jK2 = KC[2] - 1, fGn = J.gn, fGb = 1 + (J.gn - 1)*0.3, CK0 = new Float64Array(19).fill(NaN), CK1 = new Float64Array(19).fill(NaN), R1 = DT_ROT[1], R2 = DT_ROT[2], R3 = DT_ROT[3], R4 = DT_ROT[4];   // (CK0, CK1: the crown layers' caches, see dtCrownJ)
-  // ('c2': the edge's mosaic threshold's softness (wider in the far texture, a texel a world unit); the savanna's closed share darkened to the
-  // forest's colour (the forest's texture colour, about #1b331d, times the base tone, over the savanna's, about #50512f); an opened clearing's
-  // tone over the plain ground; the far texture's changes over its gain; the canopy's heights about their middle (no raised rim round a
-  // patch); the far texture's share of the crown clumps; the rivers' channel)
-  const V2 = !!(JP && JP.v2), eW = far ? 0.12 : 0.06;
-  const fq = far ? fGn : 1, fp = far ? fGb : 1, jB0 = V2 ? JQ.base[0] - 1 : 0, jB1 = V2 ? JQ.base[1] - 1 : 0, jB2 = V2 ? JQ.base[2] - 1 : 0, jF0 = (Math.min(1, 0.106*(1 + jB0)/0.314) - 1)/fq, jF1 = (Math.min(1, 0.2*(1 + jB1)/0.318) - 1)/fq, jF2 = (Math.min(1, 0.114*(1 + jB2)/0.188) - 1)/fq, jO0 = V2 ? (JQ.open[0] - 1)/fp : 0, jO1 = V2 ? (JQ.open[1] - 1)/fp : 0, jO2 = V2 ? (JQ.open[2] - 1)/fp : 0, jU0 = jB0/fq, jU1 = jB1/fq, jU2 = jB2/fq, jHo = V2 ? 0.5 : 0;
-  const jFc = V2 && far ? JQ.farCl : 1, rC0 = V2 ? JQ.rc0 : 2, rCk0 = V2 ? JQ.rcK[0] : 0, rCk1 = V2 ? JQ.rcK[1] : 0, rCk2 = V2 ? JQ.rcK[2] : 0;
+  // ('c2': the edge's mosaic: the cut's half width (wider in the far texture, a texel a world unit), the finer noises' strengths (the second
+  // from 5 px a world unit) and the band about the cut they are made in; the savanna's ground colour (the texture's, about #50512f) to the
+  // forest's (about #1b331d) as a factor less one per channel, and their difference over the forest's distance from white, as dtShade screens
+  // a lighter change (0.6), each over the far texture's gain; the canopy's heights about their middle (no raised rim round a patch); the far
+  // texture's share of the crown clumps; the rivers' channel)
+  const V2 = !!(JP && JP.v2), eW = V2 ? (far ? JQ.eWf : JQ.eW) : 0, eF = V2 && cs/r >= 0.7 ? JQ.eF : 0, eF2 = V2 && r >= 15 ? JQ.eF2 : 0, eB = 0.75*(eF + eF2) + eW, eB2 = 0.75*eF2 + eW, eQ = far ? fGn : 1, eL = 0.6*(far ? fGb : 1), jOp = V2 ? JQ.op : 0;
+  const eC0 = 0.106/0.314 - 1, eC1 = 0.2/0.318 - 1, eC2 = 0.114/0.184 - 1, jHo = V2 ? 0.5 : 0;
+  const jMin = V2 ? 0.1 : 0.005, jHy = JQ.hy || 0.05, jHyb = JQ.hyb || 0.06, jHa = JQ.ha || 0.35, jFc = V2 && far ? JQ.farCl : 1, rC0 = V2 ? JQ.rc0 : 2, rCk0 = V2 ? JQ.rcK[0] : 0, rCk1 = V2 ? JQ.rcK[1] : 0, rCk2 = V2 ? JQ.rcK[2] : 0;
   for (let by = J.y; by < y1; by++){ const py = by - 1, wy = y0 + (py + 0.5)*ri, gy = by/cs, j0 = Math.min(gw - 2, Math.floor(gy)), fy = gy - j0, la = lat[by], FP = wy < J.eq ? J.fN : J.fS;
-    for (let i = 0, a = j0*gw*NF, b = a + gw*NF; i < gw; i++, a += NF, b += NF) for (let q = 0; q < NQ; q++){ const c = QS[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; }   // the node rows above and below, blended for this px row
+    const rj = NJ > 0 && (jrow[j0] || jrow[j0 + 1]);   // (JUNGLE: its fields only where a node row above or below has any of it)
+    for (let i = 0, a = j0*gw*NF, b = a + gw*NF; i < gw; i++, a += NF, b += NF){ for (let q = 0; q < NQ; q++){ const c = QS[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; }   // the node rows above and below, blended for this px row
+      if (rj) for (let q = 0; q < NJ; q++){ const c = QJ[q]; V[i*NF + c] = g[a + c] + (g[b + c] - g[a + c])*fy; } else if (NJ) V[i*NF + 18] = 0; }
     for (let bx = 0; bx < n2; bx++){ const px = bx - 1, x = x0 + (px + 0.5)*ri, gx = bx/cs, i0 = Math.min(gw - 2, Math.floor(gx)), fx = gx - i0, o0 = i0*NF, o1 = o0 + NF;
       w[0] = w[1] = w[2] = w[3] = w[4] = w[5] = w[6] = w[7] = w[8] = 0; for (let q = 0; q < NP; q++){ const c = pres[q]; w[c] = (V[o0 + c] + (V[o1 + c] - V[o0 + c])*fx); }
       const wP = w[0], wF = w[1], wM = w[2], wD = w[3], wT = w[4], wHi = w[5], wW = w[6], wS = w[7], wO = w[8];
       let h = 0, tr = (V[o0 + 11] + (V[o1 + 11] - V[o0 + 11])*fx), tg = (V[o0 + 12] + (V[o1 + 12] - V[o0 + 12])*fx), tb = (V[o0 + 13] + (V[o1 + 13] - V[o0 + 13])*fx);
+      // JUNGLE: the tropics' share (18). 'c2': the forest's edge as a mosaic, not a blur: where it is made (33) the field (31, the finer noise
+      // added near the cut) is cut softly, so the jungle's share here (fJ) lies between the forest's own (32, the share its tones were laid on at
+      // the nodes) and the whole (18): the savanna's closed share darkened to the forest's ground colour, the forest's opened share lightened to
+      // the savanna's (jop: it takes the savanna's pasture below), and the jungle's tones (27-29) moved with the share
+      let wJ = JP ? V[o0 + 18] + (V[o1 + 18] - V[o0 + 18])*fx : 0, jA = wJ, jfn = 0, jop = 0;
+      if (V2 && wJ > 0.002){ const gl = V[o0 + 33] + (V[o1 + 33] - V[o0 + 33])*fx;
+        if (gl > 0){ jA = V[o0 + 32] + (V[o1 + 32] - V[o0 + 32])*fx; let E = V[o0 + 31] + (V[o1 + 31] - V[o0 + 31])*fx;
+          if (eF > 0 && E > 0.5 - eB && E < 0.5 + eB) E += gl*eF*1.4*dtPn(x*0.19 + 12.7, wy*0.19 + 3.1);
+          if (eF2 > 0 && E > 0.5 - eB2 && E < 0.5 + eB2) E += gl*eF2*1.4*dtPn(x*0.47 + 7.3, wy*0.47 + 55.1);
+          const fJ = jA + gl*(wJ*(E <= 0.5 - eW ? 0 : E >= 0.5 + eW ? 1 : dtSm((E - 0.5 + eW)/(2*eW))) - jA), d = fJ - jA;
+          if (d > 0.002 || d < -0.002){ const a = (j0*gw + i0)*NF + 27, b = a + gw*NF, u0 = g[a] + (g[b] - g[a])*fy, u1 = g[a + 1] + (g[b + 1] - g[a + 1])*fy, u2 = g[a + 2] + (g[b + 2] - g[a + 2])*fy;
+            const t0 = u0 + (g[a + NF] + (g[b + NF] - g[a + NF])*fy - u0)*fx, t1 = u1 + (g[a + NF + 1] + (g[b + NF + 1] - g[a + NF + 1])*fy - u1)*fx, t2 = u2 + (g[a + NF + 2] + (g[b + NF + 2] - g[a + NF + 2])*fy - u2)*fx;   // (the tones' change, from the nodes: only here)
+            tr *= 1 + t0*d/(1 + t0*jA); tg *= 1 + t1*d/(1 + t1*jA); tb *= 1 + t2*d/(1 + t2*jA);
+            if (d > 0){ jfn = d; tr *= 1 + eC0*d/((1 + eC0*jA)*eQ); tg *= 1 + eC1*d/((1 + eC1*jA)*eQ); tb *= 1 + eC2*d/((1 + eC2*jA)*eQ); }
+            else { jop = -d*jOp; tr *= 1 + 0.208*jop/((0.686 + 0.208*jA)*eL); tg *= 1 + 0.118*jop/((0.682 + 0.118*jA)*eL); tb *= 1 + 0.07*jop/((0.816 + 0.07*jA)*eL); } }
+          wJ = fJ; } }
       // fine ridged relief (octaves 2..): mountains, the bare high plateaus, a little in the hills; a rock grain on them
       const hM = wM + wS*(la < 58 ? 0.7 : 0.12) + 0.12*wHi; let wood = 0;
       if (hM > 0.02){ const mx = x + 0.3*(V[o0 + 16] + (V[o1 + 16] - V[o0 + 16])*fx), my = wy + 0.3*(V[o0 + 17] + (V[o1 + 17] - V[o0 + 17])*fx); let a = 0.4, f = 0.9;
@@ -3927,28 +3972,19 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
         wood = wM*dtSm((la - 24)/6)*(1 - dtSm((la - 55)/6))*(r < 2 ? 0.15 : 1 - dtSm(((V[o0 + 9] + (V[o1 + 9] - V[o0 + 9])*fx)/Math.max(0.08, hM) - 0.12)/0.3)); if (wood > 0){ tr *= 1 - 0.2*wood; tg *= 1 - 0.03*wood; tb *= 1 - 0.26*wood; }   // temperate ranges: woods on the lower slopes (the far texture, r < 2, has no relief to put them on: a light even share, so its ranges keep the texture's bright ridges; its rock tone a third)
         if (bRk > 0){ const rg = hM*0.07*bRk*dtPn(x*1.7 + 61, wy*1.7 + 23); tr *= 1 + rg; tg *= 1 + rg*0.92; tb *= 1 + rg*0.7; } }
       // fine rolling ground
-      const hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM - (JP ? 0.22*(V[o0 + 18] + (V[o1 + 18] - V[o0 + 18])*fx) : 0);   // (the jungle: its drainage creases instead)
+      const hR = 0.12*wP + 0.6*wHi + 0.2*wT + 0.1*wD + 0.22*wF + 0.12*wO + 0.25*wM - 0.22*wJ;   // (the jungle: its drainage creases instead)
       if (hR > 0.02){ if (bH2 > 0) h += hR*0.24*bH2*dtPn(x*0.97 + 74.1, wy*0.97 - 16.3); if (bH3 > 0) h += hR*0.11*bH3*dtPn(x*2.04 + 91.1, wy*2.04 - 29.3); }
       // forest canopy: crowns as billows
       // forest canopy: two sizes of crowns on jittered grids (world-fixed, each shown once it is a few px across), shade in the gaps; the coarsest
       // tiles (play zoom, z1.35-3.5) take crown clumps about twice as wide, so the canopy reads as texture there instead of a smooth green
-      let wJ = JP ? V[o0 + 18] + (V[o1 + 18] - V[o0 + 18])*fx : 0; const wFt = Math.min(1, wF + 0.85*wood), wFe = wFt - (wJ > 0.005 ? wJ : 0);   // (JUNGLE: the tropics' share has its own canopy, below)
-      // 'c2': the forest's edge as a mosaic, not a blur: the edge field (31) against a threshold per px; below it the forest's share opens into
-      // savanna (lighter, warmer), above it the savanna's share near the forest closes into forest fingers and islands (darker, cooler)
-      let jfn = 0; if (V2 && wJ > 0.005){ const E = V[o0 + 31] + (V[o1 + 31] - V[o0 + 31])*fx, A = E < 0.5 + eW || wJ < 0.995 ? V[o0 + 32] + (V[o1 + 32] - V[o0 + 32])*fx : 1;
-        if (E < 0.5 + eW || wJ - A > 0.01){ const mj = E <= 0.5 - eW ? 0 : E >= 0.5 + eW ? 1 : dtSm((E - 0.5 + eW)/(2*eW)), sA = 1 - A;
-          // (an opened share of the forest: the jungle's base tone the nodes laid on it taken off again, the plain ground a little lighter and
-          // warmer (an olive clearing); a closed share of the savanna: darkened to the forest's colour (its tone over the savanna's texture colour))
-          const op = A*(1 - mj), fs = sA*mj, u0 = (1 + jU0*A*mj)/(1 + jU0*A), u1 = (1 + jU1*A*mj)/(1 + jU1*A), u2 = (1 + jU2*A*mj)/(1 + jU2*A);   // (the far texture: its tones and their changes over its gain, as at the nodes)
-          tr *= u0*(1 + jO0*op)*(1 + jF0*fs); tg *= u1*(1 + jO1*op)*(1 + jF1*fs); tb *= u2*(1 + jO2*op)*(1 + jF2*fs);
-          jfn = (wJ - A)*mj; wJ *= mj; } }
+      const wFt = Math.min(1, wF + 0.85*wood), wFe = wFt - (jA > 0.005 ? jA : 0);   // (JUNGLE: the tropics' share has its own canopy, below)
       if (wFe > 0.02){ const cov = dtSm((wFt - 0.15)/0.5); let gA = 0, gB = 0;
         for (let L = 0; L < 2; L++){ const sp = L ? 0.36 : spA, bw = L ? bCB : bCA; if (bw <= 0) continue; const d = dtCrown(x, wy, sp, L ? 21 : 11), bh = DT_CH;
           if (d > 0 && bh < 0.08 + 0.92*cov){ h += wFe*0.32*sp*bw*d; const tv = 1 + (bh - 0.5)*0.12*wFe*bw; tr *= tv; tg *= tv; tb *= tv; } else if (L) gB = 1; else gA = 1; }
         const gap = (bCB > 0 ? gB*bCB + gA*bCA*(1 - bCB) : gA*bCA)*wFe*cov; if (gap > 0){ tr *= 1 - 0.26*gap; tg *= 1 - 0.2*gap; tb *= 1 - 0.24*gap; } }
       // JUNGLE: the tropical canopy (see DT_JP): drainage creases, crowns at up to three sizes on warped, rotated grids (the big ones thinned
       // between the clusters and on the floodplains), shade in the gaps, the floodplains' greens; the far texture takes the finer patches here
-      if (wJ > 0.005){ const qx = x + V[o0 + 19] + (V[o1 + 19] - V[o0 + 19])*fx, qy = wy + V[o0 + 20] + (V[o1 + 20] - V[o0 + 20])*fx, sf = JP.sec > 0 ? V[o0 + 22] + (V[o1 + 22] - V[o0 + 22])*fx : 0;
+      if (wJ > jMin){ const qx = x + V[o0 + 19] + (V[o1 + 19] - V[o0 + 19])*fx, qy = wy + V[o0 + 20] + (V[o1 + 20] - V[o0 + 20])*fx, sf = JP.sec > 0 ? V[o0 + 22] + (V[o1 + 22] - V[o0 + 22])*fx : 0;
         let cl = far ? 0 : V[o0 + 21] + (V[o1 + 21] - V[o0 + 21])*fx, rv, jr = 1, jg = 1, jb = 1, lr = 1, lg = 1, lb = 1;   // (jr..: detail; lr..: tones)
         rv = V[o0 + 30] + (V[o1 + 30] - V[o0 + 30])*fx;
         if (far){ cl = jFc*1.4*dtPn((qx*R1[0] - qy*R1[1])*cF0 + 5.3, (qx*R1[1] + qy*R1[0])*cF0 + 9.1); lr = lg = lb = 1 + (jP3 + jCl)*cl*wJ; }   // (far: the 3 and 4 world unit patches per texel, one noise: the clusters' own coarse octave (close in, the patches and the clusters' tones are noises of their own of about that size); the clusters' finer octave, 0.62 a world unit, is at the far texture's Nyquist limit: left out)
@@ -3966,8 +4002,8 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
           const big = Math.max(0, 1 - jRvS*rv - 0.5*sf), hc = dtSm((cq - jCt)/jCw + 0.5)*big + (1 - big)*0.5, sh = jSoft ? hc*hc*(3 - 2*hc) : hc;
           h += wJ*jHc*cbk*(sh - jHo); const tv = 1 + jCL*(hc - 0.5)*2*wJ*cbk; jr *= tv; jg *= tv; jb *= tv*(1 + 0.04*(0.5 - hc));
           for (let L = 0; L < 2; L++){ const bw = L ? bK1 : bK0; if (bw <= 0) continue; const sp = L ? jS1 : jS0, R = L ? R4 : R3, u = qx*R[0] - qy*R[1], v = qx*R[1] + qy*R[0];
-            const CK = L ? CK1 : CK0, d = dtCrownJ(u, v, sp, 61 + 10*L, jRr, CK), bh = CK[18], a = bw*wJ*(0.35 + 0.65*hc);
-            if (d > 0){ const pr = jSoft ? Math.sqrt(d) : d, b5 = bh - 0.5; h += jHk*sp*pr*a; const t2 = 1 + b5*jCv*a; jr *= t2*(1 + 0.05*b5*a); jg *= t2; jb *= t2*(1 - 0.06*b5*a); }
+            const CK = L ? CK1 : CK0, d = dtCrownJ(u, v, sp, 61 + 10*L, jRr, CK), bh = CK[18], a = bw*wJ*(jHa + (1 - jHa)*hc);
+            if (d > 0){ const pr = jSoft ? Math.sqrt(d) : d, b5 = bh - 0.5; h += jHk*sp*pr*a; const t2 = 1 + b5*jCv*a; jr *= t2*(1 + jHy*b5*a); jg *= t2; jb *= t2*(1 - jHyb*b5*a); }
             else { const gk = jGap*a*(L ? 0.6 : 1); jr *= 1 - gk; jg *= 1 - 0.85*gk; jb *= 1 - 0.8*gk; } } }
         // the floodplains' greens
         if (rb > 0.01){ const k = rb*wJ; lr *= 1 + jRt0*k; lg *= 1 + jRt1*k; lb *= 1 + jRt2*k; }
@@ -3989,8 +4025,10 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
         tr *= rr*(1 - 0.14*hk); tg *= rg*(1 - 0.1*hk); tb *= rb*(1 - 0.14*hk); }
       // pasture and scrub where no fields, woods or dunes give the ground detail (else a smooth green smear): two octaves of greener and browner
       // patches, paddocks (small Voronoi cells, each its own tone, most hedged) and a coarser network of tracks; it fades out as other detail takes over
-      const ps = (wP + wHi)*(1 - dtSm(fk/0.06))*(1 - dtSm((wFt + jfn - 0.15)/0.25))*(1 - dtSm(wD/0.04)); if (ps > 0.02 && wP + wHi > 0.1){
-        const pn1 = dtPn(x*0.35 + 13.7, wy*0.35 + 41.3), pn2 = dtPn(x*1.4 + 7.1, wy*1.4 + 19.9), pa = (pn1*0.11 + pn2*0.05)*ps, pl = dtPn(x*0.7 + 29.3, wy*0.7 + 3.9)*0.04*ps;
+      const ps = (wP + wHi + jop)*(1 - dtSm(fk/0.06))*(1 - dtSm((wFt - jop + jfn - 0.15)/0.25))*(1 - dtSm(wD/0.04)); if (ps > 0.02 && wP + wHi + jop > 0.1){
+        const pn1 = dtPn(x*0.35 + 13.7, wy*0.35 + 41.3);
+        if (jop > 0 && (wP + wHi < 0.1 || ps*(wP + wHi)/(wP + wHi + jop) < 0.02)){ const pa = pn1*0.14*ps; tr *= 1 - 0.55*pa; tg *= 1 + 0.6*pa; tb *= 1 - 0.35*pa; }   // ('c2': a clearing in the forest takes the mottle, not the paddocks)
+        else { const pn2 = dtPn(x*1.4 + 7.1, wy*1.4 + 19.9), pa = (pn1*0.11 + pn2*0.05)*ps, pl = dtPn(x*0.7 + 29.3, wy*0.7 + 3.9)*0.04*ps;
         tr *= (1 - 0.55*pa)*(1 + pl); tg *= (1 + 0.6*pa)*(1 + pl); tb *= (1 - 0.35*pa)*(1 + pl*0.8);
         const PS = 14, ci = Math.floor(x/PS), cj = Math.floor(wy/PS);
         if (ci !== pci || cj !== pcj){ pci = ci; pcj = cj; let m = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++, m++){ const ii = ci + di, jj = cj + dj; PX[m] = (ii + 0.1 + 0.8*dtHash(ii, jj, 41))*PS; PY[m] = (jj + 0.1 + 0.8*dtHash(ii, jj, 42))*PS; } }
@@ -4000,7 +4038,7 @@ function dtRows(J, y1){ const {r, n, x0, y0, cs, gw, g, pres, lat} = J, Hb = DT.
         let e1 = 1e9, e2 = 1e9, q1 = 0; for (let m = 0; m < 9; m++){ const dx = QX[m] - xq, dy = QY[m] - yq, d = dx*dx + dy*dy; if (d < e1){ e2 = e1; e1 = d; q1 = m; } else if (d < e2) e2 = d; }
         const qid = QI[q1], pv = (dtHash(qid, 8, 8) - 0.5)*0.2*ps, pb = (dtHash(qid, 10, 10) - 0.5)*0.1*ps; tr *= (1 - 0.5*pv)*(1 + pb); tg *= (1 + 0.6*pv)*(1 + pb); tb *= (1 - 0.3*pv)*(1 + pb*0.8);   // a paddock's own tone
         const tk = (1 - dtSm(((Math.sqrt(d2) - Math.sqrt(d1))*0.5 - lw*0.5)/(lw*1.3)))*0.12, hg = (1 - dtSm(((Math.sqrt(e2) - Math.sqrt(e1))*0.5 - lw*0.4)/(lw*1.2)))*(dtHash(qid, 9, 9) < 0.7 ? 0.12 : 0.03), hk = Math.max(tk, hg)*ps;
-        if (hk > 0){ tr *= 1 - hk; tg *= 1 - 0.8*hk; tb *= 1 - hk; } }
+        if (hk > 0){ tr *= 1 - hk; tg *= 1 - 0.8*hk; tb *= 1 - hk; } } }
       // desert: dune crests swept by the wind (a gentle windward slope, a short steep slip face), ripples on them close up; speckled gravel
       if (wD > 0.02){ const du = (V[o0 + 15] + (V[o1 + 15] - V[o0 + 15])*fx);
         if (du > 0.01 && bDn > 0){ const qx = x + (V[o0 + 16] + (V[o1 + 16] - V[o0 + 16])*fx), qy = wy + (V[o0 + 17] + (V[o1 + 17] - V[o0 + 17])*fx), t = (qx*0.83 + qy*0.56)/dper, ti = Math.floor(t), fr = t - ti;
