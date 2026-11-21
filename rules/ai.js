@@ -597,7 +597,7 @@ function aiTurn0(n, N){
   const idleBy = new Map();
   for (const a of armiesOf(n)){ if (a.to !== null || a.path.length || a.air || S.owner[a.at] !== n || !count(a)) continue;
     let list = idleBy.get(a.at); if (!list) idleBy.set(a.at, list = []);
-    const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries)
+    const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries, fleets stay fleets)
   removeEmpty();
   for (const list of idleBy.values()){ for (const a of list.slice()) list.push(...aiSplitToLimit(a)); }
   const idleAll = () => [...idleBy.values()].flat().filter(a => count(a) && !a.path.length && a.to === null);
