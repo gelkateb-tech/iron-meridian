@@ -5930,7 +5930,7 @@ const fkey = (a, p) => a.air ? 'a' : !G.P[p].sea && shipsOnly(a) ? 's' : 'x';
 /* ---------------- Units in cities: the centre point (owner 2026-11-22) ----------------
    A land province is taken the hour a ground force reaches its CENTRE POINT, its heart (rules/movement.js atHeart: G.P[p].x, y, the city).
    The map shows it: every city carries a small marker on that exact point (heartMarks), and a force standing on it (heartOn) has its position
-   dot on the marker, its counter and pictures anchored to it (the province's layout gives it the point itself: layoutCompute), and lights the
+   dot on the marker, its counter and pictures anchored to it (its pictures stand just above the point: layoutCompute, heartRole), and lights the
    marker with a ring in its side's colour. A force anywhere else in the province stands where it stands: its dot off the marker, no ring.
    heartOn is the rules' own test (atHeart) for a force that STANDS on the point: not one that only walked through it on its way to a spot
    beyond (a.hrt: the rules still count that walk for the capture, but the force is drawn, listed and ringed where it really stands, outside),
@@ -6018,11 +6018,11 @@ function layoutCompute(p, roles){
   const order0 = bat ? roleSort(roles).sort((a, b) => (roleOwner(a) === S.owner[p]) - (roleOwner(b) === S.owner[p])) : roleSort(roles), order1 = order0.filter(keepG).concat(order0.filter(r => !keepG(r))), hRole = heartRole(p, order1), order = hRole ? [hRole].concat(order1.filter(r => r !== hRole)) : order1;
   for (const r of order){ const cls = r[0], ow = roleOwner(r), FT = tmFoot(roleTypes(r)), fb = FT.b, feet = FT.feet;
     // the boxes its models will stand in (the formation it is drawn with: its types most numerous first, each box over all 16 views)
-    let fMid = 0; const SB = (() => { const M = LAY_R && LAY_R.get(p); let e0 = null; if (M) for (const e of M.values()) if (roleOf(p, e) === r){ e0 = e; break; }
+    const SB = (() => { const M = LAY_R && LAY_R.get(p); let e0 = null; if (M) for (const e of M.values()) if (roleOf(p, e) === r){ e0 = e; break; }
       const ts = e0 ? tmRank(tmUnits(e0.list), cls, tmNMax(p), tmPrimO(p, e0.owner)) : roleTypes(r), Fm = tmForm(ts);
-      { let ys = 0, ny = 0; for (let i = 0; i < ts.length; i++) if (Fm.slots[i]){ ys += Fm.slots[i][1]; ny++; } fMid = ny ? ys/ny : 0; }   // (the middle of its pictures below its pin: tmForms centres a force standing on the heart on it)
       return ts.map((t, i) => { const V = tmVB(t), o = Fm.slots[i] || [0, 0]; return [o[0] + Math.min(...V.map(q => q[0])), o[1] + Math.min(...V.map(q => q[1])), o[0] + Math.max(...V.map(q => q[2])), o[1] + Math.max(...V.map(q => q[3]))]; }); })();
-    if (r === hRole){ out.set(r, [P.x, P.y]); mine.push({p, ax:P.x, ay:P.y - fMid, fb, ow, sb:SB}); continue; }   // units in cities: on the centre point itself (its pictures centred on it: tmForms)
+    if (r === hRole){ const bot = Math.max(0, ...SB.map(q => q[3])), ay0 = P.y - HEART_GAP - bot, pg = keepG(r), ay = pg && pg.tx === P.x && pg.ty <= P.y - 0.5*HEART_GAP - bot && pg.ty >= ay0 - 4 ? pg.ty : ay0; out.set(r, [P.x, ay]);   // (where it stands now while its pictures still clear the point: a force leaving the stack leaves the rest in place)
+      mine.push({p, ax:P.x, ay, fb, ow, sb:SB}); HRL.set(p, r); continue; }   // units in cities: on the centre point (its dot on the marker), its pictures standing just above it, the marker and the name below them clear
     const oth = mine.concat(near), cand = [], pg = keepG(r);
     // in a battle the attacker stands on the side it came from (toward its own land next door, else its capital), the holder on the other side
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
@@ -6059,14 +6059,15 @@ function layoutCompute(p, roles){
     /*@TEST*/if (TMDBG.on){ const B = {}; ev(bb[0], bb[1], bb[2], Infinity, B); (mine.bk || (mine.bk = [])).push([r, bb[0], bb[1], B]); LAYEV.set(p + '|' + r, (dx, dy) => { const B2 = {}; return [ev(dx, dy, 0, Infinity, B2), B2]; }); if (LAYEV.size > 300) LAYEV.clear(); }/*@ENDTEST*/
     /*@TEST*/if (TMDBG.on) (mine.bc || (mine.bc = [])).push([r, Math.round(bc), (best[0] - P.x).toFixed(1), (best[1] - P.y).toFixed(1), near.length, [...new Set(near.map(q => q.p))].join(' ')]);/*@ENDTEST*/
     out.set(r, best); mine.push({p, ax:best[0], ay:best[1], fb, ow, sb:SB}); }
-  return {out, items:mine}; }
+  return {out, items:mine, hr:hRole}; }
 // units in cities: which of province p's roles stands on its centre point, laid out on the point itself (null: none, or not a city). Every ground
 // force there standing on the point (heartOn) is in the city; when forces of several sides are, one is drawn on the point and the others right
 // beside it (the layout's own pull to the point): the one already on it while it stays, else yours, else the holder's, else the strongest.
 // (roles not yet standing there, a column's arrival worked out ahead (provLayoutH), count as arriving at the point: legs end on the centre)
+const HRL = new Map(), HEART_GAP = 0.9;   // (HRL: the role last laid out on each city's point; HEART_GAP: world px between the point and the feet of the pictures standing on it)
 function heartRole(p, roles){ if (!heartCity(p)) return null; const P = G.P[p], M = LAY_R && LAY_R.get(p), ent = r => { if (M) for (const e of M.values()) if (roleOf(p, e) === r) return e; return null; };
   const C = roles.filter(r => { if (r[0] !== 'g') return false; const e = ent(r); return e ? e.list.some(heartOn) : true; }); if (C.length < 2) return C[0] || null;
-  const on = C.find(r => { const g = PLAG.get(p + '|' + roleBase(r)); return g && g.S === S && g.tx === P.x && g.ty === P.y; }); if (on) return on;
+  const on = HRL.get(p); if (on && C.includes(on)) return on;
   const n = r => { const e = ent(r); return e ? e.list.reduce((s, a) => s + count(a), 0) : 0; };
   return C.find(r => roleOwner(r) === PLAYER) || C.find(r => roleOwner(r) === S.owner[p]) || C.reduce((b, r) => n(r) > n(b) ? r : b, C[0]); }
 const layoutKey = (p, roles) => roleSort(roles).join(',') + '|' + (hqBoxPx(p) ? 1 : 0) + '|' + tmRW() + '|' + (S.battles.includes(p) ? 1 : 0) + '|' + TMAS + '|' + (heartRole(p, roles) || '');   // (and which role stands on the heart: a force landing, or setting off, lays the city out anew)
@@ -6080,7 +6081,7 @@ function nearDeps(p){ if (LDEP_R !== LAY_R){ LDEP.clear(); LDEP_R = LAY_R; } let
 function provLayout(p, roles){ const L = PLAY.get(p); if (L && L.chk === LAY_R && L.S === S && LAY_R) return L;
   const key = layoutKey(p, roles) + '#' + nearDeps(p).map(q => q + ':' + provLayout(q, rolesAt(LAY_R, q)).v).join(',');
   if (L && L.key === key && L.S === S){ L.chk = LAY_R; return L; }
-  /*@TEST*/const t0 = performance.now();/*@ENDTEST*/ const R = layoutCompute(p, roles), N = {key, S, out:R.out, v:++PLAY_V, chk:LAY_R, bat:S.battles.includes(p)}; /*@TEST*/N.dbg = R.items.bk; N.dbc = R.items.bc; PLAY_MS += performance.now() - t0; PLAY_N++;/*@ENDTEST*/ PLAY.set(p, N); PREG.set(p, R.items); return N; }
+  /*@TEST*/const t0 = performance.now();/*@ENDTEST*/ const R = layoutCompute(p, roles), N = {key, S, out:R.out, hr:R.hr, v:++PLAY_V, chk:LAY_R, bat:S.battles.includes(p)}; /*@TEST*/N.dbg = R.items.bk; N.dbc = R.items.bc; PLAY_MS += performance.now() - t0; PLAY_N++;/*@ENDTEST*/ PLAY.set(p, N); PREG.set(p, R.items); return N; }
 // the spot a force arriving at q will stand on (without disturbing q's present layout)
 function provLayoutH(p, roles){ const key = layoutKey(p, roles), L = PLAY.get(p); if (L && L.key.startsWith(key + '#') && L.S === S) return L; const k2 = p + '#' + key; let H = PLAYH.get(k2); if (H && H.S === S) return H;
   H = {key, S, out:layoutCompute(p, roles).out}; if (PLAYH.size > 200) PLAYH.clear(); PLAYH.set(k2, H); return H; }
@@ -6248,7 +6249,7 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     // diamond (the middle of its pictures) on the very point, its pictures round it; a force in its province's layout, or marching to a
     // province's centre (a column that joins a stack there), keeps its slot at the top of its group, as before. The shift glides (in time, never by zoom), so a force setting off or arriving does not jump
     // (kept per force: a group takes the largest shift of its forces, so a column joining a stack glides down with it instead of dropping)
-    { const want0 = (c.pinned && !c.dock) || c.heart || (c.moving && (lead.dest || lead.sail)) ? mid : 0; let Q = null;   // (c.heart: units in cities, centred on the city's point)
+    { const want0 = (c.pinned && !c.dock) || (c.moving && (lead.dest || lead.sail)) ? mid : 0; let Q = null;
       for (const q0 of c.list){ const e = TMCEN.get(q0.id); if (e && e.S === S && now - e.t <= 1500 && (!Q || e.v > Q.v)) Q = e; }
       if (TMCEN.size > 3000) TMCEN.clear();
       if (!Q) Q = {v:want0, t:now, S}; else { Q = {v:Q.v, t:Q.t, S}; const dt = Math.max(0, Math.min(100, now - Q.t)), dv = want0 - Q.v, st = TMCEN_V*dt; Q.v = Math.abs(dv) <= st ? want0 : Q.v + Math.sign(dv)*st; if (Q.v !== want0) animFast(); Q.t = now; }   // (at an even, slow rate: about a px a frame, so the pictures never jump against the force's own motion)
@@ -9051,7 +9052,7 @@ function draw(now){ draw.now = now;
     else if (c.moving){ A = moveAnchor(ROLES, a, it.wx, it.wy); c.split = SPLITS.has(a.id); const u = tmUnits([a]); c.cls = G.P[a.at].sea || Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval') ? 's' : 'g'; }
     else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : c.dock ? 's' : 'x') + c.owner);
       if (e){ const r = roleOf(c.at, e), P0 = G.P[c.at]; c.cls = r[0]; A = anchorOf(ROLES, c.at, r, now);
-        if (c.cls === 'g' && !c.air && heartCity(c.at) && c.list.some(heartOn)){ const T = PLAY.get(c.at), o = T && T.out.get(r); c.hp = c.at; c.heart = !!o && o[0] === P0.x && o[1] === P0.y; }   // units in cities: standing on the centre point (c.heart: the one laid out on it)
+        if (c.cls === 'g' && !c.air && heartCity(c.at) && c.list.some(heartOn)){ const T = PLAY.get(c.at); c.hp = c.at; c.heart = !!T && T.hr === r; }   // units in cities: standing on the centre point (c.heart: the one laid out on it)
         const mS = !c.air && a.at === c.at ? movOwn(a.id) : null;   // (a stack that absorbs an arriving column keeps its spot)
         if (mS){ A = [A[0] + it.wx - P0.x, A[1] + it.wy - P0.y]; }   // still settling after a march: its spring's lag rides along
         if (!c.air && OFS.size && c.list.length === 1) A = haltAnchor(a, A, now, it.wx, it.wy); }
@@ -9610,6 +9611,10 @@ mini.addEventListener('pointerup', () => { miniDrag = false; });
 // (the old city-or-troops menu is gone: a tap on a city opens its sheet at once, troops are reached by tapping their counter)
 function closeChooser(){ const el = $('chooser'); if (el && !el.hidden){ el.hidden = true; el.innerHTML = ''; } }
 function cityAt(x, y){ let best = null, bd = 1e9; for (const m of cityPts){ const d = Math.hypot(x - m.x, y - m.y); if (d <= Math.max(10, Math.min(m.r*1.3, m.r + 4)) && d < bd){ bd = d; best = m; } } return best; }
+// a tap's city point: close in, where the pictures of forces standing on a city's centre point surround it (units in cities), a tap on those
+// pictures is a tap on the force; only the marker itself (its ring and a little round it) still means the city
+function cityAtTap(x, y){ const m = cityAt(x, y); if (!m) return null; if (Math.hypot(x - m.x, y - m.y) <= heartRingR(view.s*HS0) + 4) return m;
+  return HITX.some(h => h.art && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) ? null : m; }
 // the city whose drawn name is at (x, y): a plain tap on a city's name picks that city (the name is what marks a city on the map)
 function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ const b = cityNames[i].b; if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return cityNames[i]; } return null; }
 // everything a tap can hit, in the order a tap tries them from the END: the stacked counters of other sides drawn beside a counter that covers
@@ -9625,8 +9630,8 @@ function tap(x, y, shift = false, long = false){
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
   const core = !hs && coreAt(x, y);   // (a counter's own square drawn over a city's point: the counter is what was tapped)
-  const cityTap = plain && !hs && !core && !!cityAt(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
-  const mk = hs || core ? null : cityAt(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
+  const cityTap = plain && !hs && !core && !!cityAtTap(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
+  const mk = hs || core ? null : cityAtTap(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null && long) return;   // (a resting finger is no order: Move stays armed)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
       for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
