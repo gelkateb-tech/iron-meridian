@@ -6028,14 +6028,14 @@ function layoutCompute(p, roles){
       return ts.map((t, i) => { const V = tmVB(t), o = Fm.slots[i] || [0, 0]; return [o[0] + Math.min(...V.map(q => q[0])), o[1] + Math.min(...V.map(q => q[1])), o[0] + Math.max(...V.map(q => q[2])), o[1] + Math.max(...V.map(q => q[3]))]; }); })();
     const isH = r === hRole, oth = mine.concat(near), cand = [], pg = keepG(r); if (isH) HRL.set(p, r);
     // units in cities: the force on the centre point (its dot on the marker, its counter just above it) has its pictures right beside the point:
-    // the nearest spot round it (within HEART_NEAR world px of their box) clear of the marker, the name and the buildings' pictures
+    // the nearest spot round it (within HEART_NEAR world px of their box) clear of the marker, the name and the buildings' pictures (where it stands now is kept within HEART_KEEP)
     const hgap = (dx, dy) => Math.hypot(Math.max(dx + fb[0], 0, -(dx + fb[2])), Math.max(dy + fb[1], 0, -(dy + fb[3])));
     // in a battle the attacker stands on the side it came from (toward its own land next door, else its capital), the holder on the other side
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
     if (isH){ for (let dy = -16; dy <= 12; dy += 0.5) for (let dx = -14; dx <= 14; dx += 0.5) if (hgap(dx, dy) <= HEART_NEAR) cand.push([dx, dy, 0]); }
     else for (let dy = -24; dy <= 12; dy += 2) for (let dx = -22; dx <= 22; dx += 2) cand.push([dx, dy, 0]);
     if (cls === 's' && !P.sea) for (const q of dockCands(p)) cand.push(q);   // a fleet docked in a port: on the water off the city's shore (the grid above rarely reaches it)
-    if (pg && !(isH && hgap(pg.tx - P.x, pg.ty - P.y) > HEART_NEAR)) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
+    if (pg && !(isH && hgap(pg.tx - P.x, pg.ty - P.y) > HEART_KEEP)) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
     // a spot's cost (B: an optional breakdown, for the tests)
     const ev = (dx, dy, bonus, bc, B) => { let c = 0; const add = B ? (k, v) => { c += v; B[k] = Math.round((B[k] || 0) + v); } : (k, v) => { c += v; };
       const ax = P.x + dx, ay = P.y + dy, dd = Math.hypot(dx, dy);
@@ -6064,7 +6064,7 @@ function layoutCompute(p, roles){
     let best = [P.x, P.y - 8], bc = Infinity, bb = null;
     // a force standing here keeps its spot outright unless it has become untenable (its counter abroad or at sea, half its troops in the water
     // or abroad, or touching the enemy in a battle, or its counter on another counter or your HQ out where they first must stand apart): crowding a name or a neighbour a little is better than a counter sliding off as another force comes or goes
-    let keep = false; if (pg && !(isH && hgap(pg.tx - P.x, pg.ty - P.y) > HEART_NEAR)){ const B = {}, c = ev(pg.tx - P.x, pg.ty - P.y, 0, Infinity, B); if (!((B.bld || 0) >= 300 ||(B.pin || 0) >= 1400 || (B.feet || 0) >= 3000 || (B.foe || 0) > 0 || (B.plates || 0) >= 800 || (B.hq || 0) >= 300)){ keep = true; bc = c; best = [pg.tx, pg.ty]; bb = [pg.tx - P.x, pg.ty - P.y, 0]; } }
+    let keep = false; if (pg && !(isH && hgap(pg.tx - P.x, pg.ty - P.y) > HEART_KEEP)){   /* (the force on the point keeps its spot while it stays near: one leaving the stack, or joining it, never sends the rest off) */ const B = {}, c = ev(pg.tx - P.x, pg.ty - P.y, 0, Infinity, B); if (!((B.bld || 0) >= 300 ||(B.pin || 0) >= 1400 || (B.feet || 0) >= 3000 || (B.foe || 0) > 0 || (B.plates || 0) >= 800 || (B.hq || 0) >= 300)){ keep = true; bc = c; best = [pg.tx, pg.ty]; bb = [pg.tx - P.x, pg.ty - P.y, 0]; } }
     if (!keep) for (const [dx, dy, bonus] of cand){ const c = ev(dx, dy, bonus, bc); if (c < bc){ bc = c; best = [P.x + dx, P.y + dy]; bb = [dx, dy, bonus]; } }
     /*@TEST*/if (TMDBG.on){ const B = {}; ev(bb[0], bb[1], bb[2], Infinity, B); (mine.bk || (mine.bk = [])).push([r, bb[0], bb[1], B]); LAYEV.set(p + '|' + r, (dx, dy) => { const B2 = {}; return [ev(dx, dy, 0, Infinity, B2), B2]; }); if (LAYEV.size > 300) LAYEV.clear(); }/*@ENDTEST*/
     /*@TEST*/if (TMDBG.on) (mine.bc || (mine.bc = [])).push([r, Math.round(bc), (best[0] - P.x).toFixed(1), (best[1] - P.y).toFixed(1), near.length, [...new Set(near.map(q => q.p))].join(' ')]);/*@ENDTEST*/
@@ -6074,7 +6074,7 @@ function layoutCompute(p, roles){
 // force there standing on the point (heartOn) is in the city; when forces of several sides are, one is drawn on the point and the others right
 // beside it (the layout's own pull to the point): the one already on it while it stays, else yours, else the holder's, else the strongest.
 // (roles not yet standing there, a column's arrival worked out ahead (provLayoutH), count as arriving at the point: legs end on the centre)
-const HRL = new Map(), HEART_NEAR = 1.6;   // (HRL: the role last laid out on each city's point; HEART_NEAR: world px at most between the point and the box of the pictures of the force on it)
+const HRL = new Map(), HEART_NEAR = 1.6, HEART_KEEP = 3.2;   // (HRL: the role last laid out on each city's point; HEART_NEAR: world px at most between the point and the box of the pictures of the force on it)
 // the boxes (world px) of a city's building pictures (bnLayout, once it is worked out: the layout is redone then, layoutKey), for the pictures of
 // the force on its point to keep off
 function heartBld(p){ const L = BNL.get(p); if (!L || BNL_G !== G) return []; const its = bnItems(p), P = G.P[p], out = [];
@@ -6151,8 +6151,9 @@ const PF = new Map(), PF_IN = 10, PF_OUT = 20, PF_UP = 160, PF_DN = 70;   // (fa
 const pbQuiet = c => { const a = c.list.reduce((b, q) => count(q) > count(b) ? q : b, c.list[0]); return a.owner !== PLAYER && !pbFight(c) && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)); };
 const pbFight = c => !c.moving && !c.air && S.battles.includes(c.at);
 // a counter's box on screen (css px): the plate with its flag, marks, bars and battle badge
-function pfBox(c, k, n = c.n){ const q = pbQuiet(c), r = plateRect(c.x, c.y, n, k, q, c.tag);
-  return [r.x, r.y, r.x + r.w + (pbFight(c) ? 14 : 0), r.y + r.h]; }
+function pfBox(c, k, n = c.n){ const q = pbQuiet(c), r = plateRect(c.x, c.y, n, k, q, c.tag), b = [r.x, r.y, r.x + r.w + (pbFight(c) ? 14 : 0), r.y + r.h];
+  if (c.hp != null && c.tag && c.da > 0.02){ const d = plateRect(c.dx, c.dy, n, k, q, false); b[0] = Math.min(b[0], d.x); b[1] = Math.min(b[1], d.y); b[2] = Math.max(b[2], d.x + d.w); b[3] = Math.max(b[3], d.y + d.h); }   // (units in cities: a force on a city's point has its badge on the marker and its tag over its pictures beside it: through the cross-fade both claim their room)
+  return b; }
 const hudCover = (b, hud) => { const A = Math.max(1, (b[2] - b[0])*(b[3] - b[1])); for (const o of hud){ const ox = Math.min(b[2], o[2]) - Math.max(b[0], o[0]), oy = Math.min(b[3], o[3]) - Math.max(b[1], o[1]); if (ox > 0 && oy > 0 && ox*oy > 0.1*A) return true; } return false; };
 const PF_HUD = 0.25, PF_S = {S:null, t:0};
 const pfFresh = now => { if (PF_S.S !== S){ PF_S.S = S; PF_S.t = now; } return now - PF_S.t < 400; };   // (the first moments of a game or a load: everything is simply there)
@@ -6206,7 +6207,7 @@ function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = 
     // not by their boxes with the marks. Hysteresis: a hidden one comes back only 6 px clear of the gap)
     const dc = c.tag ? 0 : plateDims(c.n, 1, pbQuiet(c), false).d/2;
     let hit = null, hd = Infinity; for (const o of near(bt)){ const q = o.b; let on;
-      if (!c.tag && !o.c.tag){ const ro = plateDims(o.c.n, 1, pbQuiet(o.c), false).d/2; on = Math.max(Math.abs(o.c.x - c.x), Math.abs(o.c.y - c.y)) < dc + ro + 1 + (was ? 0 : 6); }
+      if (!c.tag && !o.c.tag && c.hp == null && o.c.hp == null){ const ro = plateDims(o.c.n, 1, pbQuiet(o.c), false).d/2; on = Math.max(Math.abs(o.c.x - c.x), Math.abs(o.c.y - c.y)) < dc + ro + 1 + (was ? 0 : 6); }   // (a city's own counter, pinned to its marker as the map zooms, is tested by its whole box below)
       else on = bt[0] < q[2] + o.m && bt[2] > q[0] - o.m && bt[1] < q[3] + o.m && bt[3] > q[1] - o.m;
       if (on){ const d = (o.c.x - c.x)**2 + (o.c.y - c.y)**2 + (o.c.owner === c.owner && !pbFight(c) && !pbFight(o.c) ? 0 : 1e6); if (d < hd){ hd = d; hit = o; } } }   // (a power's own counter it may join comes first: fewer stand beside)
     if (!hit){ const o = {c, b, m}; shown.push(o); put(o); continue; }
@@ -8171,7 +8172,7 @@ let HCITY = null; /*@TEST*/const HMDBG = [];/*@ENDTEST*/   // the cities' provin
 const ovlB = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
 // names: the boxes of the names drawn this frame (city, province and power names: their places are the names' own, never moved for a marker)
 function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
-  if (!HCITY || HCITY.G !== G || HCITY.S !== S){ HCITY = G.P.filter(P => !P.sea && P.city).map(P => P.id); HCITY.G = G; HCITY.S = S; }
+  if (!HCITY || HCITY.G !== G || HCITY.S !== S){ HCITY = G.P.filter(P => !P.sea && P.city).sort((a, b) => a.y - b.y).map(P => P.id); HCITY.ys = HCITY.map(p => G.P[p].y); HCITY.G = G; HCITY.S = S; }   // (by their y: a frame looks only at the band on screen)
   const caps = new Set(); for (const N of S.nations) if (N.alive && N.capital != null && S.owner[N.capital] === N.id) caps.add(N.capital);
   // the sides standing on each point: from the drawn counters (fog of war: only what you see), and the unidentified contacts on one; the holder's
   // side first (its arc at the top), then the one drawn on the point
@@ -8183,11 +8184,13 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
   /*@TEST*/HMDBG.length = 0;/*@ENDTEST*/
   const hd = heartHd(hexPx), R = heartRingR(hexPx), ga = ctx.globalAlpha, M = R + 6, NB = names.concat(NCHIT.map(q => [q[0], q[1], q[2], q[3]]));
   const fin = hexPx >= 12 ? 1 : smooth01((hexPx - 8)/4);   // (out at the world view only the capitals and the held points show; the other cities' marks come in from hex 8 to 12)
-  const one = (p, cap) => { const P = G.P[p], [x, y] = toScreen(P.x, P.y); if (x < -M || y < -M || x > cw + M || y > ch + M) return;
+  const GC = 64, grid = new Map(); for (const q of NB) for (let gx = Math.floor(q[0]/GC); gx <= Math.floor(q[2]/GC); gx++) for (let gy = Math.floor(q[1]/GC); gy <= Math.floor(q[3]/GC); gy++){ const k = gx*4096 + gy; let L = grid.get(k); if (!L) grid.set(k, L = []); L.push(q); }
+  const onName = b => { for (let gx = Math.floor(b[0]/GC); gx <= Math.floor(b[2]/GC); gx++) for (let gy = Math.floor(b[1]/GC); gy <= Math.floor(b[3]/GC); gy++){ const L = grid.get(gx*4096 + gy); if (L && L.some(q => ovlB(q, b))) return true; } return false; };   // (the names near a box, by a coarse grid: a frame tests only its own few)
+  const one = (p, cap) => { const P = G.P[p], sy = P.y*view.s + view.y; if (sy < -M || sy > ch + M) return; const [x, y] = toScreen(P.x, P.y); if (x < -M || x > cw + M) return;
     const L = on.get(p), held = !!(L && L.length), own = names.lab.get(p), far = held || cap || (own && own.city) ? 1 : fin; if (far <= 0.01) return;
     // a mark is never drawn into a name or a naval anchor (another city's, or its own): an empty one there is left out, a held one is drawn (its ring
     // over the text), and tells which city it is by a small name tag when the city's own name is not by it
-    const r0 = held ? R + 2.4 : hd + 1.5, mb = [x - r0, y - r0, x + r0, y + r0], hit = NB.some(q => ovlB(q, mb));
+    const r0 = held ? R + 2.4 : hd + 1.5, mb = [x - r0, y - r0, x + r0, y + r0], hit = onName(mb);
     /*@TEST*/HMDBG.push({p, x:+x.toFixed(2), y:+y.toFixed(2), r:+r0.toFixed(2), sides:held ? L.map(q => q.s) : [], drawn:held || !hit ? 1 : 0, a:+far.toFixed(2)});/*@ENDTEST*/
     if (!held && hit) return;
     const dim = vis.has(p) ? 1 : 0.6;
@@ -8200,11 +8203,12 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
     if (held && hexPx >= 8){ const nb = own && own.city ? own : null, f = 10, nearOwn = nb && Math.hypot(Math.max(nb[0] - x, 0, x - nb[2]), Math.max(nb[1] - y, 0, y - nb[3])) <= R + 1.5*(nb[3] - nb[1]);
       if (!nearOwn){ const t = P.cityName || P.name, fnt = `600 ${f}px ${BODY}`; ctx.font = fnt; const w = mtw(t, fnt) + 4;
         const C = [[x + R + 3, y - f/2 - 1], [x - R - 3 - w, y - f/2 - 1], [x - w/2, y + R + 2], [x + R + 1, y + R - 2], [x - R - 1 - w, y + R - 2]];
-        let tb = null; for (const [tx, ty] of C){ const b = [tx, ty, tx + w, ty + f + 2]; if (!NB.some(q => ovlB(q, b)) && !clusters.some(c => c.pv && c.hp === p && Math.abs(c.x - (tx + w/2)) < w/2 + 10 && Math.abs(c.y - (ty + f/2)) < f/2 + 12)){ tb = b; break; } }
+        let tb = null; for (const [tx, ty] of C){ const b = [tx, ty, tx + w, ty + f + 2]; if (!onName(b) && !clusters.some(c => c.pv && c.hp === p && Math.abs(c.x - (tx + w/2)) < w/2 + 10 && Math.abs(c.y - (ty + f/2)) < f/2 + 12)){ tb = b; break; } }
         if (!tb) tb = [C[0][0], C[0][1], C[0][0] + w, C[0][1] + f + 2];
         ctx.save(); ctx.globalAlpha = ga*dim; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(t, tb[0] + 2, tb[1] + 1); ctx.fillStyle = '#ece6d4'; ctx.fillText(t, tb[0] + 2, tb[1] + 1); ctx.restore();
         /*@TEST*/HMDBG[HMDBG.length - 1].tag = tb.map(v => Math.round(v));/*@ENDTEST*/ } } };
-  for (const p of HCITY) if (!caps.has(p)) one(p, false);
+  { const ys = HCITY.ys, y0 = (-M - view.y)/view.s, y1 = (ch + M - view.y)/view.s; let lo = 0, hi = ys.length; while (lo < hi){ const m = (lo + hi) >> 1; if (ys[m] < y0) lo = m + 1; else hi = m; }
+    for (let i = lo; i < ys.length && ys[i] <= y1; i++){ const p = HCITY[i]; if (!caps.has(p)) one(p, false); } }
   for (const p of caps) one(p, true);
   ctx.globalAlpha = ga; }
 // close in, a force standing on a city's point has its pictures beside the point (off the buildings and the name: layoutCompute) and a thin line
