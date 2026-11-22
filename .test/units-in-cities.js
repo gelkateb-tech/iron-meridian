@@ -8,6 +8,8 @@
 //  (T) the city line: Berlin "In the city: 1st Infantry Division (5 units)", Szczecin names the Polish army, Hamburg "nobody" (and "Nearby:"),
 //      Poznan "? Unidentified"; the phone city sheet shows the line after a tap on Berlin's name
 //  (C) close in, the force on Berlin's point has its tag just above the ring and its pictures nearer it than the force off the point (tag farther too)
+//  (X) a force off a held point in each of 8 directions, about 4 and 15 km out, yours and an enemy's, at hex 12 to 240: clearly outside, its dot and
+//      its counter clear of the city's counter (see below; UC_NO_DIRS=1 skips it)
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -74,6 +76,25 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
       const f = id => L.find(c => c.ids.includes(id)), bp = b => b ? Math.hypot(Math.max(b[0] - m[0], 0, m[0] - b[2]), Math.max(b[1] - m[1], 0, m[1] - b[3])) : null, a = f(I.a), o = f(I.b2);
       r(a && o ? {aTagOn:a.tag, aTag:Math.round(Math.hypot(a.tx - m[0], a.ty - m[1])), oTag:Math.round(Math.hypot(o.tx - m[0], o.ty - m[1])), aFm:bp(a.fm), oFm:bp(o.fm)} : {miss:[!!a, !!o]}); })); }), ids);
     out.close = C; if (!(C.aTagOn && C.aTag < 45 && C.oTag > C.aTag + 40 && C.aFm != null && C.oFm != null && C.oFm >= C.aFm + 16)) fail('C close in: the force in the city is the one at the ring', C); }
+  // (X) every direction: a force of yours standing about 4 km and 15 km (0.36 and 1.36 world units) N, NE, E, SE, S, SW, W and NW of Berlin's point
+  //     while another holds it, and the same for a Polish army off Poznan's point (seen by a Special Operations unit of yours), at hex 12, 30, 60,
+  //     120 and 240: the force on the point keeps its dot on the marker; the one off it has its dot clear of the ring and never under (or touching)
+  //     the city's counter or the room down to the ring, and its counter (or the stack it stands in) keeps a clear gap from the city's counter
+  //     (6 px between their boxes with the marks, 15 at the same height: never side by side above the ring)
+  if (!process.env.UC_NO_DIRS){ out.dirs = 0; const DIRS = {N:[0, -1], NE:[1, -1], E:[1, 0], SE:[1, 1], S:[0, 1], SW:[-1, 1], W:[-1, 0], NW:[-1, -1]};
+    const gap = (a, q) => Math.max(a[0] - q[2], q[0] - a[2], a[1] - q[3], q[1] - a[3]), pd = (b2, x, y) => Math.hypot(Math.max(b2[0] - x, 0, x - b2[2]), Math.max(b2[1] - y, 0, y - b2[3]));
+    for (const side of ['own', 'enemy']) for (const dist of [0.36, 1.36]) for (const [dn, dv] of Object.entries(DIRS)){ const l = Math.hypot(dv[0], dv[1]), off = [dv[0]/l*dist, dv[1]/l*dist];
+      const I = await p.evaluate(([side, off]) => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const by = n => G.P.find(P => P.cityName === n && !P.sea), pol = S.nations.findIndex(q => q.name === 'Poland');
+        const C = by(side === 'own' ? 'Berlin' : 'Poznań'), o = side === 'own' ? 0 : pol, a = im.addArmy(o, C.id, side === 'own' ? {inf:4, tank:2} : {inf:3, tank:2}), b2 = im.addArmy(o, C.id, {inf:2}); b2.pos = [C.x + off[0], C.y + off[1]];
+        if (side !== 'own'){ const sc = im.addArmy(0, C.id, {spec:1}); sc.pos = [C.x + 3, C.y + 3]; } try { visCache = null; } catch (e) {} return {a:a.id, b:b2.id, p:C.id, x:C.x, y:C.y}; }, [side, off]);
+      for (const hp of [12, 30, 60, 120, 240]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(hp >= 120 ? 1200 : 400);
+        const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false; const P = im.G.P[I.p], pt = im.toScreen(P.x, P.y);
+          const h = L.find(c => c.ids.includes(I.a)), o = L.find(c => c.ids.includes(I.b)); let sb = null; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) sb = q.b;
+          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob:sb || o.bx, tag:o.tag} : null); })); }), I);
+        const k = `${side} ${dist} ${dn} hex ${hp}`; out.dirs++; if (!m){ fail('X counters missing', k); continue; }
+        const hOn = Math.hypot(m.hd[0] - m.pt[0], m.hd[1] - m.pt[1]), oPt = Math.hypot(m.od[0] - m.pt[0], m.od[1] - m.pt[1]), oHb = pd([m.hb[0], m.hb[1], m.hb[2], Math.max(m.hb[3], m.pt[1] - m.R)], m.od[0], m.od[1]);
+        const row = Math.min(m.ob[3], m.hb[3]) > Math.max(m.ob[1], m.hb[1]), g = gap(m.ob, m.hb), need = m.tag ? 6 : row ? 15 : 6;
+        if (hOn > 0.01 || oPt < m.R + 9 || oHb < 8 || g < need - 0.6) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need}); } } }
   if (errors.length) fail('E errors', errors.slice(0, 5));
-  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
+  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
   await b.close(); process.exit(fails.length ? 1 : 0); })();

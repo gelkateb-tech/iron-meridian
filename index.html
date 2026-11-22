@@ -5932,6 +5932,8 @@ const fkey = (a, p) => a.air ? 'a' : !G.P[p].sea && shipsOnly(a) ? 's' : 'x';
    The map shows it: every city carries a small marker on that exact point (heartMarks), and a force standing on it (heartOn) has its position
    dot on the marker, its counter and pictures anchored to it (its counter just above the ring, its pictures right beside the point: layoutCompute, heartRole; any other force of the city is kept farther off: heartClear), and lights the
    marker with a ring in its side's colour. A force anywhere else in the province stands where it stands: its dot off the marker, no ring.
+   Near a held point it is drawn clearly outside, whatever its bearing: its dot never under the city's counter or above it, its own counter a
+   clear gap from the city's (heartSpot, heartBadge, heartBlocks); close in, two sides' forces off the point keep their pictures apart (heartApart).
    heartOn is the rules' own test (atHeart) for a force that STANDS on the point: not one that only walked through it on its way to a spot
    beyond (a.hrt: the rules still count that walk for the capture, but the force is drawn, listed and ringed where it really stands, outside),
    not one walking (a.sail) and not one already setting off this hour (its leg starts before the capture step). The same test lights the ring,
@@ -6181,7 +6183,7 @@ function satPlace(shown, near, now){ const placed = [];
       const D0 = plateDims(L.n + (L.mn || 0), 1, clQuiet(L), true), D1 = plateDims(q.n, 1, mq, true), step = D1.w + D1.ox + 8, j = i >> 1, sd = i & 1 ? 1 : -1;   // (a row: left, right, further left...)
       return [L.x + sd*((D0.w + D0.ox)/2 + 6 + (D1.w + D1.ox)/2 + j*step), L.y, mq]; };
     const boxOf = (x, y, n, mq) => { const r = plateRect(x, y, n, 1, mq, tagM); return [r.x, r.y, r.x + r.w, r.y + r.h]; };
-    const blocked = (b, self) => { let f = 0; const A = Math.max(1, (b[2] - b[0])*(b[3] - b[1])); for (const z of near(b)){ if (z.c === self) continue; const q = z.b, ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > 0 && oy > 0) f = Math.max(f, ox*oy/A); }
+    const blocked = (b, self) => { let f = 0; const A = Math.max(1, (b[2] - b[0])*(b[3] - b[1])); if (L.hp == null && heartBlocks(b)) return 1; for (const z of near(b)){ if (z.c === self) continue; const q = z.b, ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > 0 && oy > 0) f = Math.max(f, ox*oy/A); }
       for (const q of placed){ const ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > 0 && oy > 0) f = Math.max(f, ox*oy/A); } return f; };
     const N = tagM ? 8 : STK_R1.length, ord = L.sats.slice().sort((p, q) => (mem(p) ? 0 : 1) - (mem(q) ? 0 : 1));
     for (const q of ord){ const E = mem(q); let i = -1;
@@ -8156,16 +8158,46 @@ const heartHd = hexPx => hexPx <= 30 ? Math.max(2, 2 + 0.8*Math.log2(Math.max(3,
 const heartRingR = hexPx => heartHd(hexPx) + 2.7;   // the ring's radius (the middle of its stroke)
 const heartOut = hexPx => heartRingR(hexPx) + 2.4 + dotR() + 1 + 9;   // how far off the point a force not on it is drawn at the least (css px): its dot clear of the ring by 9 px
 // a force standing off a city's point but near it: its badge goes where it leaves the city's marker and ring in sight (above its dot as everywhere,
-// else beside it on the side away from the point, else the other side, else below), so the empty marker shows and the force reads as outside
-function heartAside(c, dx, dy, q, hexPx, held){ const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), D = plateDims(c.n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
-  if (Math.hypot(dx - mx, dy - my) > Rk + D.w + D.h + 8) return;
-  const hy = my - (dotLift(c.n, q) + heartRingR(hexPx) + 3.2 - dotR() - 2);   // (where the city's own counter stands when it is held (held): just above the ring)
-  const clear = (x, y) => { const ex = Math.max(x - w2 - mx, 0, mx - x - w2), ey = Math.max(y - h2 - my, 0, my - y - h2); if (held && Math.abs(x - mx) < D.w + 3 && Math.abs(y - hy) < D.h + 3) return -1; return Math.hypot(ex, ey) - Rk; };
-  const sx = dx >= mx ? 1 : -1, side = dotR() + 3 + D.w/2, yb = dy + dotR() + 1 - D.h/2;
-  const bx = k => k > 0 ? Math.max(dx + side, mx + Rk + 4 + w2) : Math.min(dx - side, mx - Rk - 4 - w2);   // (beside: clear of the ring by a few px more, so the city's own counter is the one by its marker)
-  const C = [[dx, c.dy], [bx(sx), yb], [bx(-sx), yb], [dx, dy + dotLift(c.n, q)]];
-  let best = C[0], bv = -Infinity; for (const [x, y] of C){ const v = clear(x, y); if (v >= 0){ best = [x, y]; break; } if (v > bv){ bv = v; best = [x, y]; } }
-  c.dx = best[0]; c.dy = best[1]; }
+// else beside it on the side away from the point, else the other side, else below), so the empty marker shows and the force reads as outside; on a
+// held point (hb: the city's own counter, relative to the point) it also keeps a clear gap from the counter of the force in the city (HEART_GAP;
+// at the same height HEART_ROW).
+// (vx, vy): its dot, relative to the city's point (css px). Returns its centre and how clear it is (>= 0: clear)
+/*@TEST*/let HBDBG = null;/*@ENDTEST*/
+// this frame's held points (heartHeld) for the counters stacked beside another (satPlace): none comes onto a held point's marker or its counter
+const HEARTF = {HB:new Map(), hexPx:0};
+function heartBlocks(b){ const M = HEARTF.HB; if (!M.size) return false; const Rk = heartRingR(HEARTF.hexPx) + 3;
+  for (const [p, hb] of M){ const [mx, my] = toScreen(G.P[p].x, G.P[p].y); if (boxPt(b, mx, my) < Rk) return true; const a = [hb[0] + mx, hb[1] + my, hb[2] + mx, hb[3] + my];
+    if (boxGap(b, a) < (Math.min(b[3], a[3]) > Math.max(b[1], a[1]) ? HEART_ROW : HEART_GAP)) return true; }
+  return false; }
+const HEART_GAP = 6, HEART_ROW = 15;   // (between their boxes with the marks: about 18 px between the badges themselves; HEART_ROW beside it at its height, about 20: never two counters side by side above the ring)
+function heartBadge(n, q, vx, vy, hexPx, hb){ const D = plateDims(n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
+  const sx = vx >= 0 ? 1 : -1, side = dotR() + 3 + D.w/2, yb = vy + dotR() + 1 - D.h/2;
+  const bx = k => k > 0 ? Math.max(vx + side, Rk + 4 + w2) : Math.min(vx - side, -Rk - 4 - w2);   // (beside: clear of the ring by a few px more, so the city's own counter is the one by its marker)
+  const C = [[vx, vy - dotLift(n, q)], [bx(sx), yb], [bx(-sx), yb]]; if (!hb) C.push([vx, vy + dotLift(n, q)]);   // (by a held point never below its dot: it would read as the counter of something else)
+  let best = C[0], bv = -Infinity; for (const [x, y] of C){ const b = [x - w2, y - h2, x + w2, y + h2]; let v = boxPt(b, 0, 0) - Rk;
+    if (hb){ const r = plateRect(x, y, n, 1, q, false), rb = [r.x, r.y, r.x + r.w, r.y + r.h]; v = Math.min(v, boxGap(rb, hb) - (Math.min(rb[3], hb[3]) > Math.max(rb[1], hb[1]) ? HEART_ROW : HEART_GAP)); }   // (counter to counter: their whole boxes, marks included)
+    if (v >= 0) return [x, y, v]; if (v > bv){ bv = v; best = [x, y]; } }
+  return [best[0], best[1], bv]; }
+function heartAside(c, dx, dy, q, hexPx, hb){ const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), D = plateDims(c.n, 1, q, false);
+  if (!hb && Math.hypot(dx - mx, dy - my) > heartRingR(hexPx) + 3 + D.w + D.h + 8) return;
+  const r = heartBadge(c.n, q, dx - mx, dy - my, hexPx, hb); c.dx = mx + r[0]; c.dy = my + r[1]; }
+// the held points' own counters (the badge of the force in the city, just above the ring, and the gap down to the ring), relative to each
+// point (css px): an off-point force keeps its dot and its counter clear of them (heartSpot, heartBadge)
+function heartHeld(clusters, hexPx){ const M = new Map(), R = heartRingR(hexPx);
+  for (const h of clusters){ if (h.hk !== 'H' || h.air || h.moving || h.at == null) continue; const q = clQuiet(h), r = plateRect(0, -(dotLift(h.n, q) + R + 3.2 - dotR() - 2), h.n, 1, q, false);
+    const b = [r.x, r.y, r.x + r.w + (S.battles.includes(h.at) ? 14 : 0), Math.max(r.y + r.h, -R)], o = M.get(h.at);
+    M.set(h.at, o ? [Math.min(o[0], b[0]), Math.min(o[1], b[1]), Math.max(o[2], b[2]), Math.max(o[3], b[3])] : b); }
+  return M; }
+// where an off-point force's dot is drawn near its city's point (relative to it, css px; null: where it stands): at least Rm off the point along its
+// real bearing u (d: its real distance on screen). On a held point (hb) its dot never comes under the city's counter or the column above it, and
+// its own counter must find a place clear of it (heartBadge): the least turn off its bearing and the least push out that does it (display only)
+function heartSpot(c, d, u, Rm, hexPx, hb){ const D0 = Math.max(d, Rm); if (!hb) return d < Rm ? [u[0]*Rm, u[1]*Rm] : null;
+  const q = clQuiet(c), dr = dotR() + 7, col = [hb[0] - dr, -Infinity, hb[2] + dr, hb[3] + dr], th0 = Math.atan2(u[1], u[0]), sg = u[0] >= 0 ? 1 : -1;
+  let best = null, bc = Infinity;
+  for (let j = 0; j <= 15; j++) for (const s of j ? [sg, -sg] : [0]){ const th = th0 + s*j*Math.PI/18, cu = Math.cos(th), su = Math.sin(th);
+    for (let D = D0; D < D0 + 120; D += 2){ const cost = j*8 + D - D0; if (cost >= bc) break; const vx = cu*D, vy = su*D;
+      if (vx > col[0] && vx < col[2] && vy < col[3]) continue; if (heartBadge(c.n, q, vx, vy, hexPx, hb)[2] < 0) continue; best = [vx, vy]; bc = cost; break; } }
+  if (!best) return d < Rm ? [u[0]*Rm, u[1]*Rm] : null; return bc === 0 && d >= Rm ? null : best; }
 const HMK = new Map();
 function heartSprite(hd, pip = true){ const key = hd.toFixed(1) + '|' + dpr + '|' + (pip ? 1 : 0); let c = HMK.get(key); if (c) return c; if (HMK.size > 40) HMK.clear();
   const P = 5, W = 2*(hd + P), n = Math.ceil(W*dpr); c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.scale(n/W, n/W); const m = W/2;
@@ -8244,6 +8276,18 @@ function heartClear(clusters, hexPx){ let H = null;
     c.wx += ox/view.s; c.wy += oy/view.s; if (c.pinY != null) c.pinY += oy/view.s;
     for (const e of c.fm.ents){ e.x += ox; e.y += oy; e.box = [e.box[0] + ox, e.box[1] + oy, e.box[2] + ox, e.box[3] + oy]; }
     c.fm.box = [fb[0] + ox, fb[1] + oy, fb[2] + ox, fb[3] + oy]; } }
+// close in, in a city's province, the pictures of two forces of opposing sides standing off its point never mix: the one not yours (else the smaller)
+// is moved straight away from the other until their pictures are 14 px apart, and kept off the city's own force as heartClear does (display only)
+function heartApart(clusters, hexPx){ const L = clusters.filter(c => c.fm && c.hk === 'O' && !c.moving && !c.air && c.hp == null); if (L.length < 2) return;
+  const H = new Map(); for (const c of clusters) if (c.heart && c.hp != null && c.fm) H.set(c.hp, c); const R = heartRingR(hexPx);
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++){ let a = L[i], b = L[j]; if (a.at !== b.at || a.owner === b.owner || boxGap(a.fm.box, b.fm.box) >= 14) continue;
+    if (a.owner === PLAYER || (b.owner !== PLAYER && a.n > b.n)) [a, b] = [b, a];   // (a moves)
+    const fa = a.fm.box, fb = b.fm.box, h = H.get(a.at), P = G.P[a.at], [mx, my] = toScreen(P.x, P.y); let ux = (fa[0] + fa[2] - fb[0] - fb[2])/2, uy = (fa[1] + fa[3] - fb[1] - fb[3])/2; const d = Math.hypot(ux, uy); if (d < 1e-3){ ux = 1; uy = 0; } else { ux /= d; uy /= d; }
+    const ok = (ox, oy) => { const q = [fa[0] + ox, fa[1] + oy, fa[2] + ox, fa[3] + oy]; return boxGap(q, fb) >= 14 && (!h || (boxGap(q, h.fm.box) >= 14 && boxPt(q, mx, my) >= R + 24)); };
+    let k = 0; while (k < 300 && !ok(ux*k, uy*k)) k += 3; if (!k || k >= 300) continue; const ox = ux*k, oy = uy*k;
+    a.wx += ox/view.s; a.wy += oy/view.s; if (a.pinY != null) a.pinY += oy/view.s;
+    for (const e of a.fm.ents){ e.x += ox; e.y += oy; e.box = [e.box[0] + ox, e.box[1] + oy, e.box[2] + ox, e.box[3] + oy]; }
+    a.fm.box = [fa[0] + ox, fa[1] + oy, fa[2] + ox, fa[3] + oy]; } }
 function posDots(clusters){ const sat = new Set(); for (const c of clusters) if (c.pv && c.sats) for (const q of c.sats) for (const z of q.cl) sat.add(z);
   for (const c of clusters){ if (c.px == null || c.px < -20 || c.py < -20 || c.px > cw + 20 || c.py > ch + 20) continue;
     const al = (c.pv ? c.pa ?? 1 : c.owner === PLAYER || sat.has(c) ? 1 : 0)*(c.hud ? PF_HUD : 1); dotDraw(c.px, c.py, forceSide(c.list[0]), al, undefined, c.hp != null ? 0.72 : 1); } }   // (on a city's point a little smaller: it sits inside the marker's ring)
@@ -9126,7 +9170,7 @@ function draw(now){ draw.now = now;
   }
   // WORLD ANCHORS: each force's spot on the map (world units): its province's slot for it (provLayout), its pinned spot, or on the march its
   // smoothed position easing between its old and new slots. The counter is pinned just above it at one pixel size; its models stand just under it.
-  const farT0 = performance.now();
+  const farT0 = performance.now(), HB = HEARTF.HB = heartHeld(clusters, hexPx); HEARTF.hexPx = hexPx; /*@TEST*/HBDBG = HB;/*@ENDTEST*/   // (units in cities: the held points' own counters, for the forces off their points)
   for (const c of clusters){ const it = c.it, a = c.list[0]; let A;
     if (c.far){ const L0 = PLAY.get(c.at); if (!(L0 && L0.S === S) && performance.now() - farT0 > 6){ c.dead = true; continue; } }   // (an off-screen province not laid out yet waits for a frame with time to spare)
     if (c.pinned && !c.dock){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g';
@@ -9136,7 +9180,7 @@ function draw(now){ draw.now = now;
         { const fz = tmOn() ? tmFade(hexPx) : 0; if (fz > 0){ const F = tmForm(tmRank(tmUnits(c.list), 'g', tmNMax(a.at), tmPrimO(a.at, c.owner))), rr = fz*Math.hypot(F.b[2] - F.b[0], F.b[3] - F.b[1])/2*view.s, Rk = heartRingR(hexPx) + 4; Rm = Math.max(Rm, Rk + rr);   // (close in, its pictures (drawn round its spot) keep off the marker too,
             if (tmU(hexPx) >= 0.3) for (let n = 0, D0 = Math.max(d, Rm); n < 60; n++, D0 += 3){ const x = u[0]*D0, y = u[1]*D0, b = [x + TM_PLATE[0], y - rr + TM_PLATE[1], x + TM_PLATE[2], y - rr + TM_PLATE[3]];   // and so does its tag, pinned above them)
               if (Math.hypot(Math.max(b[0], 0, -b[2]), Math.max(b[1], 0, -b[3])) >= Rk + 44){ Rm = Math.max(Rm, D0); break; } } } }
-        if (d < Rm) A = [P0.x + u[0]*Rm/view.s, P0.y + u[1]*Rm/view.s]; } }
+        const v = heartSpot(c, d, u, Rm, hexPx, HB.get(a.at)); if (v) A = [P0.x + v[0]/view.s, P0.y + v[1]/view.s]; } }
     else if (c.moving){ A = moveAnchor(ROLES, a, it.wx, it.wy); c.split = SPLITS.has(a.id); const u = tmUnits([a]); c.cls = G.P[a.at].sea || Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval') ? 's' : 'g'; }
     else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : c.dock ? 's' : 'x') + c.owner);
       if (e){ const r = roleOf(c.at, e), P0 = G.P[c.at]; c.cls = r[0]; A = anchorOf(ROLES, c.at, r, now);
@@ -9144,7 +9188,9 @@ function draw(now){ draw.now = now;
         const mS = !c.air && a.at === c.at ? movOwn(a.id) : null;   // (a stack that absorbs an arriving column keeps its spot)
         if (mS){ A = [A[0] + it.wx - P0.x, A[1] + it.wy - P0.y]; }   // still settling after a march: its spring's lag rides along
         if (!c.air && OFS.size && c.list.length === 1) A = haltAnchor(a, A, now, it.wx, it.wy); }
-      else { A = [it.wx, it.wy]; c.cls = c.air ? 'a' : 'g'; } }
+      else { A = [it.wx, it.wy]; c.cls = c.air ? 'a' : 'g'; }
+      if (c.cls === 'g' && !c.air && c.hk === 'O' && HB.has(c.at)){ const P0 = G.P[c.at], d = Math.hypot(A[0] - P0.x, A[1] - P0.y)*view.s, u = d > 1e-6 ? [(A[0] - P0.x)*view.s/d, (A[1] - P0.y)*view.s/d] : [0.6, 0.8];   // (off a held point without a pinned spot (a landing): the same)
+        const v = heartSpot(c, d, u, heartOut(hexPx), hexPx, HB.get(c.at)); if (v) A = [P0.x + v[0]/view.s, P0.y + v[1]/view.s]; } }
     c.wx = A[0]; c.wy = A[1];
     if (!c.moving) for (const q of c.list){ if (q.air) continue; if (c.pinned) LASTSLOT.set(q.id, {x:it.wx, y:it.wy, ox:0, oy:0}); else if (q.at === c.at){ const P0 = G.P[c.at]; LASTSLOT.set(q.id, {p:c.at, x:P0.x, y:P0.y, ox:A[0] - P0.x, oy:A[1] - P0.y}); } } }
   if (LASTSLOT.size > 4000) LASTSLOT.clear();
@@ -9153,13 +9199,14 @@ function draw(now){ draw.now = now;
   tmForms(clusters, now);   // every force's formation (at every zoom): its tag's pin is the top of it, its diamond stands in its middle
   tmPlan(clusters, hexPx, now);   // the pictures' places, from the crossover zoom (the names, the HQ and the power names keep clear of them too)
   heartClear(clusters, hexPx);   // (units in cities: a force off a city's point stands visibly farther from its ring than the force in the city)
+  heartApart(clusters, hexPx);   // (and two sides' forces off it never stand among each other's pictures)
   // the counter: zoomed out the diamond on the force's spot (the middle of where its pictures stand), zoomed in the flag tag pinned PLATE_GAP px above
   // the top of its pictures (world points: no screen-space shuffling, nothing moves against the map); c.art: the crossover (0 diamond .. 1 tag)
   const UZ = tmOn() ? tmFade(hexPx) : 0, UU = tmOn() ? tmU(hexPx) : 0, HELD = new Set(); DOTW.clear(); for (const c of clusters) if (c.hp != null) HELD.add(c.hp);
   for (const c of clusters){ c.pq = null; const q = plateQuiet(c), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), dT = plateDims(c.n, k, q, true), HP = c.hp != null ? G.P[c.hp] : null, [dx, dy] = HP ? toScreen(HP.x, HP.y) : toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));   // (on the heart: its dot on the city's marker, its badge just above it)
-    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); if (HP && c.heart){ c.tx = dx; c.ty = dy - heartRingR(hexPx) - 4 - dT.h/2 - dT.bars; }   /* (units in cities: the force in the city has its tag just above the ring, as its badge further out; its pictures stand beside the point) */ c.dx = dx; c.dy = dy - dotLift(c.n, q) - (HP ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0); if (!HP && !c.moving && !c.air && c.hk === 'O') heartAside(c, dx, dy, q, hexPx, HELD.has(c.at)); c.x = c.tag ? c.tx : c.dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
+    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); if (HP && c.heart){ c.tx = dx; c.ty = dy - heartRingR(hexPx) - 4 - dT.h/2 - dT.bars; }   /* (units in cities: the force in the city has its tag just above the ring, as its badge further out; its pictures stand beside the point) */ c.dx = dx; c.dy = dy - dotLift(c.n, q) - (HP ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0); if (!HP && !c.moving && !c.air && c.hk === 'O') heartAside(c, dx, dy, q, hexPx, HELD.has(c.at) ? HB.get(c.at) : null); c.x = c.tag ? c.tx : c.dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
     c.px = dx; c.py = dy; const dw = HP ? [HP.x, HP.y] : [c.wx, c.wy + (c.form ? c.form.mid : 0)]; for (const q0 of c.list) DOTW.set(q0.id, dw); }   // the position dot (posDot): the force's spot; zoomed out its badge stands just above it
-  plateFade(clusters, k, now);   /*@TEST*/if (window.__uclOn) window.__ucl = clusters.map(c => ({ids:c.list.map(a => a.id), own:c.owner, at:c.at, x:Math.round(c.x), y:Math.round(c.y), pv:c.pv, mv:c.moving, hp:c.hp ?? null, heart:!!c.heart, hk:c.hk || '', wx:c.wx, wy:c.wy, tag:c.tag, tx:c.tx, ty:c.ty, px:c.px, py:c.py, fm:c.fm ? c.fm.box.map(v => Math.round(v)) : null, ml:(c.mlist || []).map(a => a.id), sats:(c.sats || []).map(q => ({key:q.key, ids:q.list.map(a => a.id), cl:q.cl.map(z => [Math.round(z.x), Math.round(z.y), z.at])}))}));/*@ENDTEST*/   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them, another side's stand beside it: satPlace)
+  plateFade(clusters, k, now);   /*@TEST*/if (window.__uclOn) window.__ucl = clusters.map(c => ({ids:c.list.map(a => a.id), own:c.owner, at:c.at, x:Math.round(c.x), y:Math.round(c.y), pv:c.pv, mv:c.moving, hp:c.hp ?? null, heart:!!c.heart, hk:c.hk || '', wx:c.wx, wy:c.wy, tag:c.tag, tx:c.tx, ty:c.ty, px:c.px, py:c.py, fm:c.fm ? c.fm.box.map(v => Math.round(v)) : null, bx:pfBox(c, k).map(v => Math.round(v*10)/10), pa:c.pa, da:c.da, ta:c.ta, sb:(c.sats || []).map(q => { const r = plateRect(q.x, q.y, q.n, 1, q.quiet, q.tag); return {ids:q.list.map(a => a.id), b:[r.x, r.y, r.x + r.w, r.y + r.h].map(v => Math.round(v*10)/10), pa:q.pa}; }), ml:(c.mlist || []).map(a => a.id), sats:(c.sats || []).map(q => ({key:q.key, ids:q.list.map(a => a.id), cl:q.cl.map(z => [Math.round(z.x), Math.round(z.y), z.at])}))}));/*@ENDTEST*/   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them, another side's stand beside it: satPlace)
   clusters.sort((a, b) => ((b.moving ? 1 : 0) - (a.moving ? 1 : 0)) || ((a.owner === PLAYER) - (b.owner === PLAYER)) || ((a.air ? 0 : 1) - (b.air ? 0 : 1)));   // (marching ones under the standing: one setting off slides out from under the counter it leaves)
   // the screen box a counter claims: the whole drawn counter (marks above it: commander, dug-in, supply; the bars below) and its core (the plate
   // itself with its strength number, icons and bars, which nothing may cover), and the ground its models stand on
@@ -12592,7 +12639,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {pathDbg:{get:() => PATHDBG}, netDraw:{value:() => netDraw()}, legGeom:{value:(a, u, v) => legGeom(a, u, v)}, clearSel:{value:() => clearSel()}, wpMode:{get:() => wpMode, set:v => { wpMode = !!v; renderSide(true); }}, stopTap:{value:(a, p, x, y) => stopTap(a, p, x, y)}, undoTap:{value:() => undoTap()}, coreAt:{value:(x, y) => coreAt(x, y)}, stopRoutes:{value:a => stopRoutes(a)}, cmdMode:{get:() => cmdMode}, lastPT:{get:() => lastPT}});   // (unit controls and waypoints: .test/controls.js, .test/waypoints.js)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {pics:() => ({nodes:RNODES.map(n => ({id:n.id, kind:n.kind, name:n.name, u:n.u, eng:n.eng, key:rKey(n)})), cats:RCATS.map(c => c.id)}), can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), look:(t, n, lv) => unitLookArt(t, n, lv), lookNode:id => rkLook(RN[id]), ulFiles:() => UL_CELL, group:n => ulGroup(n), model:(u, g, k) => unitModel(u, g, k), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
-if (location.protocol === 'file:' && window.__im) window.__im.uc = {heartOn:a => heartOn(a), list:(p, k) => heartList(p, k), line:p => heartLine(p, 'cs-in'), marks:() => HMDBG.slice(), dot:id => DOTW.get(id) || null, ringR:() => heartRingR(view.s*HS0), lay:p => { const L = PLAY.get(p); return L ? {hr:L.hr || null, dbg:L.dbg, dbc:L.dbc, out:[...L.out], items:(PREG.get(p) || []).map(q => ({ax:q.ax, ay:q.ay, fb:q.fb}))} : null; }};   // units in cities (.test/units-in-cities.js)
+if (location.protocol === 'file:' && window.__im) window.__im.uc = {heartOn:a => heartOn(a), list:(p, k) => heartList(p, k), line:p => heartLine(p, 'cs-in'), marks:() => HMDBG.slice(), dot:id => DOTW.get(id) || null, ringR:() => heartRingR(view.s*HS0), held:() => HBDBG && [...HBDBG], geo:() => ({uiK:uiK(), dotR:dotR(), d6:plateDims(6, 1, false, false), d2:plateDims(2, 1, false, false), t6:plateDims(6, 1, false, true), lift6:dotLift(6, false), lift2:dotLift(2, false), ring:[12, 30, 60, 120, 240].map(h => [h, heartRingR(h), heartOut(h), tmOn() ? tmFade(h) : null, tmOn() ? tmU(h) : null])}), lay:p => { const L = PLAY.get(p); return L ? {hr:L.hr || null, dbg:L.dbg, dbc:L.dbc, out:[...L.out], items:(PREG.get(p) || []).map(q => ({ax:q.ax, ay:q.ay, fb:q.fb}))} : null; }};   // units in cities (.test/units-in-cities.js)
 if (location.protocol === 'file:' && window.__im) window.__im.nc = {hits:() => NCHIT.map(q => q.slice()), names:() => cityNames.map(c => ({p:c.p, b:c.b.slice(0, 4)})), boxes:() => (window.__dbgBoxes || null), tip:NC_TIP, cityPts:() => cityPts.map(m => ({p:m.p, x:m.x, y:m.y, r:m.r})), tipHide:() => tipHide(), closeSide:() => { sideOpen = false; if (sel.army !== null || sel.prov !== null) clearSel(); else renderSide(true); }};   // naval-city anchors (.test/naval-cities.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
 if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ return GFX.n; }, get lost(){ return GFX.lost; }, reset:() => gfxReset(), mem:() => cityMem(), caches:() => ({cities:G.P.filter(P => P.city && !P.sea).length, CBAKE:CBAKE.size, CLOW:CLOW.size, CLOWN:CLOWN.size, CLGL:CLGL.size, CGEO:CGEO.size, CINFO:CINFO.size, GTILE:GTILE.size, DT:DT.cache.size, FADEP:FADEP.length, FADEPmp:+(FADEP.reduce((a, c) => a + c.width*c.height, 0)/1e6).toFixed(1), UCC:UCC.size, FLAGC:FLAGC.size, BNC:BNC.size, FIGSH:FIGSH.size})};   // a lost graphics context and its recovery (.test/black-map.js)
