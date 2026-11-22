@@ -8131,6 +8131,10 @@ function dotDraw(x, y, tk, al, ol = 'rgba(4,7,9,.92)'){ if (al < 0.01) return; c
 const heartHd = hexPx => hexPx <= 30 ? Math.max(2, 2 + 0.8*Math.log2(Math.max(3, hexPx)/3)) : Math.min(8, 4.66 + 1.4*Math.log2(hexPx/30));   // the diamond's half-diagonal, css px (2 at the world view, 4.7 at play zoom, 8 at the closest)
 const heartRingR = hexPx => heartHd(hexPx) + 2.7;   // the ring's radius (the middle of its stroke)
 const heartOut = hexPx => heartRingR(hexPx) + 2 + dotR() + 2.5;   // how far off the point a force not on it is drawn at the least (css px): its dot clear of the ring
+// a force standing off a city's point but close to it (zoomed out, its badge above its dot would cover the city's marker): its badge hangs
+// below its dot instead, so the empty marker stays in sight and the force reads as outside the city
+function heartClear(c, dx, dy, q, hexPx){ const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), D = plateDims(c.n, 1, q, false), r = heartRingR(hexPx) + 2.5;
+  if (Math.abs(mx - dx) < D.w/2 + r && my > c.dy - D.h/2 - r && my < c.dy + D.h/2 + r) c.dy = dy + dotLift(c.n, q); }
 const HMK = new Map();
 function heartSprite(hd){ const key = hd.toFixed(1) + '|' + dpr; let c = HMK.get(key); if (c) return c; if (HMK.size > 40) HMK.clear();
   const P = 5, W = 2*(hd + P), n = Math.ceil(W*dpr); c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.scale(n/W, n/W); const m = W/2;
@@ -9068,7 +9072,7 @@ function draw(now){ draw.now = now;
   // the top of its pictures (world points: no screen-space shuffling, nothing moves against the map); c.art: the crossover (0 diamond .. 1 tag)
   const UZ = tmOn() ? tmFade(hexPx) : 0, UU = tmOn() ? tmU(hexPx) : 0; DOTW.clear();
   for (const c of clusters){ c.pq = null; const q = plateQuiet(c), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), dT = plateDims(c.n, k, q, true), HP = c.hp != null ? G.P[c.hp] : null, [dx, dy] = HP ? toScreen(HP.x, HP.y) : toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));   // (on the heart: its dot on the city's marker, its badge just above it)
-    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy - dotLift(c.n, q) - (HP ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0); c.x = c.tag ? c.tx : dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
+    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy - dotLift(c.n, q) - (HP ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0); if (!HP && !c.moving && heartCity(c.at)) heartClear(c, dx, dy, q, hexPx); c.x = c.tag ? c.tx : dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
     c.px = dx; c.py = dy; const dw = HP ? [HP.x, HP.y] : [c.wx, c.wy + (c.form ? c.form.mid : 0)]; for (const q0 of c.list) DOTW.set(q0.id, dw); }   // the position dot (posDot): the force's spot; zoomed out its badge stands just above it
   plateFade(clusters, k, now);   /*@TEST*/if (window.__uclOn) window.__ucl = clusters.map(c => ({ids:c.list.map(a => a.id), own:c.owner, at:c.at, x:Math.round(c.x), y:Math.round(c.y), pv:c.pv, mv:c.moving, ml:(c.mlist || []).map(a => a.id), sats:(c.sats || []).map(q => ({key:q.key, ids:q.list.map(a => a.id), cl:q.cl.map(z => [Math.round(z.x), Math.round(z.y), z.at])}))}));/*@ENDTEST*/   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them, another side's stand beside it: satPlace)
   clusters.sort((a, b) => ((b.moving ? 1 : 0) - (a.moving ? 1 : 0)) || ((a.owner === PLAYER) - (b.owner === PLAYER)) || ((a.air ? 0 : 1) - (b.air ? 0 : 1)));   // (marching ones under the standing: one setting off slides out from under the counter it leaves)
