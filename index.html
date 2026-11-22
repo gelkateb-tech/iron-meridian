@@ -7944,9 +7944,15 @@ function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityA
     // roofs red.) One copy a frame, as cheap as a plain one; each inverse is made once, at half size
     { const S0 = cityTier(I), X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, T0 = ctx.getTransform(), sx0 = w => (Math.round(w*T0.a + T0.e) - T0.e)/T0.a, sy0 = w => (Math.round(w*T0.d + T0.f) - T0.f)/T0.d;
       const u0 = Math.max(0, (x0 - X)/E2), v0 = Math.max(0, (y0 - Y)/E2), u1 = Math.min(1, (x1 - X)/E2), v1 = Math.min(1, (y1 - Y)/E2);
-      if (u1 > u0 && v1 > v0){ const a = nf*fa*cnDark(hexPx); if (a >= 0.01){ ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a; CFILL_INV = true; try { cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); } finally { CFILL_INV = false; } } } }
+      // (further out, under hex 130, where a town is small and the darkening light, the day canvas itself multiplied in, faintly, as before:
+      // no inverse to make for each of the many towns a pan brings in; the two cross-fade from 130 to 170. At play zoom, under hex 45-75,
+      // none: there the darkening changed a few percent of a town a few px across, and a copy more of each of a hundred towns every frame
+      // cost a night pan a third of its frame rate)
+      if (u1 > u0 && v1 > v0){ const t = sstep(130, 170, hexPx), kf = nf*fa*Math.min(1, cnDark(hexPx)/0.55)*(1 - t)*sstep(45, 75, hexPx), ki = nf*fa*cnDark(hexPx)*t; ctx.globalCompositeOperation = 'multiply';
+        if (kf >= 0.01){ ctx.globalAlpha = kf; cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); }
+        if (ki >= 0.01){ ctx.globalAlpha = ki; CFILL_INV = true; try { cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); } finally { CFILL_INV = false; } } } }
     if (!lit) return;   // lights off: the concrete only goes dark
-    if (!CLOWN.has(p) && (performance.now() >= lowDl ? (animFast(), false) : true)){ if (!cityLightsLow(p)){ if (!CLOW.has(p)){ const go = CITY_GO; CITY_GO = true; cityBake(p, CLOW_S); CITY_GO = go && CITY_GO; } if (!cityLightsLow(p)) CWANT.set('N' + p, ['nl', p]); } }   // (the low tier of the lights, at once, moving or not: a fraction of a ms from the day's low tier)
+    if (!CLOWN.has(p) && (performance.now() >= lowDl ? (animFast(), false) : true)){ if (!cityLightsLow(p)){ if (!CLOW.has(p) && still){ const go = CITY_GO; CITY_GO = true; cityBake(p, CLOW_S); CITY_GO = go && CITY_GO; } if (!cityLightsLow(p)) CWANT.set('N' + p, ['nl', p]); } }   // (the low tier of the lights, at once, moving or not: a fraction of a ms from the day's low tier; but a town with no day low tier yet gets it only once the view is still: it needs the town's plan, tens of ms, and a pan at night brought a slice of one into every frame)
     // (close in the lights a little stronger, up to 1.7x at the closest zoom: there they are single windows, a px or two each, that read only
     // as clear warm points over the dark roofs)
     const a0 = nf*fa*CN_A*(1 + 0.7*sstep(150, 230, hexPx)), S = cityNightTier(I); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a0;
@@ -7989,12 +7995,13 @@ function cityNightWant(p, I, S, x0, y0, x1, y1){ if (S <= CCH){ const k = 'n' + 
 // than baked into its lights, so a stand-in made for another size glows the same (no brightening or dimming when the right canvas lands);
 // a soft canvas per town (the last 64 seen at night)
 const CLGL = new Map(), CLGL_S = 128;
-function cityLgGlow(p, make){ let c = CLGL.get(p); if (c || !make) return c || null; const I = CGEO.get(p); if (!I || !I.ms) return null;   // (from the kept outline: any town, a fraction of a ms)
+function cityLgGlow(p, make){ let c = CLGL.get(p); if (c){ CLGL.delete(p); CLGL.set(p, c); return c; } if (!make) return null;   // (least recently used first out: with more towns in view than it keeps, a first-in-first-out let each frame make dozens again)
+  const I = CGEO.get(p); if (!I || !I.ms) return null;   // (from the kept outline: any town, a fraction of a ms)
   const M = CLGL_S, m = M/2, R = I.r*M/(2*I.E); c = document.createElement('canvas'); c.width = c.height = M; const g = c.getContext('2d');
   const fall = g.createRadialGradient(m, m, 0, m, m, R*1.9); fall.addColorStop(0, '#ffe3b0'); fall.addColorStop(0.22, '#ffc678'); fall.addColorStop(0.5, '#d98a3c'); fall.addColorStop(0.8, '#7a4216'); fall.addColorStop(1, '#3a1c08');
   g.fillStyle = fall; g.fillRect(0, 0, M, M); g.globalCompositeOperation = 'multiply'; g.drawImage(I.ms, 0, 0, M, M); g.drawImage(I.ms, 0, 0, M, M);   // (opaque, black outside: it is added onto the map)
   cityNightCompact(c, p, I, M, 0, 0);   // (kept to the town's reach, as its lights are)
-  CLGL.set(p, c); CLOW_PX += M*M; if (CLGL.size > 64){ CLGL.delete(CLGL.keys().next().value); CLOW_PX -= M*M; } return c; }
+  CLGL.set(p, c); CLOW_PX += M*M; if (CLGL.size > 160){ CLGL.delete(CLGL.keys().next().value); CLOW_PX -= M*M; } return c; }
 const bartName = (k, l) => (k === 'city' ? 'b-city-' : 'b-' + BART[k] + '-') + Math.max(1, Math.min(BART_N[k] || 5, l | 0));
 const BART_OK = new Map();   // key -> true once all five levels have loaded, false for good if one failed
 function bartOk(k){ const v = BART_OK.get(k); if (v != null) return v; if (k !== 'city' && !BART[k]) return false;

@@ -15,7 +15,7 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
   const incl = new Map(); let busy = 0;
   for (let i = 0; i < prof.samples.length; i++){ const d = (prof.timeDeltas[i] || 0)/1000; let id = prof.samples[i]; if (byId.get(id).callFrame.functionName === '(idle)') continue; busy += d;
     const seen = new Set(); while (id != null){ const fn = byId.get(id).callFrame.functionName; if (!seen.has(fn)){ seen.add(fn); incl.set(fn, (incl.get(fn) || 0) + d); } id = parent.get(id); } }
-  return {busy, draw:incl.get('draw') || 0, city:Math.max(...CITYF.map(k => incl.get(k) || 0))}; }
+  return {busy, draw:incl.get('draw') || 0, city:Math.max(...CITYF.map(k => incl.get(k) || 0)), top:[...incl].filter(e => e[0] && e[0][0] !== '(').sort((a, b) => b[1] - a[1]).slice(0, 18)}; }   // (top: the functions with the most time, inclusive)
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext(PHONE ? {...devices['Pixel 7']} : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
@@ -47,7 +47,7 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
     const iv = []; for (let i = 1; i < fr.length; i++) iv.push(fr[i] - fr[i - 1]); iv.sort((x, y) => x - y);
     const A = aggregate(profile), nF = Math.max(1, iv.length);
     runs[name] = {fps:+(iv.length*1000/(fr[fr.length - 1] - fr[0])).toFixed(1), p50:+iv[iv.length >> 1].toFixed(1), p95:+iv[Math.floor(iv.length*0.95)].toFixed(1), worst:+iv[iv.length - 1].toFixed(1),
-      busy:+(A.busy/nF).toFixed(2), draw:+(A.draw/nF).toFixed(2), city:+(A.city/nF).toFixed(2), frames:iv.length}; }
+      busy:+(A.busy/nF).toFixed(2), draw:+(A.draw/nF).toFixed(2), city:+(A.city/nF).toFixed(2), frames:iv.length, top:A.top.map(([k, v]) => k + ' ' + (v/nF).toFixed(1))}; }
   const pan = PHONE ? 4 : 6;
   await go(30); await quiet(); await measure('pan30', 5000, `window.__im.view.x -= ${pan}; window.__im.view.y -= ${pan/3};`);
   await go(240); await quiet(); await measure('pan240', 5000, `window.__im.view.x -= ${pan}; window.__im.view.y -= ${pan/3};`);
