@@ -27,7 +27,8 @@ const { chromium, devices } = require('playwright'); const path = require('path'
     await p.evaluate(([nm, night]) => { const im = window.__im, S = im.S, P = im.G.P.find(q => q.cityName === nm), h0 = 24*10; let bh = h0, be = night ? 9 : -9;
       for (let h = h0; h < h0 + 24; h++){ S.hour = h; const e = im.sunSinEl(P.id); if (night ? e < be : e > be){ be = e; bh = h; } } S.hour = bh; }, [nm, night]);
     const t0 = Date.now();
-    await p.evaluate(([nm, hx]) => { document.querySelectorAll('.toast,.modal').forEach(t => t.remove()); const im = window.__im, v = im.view, P = im.G.P.find(q => q.cityName === nm), s = hx/12, R = document.getElementById('map').getBoundingClientRect();
+    await p.evaluate(([nm, hx]) => { document.querySelectorAll('.toast,.modal').forEach(t => t.remove()); const im = window.__im; im.S.storms = [];   // (no weather over any shot)
+      const v = im.view, P = im.G.P.find(q => q.cityName === nm), s = hx/12, R = document.getElementById('map').getBoundingClientRect();
       v.s = s; v.x = R.width/2 - P.x*s; v.y = R.height/2 - P.y*s; im.redraw(); }, [nm, hx]);
     // every town over the crop on its own tier (by day; at night its lights too): a neighbour's stand-in would show as a soft patch
     // (a town still without its canvases after 10 s has them made at once by the test hook cityDbg.make, the same canvases the bake pump makes
@@ -39,9 +40,9 @@ const { chromium, devices } = require('playwright'); const path = require('path'
     // still taken but reported as an error, so the run fails)
     let ready = false;
     for (let k = 0; k < 5*(+process.env.WAIT || 300); k++){ await p.waitForTimeout(200); if (ready = await p.evaluate(([n, cr, k]) => { const im = window.__im, v = im.view; im.redraw(); const R = document.getElementById('map').getBoundingClientRect(), X = (R.width/2 - v.x)/v.s, Y = (R.height/2 - v.y)/v.s, ex = Math.min(cr/2, R.width/2)/v.s, ey = Math.min(cr*0.35, R.height/2)/v.s;
-      for (const P of im.G.P){ if (!P.city || P.sea) continue; const g = im.cityDbg.geo(P.id), E = g ? g.E : 22; if (P.x + E < X - ex || P.x - E > X + ex || P.y + E < Y - ey || P.y - E > Y + ey) continue; if (!g){ if (k >= 50){ im.cityDbg.make(P.id, n); window.__made = (window.__made || 0) + 1; } return false; }   // (every town whose square reaches over the crop, not only those whose point is on it)
+      for (const P of im.G.P){ if (!P.city || P.sea) continue; const g = im.cityDbg.geo(P.id), E = g ? g.E : 22; if (P.x + E < X - ex || P.x - E > X + ex || P.y + E < Y - ey || P.y - E > Y + ey) continue; if (!g){ if (k >= 50){ if (im.cityDbg.make) im.cityDbg.make(P.id, n); window.__made = (window.__made || 0) + 1; } return false; }   // (every town whose square reaches over the crop, not only those whose point is on it)
         const h = im.cityDbg.has(P.id); let ok = h.exact; if (ok && n){ const q = im.cityDbg.night(P.id); ok = !!(q && q.exact); }
-        if (!ok){ if (k < 50) return false; im.cityDbg.make(P.id, n); window.__made = (window.__made || 0) + 1; return false; } } return true; }, [night, crop, k])) break; }
+        if (!ok){ if (k < 50) return false; if (im.cityDbg.make) im.cityDbg.make(P.id, n); window.__made = (window.__made || 0) + 1; return false; } } return true; }, [night, crop, k])) break; }
     const tA = Date.now() - t0; if (!ready) errs.push(`not settled: ${nm}:${hx}${night ? ':n' : ''} after ${Math.round(tA/1000)} s (towns over the crop still without their canvases)`);
     for (let k = 0, ok = 0; k < 24 && ok < 5; k++){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; }
     const ms = Date.now() - t0; await p.waitForTimeout(600); await p.evaluate(() => document.querySelectorAll('.toast').forEach(t => t.remove()));
