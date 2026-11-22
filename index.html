@@ -6206,8 +6206,9 @@ function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = 
     // (the nearest counter it would touch covers it. Two far badges touch by their own squares (the sum of their half-sides along both axes),
     // not by their boxes with the marks. Hysteresis: a hidden one comes back only 6 px clear of the gap)
     const dc = c.tag ? 0 : plateDims(c.n, 1, pbQuiet(c), false).d/2;
-    let hit = null, hd = Infinity; for (const o of near(bt)){ const q = o.b; let on;
+    let hit = null, hd = Infinity; for (const o of near(bt)){ const q = o.b; let on; if ((c.hp != null) !== (o.c.hp != null) && c.at === o.c.at && !c.air && !o.c.air) continue;   // (units in cities: a force just off a city's point is never folded into the city's own counter: heartAside sets it beside)
       if (!c.tag && !o.c.tag && c.hp == null && o.c.hp == null){ const ro = plateDims(o.c.n, 1, pbQuiet(o.c), false).d/2; on = Math.max(Math.abs(o.c.x - c.x), Math.abs(o.c.y - c.y)) < dc + ro + 1 + (was ? 0 : 6); }   // (a city's own counter, pinned to its marker as the map zooms, is tested by its whole box below)
+      else if (c.hp != null || o.c.hp != null) on = b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1];   // (a city's own counter and one placed beside it, clear of its marker (heartAside): only a real overlap)
       else on = bt[0] < q[2] + o.m && bt[2] > q[0] - o.m && bt[1] < q[3] + o.m && bt[3] > q[1] - o.m;
       if (on){ const d = (o.c.x - c.x)**2 + (o.c.y - c.y)**2 + (o.c.owner === c.owner && !pbFight(c) && !pbFight(o.c) ? 0 : 1e6); if (d < hd){ hd = d; hit = o; } } }   // (a power's own counter it may join comes first: fewer stand beside)
     if (!hit){ const o = {c, b, m}; shown.push(o); put(o); continue; }
@@ -8152,9 +8153,10 @@ const heartRingR = hexPx => heartHd(hexPx) + 2.7;   // the ring's radius (the mi
 const heartOut = hexPx => heartRingR(hexPx) + 2 + dotR() + 2.5;   // how far off the point a force not on it is drawn at the least (css px): its dot clear of the ring
 // a force standing off a city's point but near it: its badge goes where it leaves the city's marker and ring in sight (above its dot as everywhere,
 // else beside it on the side away from the point, else the other side, else below), so the empty marker shows and the force reads as outside
-function heartAside(c, dx, dy, q, hexPx){ const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), D = plateDims(c.n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
+function heartAside(c, dx, dy, q, hexPx, held){ const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), D = plateDims(c.n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
   if (Math.hypot(dx - mx, dy - my) > Rk + D.w + D.h + 8) return;
-  const clear = (x, y) => { const ex = Math.max(x - w2 - mx, 0, mx - x - w2), ey = Math.max(y - h2 - my, 0, my - y - h2); return Math.hypot(ex, ey) - Rk; };
+  const hy = my - (dotLift(c.n, q) + heartRingR(hexPx) + 3.2 - dotR() - 2);   // (where the city's own counter stands when it is held (held): just above the ring)
+  const clear = (x, y) => { const ex = Math.max(x - w2 - mx, 0, mx - x - w2), ey = Math.max(y - h2 - my, 0, my - y - h2); if (held && Math.abs(x - mx) < D.w + 3 && Math.abs(y - hy) < D.h + 3) return -1; return Math.hypot(ex, ey) - Rk; };
   const sx = dx >= mx ? 1 : -1, side = dotR() + 3 + D.w/2, yb = dy + dotR() + 1 - D.h/2;
   const bx = k => k > 0 ? Math.max(dx + side, mx + Rk + 4 + w2) : Math.min(dx - side, mx - Rk - 4 - w2);   // (beside: clear of the ring by a few px more, so the city's own counter is the one by its marker)
   const C = [[dx, c.dy], [bx(sx), yb], [bx(-sx), yb], [dx, dy + dotLift(c.n, q)]];
@@ -9130,9 +9132,9 @@ function draw(now){ draw.now = now;
   tmPlan(clusters, hexPx, now);   // the pictures' places, from the crossover zoom (the names, the HQ and the power names keep clear of them too)
   // the counter: zoomed out the diamond on the force's spot (the middle of where its pictures stand), zoomed in the flag tag pinned PLATE_GAP px above
   // the top of its pictures (world points: no screen-space shuffling, nothing moves against the map); c.art: the crossover (0 diamond .. 1 tag)
-  const UZ = tmOn() ? tmFade(hexPx) : 0, UU = tmOn() ? tmU(hexPx) : 0; DOTW.clear();
+  const UZ = tmOn() ? tmFade(hexPx) : 0, UU = tmOn() ? tmU(hexPx) : 0, HELD = new Set(); DOTW.clear(); for (const c of clusters) if (c.hp != null) HELD.add(c.hp);
   for (const c of clusters){ c.pq = null; const q = plateQuiet(c), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), dT = plateDims(c.n, k, q, true), HP = c.hp != null ? G.P[c.hp] : null, [dx, dy] = HP ? toScreen(HP.x, HP.y) : toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));   // (on the heart: its dot on the city's marker, its badge just above it)
-    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy - dotLift(c.n, q) - (HP ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0); if (!HP && !c.moving && !c.air && c.hk === 'O') heartAside(c, dx, dy, q, hexPx); c.x = c.tag ? c.tx : c.dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
+    c.sx = sx; c.sy = sy; c.art = c.fm ? UZ : 0; c.tag = !!c.fm && UU >= 0.5; c.da = c.fm ? ucDiaA(UU) : 1; c.ta = c.fm ? ucTagA(UU) : 0; c.tx = sx; c.ty = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3); c.dx = dx; c.dy = dy - dotLift(c.n, q) - (HP ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0); if (!HP && !c.moving && !c.air && c.hk === 'O') heartAside(c, dx, dy, q, hexPx, HELD.has(c.at)); c.x = c.tag ? c.tx : c.dx; c.y = c.tag ? c.ty : c.dy; c.bdy = 0;
     c.px = dx; c.py = dy; const dw = HP ? [HP.x, HP.y] : [c.wx, c.wy + (c.form ? c.form.mid : 0)]; for (const q0 of c.list) DOTW.set(q0.id, dw); }   // the position dot (posDot): the force's spot; zoomed out its badge stands just above it
   plateFade(clusters, k, now);   /*@TEST*/if (window.__uclOn) window.__ucl = clusters.map(c => ({ids:c.list.map(a => a.id), own:c.owner, at:c.at, x:Math.round(c.x), y:Math.round(c.y), pv:c.pv, mv:c.moving, ml:(c.mlist || []).map(a => a.id), sats:(c.sats || []).map(q => ({key:q.key, ids:q.list.map(a => a.id), cl:q.cl.map(z => [Math.round(z.x), Math.round(z.y), z.at])}))}));/*@ENDTEST*/   // out where counters would touch: the lesser ones fade out in place (a power's own hand theirs to the one that covers them, another side's stand beside it: satPlace)
   clusters.sort((a, b) => ((b.moving ? 1 : 0) - (a.moving ? 1 : 0)) || ((a.owner === PLAYER) - (b.owner === PLAYER)) || ((a.air ? 0 : 1) - (b.air ? 0 : 1)));   // (marching ones under the standing: one setting off slides out from under the counter it leaves)
