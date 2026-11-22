@@ -31,12 +31,11 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   // (1) zoomed in: a tap on the ships' picture, then on the German stack's picture at Berlin, selects that force
   for (const [nm, xy, hp] of [['sea', sc.sea, 170], ['berlin', sc.ber, 170]]){
     await view(xy, hp); await p.waitForTimeout(1500); await clear();
-    // (units in cities: a city's centre-point marker drawn over the pictures of the forces standing on it is the city's own tap target)
-    const st = await p.evaluate(() => ({ mk: window.__im.uc ? window.__im.nc.cityPts().map(m => { const r = window.__im.uc.ringR() + 4; return { x: m.x - r, y: m.y - r, w: 2*r, h: 2*r }; }) : [], hits: window.__im.hits.map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids })), hitx: window.__im.hitx.map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids, art: !!h.art, sat: !!h.sat })) }));
+    const st = await p.evaluate(() => ({ hits: window.__im.hits.map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids })), hitx: window.__im.hitx.map(h => ({ x: h.x, y: h.y, w: h.w, h: h.h, ids: h.ids, art: !!h.art, sat: !!h.sat })) }));
     const mineIds = await p.evaluate(() => window.__im.S.armies.filter(a => a.owner === 0).map(a => a.id));
-    const own = st.hitx.filter(h => h.art).find(h => h.ids.some(id => nm === 'sea' ? id === sc.sh : mineIds.includes(id)) && freePt(h, st.hits.concat(st.hitx.filter(q => q.sat), st.mk)));
+    const own = st.hitx.filter(h => h.art).find(h => h.ids.some(id => nm === 'sea' ? id === sc.sh : mineIds.includes(id)) && freePt(h, st.hits.concat(st.hitx.filter(q => q.sat))));
     if (!own){ checks['art-' + nm] = { ok: false, why: 'no picture box', n: st.hitx.length }; continue; }
-    const pt = freePt(own, st.hits.concat(st.hitx.filter(q => q.sat), st.mk));
+    const pt = freePt(own, st.hits.concat(st.hitx.filter(q => q.sat)));
     await p.evaluate(([x, y]) => window.__im.tap(x, y), pt); await p.waitForTimeout(150);
     const s1 = await p.evaluate(() => window.__im.sel.army), chooser = await p.evaluate(() => { const el = document.getElementById('chooser'); return el && !el.hidden ? [...el.querySelectorAll('[data-act="choose-army"]')].map(e => +e.dataset.id) : null; });
     const mine = await p.evaluate(ids => ids.filter(id => { const a = window.__im.S.armies.find(q => q.id === id); return a && a.owner === 0; }), own.ids);

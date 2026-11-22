@@ -21,24 +21,31 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
     const nat = n => S.nations.findIndex(q => q.name === n), pol = nat('Poland'), rk = (a, b) => Math.min(a, b) + ',' + Math.max(a, b); S.rel[rk(0, pol)] = { st: 'war', since: S.hour, until: null };
     S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const by = n => G.P.find(P => P.cityName === n && !P.sea);
     const B = by('Berlin'), Hm = by('Hamburg'), M = by('Munich'), Z = by('Szczecin'), Dr = by('Dresden'), Po = by('Poznań');
-    const a = im.addArmy(0, B.id, {inf:5}), h = im.addArmy(0, Hm.id, {inf:3, tank:2}); h.pos = [Hm.x + 0.3, Hm.y + 0.2];   // (about 3 km off Hamburg's point)
+    const a = im.addArmy(0, B.id, {inf:5}), b2 = im.addArmy(0, B.id, {tank:2}); b2.pos = [B.x + 0.75, B.y + 0.7];   // (and one of yours about 9 km off Berlin's point, at the same time)
+    const Wa = by('Warsaw'), w = im.addArmy(pol, Wa.id, {inf:3});   // (a Polish army in Warsaw you cannot see)
+    const h = im.addArmy(0, Hm.id, {inf:3, tank:2}); h.pos = [Hm.x + 0.3, Hm.y + 0.2];   // (about 3 km off Hamburg's point)
     const m = im.addArmy(0, M.id, {tank:3}); m.pos = [M.x, M.y];
     const z = im.addArmy(pol, Z.id, {inf:3, tank:2}), sc = im.addArmy(0, Z.id, {spec:1}); sc.pos = [B.x + (Z.x - B.x)*0.75, B.y + (Z.y - B.y)*0.75];
     const d = im.addArmy(0, Dr.id, {inf:2}); d.pos = [Dr.x + 2, Dr.y + 2]; d.hrt = Dr.id;   // (as if it walked through the point to a spot beyond)
     const u = im.addArmy(pol, Po.id, {inf:2}), ue = im.addArmy(0, Po.id, {inf:1}); ue.pos = [Po.x + 3, Po.y + 3];   // (a force of yours in sight of it, not a recon unit: spotted, not identified)
     try { visCache = null; } catch (e) {}
-    return {a:a.id, h:h.id, m:m.id, z:z.id, d:d.id, u:u.id, P:{B:[B.id, B.x, B.y], Hm:[Hm.id, Hm.x, Hm.y], M:[M.id, M.x, M.y], Z:[Z.id, Z.x, Z.y], Dr:[Dr.id, Dr.x, Dr.y], Po:[Po.id, Po.x, Po.y]}}; });
+    return {a:a.id, b2:b2.id, w:w.id, h:h.id, m:m.id, z:z.id, d:d.id, u:u.id, P:{B:[B.id, B.x, B.y], Hm:[Hm.id, Hm.x, Hm.y], M:[M.id, M.x, M.y], Z:[Z.id, Z.x, Z.y], Dr:[Dr.id, Dr.x, Dr.y], Po:[Po.id, Po.x, Po.y], Wa:[Wa.id, Wa.x, Wa.y]}}; });
   const fail = (k, v) => fails.push(k + ': ' + (typeof v === 'string' ? v : JSON.stringify(v)));
   // (H) heartOn against atHeart
   const H0 = await p.evaluate(I => { const S = window.__im.S, A = id => S.armies.find(a => a.id === id), uc = window.__im.uc; const r = {};
-    for (const k of ['a', 'h', 'm', 'z', 'd', 'u']){ const a = A(I[k]); r[k] = {on:uc.heartOn(a), rule:atHeart(a)}; } return r; }, ids);
+    for (const k of ['a', 'b2', 'h', 'm', 'z', 'd', 'u']){ const a = A(I[k]); r[k] = {on:uc.heartOn(a), rule:atHeart(a)}; } return r; }, ids);
   out.heart = H0; for (const k of ['a', 'm', 'z', 'u']) if (!H0[k].on || !H0[k].rule) fail('H on the point', [k, H0[k]]);
-  if (H0.h.on || H0.h.rule) fail('H off the point', H0.h); if (H0.d.on || !H0.d.rule) fail('H walked through (rules count it, the map shows it where it stands)', H0.d);
+  if (H0.h.on || H0.h.rule) fail('H off the point', H0.h); if (H0.b2.on || H0.b2.rule) fail('H off Berlin\'s point', H0.b2); if (H0.d.on || !H0.d.rule) fail('H walked through (rules count it, the map shows it where it stands)', H0.d);
   // (D) and (R) at play zoom over each city
   const look = async (P) => { await p.evaluate(([x, y]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = 30/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [P[1], P[2]]); await p.waitForTimeout(900);
-    return p.evaluate(([pid, I]) => { const im = window.__im, uc = im.uc; return {marks:uc.marks().filter(m => m.p === pid), dots:Object.fromEntries(Object.entries(I).filter(([k, v]) => typeof v === 'number').map(([k, id]) => [k, uc.dot(id)])), ringR:uc.ringR(), s:im.view.s}; }, [P[0], ids]); };
+    return p.evaluate(([pid, I]) => { const im = window.__im, uc = im.uc; return {marks:uc.marks().filter(m => m.p === pid && m.sides.length), dots:Object.fromEntries(Object.entries(I).filter(([k, v]) => typeof v === 'number').map(([k, id]) => [k, uc.dot(id)])), ringR:uc.ringR(), s:im.view.s}; }, [P[0], ids]); };
   const near = (q, P) => q && Math.abs(q[0] - P[1]) < 1e-9 && Math.abs(q[1] - P[2]) < 1e-9;
   let L = await look(ids.P.B); out.berlin = L; if (!near(L.dots.a, ids.P.B)) fail('D Berlin dot on the point', L.dots.a); if (!(L.marks[0] && L.marks[0].sides.join() === 'own')) fail('R Berlin ring', L.marks);
+  // (M) a force of yours just off the point while another stands on it: never merged into the city's counter, its own dot clear of the ring
+  if (!L.dots.b2 || near(L.dots.b2, ids.P.B) || Math.hypot(L.dots.b2[0] - ids.P.B[1], L.dots.b2[1] - ids.P.B[2])*L.s < L.ringR + 2) fail('M Berlin: the force off the point has its own dot clear of the ring', L.dots.b2);
+  { const C = await p.evaluate(I => { window.__uclOn = true; window.__im.redraw(); return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => { const q = (window.__ucl || []).find(c => c.ids.includes(I.a)); window.__uclOn = false; r(q ? q.ids : null); }))); }, ids);
+    if (!C || C.includes(ids.b2)) fail('M Berlin: the off-point force is not in the city stack', C); }
+  L = await look(ids.P.Wa); if (L.marks.length) fail('R Warsaw (an army you cannot see) has no ring', L.marks);
   L = await look(ids.P.Hm); out.hamburg = L; if (L.marks.length) fail('R Hamburg has no ring', L.marks);
   if (!L.dots.h || Math.hypot(L.dots.h[0] - ids.P.Hm[1], L.dots.h[1] - ids.P.Hm[2])*L.s < L.ringR + 2) fail('D Hamburg dot clear of the marker', {dot:L.dots.h, px:L.dots.h && Math.hypot(L.dots.h[0] - ids.P.Hm[1], L.dots.h[1] - ids.P.Hm[2])*L.s});
   L = await look(ids.P.M); out.munich = L; if (!near(L.dots.m, ids.P.M)) fail('D Munich (pinned on the point) dot on the point', L.dots.m); if (!(L.marks[0] && L.marks[0].sides.join() === 'own')) fail('R Munich ring', L.marks);
@@ -47,13 +54,14 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
   L = await look(ids.P.Po); out.poznan = L; if (!(L.marks[0] && L.marks[0].sides.join() === 'unk')) fail('R Poznan ring: the unidentified contact', L.marks);
   // (T) the city line
   const T = await p.evaluate(P => { const uc = window.__im.uc, t = p => { const d = document.createElement('div'); d.innerHTML = uc.line(p); return d.textContent.replace(/\s+/g, ' ').trim(); };
-    return {B:t(P.B[0]), Z:t(P.Z[0]), Hm:t(P.Hm[0]), Po:t(P.Po[0]), Dr:t(P.Dr[0])}; }, ids.P);
+    return {B:t(P.B[0]), Z:t(P.Z[0]), Hm:t(P.Hm[0]), Po:t(P.Po[0]), Dr:t(P.Dr[0]), Wa:t(P.Wa[0])}; }, ids.P);
   out.lines = T;
-  if (!/^In the city: 1st Infantry Division \(5 units\)$/.test(T.B)) fail('T Berlin', T.B);
-  if (!/^In the city: Poland .*\(5 units\)/.test(T.Z)) fail('T Szczecin', T.Z);
+  if (!/^In the city: 1st Infantry Division \(5 units\) ?Nearby: .*\(2 units\)$/.test(T.B)) fail('T Berlin', T.B);
+  if (!/^In the city: .*\(Poland, 5 units\)/.test(T.Z)) fail('T Szczecin', T.Z);
+  if (T.Wa !== 'In the city: not seen') fail('T Warsaw (fog: not seen)', T.Wa);
   if (!/^In the city: nobody ?Nearby: .*\(5 units\)/.test(T.Hm)) fail('T Hamburg', T.Hm);
   if (!/^In the city: \? Unidentified/.test(T.Po)) fail('T Poznan', T.Po);
-  if (!/^In the city: nobody ?Nearby: .*passed through the centre/.test(T.Dr)) fail('T Dresden', T.Dr);
+  if (!/^In the city: nobody ?Nearby: .*walked through the centre/.test(T.Dr)) fail('T Dresden', T.Dr);
   if (PHONE){ await look(ids.P.B); const q = await p.evaluate(pid => { const im = window.__im, c = im.nc.names().find(z => z.p === pid), m = document.getElementById('map').getBoundingClientRect(); return c && {x:m.left + (c.b[0] + c.b[2])/2, y:m.top + (c.b[1] + c.b[3])/2}; }, ids.P.B[0]);
     if (!q) fail('T Berlin name on screen', null); else { await p.touchscreen.tap(q.x, q.y); await p.waitForTimeout(900); const s = await p.evaluate(() => { const e = document.querySelector('#csheet .cs-in'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }); out.sheet = s;
       if (!s || !s.startsWith('In the city: 1st Infantry Division (5 units)')) fail('T phone city sheet', s); } }
