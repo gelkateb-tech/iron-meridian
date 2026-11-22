@@ -10,6 +10,10 @@
 //  (C) close in, the force on Berlin's point has its tag just above the ring and its pictures nearer it than the force off the point (tag farther too)
 //  (X) a force off a held point in each of 8 directions, 4 and 15 km out, yours and an enemy's, at hex 12 to 240: clearly outside, its dot and
 //      its counter clear of the city's counter (see below; UC_NO_DIRS=1 skips it)
+//      Up to hex 20 (mid zoom, the world view) the force off the point is drawn where it stands (a few km: under the city force's own dot, which
+//      hides it); from hex 28 out to its spot. Everywhere its dot and its counter's middle stay on its own country's land, never the sea
+//  (L) the same at coastal and border cities (Szczecin NW, Hamburg NW and N, Berlin N and E, Munich SE, Poznan S), 4 and 15 km out, at hex 12, 30
+//      and 60: the dot and the counter's middle over its own country's land (tmGround, and the drawn border: provAt), never the sea
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -90,11 +94,25 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
       for (const hp of [12, 30, 60, 120, 240]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(hp >= 120 ? 1200 : 400);
         const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false; const P = im.G.P[I.p], pt = im.toScreen(P.x, P.y);
           const h = L.find(c => c.ids.includes(I.a)), o = L.find(c => c.ids.includes(I.b)); let sb = null; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) sb = q.b;
-          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob:sb || o.bx, tag:o.tag} : null); })); }), I);
+          const bA = im.S.armies.find(a => a.id === I.b), rs = im.toScreen(bA.pos[0], bA.pos[1]), ob = sb || (o && o.bx);
+          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, tag:o.tag, real:rs, land:[im.uc.land(bA.at, o.px, o.py), im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)]} : null); })); }), I);
         const k = `${side} ${km} km ${dn} hex ${hp}`; out.dirs++; if (!m){ fail('X counters missing', k); continue; }
         const hOn = Math.hypot(m.hd[0] - m.pt[0], m.hd[1] - m.pt[1]), oPt = Math.hypot(m.od[0] - m.pt[0], m.od[1] - m.pt[1]), oHb = pd([m.hb[0], m.hb[1], m.hb[2], Math.max(m.hb[3], m.pt[1] - m.R)], m.od[0], m.od[1]);
         const row = Math.min(m.ob[3], m.hb[3]) > Math.max(m.ob[1], m.hb[1]), g = gap(m.ob, m.hb), need = m.tag ? 6 : row ? 15 : 6;
-        if (hOn > 0.01 || oPt < m.R + 9 || oHb < 8 || g < need - 0.6) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need}); } } }
+        const atReal = Math.hypot(m.od[0] - m.real[0], m.od[1] - m.real[1]) < 0.5;
+        if (hOn > 0.01 || (hp <= 20 ? !atReal : (oPt < m.R + 9 || oHb < 8)) || g < need - 0.6) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), atReal, dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need});
+        if (m.land.some(z => !z.own)) fail('X off the point: dot and counter on its own land', {k, land:m.land}); } } }
+  // (L) coastal and border cities: the force off the point is never drawn in the sea or across a border
+  if (!process.env.UC_NO_DIRS){ out.land = 0; const KW = await p.evaluate(() => KM_W), D8 = {N:[0, -1], NE:[1, -1], E:[1, 0], SE:[1, 1], S:[0, 1], SW:[-1, 1], W:[-1, 0], NW:[-1, -1]};
+    for (const [city, dn] of [['Szczecin', 'NW'], ['Hamburg', 'NW'], ['Hamburg', 'N'], ['Berlin', 'N'], ['Berlin', 'E'], ['Munich', 'SE'], ['Poznań', 'S']]) for (const km of [4, 15]){ const dv = D8[dn], l = Math.hypot(dv[0], dv[1]), off = [dv[0]/l*km*KW, dv[1]/l*km*KW];
+      const I = await p.evaluate(([city, off]) => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const C = G.P.find(P => P.cityName === city && !P.sea), o = S.owner[C.id];
+        const a = im.addArmy(o, C.id, {inf:4, tank:2}), b2 = im.addArmy(o, C.id, {inf:2}); b2.pos = [C.x + off[0], C.y + off[1]]; if (o !== 0){ const sc = im.addArmy(0, C.id, {spec:1}); sc.pos = [C.x + 3, C.y + 3]; }
+        try { visCache = null; } catch (e) {} return {a:a.id, b:b2.id, p:C.id, x:C.x, y:C.y}; }, [city, off]);
+      for (const hp of [12, 30, 60]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(400);
+        const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false;
+          const o = L.find(c => c.ids.includes(I.b)); let ob = o && o.bx; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) ob = q.b; const at = im.S.armies.find(a => a.id === I.b).at;
+          res(o ? [im.uc.land(at, o.px, o.py), im.uc.land(at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)] : null); })); }), I);
+        const k = `${city} ${km} km ${dn} hex ${hp}`; out.land++; if (!m){ fail('L counters missing', k); continue; } if (m.some(z => !z.own)) fail('L off the point: dot and counter on its own land', {k, land:m}); } } }
   if (errors.length) fail('E errors', errors.slice(0, 5));
-  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
+  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
   await b.close(); process.exit(fails.length ? 1 : 0); })();
