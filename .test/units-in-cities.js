@@ -7,6 +7,7 @@
 //  (R) the ring: Berlin own, Szczecin war, Munich own, Poznan the unidentified contact; none at Hamburg or Dresden
 //  (T) the city line: Berlin "In the city: 1st Infantry Division (5 units)", Szczecin names the Polish army, Hamburg "nobody" (and "Nearby:"),
 //      Poznan "? Unidentified"; the phone city sheet shows the line after a tap on Berlin's name
+//  (C) close in, the force on Berlin's point has its tag just above the ring and its pictures nearer it than the force off the point (tag farther too)
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -65,6 +66,14 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
   if (PHONE){ await look(ids.P.B); const q = await p.evaluate(pid => { const im = window.__im, c = im.nc.names().find(z => z.p === pid), m = document.getElementById('map').getBoundingClientRect(); return c && {x:m.left + (c.b[0] + c.b[2])/2, y:m.top + (c.b[1] + c.b[3])/2}; }, ids.P.B[0]);
     if (!q) fail('T Berlin name on screen', null); else { await p.touchscreen.tap(q.x, q.y); await p.waitForTimeout(900); const s = await p.evaluate(() => { const e = document.querySelector('#csheet .cs-in'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }); out.sheet = s;
       if (!s || !s.startsWith('In the city: 1st Infantry Division (5 units)')) fail('T phone city sheet', s); } }
+  // (C) close in (hex 240) over Berlin: the force on the point has its tag just above the ring and its pictures nearer the ring than those of the
+  //     force of yours standing off it, whose tag stands well farther off too
+  { await p.evaluate(() => { const im = window.__im; im.sel.prov = null; im.sel.army = null; }); await p.keyboard.press('Escape');
+    await p.evaluate(([x, y]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = 240/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [ids.P.B[1], ids.P.B[2]]); await p.waitForTimeout(3000);
+    const C = await p.evaluate(I => new Promise(r => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, P = im.G.P[I.P.B[0]], m = im.toScreen(P.x, P.y), L = window.__ucl || []; window.__uclOn = false;
+      const f = id => L.find(c => c.ids.includes(id)), bp = b => b ? Math.hypot(Math.max(b[0] - m[0], 0, m[0] - b[2]), Math.max(b[1] - m[1], 0, m[1] - b[3])) : null, a = f(I.a), o = f(I.b2);
+      r(a && o ? {aTagOn:a.tag, aTag:Math.round(Math.hypot(a.tx - m[0], a.ty - m[1])), oTag:Math.round(Math.hypot(o.tx - m[0], o.ty - m[1])), aFm:bp(a.fm), oFm:bp(o.fm)} : {miss:[!!a, !!o]}); })); }), ids);
+    out.close = C; if (!(C.aTagOn && C.aTag < 45 && C.oTag > C.aTag + 40 && C.aFm != null && C.oFm != null && C.oFm >= C.aFm + 16)) fail('C close in: the force in the city is the one at the ring', C); }
   if (errors.length) fail('E errors', errors.slice(0, 5));
-  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
+  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
   await b.close(); process.exit(fails.length ? 1 : 0); })();
