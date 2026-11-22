@@ -34,18 +34,19 @@ const { chromium, devices } = require('playwright'); const path = require('path'
     // (a town still without its canvases after 10 s has them made at once by the test hook cityDbg.make, the same canvases the bake pump makes
     // in slices: with a frame forced every 200 ms the map draws all the time and the pump gets only a sliver of each, so a town could take
     // minutes; how fast towns appear in play is measured on its own, not here; a page without that hook, as master, has the town made
-    // again whole by cityDbg.time every 5 s)
+    // again whole by cityDbg.time every 5 s, a town of one canvas only: a chunked one made whole would not fit the city budget and drop
+    // what the view shows)
     // (the crop as shot, at most the screen: a town only past the screen's edge is not drawn, so its canvases are let go as soon as they are
     // made and it could never count as ready)
     // (no silent time-out: a shot taken before every town over it is drawn would show towns missing; after WAIT s (default 300) the shot is
     // still taken but reported as an error, so the run fails)
     let ready = false;
-    for (let k = 0; k < 5*(+process.env.WAIT || 300); k++){ await p.waitForTimeout(200); if (ready = await p.evaluate(([n, cr, k]) => { const im = window.__im, v = im.view; im.redraw(); const R = document.getElementById('map').getBoundingClientRect(), X = (R.width/2 - v.x)/v.s, Y = (R.height/2 - v.y)/v.s, ex = Math.min(cr/2, R.width/2)/v.s, ey = Math.min(cr*0.35, R.height/2)/v.s;
-      for (const P of im.G.P){ if (!P.city || P.sea) continue; const g = im.cityDbg.geo(P.id), E = g ? g.E : 22; if (P.x + E < X - ex || P.x - E > X + ex || P.y + E < Y - ey || P.y - E > Y + ey) continue; if (!g){ if (k >= 50){ if (im.cityDbg.make) im.cityDbg.make(P.id, n); else if (k % 25 === 0) im.cityDbg.time(P.id); else return false; window.__made = (window.__made || 0) + 1; } return false; }   // (every town whose square reaches over the crop, not only those whose point is on it)
+    for (let k = 0; k < 5*(+process.env.WAIT || 300); k++){ await p.waitForTimeout(200); if (ready = await p.evaluate(([n, cr, k]) => { const im = window.__im, v = im.view; im.S.storms = []; im.redraw(); const R = document.getElementById('map').getBoundingClientRect(), X = (R.width/2 - v.x)/v.s, Y = (R.height/2 - v.y)/v.s, ex = Math.min(cr/2, R.width/2)/v.s, ey = Math.min(cr*0.35, R.height/2)/v.s;
+      for (const P of im.G.P){ if (!P.city || P.sea) continue; const g = im.cityDbg.geo(P.id), E = g ? g.E : 22; if (P.x + E < X - ex || P.x - E > X + ex || P.y + E < Y - ey || P.y - E > Y + ey) continue; if (!g){ if (k >= 50){ if (im.cityDbg.make) im.cityDbg.make(P.id, n); else if (k % 25 === 0 && (!g || g.S <= 512)) im.cityDbg.time(P.id); else return false; window.__made = (window.__made || 0) + 1; } return false; }   // (every town whose square reaches over the crop, not only those whose point is on it)
         const h = im.cityDbg.has(P.id); let ok = h.exact; if (ok && n){ const q = im.cityDbg.night(P.id); ok = !!(q && q.exact); }
-        if (!ok){ if (k < 50) return false; if (im.cityDbg.make) im.cityDbg.make(P.id, n); else if (k % 25 === 0) im.cityDbg.time(P.id); else return false; window.__made = (window.__made || 0) + 1; return false; } } return true; }, [night, crop, k])) break; }
+        if (!ok){ if (k < 50) return false; if (im.cityDbg.make) im.cityDbg.make(P.id, n); else if (k % 25 === 0 && (!g || g.S <= 512)) im.cityDbg.time(P.id); else return false; window.__made = (window.__made || 0) + 1; return false; } } return true; }, [night, crop, k])) break; }
     const tA = Date.now() - t0; if (!ready) errs.push(`not settled: ${nm}:${hx}${night ? ':n' : ''} after ${Math.round(tA/1000)} s (towns over the crop still without their canvases)`);
-    for (let k = 0, ok = 0; k < 24 && ok < 5; k++){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; }
+    for (let k = 0, ok = 0; k < 24 && ok < 5; k++){ await p.waitForTimeout(250); ok = await p.evaluate(() => { window.__im.S.storms = []; window.__im.redraw(); return !window.__im.mapBusy(); }) ? ok + 1 : 0; }
     const ms = Date.now() - t0; await p.waitForTimeout(600); await p.evaluate(() => document.querySelectorAll('.toast').forEach(t => t.remove()));
     const R = await p.evaluate(() => { const r = document.getElementById('map').getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
     const cw = Math.min(crop, R[2]), chh = Math.min(Math.round(crop*0.7), R[3]);
