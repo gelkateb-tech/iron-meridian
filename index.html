@@ -7029,7 +7029,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
   // one far out (a building small on screen still stands on its shadow); kept to the land (no shadow on the sea or a lake)
   { const SH = new Path2D(), SH2 = new Path2D();
     for (const b of Bv){ const q = b.q, H0 = b.z0 + b.h, dx = C3_SUN*H0, dy = C3_SUN*H0, pts = []; for (let k = 0; k < 4; k++) pts.push([q[2*k], q[2*k + 1]], [q[2*k] + dx, q[2*k + 1] + dy]);
-      for (const [Pa, f] of [[SH, 1], [SH2, 1.35]]){ const hl = f === 1 ? c3Hull(pts) : c3Hull(pts.map((p, i) => i & 1 ? [p[0] + dx*(f - 1), p[1] + dy*(f - 1)] : p)); hl.forEach((p, i) => i ? Pa.lineTo(p[0], p[1]) : Pa.moveTo(p[0], p[1])); Pa.closePath(); } }
+      for (const [Pa, f] of pkc >= 0.8 ? [[SH, 1], [SH2, 1.35]] : [[SH, 1]]){ const hl = f === 1 ? c3Hull(pts) : c3Hull(pts.map((p, i) => i & 1 ? [p[0] + dx*(f - 1), p[1] + dy*(f - 1)] : p)); hl.forEach((p, i) => i ? Pa.lineTo(p[0], p[1]) : Pa.moveTo(p[0], p[1])); Pa.closePath(); } }   // (the fainter long shadow only where it shows)
     for (const t of Tv){ const r = t[2], o = r*0.9; SH.moveTo(t[0] + o + r, t[1] + o); SH.arc(t[0] + o, t[1] + o, r, 0, Math.PI*2); }
     if (C3SC.width < W || C3SC.height < H){ C3SC.width = Math.max(C3SC.width, W); C3SC.height = Math.max(C3SC.height, H); }
     const gs = C3SC.getContext('2d'); gs.setTransform(1, 0, 0, 1, 0, 0); gs.globalAlpha = 1; gs.globalCompositeOperation = 'source-over'; gs.clearRect(0, 0, W, H); gs.setTransform(pk, 0, 0, pk, Ek*pk - X0, Ek*pk - Y0);
@@ -7045,7 +7045,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
   // edges, the windows and a few things on a flat roof (plant rooms, tanks, solar panels: none to three, each roof its own)
   const kR = Math.max(0, Math.min(1, (pkc - 1.1)/0.6)), kW = Math.max(0, Math.min(1, (pkc - 1.8)/0.8)), kD = Math.max(0, Math.min(1, (pkc - 2.2)/0.6));
   g.globalAlpha = 1; g.lineJoin = 'miter';
-  const kO = Math.max(0, Math.min(1, (1.3 - pkc)/0.5)), OL = kO > 0 ? new Path2D() : null;   // small on screen: a fine dark outline round each building (a crisp silhouette)
+  const kO = Math.max(0, Math.min(1, (1.3 - pkc)/0.5)), OL = kO > 0 && pkc >= 0.5 ? new Path2D() : null;   // (not on the smallest tiers: a building of a px or two needs none)   // small on screen: a fine dark outline round each building (a crisp silhouette)
   for (const b of Bv){ if (!(++yc & 127)) yield; const q = b.q, o = c3O(q), z0 = b.z0, H0 = z0 + b.h, tn = b.tn || 0, pal = b.t === 2 ? C.glass[tn][b.c % 3] : b.t === 1 ? C.pitch[tn][b.c % 6] : C.roof[tn][b.c % 6];
     const bx = C3_LEAN*z0, byy = -z0, tx = C3_LEAN*H0, ty = -H0;
     if (OL && !b.on){ const hl = hull(b); hl.forEach((p, i) => i ? OL.lineTo(p[0], p[1]) : OL.moveTo(p[0], p[1])); OL.closePath(); }
@@ -7090,7 +7090,7 @@ const c3O = q => { let a = 0; for (let k = 0; k < 4; k++){ const ax = q[2*k], ay
 // bake, or one chunk of a big city (chunks overlap by a gutter, so they meet without a seam)
 function* cityPaint(c, I, S, X0, Y0){ const g = c.getContext('2d'); yield* cityPlanDraw(g, I, S, X0, Y0, false); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; return c; }
 function cityBake(p, S){ if (S === CLOW_S && CLOW.has(p)) return CLOW.get(p); S = Math.min(S, CCH); const key = 'd' + p + '|' + S; let c = cbakeGet(key); if (c) return c;
-  if ((!CJOB.has(key) && !cityCan()) || (CITY_QUICK && S !== CLOW_S && cityDetailK(CGEO.get(p) || {E:1e9}, S) > 0)){ CITY_PEND = true; return null; }   // (a bake with just the arterials is quick: made while moving too)
+  if ((!CJOB.has(key) && !cityCan()) || (CITY_QUICK && (S !== CLOW_S ? cityDetailK(CGEO.get(p) || {E:1e9}, S) > 0 : !CJOB.has(key) && !CINFO.has(p)))){ CITY_PEND = true; return null; }   // (while the view moves no town's plan is started: its low tier is made once the view rests, or by the idle warm-up before)
   const I = cityInfo(p); if (!I) return null;   // (the low tier too from the town's full masks: every tier draws the same plan)
   const J = cityRun(key, () => { const cv = document.createElement('canvas'); cv.width = cv.height = S; return {it:cityPaint(cv, I, S, 0, 0), c:cv}; }); if (!J) return null;
   c = J.v; cbtLog(S, J.ms); if (S === CLOW_S){ CLOW.set(p, c); CLOW_PX += S*S; cityKeepTrim(p); } else cbakePut(key, c); return c; }
@@ -7360,7 +7360,7 @@ function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0
   if (!CWARM) CWARM = G.P.filter(P => P.city && !P.sea).map(P => P.id);   // (this statement had slipped into the comment above in 'Cities repair 7': CWARM stayed null and the warm-up threw every frame)
   if (!CWARM.length) return; const dl0 = CITY_DL, end = performance.now() + 7, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
   const pend0 = CITY_PEND, go0 = CITY_GO; let on = false; CITY_DL = end; CITY_GO = true;   // (its jobs in slices too: one at least, then while the 7 ms last)
-  const lim = ((saverOn() ? 1.5 : 4)*Math.max(x1 - x0, y1 - y0, 400))**2;   // (the towns round the view, nearest first: with the Battery saver those just round it; the rest when the view comes near them)
+  const lim = saverOn() ? (1.5*Math.max(x1 - x0, y1 - y0, 400))**2 : Infinity;   // (nearest the view first; with the Battery saver only the towns round the view: the rest when the view comes near them)
   while (CWARM.length && cityCan() && cityKeepPx() <= 0.8*cityKeepMax()){ let j = 0, bd = Infinity;   // (within the kept cities' budget, cityKeepMax: the warm-up never makes the least recently used towns be forgotten)
     for (let i = 0; i < CWARM.length; i++){ const P = G.P[CWARM[i]], d = (wrapNear(P.x, cx) - cx)**2 + (P.y - cy)**2; if (d < bd){ bd = d; j = i; } }
     if (bd > lim) break;
@@ -7391,8 +7391,7 @@ function drawCitiesIn(c, x0, y0, x1, y1, fa){
     c.globalAlpha = fa; cityDraw(c, p, I, cityTier(I), x0, y0, x1, y1, false, true); }
   c.restore(); }
 // live pass after the night tint (world transform): city lights, each by the darkness over its own province
-const CN_A = 0.34, CN_GLOW = 0.36, cnDark = hexPx => 0.1 + 0.46*sstep(130, 220, hexPx);   // (cnDark: how dark the unlit buildings go at full night: close in as dark as the land round them; further out a little less, so the lit town and the countries' colours under it still read)
-const CN_FILT = (() => { try { const g = document.createElement('canvas').getContext('2d'); g.filter = 'brightness(0)'; return g.filter === 'brightness(0)'; } catch (e) { return false; } })();   // (the dark silhouette: a black copy where the browser filters a canvas, else burnt in, darker for darker roofs)   // (CN_DARK: how dark the unlit buildings go at full night)   // the lights' strength and the glow's on its point (dimmed: the owner asked for subtle lights)
+const CN_A = 0.34, CN_GLOW = 0.36, cnDark = hexPx => 0.1 + 0.55*sstep(130, 220, hexPx);   // the lights' strength and the glow's on its point (dimmed: the owner asked for subtle lights); cnDark: how dark the unlit buildings go at full night (close in near black, burnt in; further out a little less, so the lit town and the countries' colours under it still read)
 const cityLightsOn = () => SET.cityLights !== false;   // Settings: 'City lights at night' (off: night still darkens the map, no lights or glows)
 function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityArtState() < 5) return; const lit = cityLightsOn();
   const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s, now = performance.now(), still = now - (lastPanT || 0) > 150; let saved = false, low = 0;
@@ -7409,11 +7408,11 @@ function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityA
     if (I.r*view.s < 0.8) return;
     if (!saved){ saved = true; ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; }   // (every frame: plain bilinear, the tiers are within 1-1.5 texels a pixel)
     // the town's buildings, streets and trees go dark first (unlit: the roofs no brighter than the night's land round them; only their lights
-    // show): its day canvases over the view laid over the map in black, as strong as the night (where a browser cannot filter a canvas, burnt
-    // in: a pale roof goes near black, a transparent pixel leaves the map as it is)
+    // show): its day canvases over the view burnt into the map (a roof goes near black, a transparent pixel leaves the map as it is; a blend
+    // as cheap as a plain copy, where a filtered copy would cost twenty times that every frame)
     { const S0 = cityTier(I), X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, T0 = ctx.getTransform(), sx0 = w => (Math.round(w*T0.a + T0.e) - T0.e)/T0.a, sy0 = w => (Math.round(w*T0.d + T0.f) - T0.f)/T0.d;
       const u0 = Math.max(0, (x0 - X)/E2), v0 = Math.max(0, (y0 - Y)/E2), u1 = Math.min(1, (x1 - X)/E2), v1 = Math.min(1, (y1 - Y)/E2);
-      if (u1 > u0 && v1 > v0){ if (CN_FILT){ ctx.filter = 'brightness(0)'; ctx.globalCompositeOperation = 'source-over'; } else ctx.globalCompositeOperation = 'color-burn'; ctx.globalAlpha = nf*fa*cnDark(hexPx); cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); if (CN_FILT) ctx.filter = 'none'; } }
+      if (u1 > u0 && v1 > v0){ ctx.globalCompositeOperation = 'color-burn'; ctx.globalAlpha = nf*fa*cnDark(hexPx); cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); } }
     if (!lit) return;   // lights off: the concrete only goes dark
     if (!CLOWN.has(p) && (performance.now() >= lowDl ? (animFast(), false) : true)){ if (!cityLightsLow(p)){ if (!CLOW.has(p)){ const go = CITY_GO; CITY_GO = true; cityBake(p, CLOW_S); CITY_GO = go && CITY_GO; } if (!cityLightsLow(p)) CWANT.set('N' + p, ['nl', p]); } }   // (the low tier of the lights, at once, moving or not: a fraction of a ms from the day's low tier)
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nf*fa*CN_A;
