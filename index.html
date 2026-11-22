@@ -7363,7 +7363,7 @@ function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0
   if (!CWARM) CWARM = G.P.filter(P => P.city && !P.sea).map(P => P.id);   // (this statement had slipped into the comment above in 'Cities repair 7': CWARM stayed null and the warm-up threw every frame)
   if (!CWARM.length) return; const dl0 = CITY_DL, end = performance.now() + 7, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
   const pend0 = CITY_PEND, go0 = CITY_GO; let on = false; CITY_DL = end; CITY_GO = true;   // (its jobs in slices too: one at least, then while the 7 ms last)
-  const lim = saverOn() ? (1.5*Math.max(x1 - x0, y1 - y0, 400))**2 : Infinity;   // (nearest the view first; with the Battery saver only the towns round the view: the rest when the view comes near them)
+  const lim = ((saverOn() ? 0.9 : 1.4)*Math.max(x1 - x0, y1 - y0, 300))**2;   // (nearest the view first, and only the towns round it (a town is a plan and a bake of tens of ms): the rest when the view comes near them)
   while (CWARM.length && cityCan() && cityKeepPx() <= 0.8*cityKeepMax()){ let j = 0, bd = Infinity;   // (within the kept cities' budget, cityKeepMax: the warm-up never makes the least recently used towns be forgotten)
     for (let i = 0; i < CWARM.length; i++){ const P = G.P[CWARM[i]], d = (wrapNear(P.x, cx) - cx)**2 + (P.y - cy)**2; if (d < bd){ bd = d; j = i; } }
     if (bd > lim) break;
@@ -7375,7 +7375,7 @@ function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0
 // cityWarm runs from the loop, not from draw: it is preparation, not motion, so it never keeps the map redrawing and it does not stop when the
 // ambient motion rests (a paused, untouched map still finishes it); a few ms a frame (every 50 ms with the Battery saver) until every city has
 // its low tier; a town on screen just baked asks for one frame (the layer picks it up)
-function cityWarmPump(now){ if (CWARM && !CWARM.length) return; if (view.s*HS0 < 9 || cityKeepPx() > 0.8*cityKeepMax() || now - (cityWarmPump.t || 0) < (saverOn() ? 50 : 0)) return; cityWarmPump.t = now;
+function cityWarmPump(now){ if (CWARM && !CWARM.length) return; if (view.s*HS0 < 9 || cityKeepPx() > 0.8*cityKeepMax() || now - (cityWarmPump.t || 0) < (saverOn() ? 120 : 40)) return; cityWarmPump.t = now;   // (a slice every few frames: the warm-up never holds the main thread for long)
   const p0 = CITY_PEND; cityWarm(now); if (CITY_PEND && !p0) redraw(); }
 // world-space bounds of what the layer or the screen shows
 function cityEach(x0, y0, x1, y1, fn){ for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea) continue; const I = CGEO.get(p), e = I ? I.E : 22;
