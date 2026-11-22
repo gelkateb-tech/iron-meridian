@@ -8229,10 +8229,10 @@ function heartClear(clusters, hexPx){ let H = null;
   for (const c of clusters) if (c.heart && c.hp != null && c.fm){ if (!H) H = new Map(); H.set(c.hp, c); } if (!H) return;
   const R = heartRingR(hexPx), tagOn = tmU(hexPx) >= 0.3;
   for (const c of clusters){ if (c.hk !== 'O' || c.moving || c.air || !c.fm || c.hp != null) continue; const h = H.get(c.at); if (!h) continue;
-    const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), hb = h.fm.box, dH = boxPt(hb, mx, my), fb = c.fm.box;
+    const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), hb = h.fm.box, dH = Math.max(boxPt(hb, mx, my) + 24, 0.8*Math.hypot((hb[0] + hb[2])/2 - mx, (hb[1] + hb[3])/2 - my)), fb = c.fm.box;   // (dH: how near its pictures may come: farther than the city's force's nearest picture, and than most of its group)
     const dHt = plateDims(h.n, 1, clQuiet(h), true), hty = my - R - 4 - dHt.h/2 - dHt.bars, ht = plateRect(mx, hty, h.n, 1, clQuiet(h), true), htb = [ht.x, ht.y, ht.x + ht.w, ht.y + ht.h];
     const dT = plateDims(c.n, 1, clQuiet(c), true), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), ty0 = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3), nmb = [mx + R + 2, my - 10, mx + R + 80, my + 10];   // (nmb: where the city's name stands beside the ring)
-    const ok = (ox, oy) => { const b = [fb[0] + ox, fb[1] + oy, fb[2] + ox, fb[3] + oy]; if (boxGap(b, hb) < 14 || boxGap(b, nmb) < 4 || boxPt(b, mx, my) < Math.max(dH + 24, R + 24)) return false;
+    const ok = (ox, oy) => { const b = [fb[0] + ox, fb[1] + oy, fb[2] + ox, fb[3] + oy]; if (boxGap(b, hb) < 14 || boxGap(b, nmb) < 4 || boxPt(b, mx, my) < Math.max(dH, R + 24)) return false;
       if (!tagOn) return true; const t = plateRect(sx + ox, ty0 + oy, c.n, 1, clQuiet(c), true), tb = [t.x, t.y, t.x + t.w, t.y + t.h];
       return boxGap(tb, htb) >= 24 && boxGap(tb, hb) >= 6 && boxGap(tb, nmb) >= 4 && boxPt(tb, mx, my) >= R + 44 && Math.hypot(sx + ox - mx, ty0 + oy - my) >= Math.hypot(hty - my, 0) + 48; };
     let ux = (fb[0] + fb[2])/2 - mx, uy = (fb[1] + fb[3])/2 - my; const d = Math.hypot(ux, uy); if (d < 1e-3){ ux = 0.6; uy = 0.8; } else { ux /= d; uy /= d; }
