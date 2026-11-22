@@ -67,7 +67,7 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
       // provinces of the owner in view (up to 8), each sampled at up to 4 cells away from its town
       const before = await p.evaluate(own => { const im = window.__im, G = im.G, S = im.S, M = window.__mc, I = M.img(), out = [];
         const v = im.view, r = document.getElementById('map').getBoundingClientRect(), x0 = -v.x/v.s, x1 = (r.width - v.x)/v.s, y0 = -v.y/v.s, y1 = (r.height - v.y)/v.s;
-        for (const P of G.P){ if (out.length >= 8) break; if (P.sea || S.owner[P.id] !== own || P.x < x0 - 200 || P.x > x1 + 200 || P.y < y0 - 200 || P.y > y1 + 200) continue; const cs = M.cells(P.id, 8); if (cs.length < 1) continue;   // (a province that is mostly town: its land between the towns, however little) out.push({p:P.id, name:P.name, cs, px:cs.map(q => M.px(I, q[0], q[1]))}); }
+        for (const P of G.P){ if (out.length >= 8) break; if (P.sea || S.owner[P.id] !== own || P.x < x0 - 200 || P.x > x1 + 200 || P.y < y0 - 200 || P.y > y1 + 200) continue; const cs = M.cells(P.id, 8); if (cs.length < 1) continue;   /* (a province that is mostly town: its land between the towns, however little) */ out.push({p:P.id, name:P.name, cs, px:cs.map(q => M.px(I, q[0], q[1]))}); }
         return out; }, own);
       // the same pixels with those provinces handed to another power (tinted in its colour): each must change
       const to = own === G0.us ? G0.ca : G0.us, ids = before.map(e => e.p);   // (yours green against another power's colour)
