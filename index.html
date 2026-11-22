@@ -8170,6 +8170,13 @@ function heartSprite(hd, pip = true){ const key = hd.toFixed(1) + '|' + dpr + '|
   dia(); g.lineJoin = 'miter'; g.lineWidth = 1.1; g.strokeStyle = 'rgba(8,10,12,.92)'; g.stroke(); dia(); g.fillStyle = '#f2ead3'; g.fill();
   if (pip){ g.beginPath(); g.arc(m, m, Math.max(0.8, hd*0.27), 0, Math.PI*2); g.fillStyle = 'rgba(14,16,18,.95)'; g.fill(); }   // (the empty point's dark pip; on a held point the force's own dot takes its place)
   c.W = W; HMK.set(key, c); return c; }
+// a held point's ring: one arc per side standing on it (cols: their colours, the first at the top), on a dark backing; painted once per size and sides
+function heartRing(R, cols){ const key = 'r' + R.toFixed(1) + '|' + cols.join(',') + '|' + dpr; let c = HMK.get(key); if (c) return c; if (HMK.size > 60) HMK.clear();
+  const W = 2*(R + 4), n = Math.ceil(W*dpr); c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.scale(n/W, n/W); const m = W/2, k = cols.length, gap = k > 1 ? 0.32 : 0; g.lineCap = 'butt';
+  for (let i = 0; i < k; i++){ const a0 = -Math.PI/2 - Math.PI/k + i*2*Math.PI/k + gap/2, a1 = a0 + 2*Math.PI/k - gap;
+    g.beginPath(); g.arc(m, m, R, a0, a1); g.lineWidth = 4.8; g.strokeStyle = 'rgba(6,9,11,.92)'; g.stroke();
+    g.beginPath(); g.arc(m, m, R, a0 + (k > 1 ? 0.04 : 0), a1 - (k > 1 ? 0.04 : 0)); g.lineWidth = 2.6; g.strokeStyle = cols[i]; g.stroke(); }
+  c.W = W; HMK.set(key, c); return c; }
 let HCITY = null; /*@TEST*/const HMDBG = [];/*@ENDTEST*/   // the cities' provinces (kept per map and game: useWorld sets which provinces are cities)
 const ovlB = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
 // names: the boxes of the names drawn this frame (city, province and power names: their places are the names' own, never moved for a marker)
@@ -8196,11 +8203,7 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
     /*@TEST*/HMDBG.push({p, x:+x.toFixed(2), y:+y.toFixed(2), r:+r0.toFixed(2), sides:held ? L.map(q => q.s) : [], drawn:held || !hit ? 1 : 0, a:+far.toFixed(2)});/*@ENDTEST*/
     if (!held && hit) return;
     const dim = vis.has(p) ? 1 : 0.6;
-    if (held){ const n = L.length, gap = n > 1 ? 0.32 : 0; ctx.save(); ctx.globalAlpha = ga; ctx.lineCap = 'butt';
-      for (let i = 0; i < n; i++){ const a0 = -Math.PI/2 - Math.PI/n + i*2*Math.PI/n + gap/2, a1 = a0 + 2*Math.PI/n - gap;
-        ctx.beginPath(); ctx.arc(x, y, R, a0, a1); ctx.lineWidth = 4.8; ctx.strokeStyle = 'rgba(6,9,11,.92)'; ctx.stroke();
-        ctx.beginPath(); ctx.arc(x, y, R, a0 + (n > 1 ? 0.04 : 0), a1 - (n > 1 ? 0.04 : 0)); ctx.lineWidth = 2.6; ctx.strokeStyle = L[i].s === 'unk' ? '#b9c3c8' : sideHi(L[i].s); ctx.stroke(); }
-      ctx.restore(); }
+    if (held){ const rs = heartRing(R, L.map(q => q.s === 'unk' ? '#b9c3c8' : sideHi(q.s))), RW = rs.W; ctx.drawImage(rs, x - RW/2, y - RW/2, RW, RW); }   // (the ring: one picture per size and sides, made once)
     const sp = heartSprite(hd, !held), W = sp.W; ctx.globalAlpha = ga*dim*far; ctx.drawImage(sp, x - W/2, y - W/2, W, W); ctx.globalAlpha = ga;
     if (held && hexPx >= 8){ const nb = own && own.city ? own : null, f = 10, nearOwn = nb && Math.hypot(Math.max(nb[0] - x, 0, x - nb[2]), Math.max(nb[1] - y, 0, y - nb[3])) <= R + 1.5*(nb[3] - nb[1]);
       if (!nearOwn){ const t = P.cityName || P.name, fnt = `600 ${f}px ${BODY}`; ctx.font = fnt; const w = mtw(t, fnt) + 4;
