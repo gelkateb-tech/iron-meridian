@@ -7230,7 +7230,7 @@ function cityLightsLow(p){ let c = CLOWN.get(p); if (c) return c; const day = CL
 // bands and the soft footprint; base: before the plan, else after it
 function cityNightBase(g, I, S, X0, Y0, W, H, day, K, glow, ms, part){
   if (part !== 2){ g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.filter = 'none'; g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-    if (day){ g.filter = `grayscale(1) brightness(${(I.pale ? 1.05 : 0.95).toFixed(2)}) contrast(3)`; g.globalAlpha = CN_DOTS*(1 - 0.85*K); g.drawImage(day, 0, 0, W, H, 0, 0, W, H); g.filter = 'none'; g.globalAlpha = 1; }   // the built-up town's brightest bits (its lit roofs and pale streets as the day canvas has them; not its shadows or its trees) a faint glow (close in only a trace: the drawn windows and lamps take over)
+    if (day){ g.filter = `grayscale(1) brightness(${(I.pale ? 1.05 : 0.95).toFixed(2)}) contrast(3)`; g.globalAlpha = CN_DOTS*(1 - K); g.drawImage(day, 0, 0, W, H, 0, 0, W, H); g.filter = 'none'; g.globalAlpha = 1; }   // the built-up town's brightest bits (its lit roofs and pale streets as the day canvas has them; not its shadows or its trees) a faint glow (close in none: the drawn windows and lamps take over, and the roofs stay dark)
     { const v = Math.round(255*CN_FILL*Math.max(CN_FILL0, 1 - K)); if (v > 0){ g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over'; } }   // the lights of the streets run together: an even glow over the built-up town (the footprint and the fall-off shape it), as bright on average as the lamps drawn close in, which take over from it (a stand-in is the finished lights, softer)
     if (part === 1) return; }
   const k = S/(2*I.E), mx = S/2 - X0, my = S/2 - Y0, R = I.r*k;
@@ -7394,7 +7394,7 @@ function drawCitiesIn(c, x0, y0, x1, y1, fa){
     c.globalAlpha = fa; cityDraw(c, p, I, cityTier(I), x0, y0, x1, y1, false, true); }
   c.restore(); }
 // live pass after the night tint (world transform): city lights, each by the darkness over its own province
-const CN_A = 0.34, CN_GLOW = 0.36, cnDark = hexPx => 0.1 + 0.55*sstep(130, 220, hexPx);   // the lights' strength and the glow's on its point (dimmed: the owner asked for subtle lights); cnDark: how dark the unlit buildings go at full night (close in near black, burnt in; further out a little less, so the lit town and the countries' colours under it still read)
+const CN_A = 0.34, CN_GLOW = 0.36, cnDark = hexPx => 0.1 + 0.55*sstep(130, 220, hexPx);   // the lights' strength and the glow's on its point (dimmed: the owner asked for subtle lights); cnDark: how dark the unlit buildings go at full night (close in about the night land's level; further out a little less, so the lit town and the countries' colours under it still read)
 const cityLightsOn = () => SET.cityLights !== false;   // Settings: 'City lights at night' (off: night still darkens the map, no lights or glows)
 function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityArtState() < 5) return; const lit = cityLightsOn();
   const x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s, now = performance.now(), still = now - (lastPanT || 0) > 150; let saved = false, low = 0;
@@ -7411,11 +7411,12 @@ function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityA
     if (I.r*view.s < 0.8) return;
     if (!saved){ saved = true; ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; }   // (every frame: plain bilinear, the tiers are within 1-1.5 texels a pixel)
     // the town's buildings, streets and trees go dark first (unlit: the roofs no brighter than the night's land round them; only their lights
-    // show): its day canvases over the view burnt into the map (a roof goes near black, a transparent pixel leaves the map as it is; a blend
-    // as cheap as a plain copy, where a filtered copy would cost twenty times that every frame)
+    // show): its day canvases over the view multiplied into the map, twice close in (each roof dimmed by its own colour twice over: near the
+    // night land's level, keeping its own hue; a transparent pixel leaves the map as it is; a blend about as cheap as a plain copy, where a
+    // filtered black copy would cost twenty times that every frame, and a burn turned sandy roofs red)
     { const S0 = cityTier(I), X = I.x - I.E, Y = I.y - I.E, E2 = 2*I.E, T0 = ctx.getTransform(), sx0 = w => (Math.round(w*T0.a + T0.e) - T0.e)/T0.a, sy0 = w => (Math.round(w*T0.d + T0.f) - T0.f)/T0.d;
       const u0 = Math.max(0, (x0 - X)/E2), v0 = Math.max(0, (y0 - Y)/E2), u1 = Math.min(1, (x1 - X)/E2), v1 = Math.min(1, (y1 - Y)/E2);
-      if (u1 > u0 && v1 > v0){ ctx.globalCompositeOperation = 'color-burn'; ctx.globalAlpha = nf*fa*cnDark(hexPx); cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); } }
+      if (u1 > u0 && v1 > v0){ const k = nf*fa*Math.min(1, cnDark(hexPx)/0.55); ctx.globalCompositeOperation = 'multiply'; for (const a of [k, k*sstep(130, 220, hexPx)]){ if (a < 0.01) break; ctx.globalAlpha = a; cityFill(ctx, p, I, false, cityCands(S0), 0, u0, v0, u1, v1, sx0, sy0); } } }
     if (!lit) return;   // lights off: the concrete only goes dark
     if (!CLOWN.has(p) && (performance.now() >= lowDl ? (animFast(), false) : true)){ if (!cityLightsLow(p)){ if (!CLOW.has(p)){ const go = CITY_GO; CITY_GO = true; cityBake(p, CLOW_S); CITY_GO = go && CITY_GO; } if (!cityLightsLow(p)) CWANT.set('N' + p, ['nl', p]); } }   // (the low tier of the lights, at once, moving or not: a fraction of a ms from the day's low tier)
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nf*fa*CN_A;
