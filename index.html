@@ -8181,7 +8181,10 @@ function heartRing(R, cols){ const key = 'r' + R.toFixed(1) + '|' + cols.join(',
     g.beginPath(); g.arc(m, m, R, a0, a1); g.lineWidth = 4.8; g.strokeStyle = 'rgba(6,9,11,.92)'; g.stroke();
     g.beginPath(); g.arc(m, m, R, a0 + (k > 1 ? 0.04 : 0), a1 - (k > 1 ? 0.04 : 0)); g.lineWidth = 2.6; g.strokeStyle = cols[i]; g.stroke(); }
   c.W = W; HMK.set(key, c); return c; }
-let HCITY = null, HMKB = []; /*@TEST*/const HMDBG = [];/*@ENDTEST*/   // the cities' provinces (kept per map and game: useWorld sets which provinces are cities)
+let HCITY = null, HMKB = [];
+// the markers (HMKB, boxes with their province last) that overlap box b, by a coarse grid built once a frame (the label pass asks it thousands of times)
+function mkAt(b){ const M = HMKB; let G = M.g; if (!G){ G = new Map(); for (const m of M) for (let gx = Math.floor(m[0]/64); gx <= Math.floor(m[2]/64); gx++) for (let gy = Math.floor(m[1]/64); gy <= Math.floor(m[3]/64); gy++){ const k = gx*4096 + gy; let L = G.get(k); if (!L) G.set(k, L = []); L.push(m); } M.g = G; }
+  const out = []; for (let gx = Math.floor(b[0]/64); gx <= Math.floor(b[2]/64); gx++) for (let gy = Math.floor(b[1]/64); gy <= Math.floor(b[3]/64); gy++){ const L = G.get(gx*4096 + gy); if (L) for (const m of L) if (ovlB(m, b) && !out.includes(m)) out.push(m); } return out; } /*@TEST*/const HMDBG = [];/*@ENDTEST*/   // the cities' provinces (kept per map and game: useWorld sets which provinces are cities)
 const ovlB = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
 // names: the boxes of the names drawn this frame (city, province and power names: their places are the names' own, never moved for a marker)
 function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
@@ -9344,7 +9347,7 @@ function draw(now){ draw.now = now;
       // out or jumps round its city as the view zooms or a force goes by; the plates are drawn over it
       // a standing diamond's middle (its icon) or its strength badge on the name: the name steps aside (or, a small one, is left out) like any blocked
       // name, so no name is half hidden under a counter; one a diamond only grazes (its corners or edge) keeps its spot and is drawn over it
-      const mkHit = bx => MKB.some(m => m[4] !== L.p && ovl(m, bx)), onMk = (L.city || L.cap) && mkHit(b);   // (another city's centre-point marker under a city's name: the name steps aside as from another name)
+      const mkHit = bx => mkAt(bx).some(m => m[4] !== L.p), onMk = (L.city || L.cap) && mkHit(b);   // (another city's centre-point marker under a city's name: the name steps aside as from another name)
       const blkN = bxNear(boxes, b).filter(hit), coreHit = blkN.some(q => q.ic && q.at !== -1 && q.ic.some(hit)), onlyUnits = blkN.length && !coreHit && blkN.every(q => q.unit && !q.hud && !q.tag);
       if (onlyUnits && blkN.every(q => q.ic ? !q.ic.some(hit) : !q.fmb)) late = blkN.some(q => q.ic);
       if ((!onlyUnits && blkN.length) || onMk){ if (L.cap && blkN.some(q => !q.unit)) continue;   // a capital name gives way only to another name; stacks make it step aside
@@ -9373,9 +9376,9 @@ function draw(now){ draw.now = now;
           for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
       // a name on a city's centre-point marker (its own or another city's) steps the least it takes off it (a few px down, up or aside) where that
       // spot is free; where none is, it keeps its place and the marker is drawn over it (heartMarks): every city's marker shows
-      if (MKB.length && MKB.some(m => ovl(m, b))){ const w0 = b[2] - b[0], lim = Math.max(14, 1.6*f); let nb = null, nd = Infinity;
-        for (const m of MKB) if (ovl(m, b)) for (const [ux, uy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]){ const d = (uy > 0 ? m[3] - b[1] : uy < 0 ? b[3] - m[1] : ux > 0 ? m[2] - b[0] : b[2] - m[0]) + 1; if (d > lim || d >= nd) continue;
-          const q = [b[0] + ux*d, b[1] + uy*d, b[2] + ux*d, b[3] + uy*d]; if (q[0] < 0 || q[2] > cw || MKB.some(z => ovl(z, q)) || bxNear(boxes, q).some(z => ovl(z, q))) continue; nb = q; nd = d; }
+      if (MKB.length && mkAt(b).length){ const w0 = b[2] - b[0], lim = Math.max(14, 1.6*f); let nb = null, nd = Infinity;
+        for (const m of mkAt(b)) for (const [ux, uy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]){ const d = (uy > 0 ? m[3] - b[1] : uy < 0 ? b[3] - m[1] : ux > 0 ? m[2] - b[0] : b[2] - m[0]) + 1; if (d > lim || d >= nd) continue;
+          const q = [b[0] + ux*d, b[1] + uy*d, b[2] + ux*d, b[3] + uy*d]; if (q[0] < 0 || q[2] > cw || mkAt(q).length || bxNear(boxes, q).some(z => ovl(z, q))) continue; nb = q; nd = d; }
         if (nb){ for (let i = 0; i < 4; i++) b[i] = nb[i]; lx = b[0] + w0/2; ly = b[1] + 1; } }
       if (L.city || L.cap){ b.city = true; cityNames.push({p:L.p, b}); } boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }
       { const hid = wfxCover(lx, ly + f/2, w); if (hid > 0) L.a *= 1 - Math.min(1, hid*1.15); }   // (a name under a live blast or cloud fades with it; its place is kept)
@@ -9987,7 +9990,7 @@ function ncPlace(L, lx, ly, f, w, b, boxes){ const s = Math.round(Math.min(17, M
     if (bx[0] < 0 || bx[2] > cw || bx[1] < 0 || bx[3] > ch) continue;
     if (bxNear(boxes, bx).some(q => q !== b && q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue;
     if (cpNear(bx).some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3])) continue;
-    if (HMKB.some(m => ovlB(m, bx))) continue;   // (nor on a centre-point marker)
+    if (mkAt(bx).length) continue;   // (nor on a centre-point marker)
     bx.nc = true; boxes.push(bx); const m = {p:L.p, x:x0, y:y0, s, a:L.a}; NCHIT.push([x0, y0, x0 + s, y0 + s, L.p]); return m; }
   return null; }
 // the anchor in its frame: a dark navy tile with a light rim (the oil marker's colours), the anchor in the names' cream
