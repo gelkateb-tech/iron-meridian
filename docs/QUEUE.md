@@ -156,8 +156,8 @@ Every picture or clip not made yet, with what it is for and its estimated cost a
 
 Radar stations, coastal naval batteries, province anti-air sites, a Hospital; multiplayer, lobby AI, gold, premium pass, competitive mode, player levels, daily rewards, seasonal art.
 
-
 ## Done (on the Dev Build, waiting for public)
+
 | Task | Model |
 |---|---|
 | **MAP SURFACE** (v66, 2026-11-22): texture back at every zoom (far colours kept, faster detail tiles), jungle look C reworked from Google Earth, sea look B at every zoom; sea mixes built but off until the owner picks. Merged one at a time (texture, jungle, sea); golden, headless, sea-mix, battery and zoom-look checks pass. | Opus |
