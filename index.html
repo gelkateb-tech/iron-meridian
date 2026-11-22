@@ -8219,7 +8219,8 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
         ctx.save(); ctx.globalAlpha = ga*dim; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(3,6,8,.85)'; ctx.strokeText(t, tb[0] + 2, tb[1] + 1); ctx.fillStyle = '#ece6d4'; ctx.fillText(t, tb[0] + 2, tb[1] + 1); ctx.restore();
         /*@TEST*/HMDBG[HMDBG.length - 1].tag = tb.map(v => Math.round(v));/*@ENDTEST*/ } } };
   { const ys = HCITY.ys, y0 = (-M - view.y)/view.s, y1 = (ch + M - view.y)/view.s; let lo = 0, hi = ys.length; while (lo < hi){ const m = (lo + hi) >> 1; if (ys[m] < y0) lo = m + 1; else hi = m; }
-    for (let i = lo; i < ys.length && ys[i] <= y1; i++){ const p = HCITY[i]; if (!caps.has(p)) one(p, false); } }
+    if (hexPx < 8){ for (const p of on.keys()) if (!caps.has(p) && G.P[p].city) one(p, false); }   // (out where no city's name shows only the capitals and the held points have a mark: no walk over every city)
+    else for (let i = lo; i < ys.length && ys[i] <= y1; i++){ const p = HCITY[i]; if (!caps.has(p)) one(p, false); } }
   for (const p of caps) one(p, true);
   ctx.globalAlpha = ga; }
 // close in, a force standing on a city's point has its tag just above the ring (as its badge further out) and its pictures right beside the
