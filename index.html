@@ -6050,7 +6050,7 @@ function layoutCompute(p, roles){
       if (c >= bc) return c;
       for (const f of feet){ add('feet', tmGround(p, cls, ax + f[0], ay + f[1], f[2])); if (c >= bc) return c; }
       const F = [ax + fb[0], ay + fb[1], ax + fb[2], ay + fb[3]], SBa = SB.map(q => [ax + q[0], ay + q[1], ax + q[2], ay + q[3]]);
-      for (const B of HB){ let fo = 0; for (const q of SBa) fo += tmFr(q, B); fo = Math.min(1, fo); if (fo > 0) add('bld', 300*fo + (fo > 0.002 ? 80 : 0)); }   // (no pictures standing on a building's)
+      for (const B of HB){ let fo = 0; for (const q of SBa) fo += tmFr(q, B); fo = Math.min(1, fo); if (fo > 0) add('bld', 120*fo + (fo > 0.002 ? 30 : 0)); }   // (no pictures standing on a building's)
       if (c >= bc) return c;
       for (const z of isH ? HEART_ZS : TM_ZS){ const s = z/HS0, Pb = [ax + TM_PLATE[0]/s, ay + TM_PLATE[1]/s, ax + TM_PLATE[2]/s, ay + TM_PLATE[3]/s], fm = true;
         for (const o of obs){ if ((o.z0 && z < o.z0) || (!fm && o.k !== 'hq') || (isH ? !o.h && (o.k === 'mk' || o.k === 'nm' || o.k === 'nm2') : o.h === 1)) continue;   /* (out where no models show, the counter only keeps off the HQ and the other counters: the names give way to it) */ const B0 = [o.wx + o.b[0]/s, o.wy + o.b[1]/s, o.wx + o.b[2]/s, o.wy + o.b[3]/s];
@@ -9131,7 +9131,7 @@ function draw(now){ draw.now = now;
         const u = d > 1e-6 ? [dx/d*view.s, dy/d*view.s] : [0.6, 0.8];
         { const fz = tmOn() ? tmFade(hexPx) : 0; if (fz > 0){ const F = tmForm(tmRank(tmUnits(c.list), 'g', tmNMax(a.at), tmPrimO(a.at, c.owner))), rr = fz*Math.hypot(F.b[2] - F.b[0], F.b[3] - F.b[1])/2*view.s, Rk = heartRingR(hexPx) + 4; Rm = Math.max(Rm, Rk + rr);   // (close in, its pictures (drawn round its spot) keep off the marker too,
             if (tmU(hexPx) >= 0.3) for (let n = 0, D0 = Math.max(d, Rm); n < 60; n++, D0 += 3){ const x = u[0]*D0, y = u[1]*D0, b = [x + TM_PLATE[0], y - rr + TM_PLATE[1], x + TM_PLATE[2], y - rr + TM_PLATE[3]];   // and so does its tag, pinned above them)
-              if (Math.hypot(Math.max(b[0], 0, -b[2]), Math.max(b[1], 0, -b[3])) >= Rk + 20){ Rm = Math.max(Rm, D0); break; } } } }
+              if (Math.hypot(Math.max(b[0], 0, -b[2]), Math.max(b[1], 0, -b[3])) >= Rk + 44){ Rm = Math.max(Rm, D0); break; } } } }
         if (d < Rm) A = [P0.x + u[0]*Rm/view.s, P0.y + u[1]*Rm/view.s]; } }
     else if (c.moving){ A = moveAnchor(ROLES, a, it.wx, it.wy); c.split = SPLITS.has(a.id); const u = tmUnits([a]); c.cls = G.P[a.at].sea || Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval') ? 's' : 'g'; }
     else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : c.dock ? 's' : 'x') + c.owner);
