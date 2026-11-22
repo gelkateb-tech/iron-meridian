@@ -8191,13 +8191,13 @@ function heartHeld(clusters, hexPx){ const M = new Map(), R = heartRingR(hexPx);
 // where an off-point force's dot is drawn near its city's point (relative to it, css px; null: where it stands): at least Rm off the point along its
 // real bearing u (d: its real distance on screen). On a held point (hb) its dot never comes under the city's counter or the column above it, and
 // its own counter must find a place clear of it (heartBadge): the least turn off its bearing and the least push out that does it (display only)
-function heartSpot(c, d, u, Rm, hexPx, hb){ const D0 = Math.max(d, Rm); if (!hb) return d < Rm ? [u[0]*Rm, u[1]*Rm] : null;
-  const q = clQuiet(c), dr = dotR() + 7, col = [hb[0] - dr, -Infinity, hb[2] + dr, hb[3] + dr], th0 = Math.atan2(u[1], u[0]), sg = u[0] >= 0 ? 1 : -1;
+function heartSpot(c, d, u, Rm, hexPx, hb, taken){ const D0 = Math.max(d, Rm), sp = 2*dotR() + 5, free = (x, y) => !taken || taken.every(t => Math.hypot(t[0] - x, t[1] - y) >= sp);   // (taken: the dots of the forces off this point placed before it: never two dots on one spot)
+  const q = hb ? clQuiet(c) : false, dr = dotR() + 7, col = hb ? [hb[0] - dr, -Infinity, hb[2] + dr, hb[3] + dr] : null, th0 = Math.atan2(u[1], u[0]), sg = u[0] >= 0 ? 1 : -1;
   let best = null, bc = Infinity;
   for (let j = 0; j <= 15; j++) for (const s of j ? [sg, -sg] : [0]){ const th = th0 + s*j*Math.PI/18, cu = Math.cos(th), su = Math.sin(th);
     for (let D = D0; D < D0 + 120; D += 2){ const cost = j*8 + D - D0; if (cost >= bc) break; const vx = cu*D, vy = su*D;
-      if (vx > col[0] && vx < col[2] && vy < col[3]) continue; if (heartBadge(c.n, q, vx, vy, hexPx, hb)[2] < 0) continue; best = [vx, vy]; bc = cost; break; } }
-  if (!best) return d < Rm ? [u[0]*Rm, u[1]*Rm] : null; return bc === 0 && d >= Rm ? null : best; }
+      if (!free(vx, vy) || (hb && ((vx > col[0] && vx < col[2] && vy < col[3]) || heartBadge(c.n, q, vx, vy, hexPx, hb)[2] < 0))) continue; best = [vx, vy]; bc = cost; break; } }
+  if (!best) best = [u[0]*D0, u[1]*D0]; if (taken) taken.push(best); return bc === 0 && d >= Rm ? null : best; }
 const HMK = new Map();
 function heartSprite(hd, pip = true){ const key = hd.toFixed(1) + '|' + dpr + '|' + (pip ? 1 : 0); let c = HMK.get(key); if (c) return c; if (HMK.size > 40) HMK.clear();
   const P = 5, W = 2*(hd + P), n = Math.ceil(W*dpr); c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.scale(n/W, n/W); const m = W/2;
@@ -9170,6 +9170,7 @@ function draw(now){ draw.now = now;
   }
   // WORLD ANCHORS: each force's spot on the map (world units): its province's slot for it (provLayout), its pinned spot, or on the march its
   // smoothed position easing between its old and new slots. The counter is pinned just above it at one pixel size; its models stand just under it.
+  const HST = new Map(), hsTaken = p => { let L = HST.get(p); if (!L) HST.set(p, L = []); return L; };   // (units in cities: the dots placed off each city's point this frame)
   const farT0 = performance.now(), HB = HEARTF.HB = heartHeld(clusters, hexPx); HEARTF.hexPx = hexPx; /*@TEST*/HBDBG = HB;/*@ENDTEST*/   // (units in cities: the held points' own counters, for the forces off their points)
   for (const c of clusters){ const it = c.it, a = c.list[0]; let A;
     if (c.far){ const L0 = PLAY.get(c.at); if (!(L0 && L0.S === S) && performance.now() - farT0 > 6){ c.dead = true; continue; } }   // (an off-screen province not laid out yet waits for a frame with time to spare)
@@ -9180,7 +9181,7 @@ function draw(now){ draw.now = now;
         { const fz = tmOn() ? tmFade(hexPx) : 0; if (fz > 0){ const F = tmForm(tmRank(tmUnits(c.list), 'g', tmNMax(a.at), tmPrimO(a.at, c.owner))), rr = fz*Math.hypot(F.b[2] - F.b[0], F.b[3] - F.b[1])/2*view.s, Rk = heartRingR(hexPx) + 4; Rm = Math.max(Rm, Rk + rr);   // (close in, its pictures (drawn round its spot) keep off the marker too,
             if (tmU(hexPx) >= 0.3) for (let n = 0, D0 = Math.max(d, Rm); n < 60; n++, D0 += 3){ const x = u[0]*D0, y = u[1]*D0, b = [x + TM_PLATE[0], y - rr + TM_PLATE[1], x + TM_PLATE[2], y - rr + TM_PLATE[3]];   // and so does its tag, pinned above them)
               if (Math.hypot(Math.max(b[0], 0, -b[2]), Math.max(b[1], 0, -b[3])) >= Rk + 44){ Rm = Math.max(Rm, D0); break; } } } }
-        const v = heartSpot(c, d, u, Rm, hexPx, HB.get(a.at)); if (v) A = [P0.x + v[0]/view.s, P0.y + v[1]/view.s]; } }
+        const v = heartSpot(c, d, u, Rm, hexPx, HB.get(a.at), hsTaken(a.at)); if (v) A = [P0.x + v[0]/view.s, P0.y + v[1]/view.s]; } }
     else if (c.moving){ A = moveAnchor(ROLES, a, it.wx, it.wy); c.split = SPLITS.has(a.id); const u = tmUnits([a]); c.cls = G.P[a.at].sea || Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval') ? 's' : 'g'; }
     else { const M = ROLES.get(c.at), e = M && M.get((c.air ? 'a' : c.dock ? 's' : 'x') + c.owner);
       if (e){ const r = roleOf(c.at, e), P0 = G.P[c.at]; c.cls = r[0]; A = anchorOf(ROLES, c.at, r, now);
@@ -9190,7 +9191,7 @@ function draw(now){ draw.now = now;
         if (!c.air && OFS.size && c.list.length === 1) A = haltAnchor(a, A, now, it.wx, it.wy); }
       else { A = [it.wx, it.wy]; c.cls = c.air ? 'a' : 'g'; }
       if (c.cls === 'g' && !c.air && c.hk === 'O' && HB.has(c.at)){ const P0 = G.P[c.at], d = Math.hypot(A[0] - P0.x, A[1] - P0.y)*view.s, u = d > 1e-6 ? [(A[0] - P0.x)*view.s/d, (A[1] - P0.y)*view.s/d] : [0.6, 0.8];   // (off a held point without a pinned spot (a landing): the same)
-        const v = heartSpot(c, d, u, heartOut(hexPx), hexPx, HB.get(c.at)); if (v) A = [P0.x + v[0]/view.s, P0.y + v[1]/view.s]; } }
+        const v = heartSpot(c, d, u, heartOut(hexPx), hexPx, HB.get(c.at), hsTaken(c.at)); if (v) A = [P0.x + v[0]/view.s, P0.y + v[1]/view.s]; } }
     c.wx = A[0]; c.wy = A[1];
     if (!c.moving) for (const q of c.list){ if (q.air) continue; if (c.pinned) LASTSLOT.set(q.id, {x:it.wx, y:it.wy, ox:0, oy:0}); else if (q.at === c.at){ const P0 = G.P[c.at]; LASTSLOT.set(q.id, {p:c.at, x:P0.x, y:P0.y, ox:A[0] - P0.x, oy:A[1] - P0.y}); } } }
   if (LASTSLOT.size > 4000) LASTSLOT.clear();
