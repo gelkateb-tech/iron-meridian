@@ -7176,7 +7176,8 @@ function cityWantOn(n, p, day, now){ const x0 = -view.x/view.s, y0 = -view.y/vie
 // The map is not redrawn while it waits (no frame is drawn just because bakes are under way: a frame costs far more than it shows), so on a
 // still map the pump gets most of each display frame (13 ms) until the view's canvases are made, nearest the middle of the screen first; the
 // towns on screen are shown once all of theirs are made (one frame asked for then), those for the layer's margins once everything is
-function cityPump(now){ if (!CWANT.size || camFly || ZTW || pinch || (drag && drag.moved) || now - (lastPanT || 0) < 200 || now - (draw.zt || 0) < 200 || view.x !== RD.vx || view.y !== RD.vy || view.s !== RD.vs) return false;
+function cityPump(now){ if (view.x !== cityPump.vx || view.y !== cityPump.vy || view.s !== cityPump.vs){ cityPump.vx = view.x; cityPump.vy = view.y; cityPump.vs = view.s; cityPump.vt = now; }   // (any move of the view, a drag's or the code's: the bakes wait till it rests)
+  if (!CWANT.size || camFly || ZTW || pinch || (drag && drag.moved) || now - (lastPanT || 0) < 200 || now - (draw.zt || 0) < 200 || now - (cityPump.vt || 0) < 200 || view.x !== RD.vx || view.y !== RD.vy || view.s !== RD.vs) return false;
   const mv = fadeRun(now) || now - CNF_RUN < 60, drawn = RD.dn2 === now, slow = RD.fi > 30, tight = RD.fi > 22; if (drawn && slow && (cityPump.k = !cityPump.k)) return true;   // (frames over 30 ms: every other one only)
   const d0 = cityWantNow(); if (d0) CITY_SCR = true;
   const dl0 = CITY_DL, go0 = CITY_GO, q0 = CITY_QUICK, p0 = CITY_PEND; CITY_DL = performance.now() + (!drawn && !mv ? 13 : slow ? 2.5 : tight || mv ? 4 : 6); CITY_GO = true; CITY_QUICK = false; let got = false, gotN = null, lowN = false;
@@ -7356,7 +7357,7 @@ function cityAnyBake(p, S, night){ S = Math.min(S, CCH); for (const f of [0.5, 2
 // idle warm-up: the low tier of every city (nearest the view first, from a coarse footprint that is not kept), a few ms a frame while the
 // view is still
 let CWARM = null;
-function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0) < 250 || now - (draw.zt || 0) < 250 || view.s !== RD.vs) return;   // (not while the view zooms: its frames come first)
+function cityWarm(now){ if (cityArtState() < 5 || camFly || now - (lastPanT || 0) < 250 || now - (draw.zt || 0) < 250 || now - (cityPump.vt || 0) < 250 || view.s !== RD.vs) return;   // (not while the view zooms: its frames come first)
   if (!CWARM) CWARM = G.P.filter(P => P.city && !P.sea).map(P => P.id);   // (this statement had slipped into the comment above in 'Cities repair 7': CWARM stayed null and the warm-up threw every frame)
   if (!CWARM.length) return; const dl0 = CITY_DL, end = performance.now() + 7, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, x0 = -view.x/view.s, y0 = -view.y/view.s, x1 = (cw - view.x)/view.s, y1 = (ch - view.y)/view.s;
   const pend0 = CITY_PEND, go0 = CITY_GO; let on = false; CITY_DL = end; CITY_GO = true;   // (its jobs in slices too: one at least, then while the 7 ms last)
