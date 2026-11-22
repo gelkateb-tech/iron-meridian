@@ -8239,9 +8239,9 @@ function heartSpot0(c, d, u, Rm, hexPx, hb, taken){ const D0 = Math.max(d, Rm), 
   for (let j = 0; j <= 18; j++) for (const s of j && j < 18 ? [sg, -sg] : [j ? sg : 0]){ const th = th0 + s*j*Math.PI/18, cu = Math.cos(th), su = Math.sin(th);
     for (let D = D0; D < D0 + 120; D += 2){ const c0 = j*8 + D - D0; if (c0 >= bc) break; const vx = cu*D, vy = su*D;
       if (!free(vx, vy) || (hb && vx > col[0] && vx < col[2] && vy < col[3])) continue;
-      const g = j || D > d ? heartGnd(p, vx, vy) : 0; if (g === 2) continue;   // (its real spot is where it stands, whatever is drawn under it)
-      const r = heartBadge(c.n, q, vx, vy, hexPx, hb, p); if (r[3] === 2 || (hb && r[2] < 0)) continue;
-      const cost = c0 + 40*g + 20*r[3]; if (cost < bc){ best = [vx, vy]; bc = cost; } if (cost === c0) break; } }   // (on a neighbour's ground only where its own province has no room)
+      const real = !j && D <= d, g = real ? 0 : heartGnd(p, vx, vy); if (g === 2) continue;   // (its real spot is where it stands, whatever is drawn under it)
+      const r = heartBadge(c.n, q, vx, vy, hexPx, hb, p); if ((r[3] === 2 && !real) || (hb && r[2] < 0)) continue;   // (and a force already clear of the marker is never moved for its counter's sake)
+      const cost = c0 + 40*g + (real ? 0 : 20*r[3]); if (cost < bc){ best = [vx, vy]; bc = cost; } if (cost === c0) break; } }   // (on a neighbour's ground only where its own province has no room)
   return !best || (bc === 0 && d >= Rm) ? null : best; }
 const HMK = new Map();
 function heartSprite(hd, pip = true){ const key = hd.toFixed(1) + '|' + dpr + '|' + (pip ? 1 : 0); let c = HMK.get(key); if (c) return c; if (HMK.size > 40) HMK.clear();
