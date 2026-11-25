@@ -325,6 +325,17 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 - **D12. The computer's own alliance check can wrongly say "coalition is full"** (already so before this work). → Unchanged, so computer-only games stay identical.
 - **D13. Known Army Size** compares the forces you have seen with their whole military, so Russia with one force seen reads "8 units, weaker military". → Done (be33bed): "8 units seen"; the comparison shows only when all their forces are known.
 
+### MARKET (point 13; branch market-ref 246d48c). Default after the arrow.
+
+- **K1. Is "offers on both sides all game, many more sales, fewer oil shortages" enough,** even though about 95% of computer sell offers still expire unsold? → Yes; deeper computer demand later if you want it.
+- **K2. Computer nations near their storage limit may sell into your buy offer at down to 0.75× the world price.** → Allowed.
+- **K3. Should players' own offers be held to a price band** (closes a money-transfer trick between two players that already exists)? → No change in this job.
+- **K4. "All goods" in the Order Book shows 5 offers per good,** with "All ›" and "Show all". → 5.
+- **K5. After tapping a flag, a "◀ Market" button brings you back** to the same tab and scroll. → Yes.
+- **K6. The old one-screen view of all five goods is gone;** each tab shows its price instead. → OK.
+- **K7. On day 1 the sell side of a scarce good is filled by small premium lots** at about 1.25-1.35× the world price. → Yes.
+- **K8. Tapping a flag opens today's nation window** until Diplomacy merges; then it opens the new ABOUT PLAYER page (one line). → Yes.
+
 ### Rebels plan (points 8-11; docs/REBELS-PLAN.md on plans-1125, 19dd3af). Suggested answer after the arrow; REBELS waits for your OK on R1.
 
 - **R1. The three proposals.** → Annex City option B (town $50M · 10k · 3 days, city $80M · 15k · 4 days, large city $120M · 25k · 5 days, metropolis $180M · 40k · 6 days); distance as straight-line km from the capital, −5 per 1,000 km rounded; each of your ground units in the city halves the rebel chance. Also: the chance reaches 100% at 10% morale; shortage scales with the share of the day's need unmet; casualties come from the province's war damage.
