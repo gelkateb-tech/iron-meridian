@@ -21,6 +21,8 @@ IM.api = {
   orderAir, orderDrop, launchMissile, launchSat, startSpy,
   declareWar, surpriseWar, acceptOffer, applyDeal,
   tradeOpen, tradeClose, postOffer, fillOffer, escortSet,
+  // the Market: withdraw one's own offer; what the page reads (the best offers for a good, what limits taking one, the whole game's world prices)
+  cancelOffer, topOffers, fillLimit, worldHistory,
   // a seat's dealings with an AI nation (first argument: the seat)
   say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk,
   // territory sales (rules/territory.js): a nation offers or answers; the value, the floor and what may be sold
