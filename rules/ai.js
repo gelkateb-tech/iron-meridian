@@ -522,7 +522,7 @@ function aiTurn0(n, N){
       for (const k of MKT_K){ const px = M.p[k]/MKT_BASE[k];
         if (mains.has(k) && inc.net[k] >= 0){ const res = aiReserve(n, k), upk = Math.max(0, inc.upkeep[k]), over = N[k] - AI_XKEEP[k] - res - 25*upk, E = AI_XEARLY[k], early = E && inc.net[k] >= E.net ? N[k] - E.keep - res - 10*upk : 0;
           const q = over >= 15*RES_K ? kFloor(Math.min(over, 120*RES_K)) : early >= 10*RES_K ? kFloor(Math.min(early, E.lot)) : 0; if (!q || px < AI_XPX) continue;
-          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ N[k] -= q; (S.book || (S.book = [])).push({id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}); } }
+          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ N[k] -= q; const o = {id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}; (S.book || (S.book = [])).push(o); bookCross(o); } }   // (a buy offer it crosses fills at once: bookCross, rules/economy.js)
         else { const want = AI_SHORT[k] + aiReserve(n, k) + 10*Math.max(0, inc.upkeep[k]); if (N[k] >= want || px > 1.5) continue;
           const q = kFloor(Math.min(want - N[k], AI_IMP[k] - (N.xB[k] || 0), (N.cash - 120)/buyPrice(n, k)*MKT_LOT)); if (q >= 5*RES_K){ const got = aiBookBuy(n, k, q); N.xB[k] = (N.xB[k] || 0) + got + (q - got >= 5*RES_K ? trade(n, k, q - got) : 0); } } } }
     // hoarded cash buys the scarce resources on the world market (up to 1.4× the going price)
