@@ -9,7 +9,9 @@ const fails = [], ok = (c, m, extra) => { if (!c) fails.push(m + (extra !== unde
   await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(400);
   await p.click('[data-act="pick"][data-p="0"]'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.click('#sp0');
 
-  // 1. day 1: the empty Market says it fills up later
+  // 1. day 1: the empty Market says it fills up later (the depth floor posts small premium lots from the first hour, so the oil sell offers are
+  // taken back first, their oil returned: the empty state is what a tab shows when nobody sells)
+  await p.evaluate(() => { for (const o of (S.book || []).filter(o => o.res === 'oil' && o.type !== 'buy')){ S.nations[o.seller].oil += o.qty; o.qty = 0; } S.book = (S.book || []).filter(o => o.qty > 0); });
   await p.keyboard.press('t'); await p.waitForTimeout(300);
   const d1 = await p.evaluate(() => document.getElementById('sheet').textContent);
   ok(/No nation is selling \w+ right now\. In the first days nobody has a surplus yet/.test(d1), 'day 1: the empty market explains that sellers appear later', d1.slice(0, 400));
