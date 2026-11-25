@@ -2,7 +2,7 @@
 
 Status: proposal only. No game code changed. The mockups are scratch copies of the test page with the Diplomacy panel replaced by option A, B or C; they use the game's own styles and the real state (US, day 41, 68-nation world: 3 wars, 6 allies in one coalition plus a second coalition, 8 trade routes, 2 offers waiting, an embargo, a ceasefire, captured land). Sheets (desktop 1440x900 at 2x, phone 440 px at 3x): `0-today.jpg`, `option-A.jpg`, `option-B.jpg`, `option-C.jpg`. They are kept outside the repository (see the report); this file holds the text and the button inventory.
 
-Related, on `auto-test/fixes` (read only, nothing repeated here): B2.22 (phone: the "More" menu opens off the left edge and cuts off Declare war, passage, alliance, route and Embargo; still visible on master in `0-today.jpg`) and IMP-17 (opening Diplomacy takes about 1.5 s on an older phone: `diploHTML` calls `acceptOffer` 5 times and `opinionParts` for each of 67 nations, and `blocs()` writes state). Decisions that bear on this screen: ECO-13 (gifts only inside a bloc), DIP-4 (embargo is a real rule), DIP-5 (territory sales). None is changed by any option.
+Related, on `auto-test/fixes` (read only, nothing repeated here): B2.22 (phone: the "More" menu opens off the left edge and cuts off Declare war, passage, alliance, route and Embargo; still visible on master in `0-today.jpg`) and IMP-17 (opening Diplomacy takes about 1.5 s on an older phone, and `blocs()` writes state while drawing). Decisions that bear on this screen: ECO-13 (gifts only inside a bloc), DIP-4 (embargo is a real rule), DIP-5 (territory sales). None is changed by any option.
 
 ## Today: what the screen offers (`diploHTML` in `index.html`, `tradeHTML`, `nationHTML`)
 
