@@ -3,9 +3,10 @@
 //    the reason is 'Needs Army Base level 1' and recruit() refuses; a Recruiting Office alone unlocks nothing; Paratroopers also need an Airbase;
 //    the other ground units keep their Army Base levels. The switch INF_NEEDS = ['fac', 'rec'] (the owner's alternative) needs both buildings.
 // 2. a new game (START-RULES, owner 2026-11-15): no city starts with an Army Base (both worlds), so on day 1 infantry says 'Needs Army Base level 1'
-//    everywhere; every capital has Fortifications I and no other province any; the starting units are the same as before the rule. Army Base level I
-//    is cheap and quick (BUILD.fac.lv1: $18M, 6,000 materials, 6,000 iron, one day) and every nation can pay for it from its starting stock; the
-//    first two Army Bases cost the base price, the third 40% more (RISE_FREE); levels II-V keep their prices
+//    everywhere; every capital has Fortifications I and no other province any; the starting units are the same as before the rule, plus the
+//    capital's fighter (startAir, owner 2026-11-25). Army Base level I is cheap and quick (BUILD.fac.lv1: $10M, 2,000 materials, 2,000 iron, 30
+//    minutes; owner 2026-11-25) and costs the same in every city (no 40% rise at level I); every nation can pay for it from its starting stock;
+//    levels II-V keep their prices (the rise for them: .test/econ-start.js)
 // 3. old saves (no S.ab): load, infantry already queued in a city without an Army Base stays queued and is trained; a capital without an Army Base
 //    gets one; the seat is told about the rule once
 // 4. the computer builds Army Bases: on its first turn every computer nation starts one in its capital (both worlds; standing by hour 30), a capital
@@ -60,12 +61,12 @@ for (const scn of ['world64', 'world']){ const R = load(), api = R.IM.api; api.u
   ok(!G.P.some(P => S.bld[P.id].fac), `${scn}: no city starts with an Army Base`, G.P.filter(P => S.bld[P.id].fac).map(P => P.cityName || P.name).slice(0, 10));
   ok(S.nations.every(N => R.canMobilize(N.id, N.capital, 'inf') === NEED), `${scn}: on day 1 infantry needs an Army Base everywhere, the capital too`, S.nations.filter(N => R.canMobilize(N.id, N.capital, 'inf') !== NEED).map(N => N.name));
   const c1 = R.buildCost(0, 'fac', 1, S.nations[0].capital);
-  ok(c1.cash === 18 && c1.metal === 6000 && c1.iron === 6000 && c1.h === 24, `${scn}: Army Base level I costs $18M, 6,000 materials and 6,000 iron and takes a day`, c1);
+  ok(c1.cash === 10 && c1.metal === 2000 && c1.iron === 2000 && c1.h === 0.5, `${scn}: Army Base level I costs $10M, 2,000 materials and 2,000 iron and takes 30 minutes`, c1);
   ok(S.nations.every(N => R.hasC(N, R.buildCost(N.id, 'fac', 1, N.capital))), `${scn}: every nation can pay for it from its starting stock`);
   const c2 = R.buildCost(0, 'fac', 2, S.nations[0].capital); ok(c2.cash === 40 && c2.metal === 19000 && c2.h === 72, `${scn}: level II keeps its price ($40M, 19,000 materials, 3 days)`, c2);
   { const N = S.nations[0], cs = G.P.filter(P => S.owner[P.id] === 0 && P.city).map(P => P.id).slice(0, 4); N.cash = 5000; N.metal = N.iron = 500000;
     const paid = cs.map(p => { const c = R.buildCost(0, 'fac', 1, p); R.build(0, p, 'fac'); return c.cash; });
-    ok(cs.length < 4 || JSON.stringify(paid) === '[18,18,25,35]', `${scn}: the first two Army Bases cost the base price, the third 40% more, the fourth 96% more`, paid);
+    ok(cs.length < 4 || JSON.stringify(paid) === '[10,10,10,10]', `${scn}: level I costs the same in every city (no rise)`, paid);
     for (const p of cs) S.cons[p] = null; }
   ok(S.nations.every(N => S.bld[N.capital].fort === R.START_FORT && R.START_FORT === 1), `${scn}: every capital starts with Fortifications I`);
   ok(forts.length === S.nations.length && forts.every(p => caps.includes(p)), `${scn}: no other province starts with Fortifications (${forts.length} forts, ${S.nations.length} nations)`, forts.filter(p => !caps.includes(p)).slice(0, 10));
@@ -105,7 +106,7 @@ for (const scn of ['world64', 'world']){ const R = load(), api = R.IM.api; api.u
   const ai = S.nations[5], fac0 = G.P.filter(P => S.bld[P.id].fac).length; S.bld[ai.capital].fac = 0; if (S.cons[ai.capital]) S.cons[ai.capital] = null; ai.cash = Math.max(ai.cash, 300);
   for (let h = 0; h < 8*24; h++) api.tick();
   ok(S.bld[ai.capital].fac >= 1 || (S.cons[ai.capital] && S.cons[ai.capital].k === 'fac'), `${ai.name}: a capital without an Army Base gets one from the computer`);
-  const fac10 = G.P.filter(P => S.bld[P.id].fac).length; ok(fac10 > 1.5*fac0, `the computer builds Army Bases (${fac0} on day 2, ${fac10} on day 10)`);
+  const fac10 = G.P.filter(P => S.bld[P.id].fac).length; ok(fac10 > fac0 + 0.5*S.nations.length && fac10 > 3.5*S.nations.length, `the computer builds Army Bases (${fac0} on day 2, ${fac10} on day 10)`);   // (master before Army Base I at $10M and 30 min: 153 -> 271)
   ok(S.nations.filter(N => N.alive).every(N => R.canMobilize(N.id, N.capital, 'inf') === '' || S.owner[N.capital] !== N.id), 'every nation can still train infantry at its capital on day 10'); }
 
 console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: the Army Base rule, start forts, old saves and the computer`);
