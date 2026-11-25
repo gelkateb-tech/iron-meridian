@@ -3,7 +3,7 @@
 //   node tools/market-check.js --days 50 --seed 2503
 // 1. conservation: every daily book step (expiry, computer listings and bids, matching, fills, the depth floor) moves money and goods between
 //    nations and the offers that hold them, and creates or destroys none (money held in buy offers and goods held in sell offers count with their owner)
-// 2. both sides: from day 1 every good has buy offers, and from about day 4 sell offers too (the depth floor; IMP-2: the computer nations post both)
+// 2. both sides: from day 1 every good has buy and sell offers (the depth floor; IMP-2: the computer nations post both)
 // 3. the rules a person meets: cancelOffer refunds; fillOffer and the matching stop at the buyer's storage; a computer nation's world-market buy takes a
 //    person's cheaper sell offer first (trade routes through the book); topOffers' order; fillLimit's reason; the whole-game price history and its
 //    downsampling; an old save without it starts from the 60 days it kept
@@ -28,9 +28,9 @@ globalThis.__C = {days:0, cash:0, goods:0};
 { const R = new Function(SRC)(), api = R.IM.api; api.useScenario('world64'); api.newGame(SEED, 0, []); const S = api.S; S.started = true;
   const sides = []; for (let h = 0; h < DAYS*24 && !S.over; h++){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); if (S.hour % 24 === 12){ const b = S.book || []; sides.push({d:S.hour/24 | 0, t:Object.fromEntries(R.MKT_K.map(k => [k, [b.filter(o => o.res === k && !R.isBid(o)).length, b.filter(o => o.res === k && R.isBid(o)).length]]))}); } }
   const C = globalThis.__C; ok(C.days >= DAYS - 1 && C.cash < 1e-6 && C.goods < 1e-4, `conservation over ${C.days} daily book steps: money and goods neither made nor lost`, {cash:C.cash, goods:C.goods});
-  const noBid = sides.filter(x => R.MKT_K.some(k => !x.t[k][1])).map(x => x.d), noAsk = sides.filter(x => x.d >= 4 && R.MKT_K.some(k => !x.t[k][0])).map(x => x.d);
+  const noBid = sides.filter(x => R.MKT_K.some(k => !x.t[k][1])).map(x => x.d), noAsk = sides.filter(x => R.MKT_K.some(k => !x.t[k][0])).map(x => x.d);
   ok(!noBid.length, 'every good has buy offers on every day from day 1', noBid);
-  ok(noAsk.length <= 3, 'every good has sell offers on (nearly) every day from day 5', noAsk);
+  ok(noAsk.length <= 2, 'every good has sell offers on (nearly) every day from day 1', noAsk);
   const AIc = S.nations.filter(N => N.alive).map(N => N.cash); ok(AIc.every(c => c > -1), 'no computer nation goes into debt', Math.min(...AIc));
   const H = R.worldHistory('oil'); ok(H.length >= DAYS - 1 && H[H.length - 1].p === +S.mkt.p.oil.toFixed(2), 'the oil history runs over the whole game to today', {n:H.length, last:H[H.length - 1], p:S.mkt.p.oil});
 }
