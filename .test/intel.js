@@ -1,7 +1,7 @@
 // Foreign army intel (owner's MAP-2 feedback, 2026-11-18; rules/vision.js armyKnown): a foreign force that is only spotted shows nothing but a
 // '?' badge and 'Unidentified army'; recon (a UAV, a drone, Special Forces, SAM radar, a battle) identifies it; an ally's force is always known.
 //   node .test/intel.js [W H]      (run tools/mkpage.sh first; prints JSON {checks, fails, errors} and exits 1 on any failure)
-// rules   spotted by infantry or a city: seen, not identified; Special Forces, a drone in flight, a UAV on station (and its 12 h after it leaves),
+// rules   spotted by infantry: seen, not identified; Special Forces, a drone in flight, a UAV on station (and its 12 h after it leaves),
 //         a battle with you, a SAM's radar under a wing: identified; an ally: always; armyView (what a host may tell a seat) has no nation,
 //         size, types or name for an unidentified force; an old save without S.intel loads and plays
 // ui      the game as Afghanistan (the nations world): the Pakistani force spotted at the border is one '?' plate (no flag, count, type, name or

@@ -7,7 +7,7 @@
 // C. the same army standing inside my land: shown, '?' until identified
 // D. my infantry beside it (outside my land): seen at 40 km, not at 70 km
 // E. my fighter patrol: sees it 180 km away, not 260 km
-// F. a city or airbase of mine right by the border sees nothing past it; a force of mine heading into its province does not reveal it
+// F. a force of mine setting off into its province does not reveal it
 // G. fighting it: shown and identified for the whole battle, wherever the two stand (B3.8, fightsMe)
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
@@ -59,7 +59,7 @@ if (T){ const {u, v, Q} = T, U = G.P[u], V = G.P[v]; S.nations[Q].ai = false; ap
       E.at = provOfPt(...Z.a); E.pos = Z.a; ok(state(E) === '?', 'E: my fighter patrol sees the army 180 km away', state(E));
       E.at = provOfPt(...Z.b); E.pos = Z.b; ok(state(E) === 'hidden', 'E: not 260 km away', state(E));
       S.armies = S.armies.filter(a => a !== W); E.at = at0; E.pos = p0; ok(state(E) === 'hidden', 'E: back outside my land with nothing near: hidden', state(E)); } }
-  // F. my city by the border: nothing past it; my force heading into v does not reveal v
+  // F. my force heading into v does not reveal v
   { const o0 = S.owner[v]; const M = addArmy(ME, u, {inf:1}); M.to = v; M.t = 0; M.path = []; M.pos = null;
     const far = Math.hypot(armyXY(M)[0] - E.pos[0], armyXY(M)[1] - E.pos[1])/KM_W; info.moverKm = Math.round(far);
     if (far > 60) ok(state(E) === 'hidden' && !view().whole.has(v), 'F: my force setting off into its province does not reveal it', state(E));
