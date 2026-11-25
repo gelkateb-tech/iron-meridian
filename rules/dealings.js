@@ -171,7 +171,8 @@ function dealAnswer(me, ai, D0, round = 1){ const D = dealNorm(D0), A = S.nation
   if (D.give.provs.length){ const mn = floorFor(me, ai, D.give.provs), got = sideCash(D.get);
     if (got < mn){ const need = Math.ceil(mn - got); if (D.get.cash + need > A.cash) return no(`${name} cannot pay the lowest price, $${fmt(mn)}M`); D.get.cash += need; changed = true; } }
   let V = dealValue(me, ai, D).v;
-  const why = () => { const t = D.give.treaty[0]; return t ? acceptOffer(ai, me, t).why || 'a fair exchange' : 'a fair exchange'; };
+  const why = () => { const t = D.give.treaty[0]; if (t) return acceptOffer(ai, me, t).why || 'a fair exchange';
+    const gain = sideCash(D.give) + sideLand(D.give) - sideCash(D.get)*1.05; return gain > Math.max(50, sideCash(D.get)) ? 'a generous offer' : 'a fair exchange'; };
   if (V >= DEAL_OK) return changed ? (round >= TERR.rounds ? no('Enough counter-offers: accept or decline') : {act:'counter', why:`${drop.length ? drop.join('; ') + '. ' : ''}This is what we can agree`, D}) : {act:'accept', why:`Agreed: ${why()}`, D};
   // 5: the gap, rounded up to $10M; too far apart is not a serious offer
   const gap0 = Math.ceil((DEAL_OK - V)/10)*10, traded = sideCash(D.give) + sideCash(D.get) + sideLand(D.give) + sideLand(D.get);
