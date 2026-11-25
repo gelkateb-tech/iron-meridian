@@ -8181,6 +8181,10 @@ const HEART_GAP = 6, HEART_ROW = 15;   // (between their boxes with the marks: a
 function heartGnd(p, vx, vy){ const P = G.P[p], wx = P.x + vx/view.s, wy = P.y + vy/view.s, v = tmGround(p, 'g', wx, wy, 1); if (v >= 2600) return 2;
   const d = provAtW(wx, wy, lodBand(view.s*HS0)); if (d >= 0 && (G.P[d].sea || S.owner[d] !== S.owner[p])) return 2;   // (and by the border drawn at this zoom)
   return v === 0 && (d < 0 || d === p) ? 0 : 1; }
+// (a counter's ground: its middle's; 1.5 when its middle is on its own land but a corner (3 px in) lies over the sea or another country: a
+// counter across a drawn border, taken only where nothing else fits)
+function heartGndBox(p, x, y, w2, h2){ const g = heartGnd(p, x, y); if (g === 2) return 2;
+  for (const [cx, cy] of [[x - w2 + 3, y - h2 + 3], [x + w2 - 3, y - h2 + 3], [x - w2 + 3, y + h2 - 3], [x + w2 - 3, y + h2 - 3]]) if (heartGnd(p, cx, cy) === 2) return 1.5; return g; }
 // (p: the force's province, for the ground under each place. Returns [x, y, clear, ground])
 function heartBadge(n, q, vx, vy, hexPx, hb, p = null){ const D = plateDims(n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
   const sx = vx >= 0 ? 1 : -1, side = dotR() + 3 + D.w/2, yb = vy + dotR() + 1 - D.h/2;
@@ -8189,9 +8193,9 @@ function heartBadge(n, q, vx, vy, hexPx, hb, p = null){ const D = plateDims(n, 1
   if (!hb) C.push([vx, vy + dotLift(n, q)]);   // (by a held point never below its dot: it would read as the counter of something else)
   const R = []; for (const [x, y] of C){ const b = [x - w2, y - h2, x + w2, y + h2]; let v = boxPt(b, 0, 0) - Rk;
     if (hb){ const r = plateRect(x, y, n, 1, q, false), rb = [r.x, r.y, r.x + r.w, r.y + r.h]; v = Math.min(v, boxGap(rb, hb) - (Math.min(rb[3], hb[3]) > Math.max(rb[1], hb[1]) ? HEART_ROW : HEART_GAP)); }   // (counter to counter: their whole boxes, marks included)
-    const g = p == null ? 0 : heartGnd(p, x, y); if (v >= 0 && !g) return [x, y, v, 0]; R.push([x, y, v, g]); }
+    const g = p == null ? 0 : heartGndBox(p, x, y, w2, h2); if (v >= 0 && !g) return [x, y, v, 0]; R.push([x, y, v, g]); }
   for (const r of R) if (r[2] >= 0 && r[3] === 1) return r;   // (clear, on its own country's land)
-  let best = null; for (const r of R) if (r[3] < 2 && (!best || r[2] > best[2])) best = r;   // (else the clearest on its own land)
+  let best = null; for (const r of R) if (r[3] < 2 && (!best || r[3] < best[3] || (r[3] === best[3] && r[2] > best[2]))) best = r;   // (else the clearest on its own land, one not across a border first)
   return best || [C[0][0], C[0][1], -1e9, 2]; }   // (none: above its dot, as anywhere; a spot search never takes it)
 function heartAside(c, dx, dy, q, hexPx, hb){ const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), D = plateDims(c.n, 1, q, false), dd = Math.hypot(dx - mx, dy - my);
   if (!hb && dd > heartRingR(hexPx) + 3 + D.w + D.h + 8) return;
@@ -8210,7 +8214,7 @@ function heartHid0(n, q, hexPx, hb, p, T){
   for (let D0 = Rk + h2 + 1, i = 0; i < 24 && D0 - Rk < bc; i++, D0 += 3) for (let j = 0; j < A.length; j++){ const t = A[j]*Math.PI/180, x = Math.cos(t)*D0, y = Math.sin(t)*D0, c0 = D0 - Rk + 4*j; if (c0 >= bc) continue;
     const r = plateRect(x, y, n, 1, q, false), rb = [r.x, r.y, r.x + r.w, r.y + r.h], b = [x - w2, y - h2, x + w2, y + h2];
     if (boxPt(b, 0, 0) < Rk || boxGap(rb, hb) < (Math.min(rb[3], hb[3]) > Math.max(rb[1], hb[1]) ? HEART_ROW : HEART_GAP) || T.some(z => boxGap(rb, z) < 3)) continue;
-    const g = heartGnd(p, x, y); if (g === 2) continue; const cost = c0 + 24*g; if (cost < bc){ bc = cost; best = [x, y, rb]; } }
+    const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; const cost = c0 + 24*g + (g === 1.5 ? 500 : 0); if (cost < bc){ bc = cost; best = [x, y, rb]; } }
   if (!best){ const x = 0, y = Rk + h2 + 1, r = plateRect(x, y, n, 1, q, false); best = [x, y, [r.x, r.y, r.x + r.w, r.y + r.h]]; }   // (no such place: just below the ring)
   return best; }
 // the held points' own counters (the badge of the force in the city, just above the ring, and the gap down to the ring), relative to each
@@ -8242,7 +8246,7 @@ function heartSpot0(c, d, u, Rm, hexPx, hb, taken){ const D0 = Math.max(d, Rm), 
       if (!free(vx, vy) || (hb && vx > col[0] && vx < col[2] && vy < col[3])) continue;
       const real = !j && D <= d, g = real ? 0 : heartGnd(p, vx, vy); if (g === 2) continue;   // (its real spot is where it stands, whatever is drawn under it)
       const r = heartBadge(c.n, q, vx, vy, hexPx, hb, p); if ((r[3] === 2 && !real) || (hb && r[2] < 0)) continue;   // (and a force already clear of the marker is never moved for its counter's sake)
-      const cost = c0 + 40*g + (real ? 0 : 20*r[3]); if (cost < bc){ best = [vx, vy]; bc = cost; } if (cost === c0) break; } }   // (on a neighbour's ground only where its own province has no room)
+      const cost = c0 + 40*g + (real ? 0 : 20*r[3] + (r[3] === 1.5 ? 200 : 0)); if (cost < bc){ best = [vx, vy]; bc = cost; } if (cost === c0) break; } }   // (on a neighbour's ground only where its own province has no room)
   return !best || (bc === 0 && d >= Rm) ? null : best; }
 const HMK = new Map();
 function heartSprite(hd, pip = true){ const key = hd.toFixed(1) + '|' + dpr + '|' + (pip ? 1 : 0); let c = HMK.get(key); if (c) return c; if (HMK.size > 40) HMK.clear();
