@@ -8185,7 +8185,8 @@ function heartGnd(p, vx, vy){ const P = G.P[p], wx = P.x + vx/view.s, wy = P.y +
 function heartBadge(n, q, vx, vy, hexPx, hb, p = null){ const D = plateDims(n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
   const sx = vx >= 0 ? 1 : -1, side = dotR() + 3 + D.w/2, yb = vy + dotR() + 1 - D.h/2;
   const bx = k => k > 0 ? Math.max(vx + side, Rk + 4 + w2) : Math.min(vx - side, -Rk - 4 - w2);   // (beside: clear of the ring by a few px more, so the city's own counter is the one by its marker)
-  const C = [[vx, vy - dotLift(n, q)], [bx(sx), yb], [bx(-sx), yb]]; if (!hb) C.push([vx, vy + dotLift(n, q)]);   // (by a held point never below its dot: it would read as the counter of something else)
+  const C = [[vx, vy - dotLift(n, q)]]; for (const k of [sx, -sx]){ const x = bx(k); if (Math.abs(x - vx) <= side + 12) C.push([x, yb]); }   // (beside it, never across the ring from it)
+  if (!hb) C.push([vx, vy + dotLift(n, q)]);   // (by a held point never below its dot: it would read as the counter of something else)
   const R = []; for (const [x, y] of C){ const b = [x - w2, y - h2, x + w2, y + h2]; let v = boxPt(b, 0, 0) - Rk;
     if (hb){ const r = plateRect(x, y, n, 1, q, false), rb = [r.x, r.y, r.x + r.w, r.y + r.h]; v = Math.min(v, boxGap(rb, hb) - (Math.min(rb[3], hb[3]) > Math.max(rb[1], hb[1]) ? HEART_ROW : HEART_GAP)); }   // (counter to counter: their whole boxes, marks included)
     const g = p == null ? 0 : heartGnd(p, x, y); if (v >= 0 && !g) return [x, y, v, 0]; R.push([x, y, v, g]); }

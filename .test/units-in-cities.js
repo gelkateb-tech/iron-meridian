@@ -12,6 +12,7 @@
 //      its counter clear of the city's counter (see below; UC_NO_DIRS=1 skips it)
 //      Up to hex 20 (mid zoom, the world view) the force off the point is drawn where it stands (a few km: under the city force's own dot, which
 //      hides it); from hex 28 out to its spot. Everywhere its dot and its counter's middle stay on its own country's land, never the sea
+//      At play zoom its counter (when not stacked with another) stands by its own dot (within 16 px), never across the ring from it
 //  (L) the same at coastal and border cities (Szczecin NW, Hamburg NW and N, Berlin N and E, Munich SE, Poznan S), 4 and 15 km out, at hex 12, 30,
 //      60 and 240: the dot and the counter's middle over its own country's land (tmGround, and the drawn border: provAt), never the sea; close in
 //      (hex 240, where a province is large on screen) the dot in its own province
@@ -96,13 +97,15 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
         const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false; const P = im.G.P[I.p], pt = im.toScreen(P.x, P.y);
           const h = L.find(c => c.ids.includes(I.a)), o = L.find(c => c.ids.includes(I.b)); let sb = null; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) sb = q.b;
           const bA = im.S.armies.find(a => a.id === I.b), rs = im.toScreen(bA.pos[0], bA.pos[1]), ob = sb || (o && o.bx);
-          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, tag:o.tag, real:rs, land:[im.uc.land(bA.at, o.px, o.py), im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)]} : null); })); }), I);
+          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, stk:!!sb, tag:o.tag, real:rs, land:[im.uc.land(bA.at, o.px, o.py), im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)]} : null); })); }), I);
         const k = `${side} ${km} km ${dn} hex ${hp}`; out.dirs++; if (!m){ fail('X counters missing', k); continue; }
         const hOn = Math.hypot(m.hd[0] - m.pt[0], m.hd[1] - m.pt[1]), oPt = Math.hypot(m.od[0] - m.pt[0], m.od[1] - m.pt[1]), oHb = pd([m.hb[0], m.hb[1], m.hb[2], Math.max(m.hb[3], m.pt[1] - m.R)], m.od[0], m.od[1]);
         const row = Math.min(m.ob[3], m.hb[3]) > Math.max(m.ob[1], m.hb[1]), g = gap(m.ob, m.hb), need = m.tag ? 6 : row ? 15 : 6;
         const atReal = Math.hypot(m.od[0] - m.real[0], m.od[1] - m.real[1]) < 0.5;
         if (hOn > 0.01 || (hp <= 20 ? !atReal : (oPt < m.R + 9 || oHb < 8)) || g < need - 0.6) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), atReal, dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need});
-        if (m.land.some(z => !z.own)) fail('X off the point: dot and counter on its own land', {k, land:m.land}); } } }
+        if (m.land.some(z => !z.own)) fail('X off the point: dot and counter on its own land', {k, land:m.land});
+        const dB = Math.hypot(Math.max(m.ob[0] - m.od[0], 0, m.od[0] - m.ob[2]), Math.max(m.ob[1] - m.od[1], 0, m.od[1] - m.ob[3]));   // (its counter by its own dot, never across the ring from it)
+        if (hp > 20 && hp <= 60 && !m.stk && dB > 16) fail('X off the point: its counter beside its own dot', {k, dotToCounter:+dB.toFixed(1)}); } } }
   // (L) coastal and border cities: the force off the point is never drawn in the sea or across a border
   if (!process.env.UC_NO_DIRS){ out.land = 0; const KW = await p.evaluate(() => KM_W), D8 = {N:[0, -1], NE:[1, -1], E:[1, 0], SE:[1, 1], S:[0, 1], SW:[-1, 1], W:[-1, 0], NW:[-1, -1]};
     for (const [city, dn] of [['Szczecin', 'NW'], ['Hamburg', 'NW'], ['Hamburg', 'N'], ['Berlin', 'N'], ['Berlin', 'E'], ['Munich', 'SE'], ['Poznań', 'S']]) for (const km of [4, 15]){ const dv = D8[dn], l = Math.hypot(dv[0], dv[1]), off = [dv[0]/l*km*KW, dv[1]/l*km*KW];
