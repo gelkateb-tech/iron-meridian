@@ -1,0 +1,305 @@
+# Questions for the owner (playtest session)
+
+The session does not stop to ask (owner's request 2026-11-21): each question is logged here and the work carries on with the default
+named under it. Answer in any order; the number is enough ("Q3: yes").
+
+Format (copy the block):
+
+```
+## Q<n>. <the question, one line>   (round <r>)
+
+**Why it matters.** One or two sentences, with the evidence.
+**Options.** A ... / B ... (suggested answer in bold)
+**Until you answer.** What the session does meanwhile.
+```
+
+---
+
+<!-- Questions go below, newest last. -->
+
+## Q1. "Embark/disembark cooldowns": is the boarding and landing time (45 minutes each) the cooldown you mean?   (setup)
+
+**Why it matters.** Your request asks the harness to cover embark/disembark "and their cooldowns". The rules have no separate cooldown: boarding
+takes 45 minutes, landing 45 minutes (never under 15 with upgrades), and a force fights its first day ashore at the landing penalty
+(docs/DECISIONS.md EMB-2 to EMB-4).
+**Options.** **A: yes, those times and the first-day penalty are the cooldowns; test those.** B: you want a real cooldown (for example no
+re-boarding for some hours after landing): that is a new rule for you to decide, not something the session adds.
+**Until you answer.** The harness checks the 45-minute times (`headless.js --scenarios`), the 15-minute floor and boarding, landing and
+rearm timers that stop counting down (`--invariants`, and rule mutants in `--selftest`), and that no force boards or lands outside a naval
+city (Marines aside). The first-day landing penalty is not checked yet (round 1).
+
+## Q2. Should time at sea follow the real sailing distance instead of the centres of sea zones?   (round 1)
+
+**Why it matters.** Short sea hops take about 2x their real length (median x2.09 on routes under 1,500 km). Berlin → Wicklow takes 11.4 days
+and the troops land at morale 33-42 (IMP-1).
+**Options.** **A: yes, try branch `idea/sea-legs` (a0e4982: a leg ends at the zone's border; speed unchanged)** / B: keep as is and only warn
+in the route preview.
+**Until you answer.** Master and auto-test/fixes are unchanged; the prototype branch shows A (it raises stuck-force reports somewhat: see
+IMP-1 before any merge).
+
+## Q3. Nations with no reachable independent land (Cuba, Japan, NZ, Mongolia, Peru, Ecuador...): a different opening?   (round 1)
+
+**Why it matters.** 15 of 68 nations cannot make the first capture First Steps asks for; 9 cannot land anywhere near for about a week (IMP-4).
+**Options.** **A: tailored First Steps text only** / B: also Marines open on day 1 for them (changes UNI-2) / C: give some cityless
+independents a landing point (changes EMB-1).
+**Until you answer.** Logged only; A is listed as a small page change.
+
+## Q4. May a cash-poor or oil-short computer nation sell goods other than metal on the world market (ECO-9)?   (round 1)
+
+**Why it matters.** Order-book listings almost never sell; nations with $6-11B of goods go broke and short of oil for up to 38 days (IMP-2).
+**Options.** **A: no; first make AI buyers take cheap book listings for stock (no decision touched)** / B: yes, above about 60% of the cap.
+**Until you answer.** A is recommended (round 2 prototype candidate). Nothing built.
+
+## Q5. Should idle interceptors scramble on their own against a strike within range of their base?   (round 1)
+
+**Why it matters.** Interceptors are on patrol about 6% of their hours; 3 of 55 strikes met a fighter (IMP-7).
+**Options.** A: yes, a new rule / **B: no; the AI flies patrols better and buys interceptors only against air threats**.
+**Until you answer.** B is the recommendation. Nothing built.
+
+## Q6. Ranged fire: show it per hour (UI), or also make it hit harder (CMB-5's 28%)?   (round 1)
+
+**Why it matters.** Artillery shows 0.03 damage a volley on screen (IMP-11), though it does well in battle.
+**Options.** **A: UI summary only** / B: raise RANGED_F / C: ranged fire also lowers morale or dig-in (new rule).
+**Until you answer.** A only, as a suggestion. Nothing built.
+
+## Q7. Manpower is full most of the game: change anything (ECO-6, BLD-6)?   (round 1)
+
+**Why it matters.** At the cap on 54-66% of nation-days; 0.80 of income used (IMP-12).
+**Options.** **A: leave it; re-check in long wars** / B: lower the city manpower base or cap / C: the Recruiting Office gives training speed
+instead of manpower.
+**Until you answer.** A.
+
+## Q8. A missile or air strike under way when peace is made (or its target changes hands): abort, or hit?   (round 1)
+
+**Why it matters.** Before the fix a missile launched just before peace still wrecked a building and added war damage in a nation now at
+peace, and a ballistic missile wrecked its own side's newly taken Army Base (MIL-R1-05; bombers likewise cut roads and rails at peace).
+**Options.** **A: the missile self-destructs (stock lost) and the strike turns back with nothing done** / B: it hits anyway (the old
+behaviour) / C: the strike turns back and the missile is refunded.
+**Until you answer.** Fixed minimally on auto-test/fixes (6195531): the shot still arrives but does land damage (war damage, links,
+buildings) only where the land is hostile (nobody's, or at war with the launcher) or enemy forces stand. No toast yet; A would add the abort.
+
+## Q9. The first-day landing penalty (EMB-4): into own or friendly ports too, and should it pass to a garrison the landed troops join?   (round 1)
+
+**Why it matters.** Troops landing in their own port fight at 67% for 24 h, the same as an assault. When landed troops join a garrison that
+did not land, the penalty disappears (merge() does not carry `landed`; t11.js: gone after 3 h). Ships docking also got it (bug MIL-R1-07,
+fixed in 0a325a6: only ground forces get the stamp and the −5 morale).
+**Options.** **A: assault landings only (enemy or independent naval city); none into own or friendly ports; never for ships** / B: every
+landing, as today, and a merge keeps the later stamp (or weights it by size).
+**Until you answer.** Only the ships part is fixed. Own-port landings keep the penalty; merges still drop it.
+
+## Q10. What should a sated AI nation's forces do when they already stand in enemy land they may not take?   (round 1)
+
+**Why it matters.** They stood on the province's heart for days (one Sudan stack 136 h), neither taking it nor moving (MIL-R1-04, DIP-6).
+**Options.** **A: they go home (nearest own province) as soon as the nation is sated** / B: they hold where they are but count as defending
+/ C: a sated nation may still take the province it stands on.
+**Until you answer.** A is on auto-test/fixes (5b22d3b, AI only; the sated rule itself unchanged): "standing in land it has not taken"
+reports went from 26 to 1 on the same 3x60 seeds.
+
+## Q11. Should a new ship finished in a port form its own docked fleet, or join the city's ground garrison (MOB-3)?   (round 1)
+
+**Why it matters.** MOB-3 says new units join an idle force there within the stack limit; the code comment says "of the same kind", but ships
+joined ground garrisons, hiding fleets and blocking Escort, Raid and Blockade (MIL-R1-02; about 70% of AI ships sat inside land forces).
+**Options.** **A: ships join only a docked fleet (ships only), otherwise form a new fleet; ground units join only forces with no ships** /
+B: the old behaviour.
+**Until you answer.** A is on auto-test/fixes (3df6ae0, also keeps fleets apart when the AI packs idle stacks). The golden changes from day 9.
+
+## Q12. A computer ground force at sea with no reachable home (its coast lost): land at a friend's port, disband, or stay at sea?   (round 1)
+
+**Why it matters.** Syria's force 369 sat idle at sea 20+ days paying upkeep, Israel's force 388 10 days (ECO-R1-4).
+**Options.** A: land at the nearest allied or passage naval city and walk home; if none, disband with a dispatch / **B: disband after 72 h
+with no route (the AI's own home search already passes through friends' ports that lead home)** / C: stay at sea.
+**Until you answer.** B is on auto-test/fixes (bc19049).
+
+## Q13. Must a loaded game play on bit-exactly as the game that was not saved?   (round 1)
+
+**Why it matters.** The save rounds wounds and `_h` to 3 decimals on purpose (compaction), so a loaded game drifts from the live one after a
+quarter step (ECO-R1-10). Harmless for one player; it matters only for lockstep multiplayer or replays from saves (LATER.md).
+**Options.** A: yes: save full precision (bigger saves) or round live too / **B: "close" is enough today; revisit with multiplayer**.
+**Until you answer.** B. Nothing changed.
+
+## Q14. A carrier wing in flight returns to wherever its carrier sailed: may it fly past its range to get there?   (round 1)
+
+**Why it matters.** With the carrier fix (MIL-R1-01, 2c48619) carrier wings fly again; a flying wing's base follows the carrier's next stop,
+so a carrier that sails away during a strike can leave the wing a return trip longer than its range. The harness now measures a carrier
+wing's mission from where it took off.
+**Options.** **A: allowed (the carrier is the base; nothing new)** / B: a carrier wing's return is limited to its range, and a wing that
+cannot reach the carrier lands at the nearest own base.
+**Until you answer.** A (what the fixed code does).
+
+## Q15. Should warships docked in a port count as its garrison and stop land forces from taking it?   (round 2)
+
+**Why it matters.** Today they do, land units barely hurt them and they barely hurt back, so one frigate holds a port for good (600 h against
+18 units; 10 AI cases / 597 h on 2 seeds). IMP-14.
+**Options.** **A: no: docked ships sortie to sea when the port falls (try `idea/port-sortie`)** / B: they defend, but as soft targets / C: they
+are captured or scuttled.
+**Until you answer.** A is only on the prototype branch `idea/port-sortie` (d7a2ea0, not merged); auto-test/fixes keeps today's rule (ships
+hold the port).
+
+## Q16. May fleets pass between neighbouring port cities over land (canals such as Kiel, Corinth), or only by sea?   (round 2)
+
+**Why it matters.** MR2-01: all 187 neighbouring port pairs are land shortcuts for fleets today (Ipoh → Kuantan across Malaya, Carlisle →
+Leeds across England). Suez and Panama are already sea links (MAP-8).
+**Options.** **A: only by sea; Suez and Panama as they are** / B: also a short list of canals (name them).
+**Until you answer.** A: fixed as a bug on auto-test/fixes (a9e2226, MOV-4): fleets sail over water only, no canal shortcuts. Name any
+canals you want and they can be added as allowed pairs.
+
+## Q17. Should artillery and warships be able to fire at independent garrisons?   (round 2)
+
+**Why it matters.** rangedFoe requires an owner ≥ 0, so ranged fire never aims at independents although land battles with them happen
+(m19.js: 4 artillery next to Tartu, 0 targets). Independent land is then harder to take than enemy land.
+**Options.** **A: yes, like any enemy at war** / B: no (keeps the AI from wasting fire on rebels).
+**Until you answer.** Unchanged (no ranged fire at independents).
+
+## Q18. Paratroopers in the air when peace is made or the target changes hands: abort, land at home, or drop anyway?   (round 2; extends Q8)
+
+**Why it matters.** MR2-06: they drop into a nation at peace and are walked home within 6 h by strandedHour.
+**Options.** **A: abort and land back at the airbase (same answer as Q8 A)** / B: drop anyway (today).
+**Until you answer.** A: fixed as a bug on auto-test/fixes (9c3af00): the drop is called off and the paratroopers stay at their airbase,
+with a dispatch. The same happens when the target changed hands to a nation they are not at war with; otherwise they drop as before.
+
+## Q19. A captured missile silo: does its stock pass to the captor, and may the captor fire missiles it has not researched?   (round 2)
+
+**Why it matters.** ECO-R2-Q1: the US took Krasnoyarsk (2 ballistic, 1 cruise) with no missile research and fired a ballistic missile; capture()
+clears the queue and construction but not `S.mstock[p]`.
+**Options.** **A: the stock is destroyed on capture** / B: it passes to the captor, fired only with the research / C: it passes and may be fired
+(today).
+**Until you answer.** Unchanged.
+
+## Q20. Should the coalition-offensive reward ($150M) come out of the leader's treasury?   (round 2)
+
+**Why it matters.** ECO-R2-Q2: diplomacy.js:229 creates the money; the message says "$150M from <leader>", who pays nothing.
+**Options.** **A: the leader pays; no reward if it cannot** / B: keep it created (a coalition bonus); fix the message.
+**Until you answer.** Unchanged.
+
+## Q21. What should an empty treasury do?   (round 2)
+
+**Why it matters.** IMP-15: nothing reads it; Thailand left about $2B of upkeep unpaid over 60 days at full strength; a person can do the same.
+**Options.** **A: forces lose 5 morale a day while upkeep is unpaid (floor 30); the AI disbands its weakest units after 3 days** / B: disband
+the dearest units / C: debt, no new orders until repaid / D: nothing (today).
+**Until you answer.** Unchanged.
+
+## Q22. The day number rolls over at 10:00 (the game's start hour) while the calendar date changes at midnight: align them?   (round 2)
+
+**Why it matters.** P2-14: at hour 43 the top bar shows day 2 at 05:00 on the third calendar date; research says "opens on day 3", trade
+routes "end at 0:00". RES-2 fixes the day as 1 + floor(hours/24), so the rule stays.
+**Options.** **A: display only: start the game clock at 00:00 so day and date turn together** / B: show only "Day N, hh:00" (drop the date) /
+C: keep.
+**Until you answer.** Unchanged.
+
+## Q23. One confirm style for war everywhere?   (round 2)
+
+**Why it matters.** P2-15: a move across a border opens a clear "DECLARE WAR?" dialog; Diplomacy's Declare war only relabels its button for
+3 s, which a phone user does not see (the first tap looks dead).
+**Options.** **A: the same dialog in both places (with IMP-5's empty-border-cities list)** / B: keep both.
+**Until you answer.** B. The phone menu is fixed (0298973: the menu stays on screen and "Confirm war?" shows); the two styles stay.
+
+## Q24. In a surprise war, should an ally of both sides join against the attacker?   (round 2)
+
+**Why it matters.** ECO-R2-8 (rejected as a bug): surpriseWar's skip list leaves out allies while startWar includes them, so a common ally
+turns on the surprise attacker; each seat gets a dispatch.
+**Options.** **A: yes, keep it (betrayal has a price)** / B: a common ally stays out, as in a declared war.
+**Until you answer.** Unchanged.
+
+## Q25. A force that must go home at peace but has no land route (an expedition across the sea): jump, sail, or disband?   (round 3)
+
+**Why it matters.** Today `sendHome` and evict move such a force over the water at once to the nearest own province on any coast
+(MIL-R3-02: 17-22 jumps per 40 days, e.g. Brussels → Norfolk, Baku → Aktau). Since B2.12, a third nation's capture triggers it too. One
+case lands off a naval city (ECO-R3-7, Norway at Windsor), against EMB-1.
+
+**Options.**
+- A: keep the jump, but land only at an own naval city.
+- **B: the force puts to sea from the province's coast and sails home like any sea trip (slow, can be caught at sea) for people; A for
+  the AI.**
+- C: it stays where it is, able to move only towards home, until `strandedHour`.
+- D: it disbands after 72 h with no route (as B1.7 / Q12 for idle AI forces at sea).
+
+**Until you answer.** A, as the smallest bug fix that keeps EMB-1 (auto-test/fixes 22d6d2b, B3.3; the same helper for evict in
+aee2fa5, B3.4): a force whose way home crosses water is moved at once to the nearest own naval city (any own province only if the nation
+has no naval city) and drops its boarding and landing timers. B (sailing home) waits for you.
+
+## Q26. A routed force with no way home (a beachhead in an enemy port, an island garrison): surrender, last stand, or evacuate?   (round 3)
+
+**Why it matters.** MIL-R3-01: it stays "retreating" in the battle for good. The dispatch falsely says "retreating to …", and the force
+can never surrender (96 cases, 1,684 h per 40 days, seed 3007). B2.24 (a fleet that routs towards land) has the same root.
+
+**Options.**
+- A: it surrenders like an encircled force (the existing rule: unsupplied, morale under 10, outnumbered 2:1).
+- B: a "last stand": no retreat, it fights on, with a truthful dispatch ("cut off at X: no way back").
+- **C: invaders holding a port's coast put to sea in an emergency embark (longer than 45 min) and sail home; otherwise A. Fleets retreat
+  to the nearest own naval city or an open sea zone away from the battle.**
+
+**Until you answer.** A. The bug fix (auto-test/fixes eca1461, B3.2) makes the state truthful: a routed force retreats only to a
+province it has a route to (fleets to an own naval city), the dispatch names that city, and a force with no route is not marked
+"retreating" but goes to the existing encircled-surrender check. No evacuation (C) is built.
+
+## Q27. Partisans in land that went back to their own nation (sale back, annexation, gift back) or was ceded at peace: disband, or keep fighting?   (round 3)
+
+**Why it matters.** ECO-R3-2: today they make the province independent within 24 h, even when it went back to their own home nation.
+This also concerns the rebels branch (REB-2).
+
+**Options.**
+- **A: they disband when the province's holder is its home nation, and also after a peace cede (the peace settles it).**
+- B: they disband only when it returns to the home nation.
+- C: today's rule.
+
+**Until you answer.** A, both halves. The fix (auto-test/fixes 0156928, B3.10) stands the partisans down whenever the province is
+home land of its holder. A peace cede makes the ceded land the receiver's home land (cede() sets `S.home`), so it is covered too:
+rebelhome.js peace on the branch keeps Tromsø with Finland (it went independent before). If you want partisans to keep fighting in land
+ceded at peace (B), that is one condition to undo for the cede path.
+
+## Q28. A coalition gift of captured land: does it become the receiver's home land at once, or stay occupied land as in a territory sale?   (round 3)
+
+**Why it matters.** ECO-R3-5: `sendGift` (diplomacy.js:355) gives the receiver home title (`S.home`) and clears occupation. `terrSell`
+(territory.js:137-141) keeps sold land occupied unless it was the buyer's own home. ECO-13 settles who may gift, not the title.
+
+**Options.**
+- **A: follow terrSell: home title only when it was the receiver's home land; otherwise it stays occupied (rebels and integration
+  apply).**
+- B: keep the gift rule as it is (a reason to gift rather than sell).
+
+**Until you answer.** B (unchanged: gifts give home title as today).
+
+## Q29. Units in training when their city is captured: lose them silently, tell the loser, or give something back?   (round 3)
+
+**Why it matters.** 253 queued orders were lost in 4x100 games, with no dispatch naming them (IMP-23).
+
+**Options.**
+- A: lost, with a dispatch that names them.
+- **B: A, plus the goods (not money or manpower) of items that had not started come back to the old owner.**
+- C: the queue moves to the nearest own city with room.
+- D: today's rule (lost, no word).
+
+**Until you answer.** D (today's rule). IMP-23 option 1 (the dispatch) is suggested as a small change; no refund is built.
+
+## Q30. Should independent garrisons be known before you attack them, or should First Steps stop advising "look for a Favourable odds chip"?   (round 3)
+
+**Why it matters.** First Steps tells a new player to capture a weak independent neighbour and look for a Favourable odds chip. But
+independent garrisons are "Unknown (fog)" and the route chip shows no odds (P3-Q1, Lumbini). India lost a 2-infantry force at Seti to a
+2-infantry garrison it could never see. P3-01 (the forces you fight stay unidentified during the battle) is a separate bug and is being
+fixed. This question is only about before the battle.
+
+**Options.**
+- A, a **PROPOSAL** on UNI-9 / VIS-2: independent garrisons count as identified (they are not a rival nation), so odds show for them.
+- B, a PROPOSAL: they are identified when an own force stands next to them.
+- **C: no rule change. First Steps drops the odds advice for independents and says "independent garrisons are 2-6 infantry: send at
+  least twice that".**
+
+**Until you answer.** Unchanged (no rule or text change made). C is a small text change for whoever takes IMP-13. Separately, the
+forces you fight are now identified for the whole battle (P3-01, fixed in 14efd66, B3.8; page only).
+
+## Q31. Phones: how should a player select several forces?   (round 3)
+
+**Why it matters.** IMP-21: a phone has no multi-select, so a 10-unit stack takes about 15 taps (median 13 starting forces per nation).
+
+**Options.**
+- **A: long press adds or removes a force (prototype `idea/phone-group`).**
+- B: a "Select" toggle in the action bar.
+- C: a "Gather here" button on your own province that sends all idle forces within N hours.
+- A and C together are also possible.
+
+**Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
+
+
+## Questions from the owner notes of 2026-11-25
+
+Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their questions here (each with the default used) as they report.
