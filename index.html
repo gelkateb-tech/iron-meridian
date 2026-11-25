@@ -6915,7 +6915,7 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
   const fits = (e, x, y, m, s) => free(bx(e, x, y, m, s)) && dry(e, x, y, m, s);
   // a town's pictures stand on their lots (cityLots), at full size where it is dry (the lot was found dry for every picture of its building),
   // else a size smaller; a yard on its lot sized as it was on its shore. A picture with no lot keeps off them all
-  const LT = P.city ? (cheap ? cityLotsRun(p, Math.max(BN_TL, performance.now() + 1.5)) : cityLots(p)) : null, lot = its.map(() => null);   // (its lots a few ms a frame)
+  const LT = P.city ? (cheap ? cityLotsRun(p, performance.now() - (lastPanT || 0) < 200 ? Math.min(BN_TL, performance.now() + 0.6) : BN_TL) : cityLots(p)) : null, lot = its.map(() => null);   // (its lots within the frame's few ms for new layouts; while the view pans, half a ms: a pan stays smooth, the pictures of towns new to the view a moment later)
   if (LT === undefined) return null;
   if (LT){ for (const l of LT.list) placed.push(l.q.slice()); placed.push(LT.fc.slice());
     for (let i = 0; i < n; i++){ const e = its[i], l = LT.k[e.k]; if (!l) continue; mirs[i] = l.m;
