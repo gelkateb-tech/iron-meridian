@@ -154,8 +154,8 @@ province**. Rules: `rangedStep`, `rangedTargets`, `bombardInfo`, `orderBombard` 
 | Cruise / Ballistic Missile | own range (`MISSILES` range, research) | | the launch picker shows its range circle |
 
 **Why these values.** They are scaled to the km sight ranges (`VIS_KM`, rules/vision.js): forces see 50 km, recon (Special Forces) 100,
-cities 80, airbases 100, UAVs 250-500. Artillery reaches a little past its own sight (80 vs 50), so it needs a spotter (your land, a city,
-another force, a UAV, a satellite), as in Conflict of Nations; rockets and a cruiser's guns reach about one province (land provinces'
+UAVs 250-500 (cities and airbases see nothing past the border since 2026-11-25). Artillery reaches a little past its own sight (80 vs 50),
+so it needs a spotter (your land, another force, a UAV, a satellite), as in Conflict of Nations; rockets and a cruiser's guns reach about one province (land provinces'
 points are 120-470 km apart, median 216 km; a coastal province's point is 60-260 km from the nearest water of its sea zone, median 104 km),
 the frigate's guns as far as artillery, a submarine's torpedoes only close by. All of it is one table to tune.
 
@@ -412,12 +412,23 @@ Fortifications III, 51% × 0.8 = 41%), so a capital the computer has built up ne
 
 Like Conflict of Nations: **seeing a foreign force only tells you that something is there.** Its nation, size, unit types, name and health are
 known only once it is **identified**, by proper recon or by fighting it. Rules: `armyKnown`, `armyIdent`, `armyView`, `intelNote` in
-`rules/vision.js` (sight itself is unchanged: `visibleSet`, `armyVisible`); the page asks `knowA` (index.html) before it shows anything about a
+`rules/vision.js` (sight itself: `visibleSet`, `armyVisible`; what the screen shows: `armyShown`); the page asks `knowA` (index.html) before it shows anything about a
 foreign force.
 
-**Spotted (only the '?' badge).** Anything in sight that nothing identifies: ordinary sight of any force (infantry, tanks, ships: 50 km), cities
-(80 km) and airbases (100 km), your own and allied land, a province you are marching to, a province revealed by someone else's UAV, manned
-aircraft in flight (150 km, patrols 200 km), and a plain AWACS (location only, as before). The map draws one grey '?' badge with a dashed edge
+**Shown at all (owner 2026-11-25: "enemy armies outside my territory still show as 'unidentified'. They shouldn't show at all. I only see
+them once they cross into my land, or when one of my units sees them within its sight range").** A foreign force appears on your map only
+when (1) it stands in your or an ally's land, or, on the move, its spot is over that land (a column marching in shows the moment it crosses
+the border, not when it sets off); (2) it is inside the sight range of one of your or an ally's units (VIS-1: ground forces and fleets 50 km,
+Special Forces 100 / 150; aircraft in flight 150; drones, fighter patrols and recon wings 200; a UAV on station 250-500; a maritime patrol 400,
+ships at sea; a satellite's strip 150; warships' sonar for submarines); (3) a recon reveal covers its province; (4) your forces are fighting
+it (B3.8); or (5) as a location-only '?' inside an AWACS orbit (AIR-3). Nothing else shows it: cities and airbases no longer see past the
+border, and sending a force into a province no longer shows what is in it before you get there. The fog drawn on the map follows the same
+sight. Ranged fire needs the same sight (`armyVisible`): a gun needs your land or a unit of yours to spot its target. A foreign air wing shows
+where it flies in your sight, not from take-off. The border advisor counts only forces you see.
+
+**Spotted (only the '?' badge).** Anything shown that nothing identifies: ordinary sight of any force (infantry, tanks, ships: 50 km), your
+own and allied land, a province revealed by someone else's UAV, manned aircraft in flight (150 km, patrols 200 km), and a plain AWACS
+(location only, as before). The map draws one grey '?' badge with a dashed edge
 where the force stands (one per province, a marching force its own): no flag, no count, no unit type icon, no 3D models or figures. Hover
 text and tap say **Unidentified army** (Spotted, or Detected by AWACS) and how to identify it, nothing more. The same holds for the province's
 hover text and sheet (Garrison: ? Unidentified army), the battle box (? Unidentified army instead of a side's nation and units), the route
@@ -454,4 +465,5 @@ the AI's guns need only a spotted target, as before. The rules never ask `armyKn
 **S.reveal** (a UAV's or an agent's reveal) is shared by every nation, as before: a province another nation's UAV revealed is in your sight
 too, but that only spots: identification is your own (and your allies') recon.
 
-Tests: `node .test/intel.js` (and `node .test/intel.js 440 900` on a phone).
+Tests: `node .test/intel.js` (and `node .test/intel.js 440 900` on a phone); `node .test/vision.js`, `node .test/fog-outside.js` (the owner's
+2026-11-25 rule).
