@@ -2525,12 +2525,12 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .mk-myt{display:flex; flex-direction:column; gap:2px; min-width:0} .mk-myt b{font-size:13.5px} .mk-myt b.sell{color:#f0c94a} .mk-myt b.buy{color:#7ee06a} .mk-myt small{font-size:11.5px; color:#9fb1b7} .mk-myt small b{font-size:11.5px; color:#fff}
 /* flag chips, in the unit badges' style: the real flag 4:3, a fabric sheen (a diagonal sweep, a vertical fall-off, faint folds), a thin dark edge, a soft
    shadow, and a 2 px bar of the side's colour (yours green, allies blue, at war red, others grey); the tap area is 44 px or more */
-.fchip{position:relative; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:0; border:0; background:none; cursor:pointer; line-height:0; vertical-align:middle}
+.fchip{position:relative; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:0; width:max-content; justify-self:center; padding:0; border:0; background:none; cursor:pointer; line-height:0; vertical-align:middle}
 .fchip::before{content:""; position:absolute; inset:-12px -8px}
 span.fchip{cursor:default} span.fchip::before{display:none}
 .fchip .flg.fc{margin:0; border-radius:2px; box-shadow:0 0 0 1px rgba(8,12,10,.9), 0 1.8px 3.6px rgba(0,0,0,.55)}
 .fchip .flg.fc::after{border-radius:inherit; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
-  background:repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 16.66%, rgba(0,0,0,.06) 16.66% 33.33%),
+  background:linear-gradient(90deg, rgba(255,255,255,.07) 0, rgba(0,0,0,.06) 16.7%, rgba(255,255,255,.07) 33.3%, rgba(0,0,0,.06) 50%, rgba(255,255,255,.07) 66.7%, rgba(0,0,0,.06) 83.3%, rgba(255,255,255,.07) 100%),
     linear-gradient(180deg, rgba(255,255,255,.1) 0, rgba(255,255,255,0) 50%, rgba(0,0,0,.16) 100%),
     linear-gradient(135deg, rgba(255,255,255,.2) 0, rgba(255,255,255,.04) 35%, rgba(255,255,255,0) 60%, rgba(0,0,0,.14) 100%)}
 .fchip::after{content:""; display:block; width:100%; height:2px; margin-top:2px; border-radius:1px; background:var(--sc, #8a9194); box-shadow:0 1px 1px rgba(0,0,0,.45)}
@@ -5283,7 +5283,7 @@ function mkChart(k){ const ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOff
     const mark = (o, cls, t) => o ? `<i class="mk-mk ${cls}" style="top:${Math.max(0, Math.min(100, C.Y(o.price)/10))}%" title="${t} $${o.price.toFixed(2)}M"></i>` : '';
     over += mark(ask, 'ask', 'Best sell offer') + mark(bid, 'bid', 'Best buy offer') + `<span class="mk-ro" aria-live="polite"></span><i class="mk-cur"></i>`; }
   return `<button class="mk-chart${big ? ' big' : ''}" data-act="mk-chart" aria-expanded="${big}" title="${tip}">
-    <span class="mk-chh"><span>World price <b>$${pr.toFixed(2)}M</b> per ${fmt(MKT_LOT)}</span>${chs}</span>${big && (ask || bid) ? `<span class="mk-leg">${ask ? `<i class="ask"></i>best sell offer $${ask.price.toFixed(2)}` : ''}${bid ? `<i class="bid"></i>best buy offer $${bid.price.toFixed(2)}` : ''}</span>` : ''}
+    <span class="mk-chh"><span>World price <b>$${pr.toFixed(2)}M</b> per ${fmt(MKT_LOT)}</span>${chs}</span>${big && (ask || bid) ? `<span class="mk-leg">${ask ? `<span><i class="ask"></i>best sell offer $${ask.price.toFixed(2)}</span>` : ''}${bid ? `<span><i class="bid"></i>best buy offer $${bid.price.toFixed(2)}</span>` : ''}</span>` : ''}
     <span class="mk-cv" data-k="${k}"><svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">${grid}<path d="M0,${C.baseY}H1000" class="b"/><path d="${C.area}" fill="${col}" opacity=".16"/><path d="${C.line}" fill="none" stroke="${col}" class="l"/></svg>${over}</span></button>`; }
 // your stock of the good, against storage, and your daily net
 function mkStock(k){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), net = income(PLAYER).net[k], R = RES.find(r => r.k === k), pct = Math.min(100, Math.round(N[k]/cap*100));
