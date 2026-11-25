@@ -271,7 +271,7 @@ function depthFloor(open){ const M = mkt(), AIs = S.nations.filter(N => N.alive 
     if (na < 3) for (const N of AIs.slice().sort((a, b) => b[k] - a[k] || a.id - b.id)){ if (na >= 3) break; if (S.book.some(o => o.seller === N.id && o.res === k)) continue;
       const sur = early ? N[k] - AI_LOW[k] : N[k] - AI_SHORT[k] - 15*Math.max(0, income(N.id).upkeep[k]), q = kFloor(Math.min(early ? 10*RES_K : 30*RES_K, sur/3)); if (q < (early ? 5 : 10)*RES_K) continue;
       N[k] -= q; S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty:q, q0:q, price:+(M.p[k]*(early ? 1.25 + 0.10*mkH(N.id, S.hour, 19) : 1.06 + 0.10*mkH(N.id, S.hour, 19))).toFixed(2), exp:S.hour + 72, depth:1}); na++; } } }
-// the first hour of a game (rules/tick.js): the depth floor, so the Market shows offers on both sides from day 1
+// a new game (newGame, rules/state.js): the depth floor, so the Market shows offers from the first hour
 function bookOpen(){ mkt(); depthFloor(true); }
 // the stock below which an AI takes a sell listing: oil about 25 days of fuel for a big consumer, twice the usual line when the listing is cheap
 function aiBookNeed(N, ask){ return (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70*RES_K)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1); }
