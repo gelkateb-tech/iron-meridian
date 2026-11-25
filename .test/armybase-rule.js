@@ -69,8 +69,9 @@ for (const scn of ['world64', 'world']){ const R = load(), api = R.IM.api; api.u
     for (const p of cs) S.cons[p] = null; }
   ok(S.nations.every(N => S.bld[N.capital].fort === R.START_FORT && R.START_FORT === 1), `${scn}: every capital starts with Fortifications I`);
   ok(forts.length === S.nations.length && forts.every(p => caps.includes(p)), `${scn}: no other province starts with Fortifications (${forts.length} forts, ${S.nations.length} nations)`, forts.filter(p => !caps.includes(p)).slice(0, 10));
-  // the starting units as before the rule (recorded from master 48d6a7f, seed 12345: the start uses no dice in either world for the nations' own units)
-  const U0 = {world64:1942, world:376}[scn]; ok(units(S) === U0, `${scn}: starting units unchanged (${units(S)}, before ${U0})`); }
+  // the starting units as before the rule (recorded from master 48d6a7f, seed 12345: the start uses no dice in either world for the nations' own units),
+  // plus one fighter at every capital (startAir, owner 2026-11-25)
+  const U0 = {world64:1942, world:376}[scn] + S.nations.length; ok(units(S) === U0, `${scn}: starting units as before plus one fighter a nation (${units(S)}, expected ${U0})`); }
 
 // ---- 3. an old save
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(777, 0, [0]); let S = R.S, G = R.G; S.started = true;

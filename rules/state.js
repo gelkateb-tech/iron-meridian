@@ -111,6 +111,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     // power may attack them (graceFor), so the compact, dug-in powers next door do not pick them off in the second week
     n.mid = !n.small && GS > 1 && np <= 55; if (n.mid) addArmy(n.id, n.capital, {inf:3, art:1});
     S.bld[n.capital].fort = START_FORT;   // only the capital starts with Fortifications (every power)
+    startAir(n.id);   // and an Airbase with one fighter wing
     if (n.small){ addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) addArmy(n.id, P.id, {inf:2}); }
   }
@@ -139,6 +140,7 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES)
     S.bld[N.capital].fort = START_FORT;   // only the capital starts with Fortifications, in every tier
     addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
+    startAir(n);   // the capital's Airbase and its fighter wing
     cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
     let guards = kit.guards;
     if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
@@ -161,6 +163,9 @@ function tierCatchUp(mode){ const mult = (raw, trade, T, floor) => { const home 
   for (const N of S.nations){ N.boost = 1; N.boostM = 1; } INCC.v = -1;
   const raw = S.nations.map(N => income(N.id).gross), tr = S.nations.map(N => tradeIncome(N.id).cash);
   for (const N of S.nations){ const kit = tierKit(N.tier, mode); N.boost = mult(raw[N.id].cash, tr[N.id], kit.day, kit.floor); N.boostM = mult(raw[N.id].mp, 0, kit.mpDay, kit.floor); } }
+// the capital's Airbase at the start (START_AIR, rules/data.js; owner 2026-11-25): Airbase I and one Air Superiority Fighter based there, beside its
+// Fortifications, for every nation (seats and computer nations alike), so each can patrol and scout from day one. New games only (old saves keep their start)
+function startAir(n){ const cap = S.nations[n].capital; S.bld[cap].air = Math.max(S.bld[cap].air || 0, START_AIR); const a = addArmy(n, cap, {[START_AIR_UNIT]:1}); a.air = {base:cap, cd:0}; return a; }
 // where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
 function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
