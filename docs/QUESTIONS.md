@@ -351,3 +351,10 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 - **M15.** Also cut morale at once when a strike lands? → No; one rule for all civilian losses.
 
 The Diplomacy layout options (A/B/C) from the same job are superseded by your reference layout; their button inventory is the checklist of actions to keep.
+
+### UI-FIXES (points 3 and 4; branch ui-fixes d26f181)
+
+- **U1.** You said blue for an affordable Build button; the game's main button colour is green. → A new blue matching the selected Build/Train tab (green is a one-line change).
+- **U2.** Unit cards in the Mobilize list are full-width rows, not buttons. → A blue tint and a blue left bar when affordable, not a solid blue block.
+- **U3.** "Build Army Base" in the Mobilize panel was always green. → Now blue when affordable and grey when not, like every other Build button.
+- **U4.** The soldier picture now fits like the others, but because he is tall and narrow he looks a little smaller than the vehicles next to him. Give tall pictures a slightly bigger size cap? → No change.
