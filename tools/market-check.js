@@ -20,19 +20,26 @@ src = src.replace('function bookDay(){', `function __tot(){ let c = 0; const g =
   for (const o of S.book || []){ if (o.type === 'buy') c += o.qty/MKT_LOT*o.price; else g[o.res] = (g[o.res] || 0) + o.qty; } return {c, g}; }
 function bookDay(){ const a = __tot(); bookDay0(); const b = __tot(); const C = globalThis.__C; C.days++; C.cash = Math.max(C.cash, Math.abs(b.c - a.c)); for (const k in a.g) C.goods = Math.max(C.goods, Math.abs(b.g[k] - a.g[k])); }
 function bookDay0(){`);
-const SRC = "'use strict';\n" + src + '\nreturn {IM, MKT_K, MKT_BASE, stockCap, isBid, mkt, trade, cancelOffer, fillOffer, postOffer, topOffers, fillLimit, worldHistory, histDay, bookCross, crosses, mktFix, bookDay, setRel:typeof setRel === "function" ? setRel : null};';
+const SRC = "'use strict';\n" + src + '\nreturn {IM, MKT_K, MKT_BASE, stockCap, isBid, mkt, trade, cancelOffer, fillOffer, postOffer, topOffers, fillLimit, worldHistory, histDay, bookCross, crosses, mktFix, bookDay, bookMigrate, setRel:typeof setRel === "function" ? setRel : null};';
 const fails = [], ok = (c, m, x) => { console.log((c ? 'ok   ' : 'FAIL ') + m + (x !== undefined ? '  ' + JSON.stringify(x) : '')); if (!c) fails.push(m); };
 
 // ---- 1 and 2: a nations-world game with no seat
 globalThis.__C = {days:0, cash:0, goods:0};
 { const R = new Function(SRC)(), api = R.IM.api; api.useScenario('world64'); api.newGame(SEED, 0, []); const S = api.S; S.started = true;
-  const sides = [], crossed = []; for (let h = 0; h < DAYS*24 && !S.over; h++){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); if (S.hour % 24 === 12){ const b = S.book || [];
-    { const bids = b.filter(R.isBid), asks = b.filter(o => !R.isBid(o)); let n = 0; for (const x of bids) for (const y of asks) if (R.crosses(x, y)) n++; if (n) crossed.push([S.hour/24 | 0, n]); } sides.push({d:S.hour/24 | 0, t:Object.fromEntries(R.MKT_K.map(k => [k, [b.filter(o => o.res === k && !R.isBid(o)).length, b.filter(o => o.res === k && R.isBid(o)).length]]))}); } }
+  const sides = [], crossed = [], self = []; for (let h = 0; h < DAYS*24 && !S.over; h++){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); if (S.hour % 24 === 12){ const b = S.book || [];
+    { const bids = b.filter(R.isBid), asks = b.filter(o => !R.isBid(o)); let n = 0; for (const x of bids) for (const y of asks) if (R.crosses(x, y)) n++; if (n) crossed.push([S.hour/24 | 0, n]);
+      for (const x of bids) for (const y of asks) if (x.seller === y.seller && x.res === y.res && y.price <= x.price) self.push([S.hour/24 | 0, x.seller, x.res, y.price, x.price]); } sides.push({d:S.hour/24 | 0, t:Object.fromEntries(R.MKT_K.map(k => [k, [b.filter(o => o.res === k && !R.isBid(o)).length, b.filter(o => o.res === k && R.isBid(o)).length]]))}); } }
   const C = globalThis.__C; ok(C.days >= DAYS - 1 && C.cash < 1e-6 && C.goods < 1e-4, `conservation over ${C.days} daily book steps: money and goods neither made nor lost`, {cash:C.cash, goods:C.goods});
   const noBid = sides.filter(x => R.MKT_K.some(k => !x.t[k][1])).map(x => x.d), noAsk = sides.filter(x => R.MKT_K.some(k => !x.t[k][0])).map(x => x.d);
   ok(!noBid.length, 'every good has buy offers on every day from day 1', noBid);
   ok(noAsk.length <= 2, 'every good has sell offers on (nearly) every day from day 1', noAsk);
   ok(!crossed.length, 'the book never shows a buy offer above a sell offer the two could trade', crossed.slice(0, 5));
+  ok(!self.length, 'a computer nation\'s own sell offer is never at or under its own buy offer for the same good', self.slice(0, 5));
+  // a save from before the depth floor (no M.bk, no computer offers): the load posts them (bookMigrate); a save that has it changes nothing
+  { const keep = S.book; S.book = []; delete S.mkt.bk; R.bookMigrate(); const t = R.MKT_K.map(k => [S.book.filter(o => o.res === k && !R.isBid(o)).length, S.book.filter(o => o.res === k && R.isBid(o)).length]);
+    ok(S.mkt.bk === 1 && t.every(([a, b]) => a >= 1 && b >= 3), 'an old save opens with offers on both sides of every good', t);
+    const n0 = JSON.stringify(S.book); R.bookMigrate(); ok(JSON.stringify(S.book) === n0, 'loading a save that has its depth floor changes nothing');
+    for (const o of S.book){ const N = S.nations[o.seller]; if (R.isBid(o)) N.cash += o.qty/1000*o.price; else N[o.res] += o.qty; } S.book = keep; }
   const AIc = S.nations.filter(N => N.alive).map(N => N.cash); ok(AIc.every(c => c > -1), 'no computer nation goes into debt', Math.min(...AIc));
   const H = R.worldHistory('oil'); ok(H.length >= DAYS - 1 && H[H.length - 1].p === +S.mkt.p.oil.toFixed(2), 'the oil history runs over the whole game to today', {n:H.length, last:H[H.length - 1], p:S.mkt.p.oil});
 }
@@ -63,8 +70,8 @@ globalThis.__C = {days:0, cash:0, goods:0};
   R.postOffer(others[0].id, 'oil', 10*K, 2.0, 'buy'); R.postOffer(others[3].id, 'oil', 10*K, 2.2, 'buy');
   const A = R.topOffers(0, 'oil', 'ask', 3), B = R.topOffers(0, 'oil', 'bid', 3);
   ok(A.map(o => o.seller).join() === [others[1].id, others[2].id, others[0].id].join() && B.map(o => o.price).join() === '2.2,2', 'topOffers: cheapest asks first (older first), highest bids first, not my own', {A:A.map(o => [o.seller, o.price]), B:B.map(o => o.price)});
-  // matching: a computer nation's bid at or above my ask fills it at my price, once a day, up to its storage
-  S.book = []; const X = others[3]; X.cash = 800; X.oil = 0; me.oil = 100*K; R.postOffer(0, 'oil', 20*K, 2.0, 'sell'); R.postOffer(X.id, 'oil', 30*K, 2.4, 'buy'); const cm = me.cash, cx = X.cash; R.bookDay();
+  // matching: a computer nation's bid at or above my ask fills it at my price, once a day, up to its storage (the highest bid first: X's is far above the standing bids)
+  S.book = []; const X = others[3]; X.cash = 800; X.oil = 0; me.oil = 100*K; R.postOffer(0, 'oil', 20*K, 2.0, 'sell'); R.postOffer(X.id, 'oil', 30*K, +(R.mkt().p.oil*1.5).toFixed(2), 'buy'); const cm = me.cash, cx = X.cash; R.bookDay();
   ok(!S.book.some(o => o.seller === 0) && X.oil >= 20*K && Math.abs(me.cash - cm - 40) < 1e-6, 'a computer bid above my ask fills it at my price in the daily step', {mine:S.book.filter(o => o.seller === 0).length, xOil:X.oil, paid:me.cash - cm, xCash:cx - X.cash});
   // a computer nation's sell offer listed between two daily steps fills a buy offer it crosses at once, at its own price
   S.book = []; const Y = others[1], Z = others[2]; Y.oil = 100*K; Z.cash = 800; Z.oil = 0; R.postOffer(Z.id, 'oil', 20*K, 2.6, 'buy'); R.postOffer(Y.id, 'oil', 15*K, 2.2, 'sell'); const cy = Y.cash, cz = Z.cash;
@@ -72,6 +79,8 @@ globalThis.__C = {days:0, cash:0, goods:0};
   // the history: one point a day; past 360 points pairs are averaged and the step doubles; an old save starts from the 60 days it kept
   const M = R.mkt(); delete M.hg; M.hist = Object.fromEntries(R.MKT_K.map(k => [k, [3, 3.2, 3.4]])); R.mktFix();
   ok(M.hg && M.hg.oil.join() === '300,320,340' && M.hg.st === 1, 'an old save\'s history starts from the days it kept', M.hg && M.hg.oil);
+  delete M.hg; M.hist = Object.fromEntries(R.MKT_K.map(k => [k, k === 'rare' ? [6.4] : [3, 3.2, 3.4]])); R.mktFix();
+  ok(M.hg.rare.join() === '640,640,640' && M.hg.oil.join() === '300,320,340', 'a good with fewer days kept starts on the same day as the others (at its first known price)', M.hg.rare);
   for (let i = 0; i < 400; i++) R.histDay(M); const n = M.hg.oil.length;
   ok(n <= 360 && M.hg.st === 2 && R.worldHistory('oil').length >= 200, 'past 360 points the history halves and keeps one point every 2 days', {n, st:M.hg.st, w:R.worldHistory('oil').length});
   ok(JSON.stringify(M.hg).length < 8000, 'the history stays small (bytes)', JSON.stringify(M.hg).length);

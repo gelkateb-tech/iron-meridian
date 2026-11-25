@@ -279,6 +279,7 @@ function restore(data){
     if (!off) continue; if (G.P[a.at].sea || (a.to !== null && G.P[a.to].sea)){ a.oldLand = 1; continue; }
     const q = pathFor(a, a.to ?? a.at, a.path[a.path.length - 1]); if (q.length) a.path = q; }
   if (NAVAL_CITIES) S.nc = 1;
+  bookMigrate();   // last: a save from before the Market's depth floor gets its first computer offers now (rules/economy.js)
   IM.emit('restored');
   return true;
 }

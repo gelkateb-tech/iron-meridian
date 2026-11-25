@@ -88,7 +88,7 @@ const MKT_BASE = {oil:3.2, metal:2.4, iron:2.2, elec:4.2, rare:6.5}, MKT_K = Obj
 // Without this the demand side read zero and the world metal price sank to its 0.7x floor in every game.
 // (the same for iron, electronics and rare materials)
 function useRes(k, q){ if (!(q > 0) || !S || !S.mkt) return; const U = S.mkt.use || (S.mkt.use = {}); U[k] = (U[k] || 0) + q; }
-function mkt(){ if (!S.mkt){ S.mkt = {p:{...MKT_BASE}, prev:{...MKT_BASE}, hist:Object.fromEntries(MKT_K.map(k => [k, []])), press:Object.fromEntries(MKT_K.map(k => [k, 0])), emb:{}}; } return S.mkt; }
+function mkt(){ if (!S.mkt){ S.mkt = {p:{...MKT_BASE}, prev:{...MKT_BASE}, hist:Object.fromEntries(MKT_K.map(k => [k, []])), press:Object.fromEntries(MKT_K.map(k => [k, 0])), emb:{}, bk:1}; } return S.mkt; }
 // an old save's market: food dropped, the new goods start at their base price
 function mktFix(){ const M = S.mkt; if (!M) return; for (const o of [M.p, M.prev, M.hist, M.press, M.use, M.dem]) if (o) delete o.food;
   M.prev = M.prev || {}; M.hist = M.hist || {}; M.press = M.press || {};
@@ -97,11 +97,13 @@ function mktFix(){ const M = S.mkt; if (!M) return; for (const o of [M.p, M.prev
 // the whole game's world prices for the Market's chart (M.hist keeps the last 60 days for the AI): M.hg = {d0, st, oil:[cents...], ...}, one point
 // every st days from day d0 (dayOf); past 360 points neighbouring pairs are averaged and st doubles (a long game costs about 7 KB at most).
 // pend holds the days of a point still being summed. An old save starts from the M.hist it has (histSeed)
-function histSeed(M){ const L = (M.hist[MKT_K[0]] || []).length, H = M.hg = {d0:dayOf(S.hour) - L + 1, st:1}; for (const k of MKT_K) H[k] = (M.hist[k] || []).slice(-L).map(v => Math.round(v*100)); return H; }
+// (every good's days end today; a good with fewer days kept, one added to the game later, starts at its first known price, or its base price)
+function histSeed(M){ const L = Math.max(...MKT_K.map(k => (M.hist[k] || []).length)), H = M.hg = {d0:dayOf(S.hour) - L + 1, st:1};
+  for (const k of MKT_K){ const a = (M.hist[k] || []).map(v => Math.round(v*100)), f = a.length ? a[0] : Math.round(MKT_BASE[k]*100); H[k] = [...Array(L - a.length).fill(f), ...a]; } return H; }
 function histDay(M){ if (!M.hg){ if (M.hist[MKT_K[0]].length > 1) histSeed(M); else { const H = M.hg = {d0:dayOf(S.hour) - 1, st:1}; for (const k of MKT_K) H[k] = [Math.round(M.prev[k]*100), Math.round(M.p[k]*100)]; } return; }
   const H = M.hg, P = H.pend || (H.pend = {c:0, s:{}}); P.c++; for (const k of MKT_K) P.s[k] = (P.s[k] || 0) + Math.round(M.p[k]*100);
   if (P.c < H.st) return; for (const k of MKT_K) (H[k] || (H[k] = [])).push(Math.round(P.s[k]/P.c)); delete H.pend;
-  if (H[MKT_K[0]].length >= 360){ for (const k of MKT_K){ const a = H[k], b = []; for (let i = 0; i + 1 < a.length; i += 2) b.push(Math.round((a[i] + a[i + 1])/2)); H[k] = b; } H.st *= 2; } }
+  if (Math.max(...MKT_K.map(k => H[k].length)) >= 360){ for (const k of MKT_K){ const a = H[k], b = []; for (let i = 0; i + 1 < a.length; i += 2) b.push(Math.round((a[i] + a[i + 1])/2)); H[k] = b; } H.st *= 2; } }
 // (the page's reader) good k's world price over the game: [{d, p}], d the first day of the point, p in $M per MKT_LOT units
 function worldHistory(k){ const H = S.mkt && S.mkt.hg; if (!H || !Array.isArray(H[k])) return []; const out = H[k].map((c, i) => ({d:H.d0 + i*H.st, p:c/100}));
   if (H.pend && H.pend.c && H.pend.s[k] != null) out.push({d:H.d0 + H[k].length*H.st, p:H.pend.s[k]/H.pend.c/100}); return out; }
@@ -169,6 +171,11 @@ function bookNote(o, n, r, pr = o.price){ const B = S.nations[o.seller]; if (o.q
   if (isSeat(o.seller)) tell(o.seller, isBid(o) ? `${S.nations[n].name} sold you ${fmt(r)} ${rlbl(o.res)} through your buy offer for $${fmt(lotCash(r, pr))}M.` : `${S.nations[n].name} bought ${fmt(r)} ${rlbl(o.res)} from your offer for $${fmt(lotCash(r, pr))}M.`, 'good', null); }
 // a computer nation's sell offer of good k that ran out unsold makes its next one 5% cheaper (six steps at most, never below 0.72x); a sale resets it
 function mkStep(N, k, unsold){ const U = N.mkU || (N.mkU = {}); if (unsold) U[k] = Math.min(6, (U[k] || 0) + 1); else delete U[k]; if (!Object.keys(U).length) delete N.mkU; }
+// a computer nation's price for a new offer of good k, kept clear of its own offers on the other side: a buy offer a cent under its cheapest
+// sell offer of k, a sell offer a cent over its highest buy offer of k (its own two offers never trade, so a seat could otherwise buy from it
+// and sell straight back to it at a profit). 0: no price fits (a buy offer is then not posted)
+function ownPx(n, k, bid, p){ let v = bid ? 1e9 : 0; for (const o of S.book || []) if (o.seller === n && o.res === k && o.qty > 0 && isBid(o) !== bid) v = bid ? Math.min(v, o.price) : Math.max(v, o.price);
+  const r = bid ? Math.min(p, v - 0.01) : Math.max(p, v + 0.01); return r >= BOOK_MIN_PRICE ? +r.toFixed(2) : 0; }
 // a computer nation buys up to q units of good k from sell offers priced at most maxP (cheapest first); returns what it got
 function bookTake(n, k, q, maxP){ const N = S.nations[n]; let got = 0;
   for (const o of (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.price <= maxP && bookOK(n, o)).sort(byAsk)){
@@ -215,15 +222,15 @@ function bookDay(){ const M = mkt(); S.book = (S.book || []).filter(o => o.qty >
     for (const k of MKT_K.slice().sort((a, b) => N[b]/hiOf(b) - N[a]/hiOf(a))){ if (mine >= 5) break;
       const hi = hiOf(k), lo = Math.min(cap*0.35, BOOK_LO[k] || 1e9);   // a metal hoard is listed from 900 units (sold nation to nation: no effect on the world price)
       if (N[k] > hi && rng() < 0.45 && !S.book.some(o => o.seller === N.id && o.res === k && !isBid(o))){ const big = N[k] > 2*hi, qty = kRound(Math.min(N[k] - lo, 250*RES_K, (30 + rng()*60)*RES_K + 0.25*(N[k] - hi))); if (qty < 10*RES_K) continue;
-        N[k] -= qty; mine++; S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty, q0:qty, price:+(M.p[k]*Math.max(0.72, (big ? 0.86 + rng()*0.18 : 0.92 + rng()*0.25) - 0.05*((N.mkU || {})[k] || 0))).toFixed(2), exp:S.hour + 72}); }
-      else if (N[k] < bidLine(N, k) && N.cash - aiFloor(N) > 7.5*M.p[k] && rng() < 0.5 && !S.book.some(o => o.seller === N.id && o.res === k && isBid(o))){ const L = bidLine(N, k), urg = Math.max(0, Math.min(1, 1 - N[k]/L)), price = +(M.p[k]*(0.9 + 0.12*urg + 0.04*mkH(N.id, S.hour, MKT_K.indexOf(k)))).toFixed(2);
+        N[k] -= qty; mine++; S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty, q0:qty, price:ownPx(N.id, k, false, +(M.p[k]*Math.max(0.72, (big ? 0.86 + rng()*0.18 : 0.92 + rng()*0.25) - 0.05*((N.mkU || {})[k] || 0))).toFixed(2)), exp:S.hour + 72}); }
+      else if (N[k] < bidLine(N, k) && N.cash - aiFloor(N) > 7.5*M.p[k] && rng() < 0.5 && !S.book.some(o => o.seller === N.id && o.res === k && isBid(o))){ const L = bidLine(N, k), urg = Math.max(0, Math.min(1, 1 - N[k]/L)), price = ownPx(N.id, k, true, +(M.p[k]*(0.9 + 0.12*urg + 0.04*mkH(N.id, S.hour, MKT_K.indexOf(k)))).toFixed(2)); if (!price) continue;
         const lots = Math.floor(Math.min(40, (L - N[k])/MKT_LOT, (N.cash - aiFloor(N))*0.4/price, (cap - N[k])/MKT_LOT)), qty = lots*MKT_LOT; if (lots < 3) continue;
         N.cash -= lots*price; mine++; S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty, q0:qty, price, exp:S.hour + 72}); } } }
   aiAllowance();
   // matching between listings (never between nations at war, never across an embargo): a computer nation's buy offer and a sell offer priced at or below
   // it, a seat's offer against a computer nation's alike (the seat is told), never a nation's own two offers nor two seats'; the deal is at the sell
   // offer's price (the buyer gets back what it held above it), up to the buyer's free storage
-  for (const bid of S.book.filter(isBid)) bookCross(bid);
+  for (const bid of S.book.filter(isBid).sort(byBid)) bookCross(bid);   // (the highest buy offer first, the older first at one price)
   // AIs short of a resource (metal for units and buildings above all) fill sell listings at a fair price (up to 1.15x the world price), another AI's and
   // a seat's alike (the seat is told of each sale); never an enemy's, never across an embargo
   for (const ask of S.book){ if (isBid(ask) || ask.qty <= 0 || ask.price > M.p[ask.res]*1.15) continue;
@@ -262,7 +269,7 @@ function aiAllowance(){ const M = mkt();
     const line = k => Math.min(0.6*cap, Math.max(2*AI_SHORT[k], 20*Math.max(0, inc.upkeep[k]))); let k = MKT_K.slice().sort((a, b) => N[a]/line(a) - N[b]/line(b) || MKT_K.indexOf(a) - MKT_K.indexOf(b))[0], f, room;
     if (N[k] < line(k)){ f = 0.84 + 0.10*mkH(N.id, S.hour, 7); room = line(k) - N[k]; }
     else { const d = Math.floor(S.hour/72); k = null; for (let i = 0; i < MKT_K.length; i++){ const kk = MKT_K[(N.id + d + i) % MKT_K.length]; if (N[kk] < 0.75*cap){ k = kk; break; } } if (!k) continue; f = 0.72 + 0.08*mkH(N.id, S.hour, 9); room = 0.75*cap - N[k]; }
-    const price = +(M.p[k]*f).toFixed(2), V = Math.min(N.cash - 10, 0.25*Math.max(0, inc.gross.cash)), lots = Math.floor(Math.min(V/price, room/MKT_LOT, 40)); if (lots < 2) continue;
+    const price = ownPx(N.id, k, true, +(M.p[k]*f).toFixed(2)); if (!price) continue; const V = Math.min(N.cash - 10, 0.25*Math.max(0, inc.gross.cash)), lots = Math.floor(Math.min(V/price, room/MKT_LOT, 40)); if (lots < 2) continue;
     N.cash -= lots*price; S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty:lots*MKT_LOT, q0:lots*MKT_LOT, price, exp:S.hour + 72, stock:1}); } }
 // the depth floor: every good has at least 3 computer offers on each side. A side with fewer gets bargain bids (2-8 lots at 0.74-0.82x the world price,
 // at most 6% of the bidder's money above $10M) from the richest computer nations with room (under 75% of their storage) and no bid of their own for it,
@@ -273,17 +280,22 @@ function aiAllowance(){ const M = mkt();
 // of a game (bookOpen), so the first day's market is not empty. A depth bid stays a cent under the cheapest sell offer its bidder could take, a depth ask a cent
 // over the highest buy offer (bookEdge), so the floor adds depth without crossing the book (bookCross covers the rest). No rng(): the prices are jittered by mkH
 // the best price on the other side of good k that nation n could trade with: the cheapest sell offer (bid false) or the highest buy offer (bid true)
-const bookEdge = (n, k, bid) => { let v = bid ? 0 : 1e9; for (const o of S.book) if (o.res === k && isBid(o) === bid && o.qty > 0 && o.seller !== n && !atWar(n, o.seller) && !embargoed(n, o.seller) && canSee(o, n)) v = bid ? Math.max(v, o.price) : Math.min(v, o.price); return v; };
+// (n's own offers count too: a nation's own sell offer is never cheaper than its own buy offer for the same good, see ownEdge)
+const bookEdge = (n, k, bid) => { let v = bid ? 0 : 1e9; for (const o of S.book) if (o.res === k && isBid(o) === bid && o.qty > 0 && (o.seller === n || (!atWar(n, o.seller) && !embargoed(n, o.seller) && canSee(o, n)))) v = bid ? Math.max(v, o.price) : Math.min(v, o.price); return v; };
 function depthFloor(open){ const M = mkt(), AIs = S.nations.filter(N => N.alive && !isSeat(N.id)), early = open || S.hour < 24*7; if (!S.book) S.book = [];
   for (const k of MKT_K){ const ai = o => o.res === k && !isSeat(o.seller); let nb = S.book.filter(o => ai(o) && isBid(o)).length, na = S.book.filter(o => ai(o) && !isBid(o)).length;
     if (nb < 3) for (const N of AIs.slice().sort((a, b) => b.cash - a.cash || a.id - b.id)){ if (nb >= 3) break; const cap = stockCap(N.id); if (N[k] >= 0.75*cap || S.book.some(o => o.seller === N.id && o.res === k && isBid(o))) continue;
       const lo = bookEdge(N.id, k, false), price = +Math.max(0.01, Math.min(M.p[k]*(0.74 + 0.08*mkH(N.id, S.hour, 17)), lo - 0.01)).toFixed(2), lots = Math.floor(Math.min(8, 0.06*(N.cash - 10)/price, (0.75*cap - N[k])/MKT_LOT)); if (lots < 2) continue;
       N.cash -= lots*price; const o = {id:S.nid++, type:'buy', seller:N.id, res:k, qty:lots*MKT_LOT, q0:lots*MKT_LOT, price, exp:S.hour + 72, depth:1}; S.book.push(o); bookCross(o); if (o.qty > 0) nb++; }
-    if (na < 3) for (const N of AIs.slice().sort((a, b) => b[k] - a[k] || a.id - b.id)){ if (na >= 3) break; if (S.book.some(o => o.seller === N.id && o.res === k)) continue;
-      const sur = early ? (N[k] >= 20*RES_K && aiMains(N.id).has(k) ? 15*RES_K : N[k] - AI_LOW[k]) : N[k] - AI_SHORT[k] - 15*Math.max(0, income(N.id).upkeep[k]), q = kFloor(Math.min(early ? 10*RES_K : 30*RES_K, sur/3)); if (q < (early ? 5 : 10)*RES_K) continue;
-      N[k] -= q; const o = {id:S.nid++, type:'sell', seller:N.id, res:k, qty:q, q0:q, price:+Math.max(M.p[k]*(early ? 1.25 + 0.10*mkH(N.id, S.hour, 19) : 1.06 + 0.10*mkH(N.id, S.hour, 19)), bookEdge(N.id, k, true) + 0.01).toFixed(2), exp:S.hour + 72, depth:1}; S.book.push(o); bookCross(o); if (o.qty > 0) na++; } } }
-// a new game (newGame, rules/state.js): the depth floor, so the Market shows offers from the first hour
+    const asks = pre => { for (const N of AIs.slice().sort((a, b) => b[k] - a[k] || a.id - b.id)){ if (na >= 3) break; if (S.book.some(o => o.seller === N.id && o.res === k)) continue;
+      const sur = pre ? (N[k] >= 20*RES_K && aiMains(N.id).has(k) ? 15*RES_K : N[k] - AI_LOW[k]) : N[k] - AI_SHORT[k] - 15*Math.max(0, income(N.id).upkeep[k]), q = kFloor(Math.min(pre ? 10*RES_K : 30*RES_K, sur/3)); if (q < (pre ? 5 : 10)*RES_K) continue;
+      N[k] -= q; const o = {id:S.nid++, type:'sell', seller:N.id, res:k, qty:q, q0:q, price:+Math.max(M.p[k]*(pre ? 1.25 + 0.10*mkH(N.id, S.hour, 19) : 1.06 + 0.10*mkH(N.id, S.hour, 19)), bookEdge(N.id, k, true) + 0.01).toFixed(2), exp:S.hour + 72, depth:1}; S.book.push(o); bookCross(o); if (o.qty > 0) na++; } };
+    if (na < 3) asks(early); if (na < 3 && !early) asks(true); } }   // (after the first week too: a scarce good, iron in the classic world, still shows small premium lots rather than none)
+// a new game (newGame, rules/state.js): the depth floor, so the Market shows offers from the first hour. M.bk marks a market that has its
+// depth floor (every new game: mkt() sets it); a save from before it (restore, rules/state.js) gets one at load (bookMigrate), so its Market is not
+// empty until the next daily step. A save that has it changes nothing at load
 function bookOpen(){ mkt(); depthFloor(true); }
+function bookMigrate(){ const had = S.mkt && S.mkt.bk, M = mkt(); if (had) return; M.bk = 1; depthFloor(false); }
 // the stock below which an AI takes a sell listing: oil about 25 days of fuel for a big consumer, twice the usual line when the listing is cheap
 function aiBookNeed(N, ask){ return (ask.res === 'oil' ? Math.max(AI_NEED.oil, 25*income(N.id).upkeep.oil) : AI_NEED[ask.res] || 70*RES_K)*(ask.price < MKT_BASE[ask.res]*0.85 ? 2 : 1); }
 // nation n takes q units of order-book offer id (buys from a sell offer, sells into a buy offer); returns the amount traded. It takes what it asked for,

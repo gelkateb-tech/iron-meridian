@@ -11,6 +11,9 @@ const fails = [], ok = (c, m, x) => { console.log((c ? 'ok   ' : 'FAIL ') + m + 
     const txt = fs.readFileSync(fp, 'utf8');
     const r0 = await p.evaluate(t => { const d = JSON.parse(t); const had = {hg:!!(d.mkt && d.mkt.hg), hist:d.mkt && d.mkt.hist ? (d.mkt.hist.oil || []).length : 0, book:(d.book || []).length}; window.__im.restore(d); const S = window.__im.S; S.started = true; return {had, hg:!!S.mkt.hg, n:worldHistory('oil').length, day:Math.floor(S.hour/24) + 1}; }, txt);
     ok(!r0.had.hg && (r0.had.hist ? r0.hg && r0.n === r0.had.hist : r0.n === 0), `${f}: the history starts from the ${r0.had.hist} days the save kept`, r0);
+    const sides = await p.evaluate(() => MKT_K.map(k => [(S.book || []).filter(o => o.res === k && o.type !== 'buy' && o.qty > 0).length, (S.book || []).filter(o => o.res === k && o.type === 'buy' && o.qty > 0).length]));
+    // (the depth floor at load: every good has offers; a side can stay short where no computer nation can afford a bid, as in play)
+    ok(sides.every(([a, b]) => a + b >= 2) && sides.filter(([a, b]) => a >= 1 && b >= 1).length >= 4, `${f}: the Market opens with offers (the load posts the depth floor, not the first daily step)`, sides);
     await p.evaluate(() => { document.querySelectorAll('#modal:not([hidden])').forEach(() => {}); }); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     await p.keyboard.press('t'); await p.waitForTimeout(300);
     let open = await p.evaluate(() => window.__im.modalKind()); if (open !== 'market'){ await p.click('[data-act="market-open"]').catch(() => {}); await p.waitForTimeout(300); open = await p.evaluate(() => window.__im.modalKind()); }
