@@ -358,3 +358,14 @@ The Diplomacy layout options (A/B/C) from the same job are superseded by your re
 - **U2.** Unit cards in the Mobilize list are full-width rows, not buttons. → A blue tint and a blue left bar when affordable, not a solid blue block.
 - **U3.** "Build Army Base" in the Mobilize panel was always green. → Now blue when affordable and grey when not, like every other Build button.
 - **U4.** The soldier picture now fits like the others, but because he is tall and narrow he looks a little smaller than the vehicles next to him. Give tall pictures a slightly bigger size cap? → No change.
+
+### ECON-START (points 5-7; branch econ-start 1ad3cd3)
+
+- **E1.** A membership's queue of 2 trains both units at once (doubles a city's ground output). Intended, or should the second wait? → Both at once (as today).
+- **E2.** Until there is a store every public player has no membership. Public build: membership off, "With a membership…" wording shown? → Yes.
+- **E3.** Should computer nations fly their start fighter on patrol and scouting (only 7 of 68 did in 10 days)? → Left idle at peace.
+- **E4.** The start fighter is folded into the capital's counter at play zoom on phones (own counter from city zoom, and in the forces list). → Left to UNITS IN CITIES.
+- **E5.** Island nations reach little on day one with their fighter (New Zealand: Lord Howe and Macquarie). → Acceptable.
+- **E6.** Old saves: an Army Base already being built keeps its 24-hour clock. → Yes.
+- **E7.** Anyone can switch membership on from the browser console or a save edit until payments exist. → Acceptable; the payment system must check membership on its own side.
+- **E8.** Readings used: the day-one infantry research is Ceramic Body Armour; your "20 hours" was 24 h in the game, now exactly 30 min; "an Arms Industry in any city" = one Arms Industry at the unchanged price; Army Base level 1 no longer gets dearer per city (levels 2-5 still rise 40%, counting only cities with level 2+); the computer now builds about twice as many interceptors and 15% fewer infantry (balance passes); the start fighter costs about $6M a day upkeep. → All yes.
