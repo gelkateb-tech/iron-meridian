@@ -287,6 +287,7 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .log .ev.good{border-left-color:var(--ok)} .log .ev.bad{border-left-color:var(--danger)} .log .ev.info{border-left-color:var(--accent)}
 .log time{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); padding-top:1px}
 #toasts{position:absolute; top:10px; left:10px; display:flex; flex-direction:column; gap:6px; width:min(290px, calc(100% - 20px)); pointer-events:none; z-index:4}
+body #toasts.dptop, body #toasts.dptop .toast{pointer-events:none!important}
 body #toasts.dptop{position:fixed!important; top:var(--dpt, 120px)!important; bottom:auto!important; left:10px; z-index:30}   /* (toastShow: Diplomacy open on a phone) */
 .toast{pointer-events:auto; text-align:left; padding:8px 11px; border-radius:4px; border:1px solid var(--line); border-left:4px solid var(--accent); background:linear-gradient(180deg, rgba(67,72,75,.9), rgba(61,66,69,.93)), var(--tex) center / cover, rgba(66,71,74,.95); font-size:12.5px; line-height:1.35; box-shadow:0 8px 20px rgba(0,0,0,.4); animation:tin .25s ease-out}
 .toast.bad{border-left-color:var(--danger)} .toast.good{border-left-color:var(--ok)}
@@ -5157,12 +5158,15 @@ function drawFX(now){
       const kz = Math.min(2, zoomK(view.s*HS0)), cp = f.owner != null && CLPOS.get(f.p + ':' + f.owner), [ax, ay] = cp ? toScreen(cp[0], cp[1]) : f.wx != null ? toScreen(f.wx, f.wy) : [x + (f.dx || 0)*kz, y], tx = ax + (cp ? 22*kz : 0), ty = ay + (cp ? -34 : (f.dy || -30))*kz - k*28; ctx.strokeText(f.text, tx, ty); ctx.fillStyle = f.color || '#ffb08a'; ctx.fillText(f.text, tx, ty); ctx.restore();
     } } }
 let booted = false;
+// Diplomacy open on a phone: the toasts sit below the band, the tabs and the sort bar (never over them) and let taps through; anywhere else they are as before
+function dpToastSync(){ const box = document.getElementById('toasts'); if (!box) return;
+  const sh = modalKind === 'diplo' && !$('modal').hidden && innerWidth <= 820 && document.querySelector('#sheet'), bars = sh ? [...sh.querySelectorAll('.dp-band, .dp-tabs, .dp-sort')] : [];
+  box.classList.toggle('dptop', !!bars.length); if (bars.length) box.style.setProperty('--dpt', Math.round(Math.max(...bars.map(b => b.getBoundingClientRect().bottom)) + 6) + 'px'); }
 function toastShow(text, kind, p){
   const box = document.getElementById('toasts'); if (!box) return;
   const el = document.createElement('button'); el.className = 'toast ' + kind; el.textContent = text; const fl = textFlag(text, 13) + textUnit(text); if (fl) el.insertAdjacentHTML('afterbegin', fl);
   if (p != null){ el.dataset.act = 'goto'; el.dataset.id = p; }
-  const band = modalKind === 'diplo' && !$('modal').hidden && innerWidth <= 820 && document.querySelector('#sheet .dp-band');
-  box.classList.toggle('dptop', !!band); if (band) box.style.setProperty('--dpt', Math.round(band.getBoundingClientRect().bottom + 6) + 'px');
+  dpToastSync();
   box.prepend(el); [...box.children].filter(c => !c.classList.contains('out')).slice(2).forEach(toastOut);
   setTimeout(() => toastOut(el), 4500);
 }
@@ -5540,7 +5544,7 @@ function dpRender(soft){ if (modalKind !== 'diplo' || $('modal').hidden) return;
   if (DV.view === 'chat' && DV.n >= 0) markRead(PLAYER, DV.n);   // (the thread on screen is read)
   if (!soft){ const ae = document.activeElement; if (ae && ae !== document.body && sh.contains(ae) && ae.blur) ae.blur(); }
   const html = diploHTML(); if (soft && same && lastSig.sheet === html) return;
-  setHTML(sh, html); dpRender.key = key; dpAfter(top, atEnd); }
+  setHTML(sh, html); dpRender.key = key; dpAfter(top, atEnd); dpToastSync(); }
 function dpAfter(top = 0, atEnd = true){ const sc = $('sheet').querySelector('.dp-scroll'); if (sc) sc.scrollTop = DV.view === 'chat' && atEnd ? sc.scrollHeight : top;
   const loc = DV.view === 'trade' && DV.T && DV.T.pk && DV.T.loc >= 0 ? DV.T.loc : -1; if (loc >= 0) terrMap(loc); if (hoverProv !== loc){ hoverProv = loc; redraw(); } }
 function dpGo(view, n = DV.n, push = true){ if (push){ DV.back.push({view:DV.view, n:DV.n}); if (DV.back.length > 16) DV.back.shift(); }
@@ -5643,7 +5647,7 @@ function dpNationHTML(n){ const me = PLAYER, N = S.nations[n], w = dpWho(n), P =
 // the stats rows: provinces, morale, victory points, capital, the army size you know of (fog of war: rules/vision.js armyView only), wars (rebels too)
 function dpStatsHTML(n, st, R, I){ const me = PLAYER, K = knownArmy(me, n), W = warList(n), B = st.bloc;
   const sales = ((S.terr && S.terr.log) || []).filter(e => (e.seller === me && e.buyer === n) || (e.seller === n && e.buyer === me)).slice(-5).reverse();
-  const army = !K ? 'Unknown' : `${fmt(K.units)} units${K.cmp ? ` · ${K.cmp} military` : ''}`;
+  const army = !K ? 'Unknown' : K.cmp ? `${fmt(K.units)} units · ${K.cmp} military` : K.all ? `${fmt(K.units)} units` : `${fmt(K.units)} units seen`;
   const wars = [...W.nations.map(m => `<span class="dp-wn">${flagHTML(m, 14)} ${m === me ? 'You' : S.nations[m].name}</span>`), ...(W.rebels ? [`<span class="dp-wn reb">${W.rebels}</span>`] : [])];
   const opin = `<button class="dp-sr dp-opr" data-act="dp-why" aria-expanded="${DV.why}"><span>Opinion of you:</span> <b class="${I.opinion > 0 ? 'pos' : I.opinion < 0 ? 'neg' : ''}">${I.opinion > 0 ? '+' : ''}${I.opinion}</b><i>${DV.why ? 'Hide' : 'Why'} ▾</i></button>
     ${DV.why ? `<ul class="dp-why">${I.parts.length ? I.parts.map(x => `<li><span>${x[0]}</span><b class="${x[1] > 0 ? 'pos' : 'neg'}">${x[1] > 0 ? '+' : ''}${x[1]}</b></li>`).join('') : '<li><span>Neutral</span></li>'}</ul>` : ''}`;
@@ -12275,7 +12279,7 @@ function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || af
   Object.assign(g.style, {left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px', maxHeight:'none'}); const st = sh.scrollTop;
   const bd = document.createElement('div'); bd.className = 'mghost'; if (m.classList.contains('docked')) bd.style.left = m.getBoundingClientRect().left + 'px';
   document.body.append(bd, g); g.scrollTop = st; setTimeout(() => { g.remove(); bd.remove(); }, 240); }
-function closeModal(restore = true){ sheetGhost(); if (modalKind === 'cities') cpReset(); $('modal').hidden = true; CMOD_FROM = ''; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
+function closeModal(restore = true){ sheetGhost(); if (modalKind === 'cities') cpReset(); $('modal').hidden = true; CMOD_FROM = ''; if (modalKind === 'mob' || modalKind === 'cbld'){ $('sheet').innerHTML = ''; lastSig.sheet = ''; } modalKind = ''; dpToastSync(); if (restore && S && !S.over && S.started) S.speed = speedBefore; renderSide(true); }
 // small line icons (own art, 24x24, stroke) for the briefing tips and the first-time tips
 const TIP_ICO = {
   recruit:'<path d="M3 20V10l4-2v12M7 20V6l5-2v16M12 20V9l4 2v9M16 20h5M2 20h20"/><path d="M19 5v5M16.5 7.5h5" />',

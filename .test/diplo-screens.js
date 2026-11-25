@@ -71,7 +71,7 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 900), PHONE = W <=
   // ---- the nation pages ----
   await ev(n => window.__im.dp.nation(n), I.Japan);
   ok('computer page: ABOUT PLAYER, back, close', /about player/i.test(await txt('.rhead h1')) && await has('.rhead [data-act="dp-back"]') && await has('.rhead > .mx'));
-  ok('computer page: the leader, no motto, Computer nation tag', await txt('.dp-pn b') === 'Kenji Tadokoro' && !(await has('.dp-motto')) && await has('.dp-tag'));
+  ok('computer page: the leader, no motto, Computer nation tag', await txt('.dp-pn b') === 'Itsuki Moriwaki' && !(await has('.dp-motto')) && await has('.dp-tag'));
   ok('computer page: only New Trade beside the flag', (await ev(() => [...document.querySelectorAll('#sheet .dp-acts [data-act]')].map(x => x.dataset.act).join(','))) === 'dp-trade');
   ok('computer page: no Add Friend, Send Message, Profile or Mute', !(await has('[data-act="dp-friend"]')) && !(await has('[data-act="dp-chat"]')) && !(await has('[data-act="dp-profile"]')) && !(await has('[data-act="dp-mute"]')));
   ok('computer page: progress towards victory', /\d+%/.test(await txt('.dp-pg')) && /progress towards victory/i.test(await txt('.dp-fb')));
@@ -218,6 +218,12 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 900), PHONE = W <=
   // toasts drop in under the title band while Diplomacy fills a phone's screen (the bottom holds the message box)
   if (PHONE) ok('toasts under the band on a phone', await ev(() => { window.__im.dp.toast('Test toast'); const box = document.getElementById('toasts'), band = document.querySelector('#sheet .dp-band'), t = box.querySelector('.toast');
     const r = t.getBoundingClientRect(), ok = box.classList.contains('dptop') && r.top >= band.getBoundingClientRect().bottom - 1 && r.bottom < innerHeight/2; t.remove(); return ok; }));
+  if (PHONE) { const rr = await ev(() => { const dp = window.__im.dp; dp.open(); dp.DV.tab = 'info'; dp.render(); dp.toast('Test toast A'); dp.toast('Test toast B');
+    const box = document.getElementById('toasts'), ts = [...box.querySelectorAll('.toast')].slice(0, 2), low = Math.max(...['.dp-band', '.dp-tabs', '.dp-sort'].map(q => document.querySelector('#sheet ' + q).getBoundingClientRect().bottom));
+    const pass = ts.every(t => getComputedStyle(t).pointerEvents === 'none') && getComputedStyle(box).pointerEvents === 'none', clear = ts.length === 2 && ts.every(t => t.getBoundingClientRect().height > 0) && ts.every(t => t.getBoundingClientRect().top >= low - 1);
+    ts.forEach(t => t.remove()); return pass && clear ? true : JSON.stringify({pass, clear, n:ts.length, low, tops:ts.map(t => t.getBoundingClientRect().top), cls:box.className}); }); ok('toasts clear of band, tabs and sort bar, taps pass through', rr === true, rr); }
+  ok('known army: units seen only, a comparison only when every force is known', await ev(() => { const K = knownArmy, me = 0, S = window.__im.S, n = S.nations.findIndex(x => x.name === 'Russia'), k = K(me, n);
+    return !k || (k.cmp ? k.all === true : k.all === false); }));
   ok('inventory: openNationPage for other screens (Market seller flags)', await ev(n => { window.__im.dp.nation(n); return window.__im.dp.DV.view === 'nation' && window.__im.dp.DV.n === n; }, I.Spain));
   // entry points that stay: the D key, the bottom bar, buttons elsewhere (diplo-open)
   await p.keyboard.press('Escape'); await p.waitForTimeout(80); await p.keyboard.press('d'); await p.waitForTimeout(120);

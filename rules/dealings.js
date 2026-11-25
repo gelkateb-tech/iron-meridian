@@ -16,11 +16,11 @@
 const LEADERS = {
   'United States':'Douglas Whitcomb', 'Canada':'Graham Thibodeau', 'Brazil':'Helena Monteiro Assis', 'United Kingdom':'Eleanor Ashcombe', 'France':'Laurent Dessaigne',
   'Germany':'Katrin Wendler', 'Russia':'Vadim Korsunov', 'Turkey':'Levent Oralkan', 'Iran':'Kaveh Mobarez', 'Egypt':'Hossam Wahdan', 'South Africa':'Kagiso Ntuli',
-  'India':'Vikram Sabnis', 'China':'Liang Wenhao', 'Japan':'Kenji Tadokoro', 'Australia':'Callum Ashworth', 'Italy':'Lorenzo Cavalieri', 'Spain':'Inés Valcárcel',
-  'Poland':'Konrad Zalewicz', 'Ukraine':'Taras Velychko', 'Romania':'Andrei Văleanu', 'Sweden':'Henrik Lindqvist', 'Norway':'Sigrid Haugland', 'Finland':'Aino Järvelä',
-  'Greece':'Stavros Mavrakis', 'Belarus':'Ales Zhuravsky', 'Saudi Arabia':'Hamoud al-Shamri', 'Iraq':'Ziad Hamdani', 'Syria':'Nabil Sabbagh', 'Yemen':'Tawfiq al-Mikhlafi',
+  'India':'Vikram Sabnis', 'China':'Liang Wenhao', 'Japan':'Itsuki Moriwaki', 'Australia':'Callum Ashworth', 'Italy':'Lorenzo Cavalieri', 'Spain':'Inés Montalbetti',
+  'Poland':'Konrad Zalewicz', 'Ukraine':'Taras Velychko', 'Romania':'Andrei Văleanu', 'Sweden':'Henrik Lindqvist', 'Norway':'Sigrid Vollaneset', 'Finland':'Aino Järvelä',
+  'Greece':'Stavros Mavrakis', 'Belarus':'Ales Zhuravsky', 'Saudi Arabia':'Hamoud al-Shamri', 'Iraq':'Ziad Hamdani', 'Syria':'Rafiq Dabbouri', 'Yemen':'Jalal Samawati',
   'Israel':'Avner Gilboa', 'Algeria':'Samir Ouali', 'Morocco':'Hamza Tazi', 'Libya':'Salem Zawi', 'Nigeria':'Tunde Adeyemi', 'Ethiopia':'Dawit Tesfaye', 'Sudan':'Hatim Elnour',
-  'DR Congo':'Didier Mwamba', 'Angola':'Mateus Kiluange', 'Kenya':'Otieno Wafula', 'Tanzania':'Baraka Mfinanga', 'Mali':'Moussa Tangara', 'Chad':'Abakar Zakaria',
+  'DR Congo':'Didier Mwamba', 'Angola':'Mateus Kiluange', 'Kenya':'Otieno Wafula', 'Tanzania':'Baraka Mfinanga', 'Mali':'Moussa Kébalou', 'Chad':'Abakar Zakaria',
   'Mozambique':'Celso Mabunda', 'Cameroon':'Etienne Ndongo', 'Pakistan':'Farhan Siddiqui', 'Bangladesh':'Tanvir Haque', 'Indonesia':'Adi Santoso', 'South Korea':'Baek Do-hyun',
   'North Korea':'Ryang Gwang-il', 'Vietnam':'Hoàng Minh Khôi', 'Thailand':'Kittipong Sirivat', 'Myanmar':'Zaw Lin Oo', 'Philippines':'Rafael Dimaculangan', 'Malaysia':'Hafiz Rahmat',
   'Kazakhstan':'Daulet Seitkali', 'Uzbekistan':'Bekzod Tursunov', 'Afghanistan':'Farid Mohseni', 'Mongolia':'Temuulen Batsaikhan', 'Mexico':'Rubén Garduño',
@@ -321,10 +321,11 @@ const natStats = n => natStatsAll()[n];
 // what seat me knows of nation n's forces: units it has identified (the fog-of-war rule: rules/vision.js armyView, identified only), and how that
 // compares with its own power; null when it has identified none ("Unknown")
 function knownArmy(me, n){ if (me === n){ let u = 0; for (const a of S.armies) if (a.owner === n) u += count(a); return {units:u, cmp:'', all:true}; }
-  const vis = visibleSet(me); let units = 0, pw = 0, seen = 0;
-  for (const a of S.armies){ if (a.owner !== n || !count(a)) continue; const v = armyView(a, vis); if (!v || v.unk) continue; units += v.n; pw += power(a); seen++; }
+  const vis = visibleSet(me); let units = 0, pw = 0, seen = 0, total = 0;
+  for (const a of S.armies){ if (a.owner !== n || !count(a)) continue; total++; const v = armyView(a, vis); if (!v || v.unk) continue; units += v.n; pw += power(a); seen++; }
   if (!seen) return null;
-  const r = pw/Math.max(1, natPower(me)); return {units, forces:seen, cmp:r < 0.7 ? 'weaker' : r > 1.4 ? 'stronger' : 'similar'}; }
+  // the weaker / similar / stronger call is made only when every one of its forces is known; with some unseen it is just the units seen
+  const all = seen === total, r = pw/Math.max(1, natPower(me)); return {units, forces:seen, all, cmp:all ? (r < 0.7 ? 'weaker' : r > 1.4 ? 'stronger' : 'similar') : ''}; }
 // who nation n is at war with: nations, and rebels (partisans) standing in its land ({nations:[ids], rebels:label or ''})
 function warList(n){ const ids = S.nations.filter(m => m.alive && m.id !== n && relView(n, m.id).st === 'war').map(m => m.id);
   let reb = ''; for (const a of S.armies) if (a.rebel && count(a) && S.owner[a.at] === n){ reb = armyName(a); break; }
