@@ -5501,11 +5501,15 @@ function diploHTML(){ if (!S || !S.nations[PLAYER]) return ''; const n = DV.n, o
   if (DV.view !== 'list' && !ok && !(DV.view === 'profile' && n === PLAYER)){ DV.view = 'list'; DV.back = []; }
   if (DV.view === 'trade' && !DV.T) DV.view = 'nation';
   return DV.view === 'nation' ? (n === PLAYER ? dpProfileHTML(n) : dpNationHTML(n)) : DV.view === 'chat' ? dpChatHTML(n) : DV.view === 'trade' ? dpTradeHTML() : DV.view === 'profile' ? dpProfileHTML(n) : dpListHTML(); }
-function dpRender(soft){ if (modalKind !== 'diplo' || $('modal').hidden) return; const sh = $('sheet'), sc = sh.querySelector('.dp-scroll'), key = DV.view + ':' + DV.n + ':' + DV.tab, top = sc && dpRender.key === key ? sc.scrollTop : 0;
+// soft: the redraw after each game hour / side-panel refresh; it keeps whatever is on screen (scroll, a box being typed in) and does nothing when the
+// page would be the same. A conversation stays at its newest message unless you scrolled up to read older ones
+function dpRender(soft){ if (modalKind !== 'diplo' || $('modal').hidden) return; const sh = $('sheet'), sc = sh.querySelector('.dp-scroll'), key = DV.view + ':' + DV.n + ':' + DV.tab, same = dpRender.key === key, top = sc && same ? sc.scrollTop : 0;
+  const atEnd = !same || !sc || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
   if (soft){ const ae = document.activeElement; if (ae && sh.contains(ae) && /^(TEXTAREA|INPUT|SELECT)$/.test(ae.tagName)) return; }
   if (DV.view === 'chat' && DV.n >= 0) markRead(PLAYER, DV.n);   // (the thread on screen is read)
-  setHTML(sh, diploHTML()); dpRender.key = key; dpAfter(top); }
-function dpAfter(top = 0){ const sc = $('sheet').querySelector('.dp-scroll'); if (sc) sc.scrollTop = DV.view === 'chat' ? sc.scrollHeight : top;
+  const html = diploHTML(); if (soft && same && lastSig.sheet === html) return;
+  setHTML(sh, html); dpRender.key = key; dpAfter(top, atEnd); }
+function dpAfter(top = 0, atEnd = true){ const sc = $('sheet').querySelector('.dp-scroll'); if (sc) sc.scrollTop = DV.view === 'chat' && atEnd ? sc.scrollHeight : top;
   const loc = DV.view === 'trade' && DV.T && DV.T.pk && DV.T.loc >= 0 ? DV.T.loc : -1; if (loc >= 0) terrMap(loc); if (hoverProv !== loc){ hoverProv = loc; redraw(); } }
 function dpGo(view, n = DV.n, push = true){ if (push){ DV.back.push({view:DV.view, n:DV.n}); if (DV.back.length > 16) DV.back.shift(); }
   DV.view = view; DV.n = n; DV.menu = DV.warAsk = DV.why = DV.leaveAsk = false; DV.fresh = -1;
