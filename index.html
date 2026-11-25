@@ -1281,6 +1281,8 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .dacts .btn.war{border-color:rgba(212,42,42,.8); color:#ffb0a8}
 .qb{background:linear-gradient(180deg, #4f666d, #3d535a); box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(0,0,0,.45); color:#fff}
 .qb:hover:not(:disabled){background:linear-gradient(180deg, #5a777f, #46616a); box-shadow:inset 0 0 0 1px var(--cn-teal)}
+.qb.can{background:linear-gradient(180deg, #4ba8e6, #2f86cb 55%, #266ca9); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(0,0,0,.45)}   /* queue button the player can afford: blue; dimmed grey when not */
+.qb.can:hover:not(:disabled){background:linear-gradient(180deg, #5cb5f0, #3a93d6 55%, #2d77b8); box-shadow:inset 0 0 0 1px #c2e6fb}
 .seg2{border-radius:3px; background:var(--cn-box); box-shadow:inset 0 1px 3px rgba(0,0,0,.5), inset 0 0 0 1px rgba(143,163,170,.4)}
 .seg2 .sg{border-radius:2px; color:var(--cn-fg2)}
 .seg2 .sg.on{color:#06232a; background:linear-gradient(180deg, #74e4ef, #2ea4b3); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(0,0,0,.5)}
@@ -10375,7 +10377,7 @@ function prodHTML(){
     const qtxt = q.length ? `${(UNITS[q[0].t] || MISSILES[q[0].t]).name} · ${q[0].h} h${q.length > 1 ? ` · +${q.length - 1} queued` : ''}<div class="bar"><i style="width:${Math.round((1 - q[0].h/(q[0].h0 || 24))*100)}%"></i></div>` : '<span style="color:var(--accent)">Idle</span>';
     // queue buttons: the unit's picture and its price (full name and costs in the tooltip), not cryptic code chips
     const btns = UT.filter(t => !canMobilize(PLAYER, p, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
-      return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="${queueWhy(PLAYER, p) ? queueWhy(PLAYER, p) + '. ' : ''}Queue ${UNITS[t].name}: ${costTxt(uc, ', ')} (shift-click: queue to the limit)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
+      return `<button class="qb${canRecruit(PLAYER, p, t) ? ' can' : ''}" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="${queueWhy(PLAYER, p) ? queueWhy(PLAYER, p) + '. ' : ''}Queue ${UNITS[t].name}: ${costTxt(uc, ', ')} (shift-click: queue to the limit)" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted"><span class="res-${cityMain(p)}" title="Main resource: ${MAIN_NAME[cityMain(p)]}">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${BK.filter(k => S.bld[p][k]).map(k => (k === 'fac' ? 'Base' : k === 'arms' ? 'Industry' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${c.h} h` : '<span class="muted">—</span>'}</td>
