@@ -30,8 +30,9 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 ## Next free slots (in this order)
 
-0. **UI-FIXES** (Sonnet; owner notes 2026-11-25 points 3, 4, 13, verbatim in "Owner notes 2026-11-25"): the infantry picture fitted in its research icon; Build button blue when affordable, grey only when not; Market shows the top 3 sellers and top 3 buyers per material. Starts when UNITS IN CITIES finishes (slot limit 5). Then REBELS (with points 8-11) once the owner OKs the proposals.
+0. **UI-FIXES** (Sonnet; owner notes 2026-11-25 points 3 and 4, verbatim in "Owner notes 2026-11-25"; point 13 moved to MARKET below after the owner's Market message): the infantry picture fitted in its research icon; Build button blue when affordable, grey only when not. Starts at the next free slot (slot limit 5). Then REBELS (with points 8-11) once the owner OKs the proposals.
 0b. **DIPLOMACY** (Opus; owner notes 2026-11-25 point 14 as replaced by the owner's Diplomacy message, verbatim in "Owner notes 2026-11-25, Diplomacy"): rebuild the Diplomacy screen to the owner's reference layout (list with Information / Coalitions / Messages & Trades tabs, sort and search; ABOUT PLAYER page for a real player and for a computer nation; conversation screen; trade builder with money, resources, cities and provinces, treaties; Accept / Decline / Counter; mute). Every action we have today stays (checklist: docs/DIPLOMACY-OPTIONS.md on plans-1125). Built now; works with computer nations today and real players later. Reference screenshots: scratchpad diplo-ref/ (style only, never copied or committed). Starts at the next free slot after UI-FIXES. **Not merged until the owner has seen every screen on a 440 px phone, including a computer nation's page and a real player's page.**
+0c. **MARKET** (Opus: rules and page; owner notes 2026-11-25 point 13 as given in the owner's Market message, verbatim in "Owner notes 2026-11-25, Market"): STOCK MARKET screen to the owner's reference (resource tabs, best 3 offers per side, Create Offer, Order Book with own offers and Cancel, money prices only), keeping our price chart (whole game, tap to expand) and sleek seller/buyer flags (unit-badge style, tap opens that nation's diplomacy page); computer nations post buy and sell offers so the market is never empty (IMP-2, IMP-16 on auto-test/fixes; cherry-pick a8dbc1f, 492a985, fe149c1 rather than redo them). Rules in rules/economy.js (and rules/api.js only if needed); the page's Market panel only. Reference: scratchpad market-ref/ (style only, never copied or committed). Starts after DIPLOMACY. **Not merged until the owner has seen each resource tab and the Order Book on a 440 px phone, before and after.**
 1. **(DONE 2026-11-22, waiting for the owner; see Ready)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
 
 
@@ -149,6 +150,31 @@ KEEP WHAT'S OURS
 - Keep every diplomacy action we already have, just moved into this layout: nothing gets removed.
 
 Show me all screens on a 440 px phone before merging, including a computer nation's page and a real player's page.
+```
+
+## Owner notes 2026-11-25, Market (verbatim; replaces point 13's one line; extra work, cancels nothing)
+
+```
+Point 13, Market rework: reference attached (Conflict of Nations "Stock Market" screenshot). Match its layout, style only, and keep our price chart and seller flags.
+
+LAYOUT
+- Header "STOCK MARKET" with a chart-style banner and the red close button.
+- A row of resource tabs under the header, one per tradable resource, using our resource icons.
+- Each tab shows only the best 3 offers on each side:
+  - BUY section: the 3 cheapest sell offers I can buy from. Each row has the resource icon, the amount in green (+4,000), the unit price with the money icon, and a green Buy button.
+  - SELL section: the 3 highest buy offers I can sell to. Each row has the amount in red (−2,070), the unit price, and a yellow Sell button.
+  - All other offers wait in line. When one of the top 3 is filled or cancelled, the next best moves up.
+- Bottom buttons: Create Offer and Order Book. Order Book shows the full queue for that resource, plus my own open offers with a Cancel button.
+- Prices in money only.
+
+KEEP OURS
+- The price chart: a slim chart at the top of each resource tab showing that resource's price over the whole game. Tap it to expand to full size.
+- Seller and buyer flags on every offer row, so I can see who I'm trading with and avoid nations I'll fight later. Make the flags sleek, in the same style as the unit badges: the real flag with a light fabric sheen, a thin dark edge and a soft shadow, small and neat. Tapping a flag opens that nation's diplomacy page.
+
+ALSO
+- Make sure computer nations actually post buy and sell offers (the playtest found they sit on goods and never sell, IMP-2), so the market is never empty.
+
+Show me each resource tab and the Order Book on a 440 px phone, before and after, before merging.
 ```
 
 ## Ready, waiting for the owner
