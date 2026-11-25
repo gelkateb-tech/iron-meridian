@@ -20,17 +20,19 @@ src = src.replace('function bookDay(){', `function __tot(){ let c = 0; const g =
   for (const o of S.book || []){ if (o.type === 'buy') c += o.qty/MKT_LOT*o.price; else g[o.res] = (g[o.res] || 0) + o.qty; } return {c, g}; }
 function bookDay(){ const a = __tot(); bookDay0(); const b = __tot(); const C = globalThis.__C; C.days++; C.cash = Math.max(C.cash, Math.abs(b.c - a.c)); for (const k in a.g) C.goods = Math.max(C.goods, Math.abs(b.g[k] - a.g[k])); }
 function bookDay0(){`);
-const SRC = "'use strict';\n" + src + '\nreturn {IM, MKT_K, MKT_BASE, stockCap, isBid, mkt, trade, cancelOffer, fillOffer, postOffer, topOffers, fillLimit, worldHistory, histDay, mktFix, bookDay, setRel:typeof setRel === "function" ? setRel : null};';
+const SRC = "'use strict';\n" + src + '\nreturn {IM, MKT_K, MKT_BASE, stockCap, isBid, mkt, trade, cancelOffer, fillOffer, postOffer, topOffers, fillLimit, worldHistory, histDay, bookCross, crosses, mktFix, bookDay, setRel:typeof setRel === "function" ? setRel : null};';
 const fails = [], ok = (c, m, x) => { console.log((c ? 'ok   ' : 'FAIL ') + m + (x !== undefined ? '  ' + JSON.stringify(x) : '')); if (!c) fails.push(m); };
 
 // ---- 1 and 2: a nations-world game with no seat
 globalThis.__C = {days:0, cash:0, goods:0};
 { const R = new Function(SRC)(), api = R.IM.api; api.useScenario('world64'); api.newGame(SEED, 0, []); const S = api.S; S.started = true;
-  const sides = []; for (let h = 0; h < DAYS*24 && !S.over; h++){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); if (S.hour % 24 === 12){ const b = S.book || []; sides.push({d:S.hour/24 | 0, t:Object.fromEntries(R.MKT_K.map(k => [k, [b.filter(o => o.res === k && !R.isBid(o)).length, b.filter(o => o.res === k && R.isBid(o)).length]]))}); } }
+  const sides = [], crossed = []; for (let h = 0; h < DAYS*24 && !S.over; h++){ for (let q = 0; q < api.BATTLE_Q; q++) api.tickQ(); if (S.hour % 24 === 12){ const b = S.book || [];
+    { const bids = b.filter(R.isBid), asks = b.filter(o => !R.isBid(o)); let n = 0; for (const x of bids) for (const y of asks) if (R.crosses(x, y)) n++; if (n) crossed.push([S.hour/24 | 0, n]); } sides.push({d:S.hour/24 | 0, t:Object.fromEntries(R.MKT_K.map(k => [k, [b.filter(o => o.res === k && !R.isBid(o)).length, b.filter(o => o.res === k && R.isBid(o)).length]]))}); } }
   const C = globalThis.__C; ok(C.days >= DAYS - 1 && C.cash < 1e-6 && C.goods < 1e-4, `conservation over ${C.days} daily book steps: money and goods neither made nor lost`, {cash:C.cash, goods:C.goods});
   const noBid = sides.filter(x => R.MKT_K.some(k => !x.t[k][1])).map(x => x.d), noAsk = sides.filter(x => R.MKT_K.some(k => !x.t[k][0])).map(x => x.d);
   ok(!noBid.length, 'every good has buy offers on every day from day 1', noBid);
   ok(noAsk.length <= 2, 'every good has sell offers on (nearly) every day from day 1', noAsk);
+  ok(!crossed.length, 'the book never shows a buy offer above a sell offer the two could trade', crossed.slice(0, 5));
   const AIc = S.nations.filter(N => N.alive).map(N => N.cash); ok(AIc.every(c => c > -1), 'no computer nation goes into debt', Math.min(...AIc));
   const H = R.worldHistory('oil'); ok(H.length >= DAYS - 1 && H[H.length - 1].p === +S.mkt.p.oil.toFixed(2), 'the oil history runs over the whole game to today', {n:H.length, last:H[H.length - 1], p:S.mkt.p.oil});
 }
@@ -64,6 +66,9 @@ globalThis.__C = {days:0, cash:0, goods:0};
   // matching: a computer nation's bid at or above my ask fills it at my price, once a day, up to its storage
   S.book = []; const X = others[3]; X.cash = 800; X.oil = 0; me.oil = 100*K; R.postOffer(0, 'oil', 20*K, 2.0, 'sell'); R.postOffer(X.id, 'oil', 30*K, 2.4, 'buy'); const cm = me.cash, cx = X.cash; R.bookDay();
   ok(!S.book.some(o => o.seller === 0) && X.oil >= 20*K && Math.abs(me.cash - cm - 40) < 1e-6, 'a computer bid above my ask fills it at my price in the daily step', {mine:S.book.filter(o => o.seller === 0).length, xOil:X.oil, paid:me.cash - cm, xCash:cx - X.cash});
+  // a computer nation's sell offer listed between two daily steps fills a buy offer it crosses at once, at its own price
+  S.book = []; const Y = others[1], Z = others[2]; Y.oil = 100*K; Z.cash = 800; Z.oil = 0; R.postOffer(Z.id, 'oil', 20*K, 2.6, 'buy'); R.postOffer(Y.id, 'oil', 15*K, 2.2, 'sell'); const cy = Y.cash, cz = Z.cash;
+  const xq = R.bookCross(S.book.find(o => o.seller === Y.id)); ok(xq === 15*K && Z.oil === 15*K && Math.abs(Y.cash - cy - 33) < 1e-9 && Math.abs(Z.cash - cz - 15*0.4) < 1e-9 && S.book.length === 1 && S.book[0].qty === 5*K, 'a crossing sell offer fills the buy offer at once, at the sell price (the buyer gets the difference back)', {xq, zOil:Z.oil, y:Y.cash - cy, z:Z.cash - cz});
   // the history: one point a day; past 360 points pairs are averaged and the step doubles; an old save starts from the 60 days it kept
   const M = R.mkt(); delete M.hg; M.hist = Object.fromEntries(R.MKT_K.map(k => [k, [3, 3.2, 3.4]])); R.mktFix();
   ok(M.hg && M.hg.oil.join() === '300,320,340' && M.hg.st === 1, 'an old save\'s history starts from the days it kept', M.hg && M.hg.oil);
