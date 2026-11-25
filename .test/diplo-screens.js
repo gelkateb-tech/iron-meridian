@@ -125,6 +125,7 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 900), PHONE = W <=
   const v1 = await tr({cash:200}, {oil:2000}); ok('trade: the footer predicts, the computer accepts', /accept/i.test(v1) && /Agreed/.test(await ev(n => threadView(0, n).items.slice(-1)[0].text, I.Mexico)), v1);
   await tr({cash:100}, {oil:40000}); ok('trade: the computer counters with a reason and an offer card', await ev(n => offersWith(0, n).some(o => !o.mine && o.src === 'deal'), I.Mexico) && /more in value/.test(await ev(n => threadView(0, n).items.filter(e => e.t === 'msg').slice(-1)[0].text, I.Mexico)));
   await tr({cash:10}, {oil:30000}); ok('trade: the computer declines with its reason', /not a serious offer/i.test(await ev(n => threadView(0, n).items.slice(-1)[0].text, I.Mexico)));
+  ok('conversation: scrolled up to older messages, it stays there when the page refreshes', await ev(n => { window.__im.dp.go('chat', n); const h = document.getElementById('dp-hist'); const end = h.scrollTop > 0; h.scrollTop = 0; window.__im.dp.side(); return end && document.getElementById('dp-hist').scrollTop === 0; }, I.Mexico));
   ok('trade: the Messages & Trades row marks the waiting answer', await ev(n => { window.__im.dp.open(); window.__im.dp.DV.tab = 'msg'; window.__im.dp.render(); return !!document.querySelector(`#sheet .dp-th[data-id="${n}"] .dp-ans`); }, I.Mexico));
   // the builder: money, goods, a province (floor, lock, why), treaties both sides sign
   await ev(n => window.__im.dp.trade(n), I.Colombia);
