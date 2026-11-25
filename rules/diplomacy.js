@@ -343,8 +343,8 @@ function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   for (const k of DEAL_K){ const e = 0.01*(isGood(k) ? RES_K : 1); if ((D.give[k] || 0) > N[k] + e) return `you do not have ${k === 'cash' ? '$' + fmt(D.give[k]) + 'M' : resFull(k, D.give[k])}`; if ((D.get[k] || 0) > A[k] + e) return `they do not have ${k === 'cash' ? '$' + fmt(D.get[k]) + 'M' : resFull(k, D.get[k])}`; }
   if (D.give.provs.some(p => S.owner[p] !== me) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
   if (D.give.provs.some(p => isCapital(p)) ) return 'you cannot hand over your capital';
-  if (D.get.provs.length) return `${A.name} never sells territory`;   // land is sold in the Territory tab (rules/territory.js), never by a computer-run nation
-  if (D.give.provs.length) return 'land is sold in the Territory tab, for money';
+  if (D.get.provs.length) return `${A.name} never sells territory`;   // land is traded with New Trade (rules/dealings.js, rules/territory.js), never by a computer-run nation
+  if (D.give.provs.length) return 'land is traded with New Trade in Diplomacy';
   if (D.give.treaty.includes('peace') && !atWar(ai, me)) return 'you are not at war';
   return null; }
 function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
