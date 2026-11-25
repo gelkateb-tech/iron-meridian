@@ -8214,7 +8214,7 @@ function heartHid0(n, q, hexPx, hb, p, T){
   for (let D0 = Rk + h2 + 1, i = 0; i < 24 && D0 - Rk < bc; i++, D0 += 3) for (let j = 0; j < A.length; j++){ const t = A[j]*Math.PI/180, x = Math.cos(t)*D0, y = Math.sin(t)*D0, c0 = D0 - Rk + 4*j; if (c0 >= bc) continue;
     const r = plateRect(x, y, n, 1, q, false), rb = [r.x, r.y, r.x + r.w, r.y + r.h], b = [x - w2, y - h2, x + w2, y + h2];
     if (boxPt(b, 0, 0) < Rk || boxGap(rb, hb) < (Math.min(rb[3], hb[3]) > Math.max(rb[1], hb[1]) ? HEART_ROW : HEART_GAP) || T.some(z => boxGap(rb, z) < 3)) continue;
-    const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; const cost = c0 + 24*g + (g === 1.5 ? 500 : 0); if (cost < bc){ bc = cost; best = [x, y, rb]; } }
+    const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; const cost = c0 + 24*Math.floor(g) + (g === 1.5 ? 12 : 0); if (cost < bc){ bc = cost; best = [x, y, rb]; } }   // (across a border only a little worse: farther round, it would read as another place's)
   if (!best){ const x = 0, y = Rk + h2 + 1, r = plateRect(x, y, n, 1, q, false); best = [x, y, [r.x, r.y, r.x + r.w, r.y + r.h]]; }   // (no such place: just below the ring)
   return best; }
 // the held points' own counters (the badge of the force in the city, just above the ring, and the gap down to the ring), relative to each
