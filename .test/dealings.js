@@ -179,6 +179,39 @@ R.setRel(US, CA, 'peace');
   const c = R.devAnswer(r.o.id, 'counter'); ok(c.ok && R.offersWith(US, CA).some(x => x.id === c.o.id && !x.mine), 'pretend counter');
   R.offerAct(US, 'deal', c.o.id, 'decline'); ok(R.muteSet(US, CA, true), 'a pretend person can be muted'); R.muteSet(US, CA, false); R.devPerson(CA, false); }
 
+// 15b. review fixes: alliance limits and one treaty per deal between people, counters only of your own offers (round from the offer),
+// mute hides offer dispatches, no opinion cost for a computer's refusal, offers made before a war lapse, embargo keys do only what they say
+{ const others = S.nations.filter(N => N.alive && ![US, DE, CA].includes(N.id)).map(N => N.id); for (const N of S.nations) for (const M of S.nations) if (N.id < M.id && R.rel(N.id, M.id).st === 'ally') R.setRel(N.id, M.id, 'peace');
+  R.setRel(US, DE, 'peace'); for (const x of others.slice(0, 3)) R.setRel(US, x, 'ally');
+  let w = R.dealWhy(US, DE, R.dealNorm(deal({}, {}, ['ally']))); ok(/too many allies/.test(w || ''), 'people: 3 allies at most: ' + w);
+  for (const x of others.slice(1, 3)) R.setRel(US, x, 'peace'); R.setRel(DE, others[3], 'ally'); R.setRel(DE, others[4], 'ally');
+  w = R.dealWhy(US, DE, R.dealNorm(deal({}, {}, ['ally']))); ok(/4 members/.test(w || ''), 'people: a coalition of 4 at most (2 + 3): ' + w);
+  ok(!R.dealPropose(US, DE, deal({}, {}, ['ally'])).ok, 'and the offer is refused');
+  R.setRel(US, others[0], 'peace'); R.setRel(DE, others[3], 'peace'); R.setRel(DE, others[4], 'peace');
+  w = R.dealWhy(US, DE, R.dealNorm(deal({}, {}, ['ally', 'nap']))); ok(/one treaty per deal/.test(w || ''), 'one treaty per deal: ' + w);
+  // counters: only of an offer made to you, by that nation; the round follows the offer, whatever the caller says
+  R.devPerson(CA, true); R.setRel(US, CA, 'peace'); const o1 = R.dealPropose(US, CA, deal({cash:10})).o, n0 = S.deals.length;
+  const bad = R.dealPropose(DE, US, deal({cash:5}), {counterOf:{src:'deal', id:o1.id}}); ok(!bad.ok && S.deals.some(x => x.id === o1.id) && S.deals.length === n0, 'a third side cannot close an offer by countering it: ' + JSON.stringify(bad));
+  const bad2 = R.dealPropose(US, DE, deal({cash:5}), {counterOf:{src:'deal', id:o1.id}}); ok(!bad2.ok && S.deals.some(x => x.id === o1.id), 'nor can its own maker');
+  const t0 = R.dealPropose(DE, US, deal({cash:5})).o, c1 = R.dealPropose(US, DE, deal({cash:6}), {round:1, counterOf:{src:'deal', id:t0.id}});
+  ok(c1.ok && c1.o.n === t0.n + 1, 'the round comes from the countered offer: ' + (c1.o && c1.o.n)); R.offerAct(DE, 'deal', c1.o.id, 'decline'); R.offerAct(US, 'deal', o1.id, 'withdraw'); R.devPerson(CA, false);
+  // mute: the offer waits in the thread, no dispatch and no event
+  const ev = []; R.IM.on('deal', (n, o) => ev.push(o.id)); R.muteSet(US, DE, true); const l0 = (S.log || []).length;
+  const m = R.dealPropose(DE, US, deal({cash:5})); ok(m.ok && !ev.includes(m.o.id) && (S.log || []).length === l0, 'muted: no dispatch or event for the offer');
+  ok(!R.threads(US).find(t => t.n === DE).answer, 'muted: no Answer mark'); R.muteSet(US, DE, false); R.offerAct(DE, 'deal', m.o.id, 'withdraw');
+  // a computer nation's refusal costs no opinion; an impossible deal is refused before it is asked, also at no cost
+  R.setRel(US, CA, 'peace'); const op0 = R.opinion(CA, US), L0 = R.threadView(US, CA).items.length;
+  ok(!R.dealPropose(US, CA, deal({cash:-5})).ok && !R.dealPropose(US, CA, deal({oil:1e12})).ok && R.threadView(US, CA).items.length === L0, 'impossible deals refused, no card');
+  const dl = R.dealPropose(US, CA, deal({}, {cash:Math.floor(S.nations[CA].cash)})); ok(dl.act === 'decline' && Math.abs(R.opinion(CA, US) - op0) < 1e-9, 'declined at no cost: ' + dl.why);
+  // offers made in peace lapse when a war starts; offers made during a war stand
+  R.setRel(US, DE, 'peace'); const pz = R.dealPropose(US, DE, deal({cash:5})).o; R.setRel(US, DE, 'war', null, US);
+  ok(!R.offerAct(DE, 'deal', pz.id, 'accept').ok, 'an offer from before the war cannot be accepted');
+  const wz = R.dealPropose(US, DE, deal({cash:5})).o; R.dealHour(); ok(!S.deals.some(x => x.id === pz.id) && S.deals.some(x => x.id === wz.id), 'the old one lapses, the war-time one stands');
+  ok(R.threadView(US, DE).items.some(e => e.id === pz.id && e.st === 'void'), 'its card says no longer possible'); R.offerAct(US, 'deal', wz.id, 'withdraw'); R.setRel(US, DE, 'peace');
+  // embargo: a double tap on Embargo keeps it, Lift only lifts
+  R.relAct(US, CA, 'embargo'); R.relAct(US, CA, 'embargo'); ok(R.embargoed(US, CA), 'Embargo twice: still on');
+  R.relAct(US, CA, 'embargo-lift'); ok(!R.embargoed(US, CA) && !R.relAct(US, CA, 'embargo-lift').ok && !R.embargoed(US, CA), 'Lift twice: still off'); }
+
 // 16. old saves: none of the new state; the readers and actions work, the new fields appear only when used
 { const o = JSON.parse(api.saveJSON()); delete o.ppl; delete o.deals; delete o.devPeople; delete o.mute; delete o.friends; if (o.desks) for (const k in o.desks){ delete o.desks[k].mute; delete o.desks[k].friends; }
   if (o.chat) for (const k in o.chat) o.chat[k] = o.chat[k].filter(e => !e.t);   // (old entries: messages only)

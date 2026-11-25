@@ -94,9 +94,10 @@ function terrOffer(from, to, p, price, round = 1, lastAi = null){ price = Math.r
   const o = {id:S.nid++, p, seller, buyer, from, to, price, value:provValue(p), n:round, h:S.hour, exp:S.hour + TERR.offerH}; if (lastAi != null) o.lastAi = lastAi;
   if (!isSeat(to)) return terrAiAnswer(o);
   T.offers.push(o); offerNote(o, 'terr', m => `${m === seller ? 'You sell' : 'You buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M).`);
-  tell(to, `${S.nations[from].name} offers to ${from === seller ? 'sell you' : 'buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M). Answer in Diplomacy (D).`, 'info', p);
+  const hush = isMuted(to, from);   // (a seat that muted the sender: the offer waits in the thread, no dispatch)
+  if (!hush) tell(to, `${S.nations[from].name} offers to ${from === seller ? 'sell you' : 'buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M). Answer in Diplomacy (D).`, 'info', p);
   if (isSeat(from)) tell(from, `Offer sent to ${S.nations[to].name}: ${provName(p)} for $${fmt(price)}M.`, 'info', p);
-  IM.emit('terr', o.to, o); return {ok:true, o}; }
+  if (!hush) IM.emit('terr', o.to, o); return {ok:true, o}; }
 // a computer buyer's answer to offer o (it is o.to; it never sells): yes at or under what it would pay, else a counter-offer at that, else no
 function terrAiAnswer(o){ const ai = o.to, me = o.from, want = terrWant(ai, o.p, o.seller), A = S.nations[ai];
   if (o.price <= want){ terrSell(o.seller, o.buyer, o.p, o.price); return {ok:true, done:true, why:'accepted'}; }
@@ -161,7 +162,7 @@ function terrTransfer(seller, buyer, p, price, value = provValue(p)){ const A = 
 // every hour: offers that ran out, or whose province changed hands, lapse
 function terrHour(){ const T = S.terr; if (!T || !T.offers.length) return;
   T.offers = T.offers.filter(o => { const ok = o.exp > S.hour && S.owner[o.p] === o.seller && S.nations[o.from].alive && S.nations[o.to].alive && !atWar(o.from, o.to);
-    if (!ok && o.exp <= S.hour) tell(o.from, `Your offer to ${S.nations[o.to].name} for ${provName(o.p)} expired.`, 'info', o.p); return ok; }); }
+    if (!ok){ offerSt(o.from, o.to, 'terr', o.id, o.exp <= S.hour ? 'expired' : 'void'); if (o.exp <= S.hour) tell(o.from, `Your offer to ${S.nations[o.to].name} for ${provName(o.p)} expired.`, 'info', o.p); } return ok; }); }
 // every day: a computer-run nation may bid for a person's captured land it wants (its own lost land, or land on its border)
 function terrDay(){ if (S.terr && S.terr.no) for (const k in S.terr.no) if (S.terr.no[k] <= S.hour) delete S.terr.no[k];
   for (const me of seats()){ if (!S.nations[me].alive) continue;

@@ -41,7 +41,7 @@ const isPerson = n => !!personOf(n);
 function seatInfo(n, info){ if (!isSeat(n) || !info) return false; const P = (S.ppl || (S.ppl = {}))[n] || (S.ppl[n] = {pid:'local:' + n, since:S.hour});
   if (info.name != null){ const v = cleanText(info.name, PPL_NAME); if (!v) return false; P.name = v; }
   if (info.motto != null) P.motto = cleanText(info.motto, PPL_MOTTO);
-  if (info.pid != null){ const v = cleanText(info.pid, 64); if (v) P.pid = v; }
+  if (info.pid != null && (!P.pid || /^local:/.test(P.pid))){ const v = cleanText(info.pid, 64); if (v) P.pid = v; }
   return true; }
 // a seat's desk as it stands, written nowhere (desk() makes a missing desk of a second seat)
 const deskView = n => { for (const N of S.nations) if (!N.ai){ if (N.id === n) return S; break; } return (S.desks && S.desks[n]) || {}; };
@@ -108,7 +108,13 @@ function treatyWhy(a, b, k){ const st = relView(a, b).st;
   if (st === 'war') return 'you are at war: agree a ceasefire first';
   if (k === 'nap') return st === 'peace' || st === 'truce' ? null : st === 'nap' ? 'a non-aggression pact is already in force' : st === 'ally' ? 'you are allies' : 'right of way is in force';
   if (k === 'pass') return st === 'peace' || st === 'nap' ? null : st === 'pass' ? 'right of way is already in force' : st === 'ally' ? 'allies already have right of way' : 'not during a ceasefire';
-  if (k === 'ally') return st === 'ally' ? 'you are already allies' : null;
+  if (k === 'ally'){ if (st === 'ally') return 'you are already allies';
+    // the alliance limits of acceptOffer (rules/diplomacy.js), for people too: 3 allies each at most, and a coalition of 4 members at most
+    const allies = n => S.nations.reduce((c, m) => c + (m.alive && m.id !== n && relView(n, m.id).st === 'ally' ? 1 : 0), 0);
+    if (allies(a) >= 3 || allies(b) >= 3) return `too many allies: ${allies(a) >= 3 ? S.nations[a].name : S.nations[b].name} has 3`;
+    const BL = blocsView(), Ba = BL.find(B => B.members.includes(a)), Bb = BL.find(B => B.members.includes(b));
+    if (!(Ba && Ba === Bb) && (Ba ? Ba.members.length : 1) + (Bb ? Bb.members.length : 1) > 4) return 'a coalition has 4 members at most';
+    return null; }
   return null; }
 // the lowest a side may receive for the provinces it gives (DIP-5 floors: 25% of the value, 10% between coalition partners after 3 days)
 const floorFor = (seller, buyer, provs) => provs.reduce((s0, p) => s0 + terrMin(seller, buyer, p), 0);
@@ -121,7 +127,7 @@ function dealWhy(a, b, D){ const A = S.nations[a], B = S.nations[b];
   if (dealEmpty(D)) return 'the deal is empty';
   const all = [...D.give.provs, ...D.get.provs]; if (new Set(all).size !== all.length) return 'a province is listed twice';
   for (const k of DEAL_K){ const e = 0.01*(isGood(k) ? RES_K : 1); if ((D.give[k] || 0) > A[k] + e) return `${isSeat(a) ? 'you do' : A.name + ' does'} not have ${resFull(k, D.give[k])}`; if ((D.get[k] || 0) > B[k] + e) return `${B.name} does not have ${resFull(k, D.get[k])}`; }
-  if (D.give.treaty.includes('peace') && D.give.treaty.length > 1) return 'a ceasefire comes first: other treaties can follow it';
+  if (D.give.treaty.length > 1) return D.give.treaty.includes('peace') ? 'a ceasefire comes first: other treaties can follow it' : 'one treaty per deal: sign the next one in another deal';
   for (const k of D.give.treaty){ const w = treatyWhy(a, b, k); if (w) return `${TREATY_NAME[k] || k}: ${w}`; }
   if (D.get.provs.length && !isSeat(b)) return `${B.name} never sells land`;
   if (D.give.provs.length && !isSeat(a)) return `${A.name} never sells land`;
@@ -202,13 +208,22 @@ function dealApply(a, b, D0){ const D = dealNorm(D0), why = dealWhy(a, b, D); if
   for (const p of [...D.give.provs, ...D.get.provs]) checkNation(S.owner[p] === a ? b : a, S.owner[p]);
   checkEnd(); return true; }
 const dealsS = () => S.deals || (S.deals = []);
+// the offer seat me counters with a new deal to n: it must be open and made to me by n. {o, round} (round: the countered offer's + 1), or null
+function counterBase(me, n, co){ if (!co) return {o:null, round:1};
+  if (co.src === 'deal'){ const o = (S.deals || []).find(x => x.id === co.id); return o && o.to === me && o.from === n ? {o, round:(o.n || 1) + 1} : null; }
+  if (co.src === 'treaty' || co.src === 'trade'){ const o = (deskView(me).offers || []).find(x => x.id === co.id); return o && o.from === n ? {o, round:2} : null; }
+  if (co.src === 'terr'){ const o = S.terr && S.terr.offers.find(x => x.id === co.id); return o && o.to === me && o.from === n ? {o, round:(o.n || 1) + 1} : null; }
+  return null; }
+// an offer made before the two went to war lapses (a ceasefire offer aside): offers made during the war stand
+const dealStale = o => atWar(o.from, o.to) && !o.war0 && !(o.D && o.D.give.treaty.includes('peace'));
 const DEAL_H = 48;   // an offer to a person stands 2 days
-// seat me proposes deal D to nation n. opts: {round, counterOf:{src, id}} (a counter-offer replaces the offer it answers).
-// A computer nation answers at once; a person (or a territory sale between two seats) gets the offer. Returns {ok, act, why, o}
-function dealPropose(me, n, D0, opts = {}){ const D = dealNorm(D0), round = Math.max(1, opts.round | 0 || 1), N = S.nations[n];
+// seat me proposes deal D to nation n. opts: {counterOf:{src, id}} (a counter-offer replaces the offer it answers, which must be n's offer to me;
+// its round is that offer's + 1). A computer nation answers at once; a person (or a territory sale between two seats) gets the offer. Returns {ok, act, why, o}
+function dealPropose(me, n, D0, opts = {}){ const D = dealNorm(D0), N = S.nations[n];
   if (!isSeat(me)) return {ok:false, why:'not a seat'};
   if (!N || !N.alive || n === me) return {ok:false, why:'no other side'};
-  const co = opts.counterOf, closeOld = () => { if (!co) return; offerClose(me, co.src, co.id, 'countered'); };
+  const co = opts.counterOf, cb = counterBase(me, n, co); if (!cb) return {ok:false, why:'that offer is not yours to counter'};
+  const round = cb.round, closeOld = () => { if (!co) return; offerClose(me, co.src, co.id, 'countered'); };
   // one province against money only: the territory sale (its offer, counters and log)
   if (dealIsLand(D) && (isSeat(n) || !isPerson(n))){ const sell = D.give.provs.length === 1, p = sell ? D.give.provs[0] : D.get.provs[0], price = sell ? D.get.cash : D.give.cash;
     if (co && co.src === 'terr'){ const o0 = S.terr && S.terr.offers.find(x => x.id === co.id), r = terrAnswer(me, co.id, 'counter', price); if (o0 && !S.terr.offers.includes(o0)) offerSt(o0.from, o0.to, 'terr', o0.id, 'countered');
@@ -217,23 +232,24 @@ function dealPropose(me, n, D0, opts = {}){ const D = dealNorm(D0), round = Math
     closeOld();
     if (!isSeat(n)){ say(me, n, me, `Offer: ${sell ? 'we sell you' : 'we buy'} ${provName(p)} for $${fmt(price)}M.`); say(me, n, n, r.done ? 'Agreed. The land is ours.' : r.countered ? `Too much. We offer $${fmt(r.price)}M instead.` : `${r.why}.`); markRead(me, n); }
     return {ok:true, act:r.done ? 'accept' : r.countered ? 'counter' : r.declined ? 'decline' : 'sent', why:r.why || '', o:r.o}; }
-  const why = isPerson(n) ? dealWhy(me, n, D) : null; if (why){ refuse(me, `Not possible: ${why}.`); return {ok:false, why}; }
+  const why = isPerson(n) ? dealWhy(me, n, D) : (D1 => (D1.get.provs = [], dealEmpty(D1) ? `${N.name} never sells land` : dealWhy(me, n, D1)))(dealNorm(D));
+  if (why){ refuse(me, `Not possible: ${why}.`); return {ok:false, why}; }
   closeOld();
-  if (isPerson(n)){ const o = {id:S.nid++, from:me, to:n, D, n:round, h:S.hour, exp:S.hour + DEAL_H}; if (co) o.counterOf = co.id;
+  if (isPerson(n)){ const o = {id:S.nid++, from:me, to:n, D, n:round, h:S.hour, exp:S.hour + DEAL_H}; if (co) o.counterOf = co.id; if (atWar(me, n)) o.war0 = true;
     dealsS().push(o); offerNote(o, 'deal', dealNoteText(o, 'Proposal'));
-    if (isSeat(n)) tell(n, `${personOf(me).name} (${S.nations[me].name}) sent you a trade offer. Answer in Diplomacy (D).`, 'info', null);
-    IM.emit('deal', n, o); return {ok:true, act:'sent', o}; }
+    if (!isMuted(n, me)){ if (isSeat(n)) tell(n, `${personOf(me).name} (${S.nations[me].name}) sent you a trade offer. Answer in Diplomacy (D).`, 'info', null); IM.emit('deal', n, o); }   // (muted: kept in the thread, no dispatch)
+    return {ok:true, act:'sent', o}; }
   // a computer nation: its answer now
   const ans = dealAnswer(me, n, D, round), mine = {id:S.nid++, from:me, to:n, exp:S.hour, n:round};
   noteAdd(me, n, {t:'offer', src:'deal', id:mine.id, from:me, to:n, exp:S.hour, text:`Proposal: ${dealSay(D, 'they')}.`, d:D, st:ans.act === 'accept' ? 'accepted' : ans.act === 'counter' ? 'countered' : 'declined'}, false);
   if (ans.act === 'accept'){ if (!dealApply(me, n, D)) return {ok:false, why:'the deal failed'}; say(me, n, n, `${ans.why}.`); markRead(me, n); return {ok:true, act:'accept', why:ans.why}; }
-  if (ans.act === 'counter'){ const o = {id:S.nid++, from:n, to:me, D:dealFlip(ans.D), n:round + 1, h:S.hour, exp:S.hour + DEAL_H, counterOf:mine.id};
+  if (ans.act === 'counter'){ const o = {id:S.nid++, from:n, to:me, D:dealFlip(ans.D), n:round + 1, h:S.hour, exp:S.hour + DEAL_H, counterOf:mine.id}; if (atWar(me, n)) o.war0 = true;
     dealsS().push(o); say(me, n, n, `${ans.why}.`); offerNote(o, 'deal', dealNoteText(o, 'Counter-offer')); markRead(me, n); return {ok:true, act:'counter', why:ans.why, o}; }
-  addMem(n, me, -2); say(me, n, n, `${ans.why}.`); markRead(me, n); return {ok:true, act:'decline', why:ans.why, want:ans.want}; }
+  say(me, n, n, `${ans.why}.`); markRead(me, n); return {ok:true, act:'decline', why:ans.why, want:ans.want}; }
 // close an offer without carrying it out (st: the card's status)
-function offerClose(me, src, id, st){ if (src === 'deal'){ const o = (S.deals || []).find(x => x.id === id); if (o){ S.deals = S.deals.filter(x => x !== o); offerSt(o.from, o.to, 'deal', id, st); } return; }
+function offerClose(me, src, id, st){ if (src === 'deal'){ const o = (S.deals || []).find(x => x.id === id && (x.from === me || x.to === me)); if (o){ S.deals = S.deals.filter(x => x !== o); offerSt(o.from, o.to, 'deal', id, st); } return; }
   if (src === 'treaty' || src === 'trade'){ const D = desk(me), o = (D.offers || []).find(x => x.id === id); if (o){ D.offers = D.offers.filter(x => x !== o); offerSt(me, o.from, src, id, st); } return; }
-  if (src === 'terr'){ const T = S.terr, o = T && T.offers.find(x => x.id === id); if (o){ T.offers = T.offers.filter(x => x !== o); offerSt(o.from, o.to, 'terr', id, st); } } }
+  if (src === 'terr'){ const T = S.terr, o = T && T.offers.find(x => x.id === id && (x.from === me || x.to === me)); if (o){ T.offers = T.offers.filter(x => x !== o); offerSt(o.from, o.to, 'terr', id, st); } } }
 // seat me answers an offer: act 'accept', 'decline' or 'withdraw' (its own). src as offerNote. A counter-offer is sent with dealPropose
 // (opts.counterOf), or for a territory offer with terrAnswer. Returns {ok, why}
 function offerAct(me, src, id, act){ if (!isSeat(me)) return {ok:false, why:'not a seat'};
@@ -245,7 +261,7 @@ function offerAct(me, src, id, act){ if (!isSeat(me)) return {ok:false, why:'not
     D.offers = D.offers.filter(x => x !== o); markRead(me, o.from);
     if (act === 'accept'){ if (o.kind === 'trade'){ const why = dealOK(me, o.from, o.deal); if (why){ offerSt(me, o.from, src, id, 'void'); refuse(me, `That trade no longer works: ${why}.`); return {ok:false, why}; }
         applyTrade(me, o.from, o.deal); tell(me, `Trade with ${S.nations[o.from].name} completed: ${dealSay(o.deal, 'they')}.`, 'good', null); }
-      else { const war = atWar(o.from, me); if ((o.kind === 'peace') !== war){ offerSt(me, o.from, src, id, 'void'); tell(me, 'That offer no longer applies.', 'info', null); return {ok:false, why:'that offer no longer applies'}; } applyDeal(o.from, me, o.kind); }
+      else { const w = treatyWhy(o.from, me, o.kind); if (w){ offerSt(me, o.from, src, id, 'void'); tell(me, `That offer no longer applies: ${w}.`, 'info', null); return {ok:false, why:'that offer no longer applies'}; } applyDeal(o.from, me, o.kind); }
       offerSt(me, o.from, src, id, 'accepted'); return {ok:true}; }
     addMem(o.from, me, -5); offerSt(me, o.from, src, id, 'declined'); return {ok:true}; }
   if (src === 'deal'){ const o = (S.deals || []).find(x => x.id === id); if (!o) return {ok:false, why:'the offer is gone'};
@@ -253,19 +269,19 @@ function offerAct(me, src, id, act){ if (!isSeat(me)) return {ok:false, why:'not
     if (o.to !== me) return {ok:false, why:'not your offer to answer'};
     markRead(me, o.from);
     if (act === 'decline'){ offerClose(me, 'deal', id, 'declined'); if (!isSeat(o.from)) addMem(o.from, me, -2); else tell(o.from, `${S.nations[me].name} declined your trade offer.`, 'info', null); return {ok:true}; }
-    if (act === 'accept'){ const why = dealWhy(o.from, me, o.D) || (!isSeat(o.from) && !isPerson(o.from) && dealValue(me, o.from, dealFlip(o.D)).v < DEAL_OK ? 'their terms have changed' : null);
+    if (act === 'accept'){ const why = (dealStale(o) ? 'you are now at war' : null) || dealWhy(o.from, me, o.D) || (!isSeat(o.from) && !isPerson(o.from) && dealValue(me, o.from, dealFlip(o.D)).v < DEAL_OK ? 'their terms have changed' : null);
       if (why){ offerClose(me, 'deal', id, 'void'); refuse(me, `That offer no longer works: ${why}.`); return {ok:false, why}; }
       S.deals = S.deals.filter(x => x !== o); dealApply(o.from, me, o.D); offerSt(o.from, me, 'deal', id, 'accepted'); return {ok:true}; }
     return {ok:false, why:'unknown answer'}; }
   return {ok:false, why:'unknown offer'}; }
-// every hour (rules/diplomacy.js diploHour): offers to people that ran out, or whose sides fell, lapse
+// every hour (rules/diplomacy.js diploHour): offers to people that ran out, whose sides fell, or made before the two went to war, lapse
 function dealHour(){ const L = S.deals; if (!L || !L.length) return;
-  S.deals = L.filter(o => { const ok = o.exp > S.hour && S.nations[o.from].alive && S.nations[o.to].alive; if (!ok){ offerSt(o.from, o.to, 'deal', o.id, 'expired'); if (isSeat(o.from) && o.exp <= S.hour) tell(o.from, `Your trade offer to ${S.nations[o.to].name} expired.`, 'info', null); } return ok; }); }
+  S.deals = L.filter(o => { const live = o.exp > S.hour && S.nations[o.from].alive && S.nations[o.to].alive, ok = live && !dealStale(o); if (!ok){ offerSt(o.from, o.to, 'deal', o.id, live ? 'void' : 'expired'); if (isSeat(o.from) && o.exp <= S.hour) tell(o.from, `Your trade offer to ${S.nations[o.to].name} expired.`, 'info', null); } return ok; }); }
 
 /* ---------------- Moved from the page: the actions it used to carry out itself (same rules) ---------------- */
 // $50M of aid to an ally or coalition partner: +5 opinion (ECO-13: only inside an alliance or coalition). The money is spent, as before
 function giftCash(me, n){ const M0 = S.nations[me]; if (!M0 || M0.cash < 50) return {ok:false, why:'needs $50M'};
-  if (!(relView(me, n).st === 'ally' || sameBlocView(me, n))) return {ok:false, why:'only for allies and coalition partners'};
+  if (!(relView(me, n).st === 'ally' || sameBloc(me, n))) return {ok:false, why:'only for allies and coalition partners'};
   M0.cash -= 50; addMem(n, me, 5); tell(me, `You sent $50M in aid to ${S.nations[n].name}.`, '', null); return {ok:true}; }
 // peace for tribute (the price tribute(me, m) asks): a ceasefire with the land terms when m takes it
 function payTribute(me, m){ const tr = tribute(me, m), M0 = S.nations[me]; if (!atWar(me, m)) return {ok:false, why:'you are not at war'};
@@ -360,8 +376,8 @@ function relAct(me, n, k, arg){ if (!isSeat(me) || me === n || !S.nations[n] || 
   if (k === 'tribute') return payTribute(me, n);
   if (k === 'route-open'){ const r = tradeOpen(me, n); if (r !== true){ refuse(me, `Not possible: ${r}.`); return {ok:false, why:r}; } return {ok:true}; }
   if (k === 'route-close'){ const R = S.trade && S.trade.routes.find(x => x.key === trKey(me, n)); if (!R) return {ok:false, why:'no route'}; tradeClose(me, R.id); return {ok:true}; }
-  if (k === 'embargo' || k === 'embargo-lift') return embargoAct(me, n, false);
-  if (k === 'embargo-join') return embargoAct(me, n, true);
+  if (k === 'embargo' || k === 'embargo-join' || k === 'embargo-lift'){ const on = !!(S.mkt && S.mkt.emb && S.mkt.emb[me + '>' + n]);   // (each key does only what it says: a double tap changes nothing)
+    if ((k === 'embargo-lift') !== on) return {ok:false, why:on ? 'your embargo is already in force' : 'you have no embargo on them'}; return embargoAct(me, n, k === 'embargo-join'); }
   if (k === 'aid') return giftCash(me, n);
   if (k === 'give') return sendGift(me, n, arg) ? {ok:true} : {ok:false, why:'choose something you have to send'};
   if (k === 'war'){ const ok = declareWar(me, n); return ok ? {ok:true} : {ok:false, why:relView(me, n).st === 'truce' ? 'a ceasefire is in force' : 'not possible now'}; }
@@ -423,10 +439,10 @@ function devWrite(n, me){ const T = ['Hello neighbour. Shall we keep this border
 // the pretend person n offers seat me a trade: two lots of the good it holds most of, for money at world price
 function devOffer(n, me){ const N = S.nations[n], P = mktP(), k = MKT_K.slice().sort((x, y) => N[y] - N[x] || (x < y ? -1 : 1))[0], q = Math.min(2*RES_K, kFloor(N[k]));
   const D = {give:emptySide(), get:emptySide()}; if (q >= RES_K){ D.give[k] = q; D.get.cash = Math.max(10, Math.round(lotCash(q, P[k]))); } else D.give.cash = 20;
-  const o = {id:S.nid++, from:n, to:me, D:dealNorm(D), n:1, h:S.hour, exp:S.hour + DEAL_H}; dealsS().push(o); offerNote(o, 'deal', dealNoteText(o, 'Proposal')); return o; }
+  const o = {id:S.nid++, from:n, to:me, D:dealNorm(D), n:1, h:S.hour, exp:S.hour + DEAL_H}; if (atWar(n, me)) o.war0 = true; dealsS().push(o); offerNote(o, 'deal', dealNoteText(o, 'Proposal')); return o; }
 // the pretend person answers seat me's open offer id: 'accept', 'decline' or 'counter' (it asks $10M more, or one lot less of its goods)
 function devAnswer(id, act){ const o = (S.deals || []).find(x => x.id === id); if (!o || isSeat(o.to)) return {ok:false, why:'no offer to a pretend person'}; const n = o.to, me = o.from;
-  if (act === 'accept'){ const w = dealWhy(me, n, o.D); if (w){ offerClose(me, 'deal', id, 'void'); return {ok:false, why:w}; } S.deals = S.deals.filter(x => x !== o); dealApply(me, n, o.D); offerSt(me, n, 'deal', id, 'accepted'); say(me, n, n, 'Deal.'); return {ok:true}; }
+  if (act === 'accept'){ const w = (dealStale(o) ? 'you are now at war' : null) || dealWhy(me, n, o.D); if (w){ offerClose(me, 'deal', id, 'void'); return {ok:false, why:w}; } S.deals = S.deals.filter(x => x !== o); dealApply(me, n, o.D); offerSt(me, n, 'deal', id, 'accepted'); say(me, n, n, 'Deal.'); return {ok:true}; }
   if (act === 'decline'){ offerClose(me, 'deal', id, 'declined'); say(me, n, n, 'No thanks.'); return {ok:true}; }
   const D = dealNorm(o.D); if (S.nations[me].cash >= D.give.cash + 10) D.give.cash += 10; else { const k = DEAL_K.find(x => x !== 'cash' && D.get[x] >= RES_K); if (k) D.get[k] -= RES_K; else D.give.cash = Math.floor(S.nations[me].cash); }
   offerClose(me, 'deal', id, 'countered'); const o2 = {id:S.nid++, from:n, to:me, D:dealFlip(D), n:o.n + 1, h:S.hour, exp:S.hour + DEAL_H, counterOf:id}; dealsS().push(o2);
