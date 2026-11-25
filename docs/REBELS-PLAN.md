@@ -1,149 +1,683 @@
-# Rebels: the plan (owner rules 18 and 19)
+# Occupation, morale, annexing and rebels: the plan (owner points 8-11, 2026-11-25)
 
-This is a plan only. Nothing in the game has changed yet. Every number below is a proposal. The questions at the end each have a suggested answer.
+This is a plan only. Nothing in the game has changed yet. It replaces the earlier version of this file (owner rules 18 and 19): today's
+**unrest**, the earlier plan's **daily per-unit changes**, **integration** and **Pacify** are gone, as the owner asked. What stays from the
+earlier plan is listed in section 4.6. The owner's numbers are used exactly as given. Where the owner asked for a proposal, or where his words
+can be read two ways, the options are set out with a recommendation in bold and worked numbers. The questions at the end each have a
+suggested answer.
 
-## 1. The rule in one paragraph
+Every number below was measured on the real rules (nations world, seed 12345 unless stated) with read-only scripts that lay this plan over an
+in-memory copy of the rules (`docs/rebels-plan/sim/`, Appendix B says how to rerun them). No game file was changed.
 
-A city you capture is **occupied**: it still belongs in spirit to the country you took it from. Each day its people grow more restless, so its **morale** falls, unless your troops are there. **If an occupied city's morale drops below 30%, rebels rise up**: a band of armed fighters appears in the city and attacks your garrison. If they beat it, or the city is empty, and they then hold it for 24 hours, the city goes back to its original country, or becomes independent if that country no longer exists. **Your own original cities never rebel.** The counter is soldiers. **2 units hold a captured city's morale steady. 4 units raise it.** After **10 days with troops there and morale at 50% or more**, the city is **integrated** and never rebels again. You can take land quickly, but only as quickly as you can garrison it.
+## 0. The three proposals you asked for
 
-## 2. Morale in an occupied city
+### 0.1 (a) Annex City: cost and build time
 
-Morale is worked out the same way as today: **100% minus unrest minus war damage**. Low morale cuts the city's output, as it does now. The plan changes only how unrest moves in an occupied city each day.
+Annex City is built from the city's build list like a building. It uses the city's one construction slot, so nothing else is built there
+while it runs. The cost grows with the city's size, in the same four size bands the rebels use (section 4.3).
 
-| What | Effect on morale |
+What annexing is worth: a city's full output (a home city at 100% morale, no Arms Industry) is about $28M a day for a town or an ordinary
+city, $29M for a large city and $37M for a metropolis (money plus its main resource at the world base price), and 2.5k to 7.4k manpower.
+Occupied at 50% morale it gives 18% of that; annexed at 65% morale (its target is 15 higher) it gives 40%. The gain is therefore about
+$6M a day for a town or a city, $6.4M for a large city and $8.2M for a metropolis, plus 0.6k to 1.6k manpower a day.
+
+| City size (people) | Cities on the map | **B (recommended)** money · manpower · time | B pays back its money in | and its manpower in | A (light), payback | C (steep), payback |
+|---|---|---|---|---|---|---|
+| Town (under 1.5 million) | 208 | **$50M · 10k · 3 days** | 8 days | 18 days | $30M · 5k · 2 d (5 / 9 days) | $90M · 15k · 4 d (15 / 27 days) |
+| City (1.5 to 5 million) | 295 | **$80M · 15k · 4 days** | 13 days | 21 days | $45M · 8k · 3 d (7 / 11) | $140M · 25k · 5 d (23 / 35) |
+| Large city (5 to 20 million) | 148 | **$120M · 25k · 5 days** | 19 days | 25 days | $70M · 12k · 4 d (11 / 12) | $210M · 40k · 6 d (33 / 40) |
+| Metropolis (20 million or more) | 33 | **$180M · 40k · 6 days** | 22 days | 24 days | $110M · 20k · 5 d (13 / 12) | $320M · 60k · 7 d (39 / 37) |
+
+(The payback counts from the day the annexing ends; the build time comes on top. A nation's own multipliers, its catch-up and its
+administration, move these figures by up to a third either way.)
+
+**Recommendation: B.** It is a high cost, as you asked: a typical nation earns about $220M and 58k manpower a day and holds about $220M and
+90k at the start, so annexing an ordinary city costs a third of a day's money and a quarter of a day's manpower, and a metropolis most of a
+day's income. It pays back in two to three weeks, about the length of a war, so it is a real choice: annex the cities you mean to keep, not
+every village. A is cheap enough to annex everything at once; C pays back only after a month or more, so few would bother.
+
+Worked example (section 5's 30-day run): Poland takes Dresden, Hamburg and Nürnberg (cities) and Munich (a large city) from Germany.
+Annexing all four under B costs $360M and 70k manpower. Section 5 shows what they give, occupied and annexed.
+
+### 0.2 (b) How "distance to the capital" is measured
+
+The modifier is −5 per unit of distance, rounded. Four ways to measure it were checked on the real map, from each nation's capital to its own
+cities and to foreign cities it might occupy:
+
+- **Straight-line distance in kilometres** (great circle), 1 unit = 1,000 km. The same for every nation, easy to show ("531 km from
+  Warsaw"), costs nothing to work out, does not change during the game.
+- Straight-line distance, 1 unit = 1,500 km. Softer.
+- March time of an infantry unit along roads, rail and by sea, 1 unit = 2 days. Rewards railways, but an island next to the capital counts as
+  far (Belfast from London −15, Hobart from Canberra −15), it changes when a road is bombed or the weather turns, and it is hard to explain.
+- Province hops or map hexes. Rejected: provinces are far smaller in Europe than in Siberia, and hexes are stretched near the poles (the
+  map's projection doubles distances at 60° north), so both would punish some nations for the way the map is drawn.
+
+**Recommendation: straight-line kilometres, −5 per 1,000 km (rounded), counted up to 6,000 km (at most −30).** Without the limit, a city
+on another continent could never be held: Washington to Baghdad is 9,907 km, −50, an occupied target of 10%, risings every night whatever
+you do. With it, Baghdad held by the United States has an occupied target of 30% and an annexed one of 45%: hard, but possible with troops and
+annexing. Rounding: 0 to 499 km is 0, 500 to 1,499 km is −5, 1,500 to 2,499 km −10, and so on.
+
+Real cities of the nations world (homeland base target 90 before any other modifier):
+
+| Nation | City | km from capital | **1,000 km, max −30** | 1,500 km | 2 days' march (march hours) |
+|---|---|---|---|---|---|
+| Russia | Saint Petersburg | 683 | **−5** | 0 | 0 (20 h) |
+| Russia | Kazan | 792 | **−5** | −5 | 0 (18 h) |
+| Russia | Yekaterinburg | 1,464 | **−5** | −5 | −5 (36 h) |
+| Russia | Novosibirsk | 2,816 | **−15** | −10 | −10 (78 h) |
+| Russia | Irkutsk | 4,225 | **−20** | −15 | −10 (111 h) |
+| Russia | Vladivostok | 6,449 | **−30** | −20 | −20 (182 h) |
+| United States | New York | 250 | **0** | 0 | 0 (7 h) |
+| United States | Chicago | 1,044 | **−5** | −5 | 0 (18 h) |
+| United States | Dallas | 1,967 | **−10** | −5 | −5 (33 h) |
+| United States | Los Angeles | 3,693 | **−20** | −10 | −5 (65 h) |
+| United States | Seattle | 3,793 | **−20** | −15 | −10 (74 h) |
+| United States | Anchorage | 5,396 | **−25** | −20 | −40 (378 h, by sea) |
+| China | Shanghai | 921 | **−5** | −5 | 0 (20 h) |
+| China | Guangzhou | 1,874 | **−10** | −5 | −5 (32 h) |
+| China | Kashgar | 3,493 | **−15** | −10 | −10 (100 h) |
+| France | Lyon | 355 | **0** | 0 | 0 (7 h) |
+| France | Marseille | 676 | **−5** | 0 | 0 (15 h) |
+| France | Cayenne (French Guiana) | 7,236 | **−30** | −25 | −60 (588 h, by sea) |
+| Brazil | Manaus | 1,904 | **−10** | −5 | −10 (78 h) |
+| Canada | Vancouver | 3,436 | **−15** | −10 | −10 (73 h) |
+| Australia | Perth | 2,961 | **−15** | −10 | −5 (56 h) |
+| Australia | Hobart | 771 | **−5** | −5 | −15 (161 h, by sea) |
+| India | Chennai | 1,738 | **−10** | −5 | −5 (30 h) |
+| Indonesia | Jayapura | 3,656 | **−20** | −10 | −30 (267 h, by sea) |
+| United Kingdom | Edinburgh | 562 | **−5** | 0 | 0 (11 h) |
+| United Kingdom | Belfast | 557 | **−5** | 0 | −15 (152 h, by sea) |
+| Germany | Cologne | 448 | **0** | 0 | 0 (10 h) |
+| Japan | Sapporo | 969 | **−5** | −5 | −5 (58 h) |
+| Chile | Punta Arenas | 2,185 | **−10** | −5 | −10 (82 h) |
+
+Cities you might occupy (occupied base 60, annexed base 75):
+
+| Holder | City | km | **1,000 km, max −30** | Occupied target before other modifiers | Annexed |
+|---|---|---|---|---|---|
+| Poland | Dresden | 531 | **−5** | 55 | 70 |
+| Germany | Paris | 876 | **−5** | 55 | 70 |
+| Russia | Kyiv | 700 | **−5** | 55 | 70 |
+| Russia | Berlin | 1,563 | **−10** | 50 | 65 |
+| United States | Havana | 1,881 | **−10** | 50 | 65 |
+| China | Hanoi | 2,286 | **−10** | 50 | 65 |
+| Brazil | Buenos Aires | 2,425 | **−10** | 50 | 65 |
+| United States | Baghdad | 9,907 | **−30** (−50 without the limit) | 30 | 45 |
+
+The distance is to the nation's capital of the moment: if the capital falls and moves (rules/state.js checkNation), distances are measured
+from the new one.
+
+### 0.3 (c) How much troops in a city lower the rebel chance
+
+The chance itself (section 4.2) rises from 0% at 33% morale to 50% at 25%. "Troops" are your ground units standing in the city (not aircraft
+or ships, not units marching through). Three ways were compared, together with what happens when the rebels then fight. The fights were
+measured with the real battle rules: rebels against a garrison with your +25% dug-in city bonus, 8 cities per match-up
+(`docs/rebels-plan/sim/duel.js`):
+
+| Garrison against rebels | 1 v 3 | 2 v 3 | 3 v 3 | 2 v 4 | 3 v 4 | 4 v 4 | 3 v 5 | 4 v 5 | 5 v 5 | 4 v 6 | 6 v 6 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Garrison wins | 0/8 | 3/8 | **8/8** | 0/8 | 2/8 | **8/8** | 0/8 | 1/8 | **8/8** | 0/8 | **8/8** |
+| Length of the fight | 27 h | 68 h | 69 h | 40 h | 83 h | 73 h | 52 h | 102 h | 82 h | 69 h | 75 h |
+
+So a garrison at least as large as the rebel band always wins (in about three days: rebels never lose battle morale, decision CMB-9), and
+a smaller one almost always loses, after which the city is empty and goes over to the rebels.
+
+The chance that night for an ordinary city (a band of 4 rebels), at 28% morale (31%) / 20% (67%) / 10% (100%), in %:
+
+| Your units in the city | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| **H: each unit halves the chance (recommended)** | 31 / 67 / 100 | 16 / 33 / 50 | 8 / 17 / 25 | 4 / 8 / 13 | 2 / 4 / 6 | 1 / 2 / 3 | 0.5 / 1 / 1.6 |
+| S: a garrison as large as the band stops risings (chance × (1 − units ÷ band)) | 31 / 67 / 100 | 23 / 50 / 75 | 16 / 33 / 50 | 8 / 17 / 25 | 0 | 0 | 0 |
+| P: −15 points per unit | 31 / 67 / 100 | 16 / 52 / 85 | 1 / 37 / 70 | 0 / 22 / 55 | 0 / 7 / 40 | 0 / 0 / 25 | 0 / 0 / 10 |
+
+**Recommendation: H, each of your ground units in the city halves the chance.** It is one sentence the player can remember, every unit
+counts, and it never quite reaches zero, so risings still happen in a garrisoned city now and then. When they do, a garrison as large as
+the band holds the city (8 of 8), which is the picture you described: "rebels attack them, the city stays mine". Under S a rising can only
+happen when the garrison is smaller than the band, so almost every rising ends with the city lost; under P one or two units wipe out the
+risk at middling morale and do little at very low morale.
+
+What H means over ten nights in an ordinary city held at 20% morale: no troops, 67% a night, so the city is almost surely lost within two
+nights; 2 units, a rising about every 6 nights, which they lose (2 v 4: 0 of 8); 4 units, a rising in about one ten-night stretch in
+three, which they win; 6 units, about one chance in ten of a rising at all.
+
+## 1. The rules in a few lines
+
+- **Every city and countryside province has a morale**, 70% at the start of a game. It moves once a day, at the day change, an eighth of the
+  way toward a **target**: the base for what the place is (home city 90, annexed city 75, occupied city 60, countryside 100) plus or minus
+  the modifiers in section 2.3. The city panel lists them all.
+- **Output** follows morale as it does today (45% at 0 morale, 100% at full morale), times **25% in an occupied city or province** and
+  **50% in an annexed one**. An occupied city cannot mobilize units.
+- **Annex City** (from the city's build list) turns an occupied city into an annexed one: 50% output, a morale base of 75, and it can
+  mobilize. Capture takes the status away.
+- **A city at 33% morale or lower burns** (fire and smoke on the map) and can rebel. Once a day, at the day change, it rolls: 0% at 33%,
+  50% at 25%, more below; each of your ground units in the city halves the chance. Rebels fight any troops in the city (yours count as dug
+  in: +25%); an empty city goes over to them at once. The countryside never rebels.
+- **Occupying a trade partner costs you that trade** (its slot stays empty) for as long as the war lasts or you hold its cities
+  unannexed, and while you hold them unannexed your other routes pay 25% less (section 5).
+- **Occupied land counts a quarter, annexed land a half, against a nation's administration factor**, so that holding and annexing pay
+  off (section 5.4).
+
+## 2. Morale (point 9)
+
+### 2.1 Starting values and the daily step
+
+| When | Morale |
 |---|---|
-| Captured | starts at 70% at most (unrest 30), minus any war damage |
-| Occupation, original country still exists | −6% a day |
-| Occupation, original country gone (or the city was independent) | −4% a day |
-| Each of your ground units standing in the city | +3% a day, counting at most 4 units (+12%) |
-| City cut off from your supply (encircled) | the garrison counts only half |
-| War damage | lowers morale directly and heals by 2.5% a day (unchanged) |
-| **Pacify** ($40M) | +25% at once. Needs at least 1 of your units in the city. Once every 3 days per city |
-| Enemy spy "Incite unrest" | −35% at once (unchanged) |
-| Rebels rise | +15% (the angriest people have taken up arms) |
+| Start of a game, every city and countryside province | 70% |
+| A city or province is captured from another country, or from independent land | 25% |
+| A city or province of your own homeland is taken back (liberated), or handed back to you at peace | 55% (or its morale, if higher) |
+| A nation's land passes to the nation that destroyed it (rules/state.js checkNation) | 25% (it is occupied land) |
 
-**Days until morale falls below 30%** (a city captured undamaged at 70%):
+At every day change, after the day's output is paid: **morale = morale + (target − morale) ÷ 8**. Morale is kept to one decimal, but
+everything the player sees and every threshold (33%, 40%, 100%) uses the whole number shown. Example: a city captured at 25% with a target
+of 55 shows 29%, 32%, 35%, 37%, 40%, 42% on the following days: it leaves the danger zone on day 3 and reaches 50% after about two weeks.
 
-| Garrison | Original country exists | Original country gone |
+### 2.2 Base targets
+
+| Province | Base target |
+|---|---|
+| A city of your homeland (its home nation, `S.home`, is you) | 90 |
+| An annexed city | 75 |
+| An occupied city | 60 |
+| Any countryside province (homeland, annexed or occupied) | 100 |
+
+The countryside always aims at 100 before modifiers, as you wrote, but an occupied one still gives only 25% of its output (section 3.4).
+
+### 2.3 Modifiers on the target
+
+All are added to the base, and the target is then kept between 0 and 100.
+
+| Modifier | Value | How it is counted |
 |---|---|---|
-| 0 units | **day 7** (day 6 if the city had 20% war damage) | day 11 |
-| 1 unit | day 14 | day 41 |
-| 2 units | never (steady at 70%), integrated on day 10 | never (rises), integrated on day 10 |
-| 4 units | never (100% by day 5), integrated on day 10 | never, integrated on day 10 |
+| Distance to the capital | −5 per 1,000 km, rounded, at most −30 | proposal (b), section 0.2. The capital city itself: 0 km |
+| Wars | −2 per nation you are at war with, at most −25 | Nations with 0 VP (no land left) do not count. **Rebels count as one more war** while rebels stand in any city you hold. Independent land is not a nation and does not count |
+| Enemy neighbours | −5 per adjacent province held by a nation you are at war with | land neighbours only (a sea zone is not a neighbour); independent land does not count (question 4) |
+| Enemy units in the province | −1 | any force of a nation you are at war with, or rebels, standing in the province (not marching through, not aircraft). As written: −1 whatever their number (question 5) |
+| Low-morale neighbours | −7 for each such neighbour that is a city, −4 for each that is countryside | your own adjacent provinces showing 40% or less, as they stood before today's step (question 6) |
+| High-morale neighbours | +3 for each such neighbour that is a city, +1 for each that is countryside | your own adjacent provinces showing 100% |
+| Resource shortage | up to −50 | section 2.4 |
+| Civilian casualties | up to −30, shrinking by a third each day | section 2.5 |
+| Capital lost | −20 on every province you hold | while your original capital (the one you started with) is held by another nation |
+| The capital city | +25 | your capital of the moment (a new capital after a move counts) |
+| Bunker | +5 / +10 / +20 / +35 / +50 at levels 1-5 | the working level (a knocked-out bunker gives nothing). The garrison's own morale bonus (`BUNKER_LV.mrl`, +33% at level 4) is a different thing and stays as it is |
 
-**"Recovered" means morale at 50% or more** (the bar turns green). Each day with at least 1 of your units in the city and morale at 50% or more counts toward integration. A bad day takes one day off the count but never resets it. **At 10 days the city is integrated**: it stops losing morale, recovers 4% a day like your own land, and can no longer rebel while you hold it. It does not become one of your original cities (question 6). Starting from 35% morale, **4 units** integrate the city in about 13 days, **3 units** in about 15 days, and **2 units plus one Pacify** in 10 days. **2 units alone** hold it at 35% and it never integrates.
+Worked examples (peace unless stated):
 
-## 3. Rebels
+| Province | Base | Distance | Other | Target | Output at that morale |
+|---|---|---|---|---|---|
+| Warsaw, Poland's capital, Bunker I | 90 | 0 | capital +25, Bunker +5 | 100 (120 kept to 100) | 100% |
+| Vladivostok, Russian homeland city | 90 | −30 | | 60 | 78% |
+| Los Angeles, the United States at war with 2 nations | 90 | −20 | wars −4 | 66 | 81% |
+| Dresden, occupied by Poland the day after capture: 2 German provinces next door, 2 of its neighbours just taken (25%), a battle there the day before | 60 | −5 | war −2, enemy neighbours −10, low-morale neighbours −8, casualties −6 | 29 | 25% × 61% = 15% |
+| Dresden two weeks on (the front has moved on, its neighbours have recovered) | 60 | −5 | war −2 | 53 | 25% × 74% = 18% |
+| Dresden annexed | 75 | −5 | war −2 | 68 | 50% × 82% = 41% |
 
-- **When:** once a day, at the daily update. Rebels appear for certain if an occupied city that is not yet integrated is below 30% morale. They do not appear in the first **3 days after a capture** (a grace period), within **5 days of the city's last uprising** (a cooldown), or while rebels are already there. There is no limit on how many uprisings a city can have.
-- **How strong:** **3 units in a town** (under 1.5 million people), **4 in a city**, **5 in a large city** (5 million or more), **6 in a metropolis** (20 million or more). They fight as infantry.
-- **They fight at once.** Independent forces are at war with everyone, so the rebels battle any garrison in the city straight away. I tested this with the real battle rules: **a garrison at least as large as the rebels wins in 1.5 to 3 days** (2 against 2, 3 against 3, 4 against 4 and 6 against 4 won 6 times out of 6), and **a smaller one usually loses** (1 against 3 and 2 against 4 won only 1 time in 6, 4 against 5 won 2 times in 6; `node tools/rebels-sim.js --duel`).
-- **They never move.** They stay in their city.
-- **How they take the city:** if no ground unit of yours stands in the city for **24 hours in a row**, the city flips. The original country gets it back if it still exists, and the rebels become its troops (at least 2 infantry). Otherwise the city becomes independent and the rebels stay as its garrison. You can take it back with an ordinary attack.
-- **What is lost:** the same as a capture. Buildings stay, fortifications lose 1 level, and the production queue and any construction in progress are lost. Air wings based there escape to the nearest airbase.
-- **When rebels are crushed,** the city stays yours and its morale stays where it is. If morale is still low, 5 days later the next uprising can start.
+### 2.4 Resource shortage (up to −50): proposal
 
-## 4. Only occupied cities, and the capital question
+A resource counts as short on a day when your stock of it ran out and your production of it is negative (the existing `N.short` flag,
+rules/tick.js daily). In practice that is money (unpaid upkeep), oil, iron and electronics, the four things upkeep uses; materials, rare
+materials and manpower are never used up by upkeep. The modifier applies to every province you hold.
 
-Rebels come only in cities you captured, never in your original ones. Land ceded to you in a treaty, or bought from the country it belongs to, already counts as your own today and never rebels. If you buy a city from a country that only occupied it, the city stays occupied and can rebel. Your earlier note asked for more: "when the capital is captured… the moral of all the homland citites and the occupied ones starts going down until they rebel". That conflicts with the new rule. The options are:
+- **Recommended: by depth.** For each short resource, −50 × the share of that day's need left unmet, at least −5; added up, at most −50.
+  Oil need 60 a day and production 40 with an empty tank: a third unmet, −17. No iron at all against an iron upkeep: −50 on its own. A
+  nation short of a trickle of electronics: −5.
+- Flat: −10 per short resource, at most −50.
+- Slow: −5 per day while any resource is short, up to −50, falling back 10 a day once supplied.
 
-- **A.** Occupied cities only, always. This is the new rule as written.
-- **B.** Once your capital falls, your own cities also lose morale every day, and they can rebel and become independent. This is harsh: one lost capital could break up a whole country.
-- **C.** Losing your capital is a one-time shock: every city you hold drops 15% morale at once. Occupied cities can then rebel under the normal rule. Your own cities can fall as low as 30% but never below, so no rebels appear in your homeland.
+By depth makes a small slip cheap and a real collapse severe, and its line is easy to read ("Oil: a third of your needs unmet −17").
 
-**Recommendation:** build **A** now. Add **C** later, in the "capital destroyed" step you already planned.
+### 2.5 Civilian casualties (up to −30): proposal
 
-## 5. Countryside (provinces without a city)
+**Source (recommended): the province's own war damage.** Today every battle step, ranged fire, air raid and missile that hits a province adds
+war damage there (rules/economy.js warDamage): 2 an hour while a battle goes on, a ballistic missile 22, a cruise missile 12, a Heavy Bomber
+6 per bomber on a city. Each point of war damage adds half a point of civilian casualties to that province: a full day of fighting adds 24, a
+ballistic missile 11, a cruise missile 6, a raid by three Heavy Bombers 9. The total is capped at 30 and **shrinks by a third at each day
+change** (×2/3): 24, 16, 11, 7, 5, 3. Today war damage lowers morale directly and heals 2.5 a day; under this plan it acts only through this
+modifier. (It still kills people as today, and the Bunker still spares them.)
 
-**Recommendation: not included.** Countryside never rebels. Occupation can lower its morale only as far as 50%, which affects its output and nothing else. It integrates the same way a city does. This also ends today's flood of small revolts: 350 to 1,350 provinces flip back and forth in a 60-day game.
+Other ways considered: from the share of the province's people killed (the same events, harder to read); nation-wide (every province pays
+for losses anywhere, which punishes a big country for a battle on its edge).
 
-## 6. Computer nations
+Because morale moves an eighth of the gap a day, a −24 hit costs a city about 8 points of morale over the following week, then it recovers.
 
-They follow the same rule. **Pacify moves into the rules** (`pacify(n, p)` in `rules/api.js`), so the page and the AI use one checked order. The AI learns four habits:
+### 2.6 Morale and output (kept as today)
 
-1. Leave **2 infantry** in each captured city until it is integrated. Leave 4 if the original country is still fighting nearby.
-2. Pacify when a city is below 45% morale, has a unit in it, and the treasury holds $100M or more.
-3. Send a force at least as large as the rebels to crush them.
-4. **Self-brake:** start no new attack on a city while it has 2 or more captured cities below 40% morale.
+Output = base yield × **(0.45 + 0.55 × morale ÷ 100)** (today's link, rules/economy.js provYield) × **1 for homeland, 0.5 annexed, 0.25
+occupied** (this replaces `occFactor`, today a ramp from 25% to 100% over 10 days) × the blockade and convoy factors as today.
 
-**Simulation** (`node tools/rebels-sim.js`, headless rules, computer players only, the AI never starts wars). Each figure is the average of 2 seeds. "Plan + AI pacify" adds habit 2 only. Habits 1, 3 and 4 do not exist yet.
+One thing must change with it. The nations world sets each nation's catch-up multiplier (`N.boost`, rules/state.js tierStart) from its
+income at hour 0. With every province at 70% at the start, that income is 16% lower than today's, so the multiplier comes out too high,
+and once morale settles near 90 every economy ends about 11% richer than its tier is meant to be (measured: world income on day 60 is $16.9
+billion a day under the plan against $15.2 billion today, both seeds). **The calibration must use each province's peacetime target** (the
+morale it will settle at), not the starting 70%. Population still grows only above 70% morale (rules/tick.js), unchanged.
 
-| World / day 60 | Today's rule | Plan | Plan + AI pacify |
+### 2.7 What is removed
+
+- Unrest (`S.unrest`, `unrestDay`, `unrestOf`) and the partisans it spawned; integration (`S.integ`); the per-unit daily change; Pacify (the
+  button and the $40M order: question 8); war damage as a direct cut to morale.
+- Mobilisation's strain on the home front (today up to 15 unrest per Mobilisation level in homeland provinces): it is not in your list, so
+  it goes; question 9 offers to keep it as one more modifier.
+- The agent's "Incite unrest" (+35 unrest today) becomes **"Incite revolt": −20 morale at once** in an occupied city (question 10).
+
+## 3. Occupied, annexed, homeland (point 8)
+
+### 3.1 What each status means
+
+| Status | Output | Morale base (city) | Mobilize units | Changes by |
+|---|---|---|---|---|
+| Homeland | 100% | 90 | yes | capture (it is then occupied for the captor) |
+| Annexed | 50% | 75 | yes | capture (the status is lost) |
+| Occupied | 25% | 60 | **no** ("Occupied: annex the city to mobilize here") | Annex City |
+
+Buildings may still be built in an occupied city (Annex City is one of them). The countryside's base is 100 whatever its status.
+
+### 3.2 Annex City
+
+- **Where:** in the city's build list, first card, only while the city is occupied by you ("Annex City · $80M · 15k · 4 d").
+- **Cost and time:** proposal (a), section 0.1. Paid when it starts, like a building.
+- **When:** any time, even while the city burns, while rebels are in it, or while it is under attack, as you said. It needs the city's
+  construction slot to be free (one construction at a time, as for every building).
+- **When it ends:** the city is annexed: output 50%, morale base 75 (morale itself then climbs toward the new target an eighth a day; it does
+  not jump), and units can be mobilized there.
+- **If the city is captured** (by an enemy, or retaken by its original owner), an annexing in progress is lost with its cost, and an
+  annexed city loses the status: for the new holder it is occupied (25% morale, or 55% if it is that nation's own homeland).
+- **Rebels:** if your troops are in the city when rebels rise, they fight (your troops count as dug in: +25%), the city stays yours and the
+  annexing carries on. If the city is empty, or your troops there are all destroyed or retreat, the rebels take the city at once: you lose
+  it, the annexing and its cost.
+- **The countryside around an annexed city:** question 2 (suggested: annexing a city also annexes the occupied countryside provinces whose
+  nearest city it is, so a conquered region can be brought to 50% without a second kind of order).
+- **Land you receive by treaty, sale or gift:** question 3 (suggested: it arrives annexed, not homeland, unless it was your homeland).
+
+### 3.3 Rules and API
+
+`annexCity(n, p)` and `annexWhy(n, p)` in rules/api.js (the page and the AI use one checked order). The construction is
+`S.cons[p] = {k:'annex', lvl:1, h, h0}`; when it ends `S.anx[p] = n` (annexed by n). Capture deletes `S.anx[p]` and clears `S.cons[p]`
+(capture already clears it). `mobBlock` (rules/production.js) refuses units in an occupied city with the reason above.
+
+### 3.4 The countryside
+
+The countryside never rebels. Occupied countryside starts at 25% morale and aims at 100 minus its modifiers, so it recovers within a week or
+two once the front moves on (in the 60-day world runs, occupied countryside averaged about 90% morale by day 30), but it keeps giving 25%
+unless question 2's suggestion is taken.
+
+## 4. Rebels (point 10)
+
+### 4.1 Which cities
+
+Any city you hold whose morale shows 33% or lower: homeland, annexed or occupied (your point 10 says "a city"; the earlier plan allowed only
+occupied cities: question 7 checks this). Not the countryside. Not while rebels are already in the city.
+
+### 4.2 The chance each night: the curve below 25%
+
+At every day change, after the morale step, each such city rolls once. From 33% to 25% the chance rises by 6.25 points per point of morale
+(your numbers: 0% at 33%, 50% at 25%). Below 25%, three ways were considered (chance in %, before troops):
+
+| Morale | 33 | 32 | 31 | 30 | 29 | 28 | 27 | 26 | 25 | 22 | 20 | 17 | 15 | 12 | 10 or less |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Recommended: half the slope, 100% at 10%** | 0 | 6 | 13 | 19 | 25 | 31 | 38 | 44 | 50 | **60** | **67** | **77** | **83** | **93** | **100** |
+| Same slope: 100% at 17% | 0 | 6 | 13 | 19 | 25 | 31 | 38 | 44 | 50 | 69 | 81 | 100 | 100 | 100 | 100 |
+| Gentle: 100% at 0% | 0 | 6 | 13 | 19 | 25 | 31 | 38 | 44 | 50 | 56 | 60 | 66 | 70 | 76 | 80 (100 at 0) |
+
+**Recommended: half the slope** (3.33 points per point of morale below 25%, certain at 10% and below). A city that low has been neglected
+for days; a certain rising there is fair, and the troop rule still lets a garrison keep the real chance small: at 10% morale, 4 units bring
+it to 6%.
+
+### 4.3 The rising
+
+- **Size:** 3 rebel infantry in a town (under 1.5 million people), 4 in a city, 5 in a large city (5 million or more), 6 in a metropolis
+  (20 million or more), as in the earlier plan.
+- **Your troops in the city:** a real battle, by the ordinary battle rules. Your forces there count as dug in for it (+25% in a city, the
+  owner's `DIG_CITY`) even if they arrived less than 12 hours ago, and keep the holder's defence and the Bunker as usual. Rebels never lose
+  battle morale (decision CMB-9), so they fight to the last. The city stays yours throughout, and an annexing carries on.
+- **No troops in the city** (or yours are destroyed or retreat): the rebels take it at once. It goes back to its original country if that
+  country still exists and is not you (the rebels become its troops, at least 2 infantry); otherwise it becomes independent and the rebels
+  stay as its garrison. A homeland city that rebels becomes independent. You take it back with an ordinary attack. (The earlier plan's
+  24 hours alone in the city before it flipped is dropped: question 11.)
+- **What is lost with the city:** as on a capture: the production queue, any construction (an annexing too), one Bunker level; air wings
+  based there escape to the nearest airbase or are lost (the rebels branch's `wingsFlee`).
+- **After a rising** morale does not change, and the city cannot rise again while rebels are in it. A city whose rebels were crushed keeps
+  its morale, so if it is still low it can rise again the next night.
+- **Wars modifier:** while rebels stand in any of your cities, they count as one more war (−2 on every province).
+
+### 4.4 Rebels as their own side (kept from the earlier plan)
+
+Rebels belong to no nation (owner −1, flagged `rebel`), are at war with everyone, never move, and are named "Rebels". Their badge has the
+grey band with **crossed rifles**; on the map they are the 3D rebel squad (irregular fighters, no helmets, AK-pattern rifles, one rocket
+launcher), shown at the same zoom as every other force. A seat always identifies rebels standing in a city it holds.
+
+### 4.5 What the computer does about it
+
+Section 7.
+
+### 4.6 What stays from the earlier plan, and what goes
+
+Stays: rebel sizes 3/4/5/6; where a lost city goes; rebels never move and never lose battle morale; the badge, the name, the 3D squad and
+their zoom; air wings escaping; buildings staying with a Bunker level lost; the computer's self-brake; old partisans becoming rebels.
+Goes: unrest and its daily rates, integration, Pacify, the 3-day grace and 5-day cooldown, certain risings below 30%, "one infantry unit
+crushes any rebels" (replaced by the real fight you asked for), the 24-hour hold, the countryside floored at 50% morale.
+
+## 5. Occupying a trade partner (point 11)
+
+### 5.1 What happens today (measured)
+
+A trade route ends when its two nations go to war (rules/trade.js `trInvalid`, at the next daily pass). But the slot it leaves is filled
+again the next day by another partner (`tradeGen`), so the attacker trades as much as before within a day. The run: Poland (4 routes, $31.7M
+a day plus goods) declares war on Germany on day 2, Germany being its land-route partner ($5.8M and 1.3k materials a day), and takes 4 German
+cities (Dresden, Hamburg, Nürnberg, Munich) with the countryside around them on days 3 and 6, leaving 6 infantry in each; Germany's computer
+turn is switched off so the cities stay taken. Poland has 4 routes again on day 3, and its trade over the 30 days is worth $1,561M when
+Germany was a partner against $1,558M when it was not. **Today, occupying a trade partner costs nothing that can be seen.**
+
+### 5.2 Options
+
+- **A. Today's rule.** No difference (above).
+- **B. "That trade is lost".** The route ends at war, as today, and **its slot stays empty** while you are at war with that nation or hold
+  any of its cities you have not annexed. It is free again after peace once those cities are annexed or handed back. The same holds for
+  the other side. The trade panel shows the empty slot: "Lost: Germany (war) · −$5.8M and 1.3k materials a day".
+- **C. B, plus a trade shock (recommended).** While you hold any city of a former partner that you have not annexed, your other routes pay
+  25% less ("your partners are wary of you"). Annexing those cities ends the shock (peace is not needed for that); the lost slot still
+  waits for peace.
+
+### 5.3 Thirty days, measured (Poland and Germany, the run above)
+
+Value = money plus goods at the day's market price. "War alone" is the same war with nothing taken. All runs use section 2's morale and the
+administration weighting of 5.4.
+
+| Day | 1 | 3 | 7 | 14 | 30 | 30-day total |
+|---|---|---|---|---|---|---|
+| Trade, money a day: non-partner (any option), $M | 31.6 | 32.4 | 33.6 | 33.7 | 34.5 | value $1,558M |
+| Trade: partner, option A | 31.7 | 32.4 | 33.7 | 33.8 | 34.5 | $1,561M |
+| Trade: partner, option B | 31.7 | **25.4** | 26.3 | 26.4 | 26.9 | **$1,205M (−$353M)** |
+| Trade: partner, option C | 31.7 | **19.0** | 19.7 | 19.8 | 20.2 | **$926M (−$632M)** |
+| The 4 taken cities, occupied, value a day $M | 0 | 16.6 | 24.9 | 25.1 | 28.3 | $703M |
+| The 4 taken cities, annexed at capture (B costs: $360M, 70k), value a day $M | 0 | 16.6 | 41.1 | 53.5 | 62.6 | $1,426M |
+| Their morale on day 30, occupied / annexed | | | | | | 45, 42, 32, 40 / 66, 57, 51, 60 |
+
+What Poland's whole economy (gross value over the 30 days) gets from the conquest, against the same war with nothing taken ($17,475M):
+
+| | Non-partner | Partner, A (today) | Partner, B | **Partner, C** |
+|---|---|---|---|---|
+| Hold the 4 cities, occupied | **+$185M** | +$304M | −$157M | **−$436M** |
+| Annex them at once (gross; the $360M and 70k are paid out of it) | **+$669M** | | +$439M | about +$380M (the shock ends when the last annexing finishes, day 10) |
+
+So under C a war on a non-partner pays from the first weeks, while the same conquest of a trading partner costs Poland about $440M in a
+month unless it annexes, and its trade income drops from $34M to $20M a day: **clearly noticeable**, on the trade panel and in the
+treasury. Annexing (or not occupying the partner at all) is the way out, which is the story you described: the occupied cities stay weak
+until morale recovers, and holding and annexing them pays off. Under B the difference is about a third of C's; under today's rule there is
+none. (The partner case under A comes out slightly above the non-partner one by the run's own noise: their trade is the same.)
+
+**Recommendation: C.** If you want only the literal "I lose that trade", take B.
+
+### 5.4 Needed for "holding pays off": administration
+
+Today a nation's income is multiplied by an administration factor, `80 ÷ (40 + provinces)` kept between 0.6 and 1.6 (rules/economy.js
+income0), and every province counts, occupied or not. Poland starts with 17 provinces (factor 1.40); taking the 4 cities and the 7 countryside
+provinces around them drops it to 1.18, a 16% cut on everything Poland makes, far more than the occupied land gives at 25%. Measured
+over the same 30 days: holding the 4 cities costs Poland $1,661M against the war alone, and annexing them still costs $930M. With the rule
+as it stands, conquest by a small nation never pays.
+
+**Recommended: occupied provinces count a quarter in the administration count and annexed ones a half** (as much as they produce). Then
+Poland's factor goes from 1.40 to 1.34 only, and the table in 5.3 holds (question 14).
+
+### 5.5 Rules
+
+`S.trade.lost[key] = {a, b, h}` is written when a route ends because of war (`trEnded`); `tradeGen` leaves one slot free for each live
+entry; an entry ends at peace once neither side holds unannexed cities of the other. Option C: `tradeIncome` multiplies the routes of a
+nation holding such cities by 0.75. Dispatch when the route ends: "Your trade route with Germany ended: war broke out. Its slot stays empty
+while you are at war with Germany or hold its cities without annexing them; holding them also costs you 25% on your other routes."
+
+## 6. What the player sees
+
+### 6.1 The city panel: the morale factors list
+
+Mockups (the real page with the proposed parts drawn into it; Poland holding Dresden, taken from Germany, with 2 infantry there):
+
+- Today: `docs/rebels-plan/sheet-today-desk.jpg`, `docs/rebels-plan/sheet-today-phone.jpg`
+- Plan: `docs/rebels-plan/sheet-plan-desk.jpg`, `docs/rebels-plan/sheet-plan-phone.jpg`
+
+![The city sheet under the plan, desktop](rebels-plan/sheet-plan-desk.jpg)
+
+Top to bottom, inside the city sheet under its stat row:
+
+1. **The stat row's morale chip** keeps its bar and face and shows the whole-number morale; at 33% or lower it adds a small flame and a
+   red outline. Tapping it opens or closes the factors list (open by default for an occupied city or one at 40% or less; the choice is
+   remembered on the device).
+2. **Header:** "MORALE 28% ➜ 29% target", the daily move ("+0.1 a day", green up, red down) and, when the city can rebel, a red chip with
+   a flame: "REBELS 16% at the day change".
+3. **Factors**, one row each: an icon, what it is in plain words with its count ("2 neighbours held by Germany", "531 km from Warsaw
+   (−5 per 1,000 km)", "Civilian casualties (fades by a third a day)"), and the value on the right, red when negative, green when
+   positive. The base comes first ("Occupied city (home 90 · annexed 75) 60"). Desktop: two columns, with the factors at 0 listed dimmed so
+   the player learns what exists. Phone: one column, only the factors that are not 0.
+4. **Footer:** "Target 29%", the output line "Output 15% of a home city: 25% occupied × 60% at this morale", and the **Annex City**
+   button with its price and time (occupied cities only; while it runs it shows a bar and the days left, as the Build button does).
+5. **A note in plain words** when the city can rebel: "Rebels can rise at 33% morale or lower. Tonight's chance: 31% at 28% morale,
+   halved by your 2 units. They fight your troops here; an empty city is lost to them."
+
+Also: the banner's status line reads "Occupied City · 25% output" or "Annexed City · 50% output"; MOBILIZE UNIT in an occupied city reads
+"Occupied: annex the city to mobilize here"; the **Annex City** card leads the build cards (gold, with its price and time on it). The side
+panel (province details) shows "Morale 28% · target 29%" in place of today's unrest bar. The Cities list shows the flame chip on every city
+that can rebel, and its Morale sort puts them first.
+
+### 6.2 The fire and smoke on the map
+
+Mockups: `docs/rebels-plan/fire-map-desk.jpg` and `docs/rebels-plan/fire-map-phone.jpg` (one still frame over Dresden) and
+`docs/rebels-plan/fire-frames.png` (six frames of each look).
+
+![Fire and smoke frames](rebels-plan/fire-frames.png)
+
+- **When:** on every city showing 33% morale or lower that the viewer can see (its own cities always; others where the fog allows:
+  question 13). It fades in over 1 second when the city reaches 33% and goes out over 2 seconds when it rises above. It is display only:
+  it never touches the rules or their dice.
+- **Look:** flame tongues over the city's centre (additive, a white-yellow core to orange to a dark-red tip, each flickering at its own 6 to
+  10 Hz), a soft orange glow on the ground, and a column of smoke puffs rising and drifting with the display wind the battle smoke already
+  uses (fx.js `windX`/`windY`), dark at the base and greying as they rise, lit orange from below at night. At 26-33% morale: 5 tongues and
+  5 puffs. At 25% and lower: 7 and 7, drawn 25% larger. The size also follows the city (town ×0.8, city ×1, large city ×1.2, metropolis
+  ×1.4) and the zoom, within the effects' usual limits (fx.js `kzNow`).
+- **Zoom:** below the zoom where city smoke is drawn today (hexPx 7) there are no particles, only a small static flame on the city's label.
+- **Desktop (effects High):** particles from the existing pool (fx.js `PART`, with the `FIRE` and `puffSprite` sprites), at most 12 burning
+  cities animated at once (those nearest the screen centre); the others show the static flame.
+- **Phone (effects Low, the phone default):** no particles and no gradients drawn per frame: a 4-frame flame sprite drawn once into a small
+  canvas and cycled at 8 fps, plus one smoke puff every 1.5 seconds per city; at most 6 cities animated, the rest static. The page's redraw
+  scheduler asks for frames at 8 fps only while a burning city is on screen (Battery saver: the flame stays a still picture when nothing
+  else moves).
+- **Reduce motion, or effects Off:** the static flame only.
+- **Budget:** at most 1 ms a frame on a desktop and 0.3 ms on a phone with 20 burning cities on screen, checked by the picture and
+  performance tests (section 11).
+
+### 6.3 Dispatches
+
+- A city of yours reaches 33%: "Dresden is burning: morale 33%. Rebels may rise at the day change (6%, halved by each unit there). Station
+  troops, or annex it." (once each time it crosses the line)
+- A rising: "Rebels rose up in Dresden (4 units)! Your 2 units there are fighting them." / "Rebels rose up in Dresden (4 units) and took the
+  empty city. It has gone back to Germany."
+- The end of a fight: "Your troops crushed the rebels in Dresden." / "The rebels destroyed your garrison and took Dresden."
+- Annexing: "Annexing Dresden: done in 4 days." / "Dresden is annexed: 50% output, units can be mobilized there." / "The annexing of
+  Dresden was lost with the city."
+- Trade (section 5).
+
+### 6.4 Help
+
+The help page's Occupation entry is rewritten in four lines: morale and its target, occupied and annexed output, rebels at 33% and the
+troop rule, trade partners.
+
+## 7. Computer nations
+
+### 7.1 Habits (rules/ai.js)
+
+1. **Garrisons.** Keep, in every city it holds at 38% morale or lower, at least as many ground units as the city's rebel band (3 to 6),
+   taking the nearest idle units; never leave a city at 33% or lower empty if a unit can reach it within a day.
+2. **Annexing.** Start Annex City in its occupied cities, the largest first, whenever its treasury holds the cost plus $150M and its
+   manpower the cost plus 40k.
+3. **Retaking.** Treat a city lost to rebels as an ordinary target, sending a force at least as large as the rebels.
+4. **Self-brake** (kept from the earlier plan): start no new attack while two or more of its cities are at 33% or lower.
+
+### 7.2 Measured
+
+The nations world, 60 days, computer players only, two seeds (12345 / 777). The computer never starts wars (`AI_STARTS_WARS` is false),
+so what it takes here is independent land; this measures the rule's churn and the economy, not wars between nations. Plan runs: troop rule
+H, curve as recommended, Annex City B, and a stand-in for habit 2 (annexing); habits 1, 3 and 4 do not exist yet.
+
+| Day 60 | Today's rule | Plan | Plan, no annexing habit |
 |---|---|---|---|
-| 64 nations: land gained by all nations (day 30) | +432 (+412) | +446 (+420) | +449 (+415) |
-| 64 nations: uprisings / provinces lost to them | 382 / 363 | 20 / 15 | 12 / 11 |
-| Classic 15: land gained (day 30) | +1,228 (+989) | +1,447 (+1,018) | +1,426 (+1,052) |
-| Classic 15: uprisings / provinces lost to them | 1,434 / 1,338 | 183 / 124 | 96 / 75 |
+| Provinces held by nations (start 2,534) | 2,921 / 2,911 | 2,908 / 2,913 | 2,903 |
+| Captures in 60 days | 728 / 696 (land flipping back and forth) | 388 / 395 | 379 |
+| Risings (all in occupied cities; in an empty city / fought) | 342 / 325 partisan risings | 14 / 17 (12 / 16 empty, 2 / 1 fought) | 10 (all empty) |
+| Cities lost to rebels | | 14 / 16 | 10 |
+| Annexings started / done / lost with the city | | 20 / 25 started, 17 / 20 done, 3 / 2 lost | |
+| Occupied cities still held and not annexed (their average morale) | | 2 / 4 (55% / 42%) | 22 (54%) |
+| Homeland cities' average morale (risings in homeland cities) | | 90% (none) | 90% (none) |
+| Occupied countryside, average morale | | 94% | 93% |
+| World money income a day | $15.2bn / $15.2bn | $17.0bn / $17.0bn | $17.0bn |
 
 What this means:
 
-- Because the AI never starts wars, it only grows into independent land. The plan replaces today's constant churn (mostly countryside) with a few dozen real city uprisings.
-- Most uprisings (about 7 in 10) hit cities the AI left empty. In the 64-nation world the AI already parks big stacks in its captured cities (9 of 13 had 4 or more units on day 30), so those cities integrate quickly.
-- On its own, the plan **does not** slow the AI. Without today's churn the computer actually keeps about 15% more land in the classic world. Habits 1 and 4 are what turn the rule into a real brake. The build step will measure them with the same script, aiming for **classic-world land at or below today's +1,228 by day 60**.
+- The churn of today's rule (hundreds of provinces flipping back and forth) is gone; the computer grows by the same amount of land.
+- Risings are rare and all hit occupied cities, mostly empty ones: habit 1 (garrisons) is what will stop them, and the build step measures
+  it with the same script.
+- With the annexing habit the computer annexes nearly every city it keeps.
+- World income is 11-12% higher than today: that is the calibration fault of section 2.6, which the build fixes before balancing.
+- No homeland city came near 33% in peace. Wars between nations (where enemy neighbours, casualties and shortage bite) are measured in the
+  build step with `.test/ai-wars.js` and a seat at war.
 
-## 7. What the player sees
+## 8. Old saves
 
-- **Morale bar** (province panel, city sheet, city list): green at 50% or more, amber from 30% to 49%, red below 30%. A thin line marks 30% on occupied cities. The bar also shows the daily change and what would fix it, for example "−6%/day · 0 troops · 2 hold it, 4 raise it", plus the integration count ("Integrating 6/10").
-- **Warnings** (dispatches; each one is sent once each time morale crosses the line):
-  - At 40%: "Morale in Lyon is 40% and falling 6% a day. Rebels will rise below 30% (about 2 days). Station troops or Pacify."
-  - At 30%: "Rebels rose up in Lyon (4 units)! Your garrison of 1 is outnumbered."
-  - Then: "Lyon will be lost in 24 h unless troops arrive", then "Lyon revolted and rejoined France", or "Your garrison crushed the rebels in Lyon".
-- **"Rebels likely" chip** on the city label, the city list and the city sheet when morale is below 40% and falling. When rebels are present it becomes **"Rebels!"**.
-- **Pacify button:** stays where it is, now with a reason when it is greyed out ("needs a unit in the city", "again in 2 days").
-- **On the map:** rebels appear as **3D soldier figures like other units**, using a new squad model. It shows 3 irregular fighters with no helmets and no plate carriers: bare heads, a cap or a head scarf, jackets and jeans in mixed colours, chest rigs, and AK-style rifles, one of them with a rocket launcher. The figures are the same size as other squads and **visible at the same zoom as other units**. Today, independent forces in the 64-nation world only appear when you zoom in very close; rebels will not have that limit. Their badge has a **grey band with a rebel emblem** (crossed rifles), and they are named **"Rebels"** (today they are called "Partisans").
+A save made before this rule (no `S.mv`) is converted once, on load (`moraleMigrate` in rules/state.js restore, after the other migrations):
 
-## 8. Old saves, tests, performance, work
+- **Morale** of each land province = today's morale (100 − unrest − war damage), so nothing the player sees jumps on load.
+- **Civilian casualties** start at 0 (the war damage is already in that morale).
+- **Status:** a city or province occupied for 10 days or more, or integrated, becomes **annexed** at no cost (today it already gives full
+  output after 10 days; dropping it to 25% on load would be a shock); one occupied for less stays occupied.
+- **Partisans** become rebels. In the countryside (which no longer rebels) they stand down. In a city without the holder's troops they get
+  24 hours before the city goes over, once, with a dispatch, so a load never loses a city on the spot.
+- `S.unrest`, `S.integ`, `S.rcool` and `S.pcool` are dropped; `S.occ` stays (it dates the occupation for the panel). The tier calibration of
+  an old nations-world save is not redone.
+- Each seat gets one dispatch explaining the new rule.
 
-- **Old saves:** they load as they are. Partisans already in a save become rebels. Cities that integrated under the old rule stay integrated. Cities below 30% when a save loads get the 3-day grace, so a load does not cause a burst of uprisings. Countryside morale below 50% is raised to 50% on load.
-- **Bug fixed along the way:** today, rebels standing alone take a province **within 1 hour**, not after the intended 24 hours. Their hold counter starts empty, so the first check passes at once (I tested this).
-- **Tests:** a new test file, `.test/rebels.js`. It checks:
-  - the day tables above for 0, 1, 2 and 4 units
-  - grace, cooldown and rebel sizes
-  - garrison against rebels
-  - the 24-hour flip to the original country or to independence
-  - that original cities never rebel
-  - integration
-  - Pacify through the rules (needs a unit, has a cooldown) and its use by the AI
-  - old saves
-  - that `tools/headless.js --check` still gives the same result every run
-  
-  Picture checks cover the bar, the chip and the new 3D squad.
-- **Performance:** one daily pass over the provinces, the same as today. Rebel forces are checked once an hour, also as today. The simulation ran at the same speed with today's rule and with the plan (about 3 seconds per game day for the 64-nation world).
-- **Files:** `rules/economy.js` (the rule, Pacify), `rules/api.js` (Pacify), `rules/ai.js` (the 4 habits), `rules/state.js` (old saves, the name "Rebels"), `units3d.js` and `tools/bake-assets.js` (the rebel squad, `assets/units/m-reb.webp`), `index.html` (bar, chip, warnings, badge, zoom, help text), `.test/rebels.js`.
-- **Estimate:** 3 build steps:
-  1. The rules, the AI and the tests.
-  2. The display and the 3D squad.
-  3. Tuning with the simulation, plus picture checks.
+## 9. The branch `rebels` (419f514): what is reused
 
-## 9. Questions for you (suggested answer in bold)
+The branch built the earlier plan and was never merged; its rule (unrest rates, integration, Pacify, one infantry unit crushing any
+rebels) is replaced. It also predates the auto-test fixes to partisans and capture (auto-test/fixes 0c9b468, 48ab87d, 0156928), so it is
+not merged: the reusable parts are copied onto the new branch from master.
 
-1. After a capital is captured, which rule? **A now (occupied cities only); C (a one-time −15% shock, no homeland rebels) later, with "capital destroyed".**
-2. Countryside without a city: should it rebel? **No. Morale there only cuts output and never falls below 50%.**
-3. Below 30%: are rebels certain, or only a daily chance? **Certain (at the daily update, after a 3-day grace and with a 5-day cooldown).**
-4. Rebel strength: **3 / 4 / 5 / 6 units for a town / city / large city / metropolis.**
-5. Garrison effect: **+3% a day per unit, up to 4 units: 2 units hold a city steady and 4 raise its morale.**
-6. Does an integrated city become one of your original cities? **No. It never rebels and gives full output, but the original country keeps its claim.**
-7. Pacify: **$40M, +25%, needs at least 1 of your units in the city, once every 3 days per city.** Without the unit rule, money alone could replace troops for about $13M a day per city.
-8. Rebels never lose battle morale (independent forces work like that today). **Keep it: they are fighters with nothing to lose.**
-9. Rebel badge emblem: **crossed rifles** (or a raised fist, or a torch)?
+| Reused as it is | Where on the branch |
+|---|---|
+| The rebel squad in 3D (`m-reb`, its figures) and its baked pictures | `units3d.js`, `tools/bake-assets.js`, `assets/units/m-reb.webp`, `m-reb-hi.webp` |
+| The crossed-rifles emblem and badge band (`rifleX`, `rebelBand`, the `reb` icon), the unit-type tables (`TMM`, `TMG`, `TM_FOOT`, `TM_CT`) and the rule that shows rebels at every zoom | `index.html` |
+| Rebels identified in a city you hold | `rules/vision.js` (one line in `armyIdent`) |
+| `armyName`: "Rebels" | `rules/state.js` |
+| `wingsFlee` (air wings escape a lost city), `rebelSize`, `garrisonOf`, `rebelsAt` | `rules/economy.js`, `rules/combat.js` |
+| The city's hand-over (owner, queue, construction, Bunker level, occupation, wings, the original country or independence) | `rules/economy.js` `rebelHour`, without its 24-hour count |
+| The save-migration pattern (a version flag, a dispatch to each seat) | `rules/state.js` `rbMigrate` |
+| The badge and zoom checks; the hand-over, wings and old-partisan cases | `.test/rebels-ui.js`; parts of `.test/rebels.js` |
+| The city sheet's chip styles (`.oc-chip`), for the flame chip | `index.html` |
 
-## Appendix: what exists today (file:line on master 4de6ebc)
+Not reused: `RB` and its rates, `unrestRate`, `occHold`, integration, `pacify` and `pacifyWhy` (and their API entries), `rebelCrush`, the
+sheet's integration and Pacify row, the help text, the golden fingerprint, the branch's simulation overlay in `tools/rebels-sim.js`.
 
-- **Occupation:** original owner `S.home[p]`, current owner `S.owner[p]`. `occFactor` ramps output from 25% to 100% over 240 hours (rules/economy.js:8). Capture sets the occupation hour and raises unrest to at least 30 (city) or 15 (countryside) (rules/combat.js:343, 349-350). Ceded or sold land resets home (rules/diplomacy.js:173, 334; rules/territory.js:139-141). A collapsed nation's land is annexed (and counted as occupied) or becomes independent with 2 infantry (rules/state.js:366-372).
-- **Morale and unrest:**
-  - `moraleOf = 100 − unrest − war damage` (rules/economy.js:21). War damage is capped at 70 (rules/economy.js:22) and heals 2.5 a day (rules/tick.js:221). Output is multiplied by `0.45 + 0.55 × morale/100` (rules/economy.js:23).
-  - `unrestDay` (rules/economy.js:197-214, run daily from rules/tick.js:253):
-    - integration after 10 days with 2 or more units caps unrest at 30 (line 206)
-    - each day unrest moves by `(5 if home alive, else 3) + 2 for a city − min(9, 1.5 × garrison)`
-    - a warning at 50
-    - partisans appear by daily chance above 60 (line 210)
-  - `rebelHour` (rules/economy.js:215-227, run hourly from rules/tick.js:25): the 24-hour hold uses `++a.hold` on an unset counter (line 219), and `addArmy` never sets it (rules/state.js:284-288). That is why the province flips within 1 hour.
-  - The name "Partisans" comes from rules/state.js:301.
-- **Spies and Pacify:** "Incite unrest" adds 35 (rules/diplomacy.js:379, 410). The AI uses it against occupied land (rules/ai.js:131-136). Pacify exists only on the page and changes the state directly (index.html:10067 button, 10097 handler); the AI cannot use it. Independent forces are at war with everyone (rules/diplomacy.js:16). The independent side never captures (rules/tick.js:96). Its forces lose no battle morale (rules/tick.js:174). Supply per nation: `SUP` and `supplied` (rules/movement.js:467, 472). Ground units needed to capture: `CAP_MIN = 2` (rules/data.js:517). AI_STARTS_WARS is false (rules/diplomacy.js:10). The AI keeps a garrison only in its capital (rules/ai.js:589-592, 639).
-- **Display:**
-  - morale in the province panel (index.html:8636), the city sheet bar (8915, 8931), details (10059), the unrest bar with "revolt risk" (10066-10067) and the help text (10510)
-  - rebels get the red "war" badge (index.html:6943)
-  - independent forces are hidden until zoom `hexPx ≥ 49` in the 64-nation world (index.html:7833-7835)
-  - unit types map to models through `TMM` (index.html:5077, 5210)
-  - 3D squads: `mSoldier` and `mSquad` (units3d.js:410, 460), the model list `MAPB` (units3d.js:749), baked by `node tools/bake-assets.js map` (tools/bake-assets.js:3)
-- **Measurements:** `tools/rebels-sim.js` (read-only; it lays the plan's numbers over an in-memory copy of the rules).
+## 10. Build order
+
+One branch (REBELS), from master, in this order; each step ends with the headless determinism check:
+
+1. **Morale in the rules:** `S.mor`, `S.cas`, `S.anx`; the targets and the daily step (rules/economy.js, replacing `unrestDay`); start,
+   capture and liberation values (rules/combat.js capture, rules/diplomacy.js cede, rules/state.js checkNation); war damage feeding
+   casualties; shortage; the output link replacing `occFactor`; the tier calibration on peacetime targets (rules/state.js tierStart); the
+   old-save migration. Tests.
+2. **Annex City:** the construction, the API order and its reasons, `mobBlock`, capture and rebel losses; questions 2 and 3 as answered.
+3. **Rebels:** the nightly roll, the troop rule, the rising, the dug-in fight, the hand-over; the parts copied from the branch.
+4. **Trade (point 11):** as chosen in section 5 (rules/trade.js); the administration weighting (rules/economy.js income0); the dispatches.
+5. **Computer nations:** the four habits; re-measure (section 7.2).
+6. **The page:** the factors list, chips, Annex card, Mobilize reason, side panel, Cities list, dispatches, help; the fire and smoke
+   (fx.js); the badge and 3D squad from the branch.
+7. **Balance and pictures:** the checks of section 11; before/after screenshots to you before merging.
+
+## 11. Tests and checks
+
+- **New `.test/morale.js`:** start values; the eighth-a-day step and its rounding; every modifier on its own (distance for named cities,
+  wars with a 0-VP nation and with rebels, the −25 cap, enemy neighbours with independent land left out, enemy units, low and high
+  neighbours read from the day before, shortage depth, casualties and their ×2/3 decay, capital lost, capital, Bunker levels); the target
+  kept within 0-100; output 25/50/100% × the morale link.
+- **New `.test/annex.js`:** cost and time by size band; the slot; refused when not occupied or unaffordable; mobilizing refused while
+  occupied and allowed once annexed; capture removes the status and loses an annexing; rebels with troops present: the annexing carries on;
+  rebels in an empty city: city, annexing and cost lost.
+- **`.test/rebels.js` (new rule):** the chance table; halving per unit; no rising above 33% or in the countryside; the size bands; the dug-in
+  fight; an empty city handed over at once (to the original country, or independent; a homeland city independent); no new rising while
+  rebels are there; rebels counted as a war; the badge and the 3D squad (from the branch's `.test/rebels-ui.js`).
+- **Trade:** the cases of section 5 (the route ends at war; what happens to its slot; a non-partner war changes nothing).
+- **Old saves:** the `.test` fixtures and a public-v3.12 save load, convert (morale unchanged on load, 10-day occupations annexed) and play
+  10 days.
+- **Rules checks:** `node tools/headless.js --check` (determinism) and `--nations`; the golden fingerprint (`tools/golden-12345.txt`) redone
+  once, on purpose; `node tools/balance.js`, `node tools/eco-check.js --scenarios`, `node tools/nations-balance.js` (tier incomes within
+  their targets after the recalibration of 2.6); `tools/rebels-sim.js` replaced by this plan's simulation (`docs/rebels-plan/sim`, moved
+  into tools/) with scenarios for a capture, a liberation, an annexing, a rising with and without troops, a trade partner and a non-partner;
+  `node tools/perf.js` for the daily morale pass (about 3,500 provinces, each neighbour read once) and for the fire effect.
+- **Pictures:** the city sheet before and after (desktop and phone), the Annex card, the fire on the map at three zooms, by day and night,
+  on both, sent to you before merging.
+
+## 12. Questions for you (suggested answer in bold)
+
+1. The three proposals: **(a) Annex City B ($50M · 10k · 3 days for a town up to $180M · 40k · 6 days for a metropolis); (b) straight-line
+   distance, −5 per 1,000 km, at most −30; (c) each of your ground units in the city halves the rebel chance.**
+2. The countryside around an annexed city: annexed with it, or left occupied (25% for good, since only cities have the Annex City card)?
+   **Annexed with it: the occupied countryside provinces whose nearest city it is, taken from the same country.**
+3. Land you receive by peace treaty, territory sale or gift becomes your homeland at once today (100% output). **It arrives annexed (50%,
+   morale base 75) unless it was your own homeland.**
+4. Enemy neighbours: does independent land count as "a nation you are at war with" (in the rules, independent forces are at war with
+   everyone)? **No: only nations count, as for the wars modifier.**
+5. "Enemy units in the province: −1": −1 whatever their number, or −1 per unit? **−1 whatever their number, as written.**
+6. Low and high-morale neighbours: −7 / +3 when the neighbour is a city and −4 / +1 when it is countryside (the plan's reading), or by what
+   the province itself is? **By the neighbour, as the plan reads it.**
+7. Can homeland and annexed cities rebel too, or only occupied ones (the earlier plan's rule)? **Any city at 33% or lower, as your point 10
+   says; a homeland city gets there only through a lost capital, a long shortage or a siege.**
+8. Pacify is gone (morale now moves only toward its target). Keep a way to buy morale? **No.**
+9. Mobilisation used to strain homeland morale (up to 15 unrest at the highest level). Keep it as one more modifier, −5 per Mobilisation
+   level on homeland targets? **Yes: otherwise Mobilisation costs only money.**
+10. The agent's "Incite unrest" becomes "Incite revolt": **−20 morale at once in an occupied city** (it then climbs back an eighth of the
+    gap a day).
+11. Rebels in an empty city take it at once (your words), or after 24 hours alone there (the earlier plan, which gave you time to send
+    troops)? **At once.**
+12. Trade (point 11): today the lost route is replaced the next day, so occupying a partner costs nothing. **Option C: the route's slot
+    stays empty while at war or while you hold its cities unannexed, and your other routes pay 25% less until you annex them** (section 5).
+13. The fire on foreign cities: wherever you can see the city, or only on your own? **Wherever you can see it: a burning city is no
+    secret.**
+14. Administration: today every province held counts fully against a nation's administration factor, so a small nation that conquers
+    loses more than the conquest gives (section 5.4). **Occupied provinces count a quarter and annexed ones a half.**
+
+## Appendix A. What exists today (file:line on master 4e52d08)
+
+- **Output:** `provYield` (rules/economy.js:24) multiplies by `occFactor` (rules/economy.js:8: 25% rising to 100% over 240 hours after a
+  capture) and by `0.45 + 0.55 × moraleOf/100`. `moraleOf` = 100 − unrest − war damage (rules/economy.js:21). `warDamage` (rules/economy.js:23)
+  adds to `S.dmg` (capped at 70) and kills people; it is called by every battle step (rules/tick.js:157, 0.5 a step), ranged fire
+  (rules/combat.js:351), air raids (rules/air.js:232) and missiles (rules/air.js:327). War damage heals 2.5 a day (rules/tick.js:232);
+  population grows above 70% morale (rules/tick.js:233).
+- **Unrest:** `unrestDay` (rules/economy.js:199, run at the day change from rules/tick.js:264): mobilisation strain, integration after 10 days
+  with 2 units, daily rates, partisans above 60. `rebelHour` (rules/economy.js:217, hourly from rules/tick.js:26) hands a province to its
+  original nation after 24 hours alone (the hold count bug is fixed on auto-test/fixes 0c9b468). `capture` (rules/combat.js:393) sets the
+  occupation hour and unrest 30/15 (line 400). `checkNation` (rules/state.js:404) passes a dead nation's land on, occupied (line 411). `cede`
+  (rules/diplomacy.js:174) and territory sales (rules/territory.js:139-141) set the home nation. Incite unrest: rules/diplomacy.js:380, 393.
+  Pacify: on the page only (index.html:11434).
+- **Buildings and units:** one construction per province (`S.cons`, rules/production.js `build`, `consHour`); `mobBlock`
+  (rules/production.js:12) decides who may mobilize. The Bunker table `BUNKER_LV` (rules/data.js:160). Dug in: `DIG_CITY = 1/1.25`
+  (rules/combat.js:210) after 12 hours standing still or with the Defend stance (`dugIn`, rules/combat.js:203). `CAP_MIN = 1`
+  (rules/data.js:631).
+- **Trade:** routes form daily in `tradeGen` (rules/trade.js:360) by score: 2-4 sea routes, 1 land route and 1-2 independent partners per
+  nation; `trInvalid` (rules/trade.js:212) ends a route on war; a freed slot is filled again the next day.
+- **Victory points:** `score` (rules/state.js:431): 4 a city, 1 a province, 10 an original capital held.
+- **Effects:** burning cities' smoke `afxMark` and `afxAmbient` (fx.js:122-128); effects levels and the phone default (fx.js:1136).
+
+## Appendix B. The simulations
+
+The scripts in `docs/rebels-plan/sim/` load the rules files the way `tools/headless.js` does, apply this plan to that in-memory copy
+(`overlay.js`: morale, targets, status, Annex City, the nightly roll, the trade options; later declarations win and two lines are patched in
+memory) and change no file. Run them from that folder:
+
+| Command | What it measures |
+|---|---|
+| `node sim-world.js now 60 12345` | the whole nations world under today's rule, computer players only (income, land, captures) |
+| `node sim-world.js plan 60 12345 troop=half` | the same under the plan; options `troop=half\|size\|minus15`, `curve=A\|B\|C`, `annex=A\|B\|C`, `annexAI=true\|false`, `km=1000` |
+| `node sim-trade.js Poland Germany partner\|none\|waronly\|peace A\|B\|C 0\|1 30 12345 4 0\|1` | section 5: attacker, victim, partner or not, trade option, annex at capture, days, seed, cities taken, administration weighting |
+| `node rep-trade.js <files>`, `node rep-trade2.js <files>` | the 30-day sums and the day-by-day table of section 5 |
+| `node duel.js` | rebels against a dug-in garrison, 8 cities per match-up (section 0.3) |
+| `node distances.js > dist.json`, then `node distance-table.js` | the distance tables of section 0.2 |
+| `node annex-payback.js` | city output by size band and the annex paybacks of section 0.1 |
+
+The mockups: `bash tools/mkpage.sh`, then `node docs/rebels-plan/mock/sheet-mockup.js <folder>` (city sheet today and planned, map with the
+fire, desktop and phone) and `node docs/rebels-plan/mock/fire-frames.js <folder>`.
