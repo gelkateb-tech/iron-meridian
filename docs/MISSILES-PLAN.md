@@ -12,17 +12,17 @@ Contents: 1 in short, 2 how I read the request, 3 today (measured), 4 research, 
 
 | | Cruise | Ballistic | **Chemical** (new) | **Tactical Nuclear** (new) |
 |---|---|---|---|---|
-| Research | Cruise Missiles, day 1 (as today) | **Conventional Warhead** (today's Ballistic Missiles, renamed), day 6 | **Chemical Warhead**, day 10, 7 days | **Nuclear Warhead**, day 20, 10 days |
+| Research | Cruise Missiles (as today: open from day 1, 6 days, so ready on day 7) | **Conventional Warhead** (today's Ballistic Missiles, renamed), day 6 | **Chemical Warhead**, day 10, 7 days | **Nuclear Warhead**, day 20, 10 days |
 | Built in | **any city with an Army Base, Airbase or Naval Yard**, or a silo | Missile Silo I | Missile Silo I | Missile Silo II |
 | Price | $60M | $140M | **$170M**, 12 rare | **$400M**, 30 rare |
-| Build time | 36 h | 72 h | 84 h | 120 h (108 h at Silo II) |
+| Build time | 36 h | 72 h | 84 h | 108 h (built only in Silo II or higher; 96 h at Silo III) |
 | What it does | power 7 on the forces in one province | power 16, wrecks a building level | a small blast, then **gas for 12 h**: every ground force there loses 2.5% of its health an hour and fights 20% worse | **half the health of everything in the province** (armour and ships 40%), 12% in every neighbouring province, every building knocked out 48 h and two levels wrecked, **radiation for 48 h** |
-| Civilians | as today | as today | **−20 morale** in a city (civilian casualties), 4% of its people | **−30 morale** (the morale plan's limit), 12% of its people; −10 and 2% next door |
+| Civilians | as today | as today | **civilian casualties 20** in a city: its morale target −20, fading by a third a day (morale itself falls about 5 points at most), 4% of its people | **civilian casualties 30** (the morale plan's limit: morale falls about 7 points at most), 12% of its people; −10 and 2% next door |
 | Limits | 2 stored per city without a silo | none | 2 per silo, 6 per nation, one launch every 12 h | 1 per silo, 3 per nation, one launch every 24 h, at least 6 h in flight |
-| Diplomacy | none | none | victim −30, everyone else −15, marked a treaty breaker | victim −60, everyone else −35, treaty breaker, "Used nuclear weapons" −30 for 60 days; the victim's allies join the war |
+| Diplomacy | none | none | victim −30, everyone else −15, "Used chemical weapons" −25 for 50 days | victim −60, everyone else −35, "Used nuclear weapons" −30 for 60 days; the victim's allies join the war |
 
-- **The Missile Silo needs Conventional Warhead** (day 6) instead of Cruise Missiles. **Cruise missiles need neither**: they come from any city with an Army Base, Airbase or Naval Yard, from day 1.
-- **Earliest use**, a nation that does nothing else (the chain of prerequisites sets it, not money): first chemical missile on **day 26**, first nuclear missile on **day 36**. The full nuclear path costs about **307 rare materials of research**: about 25 days of a rich nation's rare-material income, two months of a typical one's. Nuclear weapons are a late, rich-nation weapon.
+- **The Missile Silo needs Conventional Warhead** (day 6) instead of Cruise Missiles. **Cruise missiles need neither**: they come from any city with an Army Base, Airbase or Naval Yard, as soon as Cruise Missiles is researched (6 days, so from day 7).
+- **Earliest use**, a nation that does nothing else (the chain of prerequisites sets it, not money): first chemical missile on **day 26**, first nuclear missile on **day 36**. The full nuclear path costs about **251 rare materials of research**: about 20 days of a rich nation's rare-material income, six weeks of a typical one's. Nuclear weapons are a late, rich-nation weapon.
 - **Measured against today's missiles** (the real rules in Node, section 3): a ballistic missile takes 30 health from any stack (7% of a 40-unit army). A chemical missile takes 24 to 40% from a stack that stays in the gas, 11 to 26% from one that walks out. A nuclear missile takes 46% of a 40-unit army at once and 63% if it stays in the radiation.
 - **The computer fires no missiles today** (0 launches in 60 days on three seeds, 68 nations): the new weapons will not flood computer games. It gets a strict use rule (section 10).
 - **On the map** the existing looks do the work: the launch plume, the trail and the INCOMING marker (labelled CHEMICAL or NUCLEAR), the chemical blast and gas cloud, the tactical nuclear flash and mushroom cloud. New: a gas zone and a radiation zone marker on the province for as long as they last (mockups in section 11).
@@ -82,7 +82,7 @@ Strategic Weapons gets two new lines, Chemical Missile and Nuclear Missile, and 
 |---|---|---|---|---|---|---|---|
 | 1 | Cruise Missiles (`msl1`) | Cruise Missile | Unlock | **any city with an Army Base, Airbase or Naval Yard** (or a silo) builds Cruise Missiles. Was: "Missile Silos can build Cruise Missiles" | $96M, 20 mat, 31 rare (unchanged) | 6 | |
 | 6 | **Conventional Warhead** (`msl2`, was "Ballistic Missiles") | Ballistic Missile | Unlock | **Missile Silos can be built**; silos build Ballistic Missiles | $144M, 35 mat, 64 rare (unchanged) | 8 | Cruise Missiles (unchanged) |
-| 10 | **Chemical Warhead** (`msl_chem`) | Chemical Missile (new) | Unlock | silos build Chemical Missiles | $180M, 40 mat, 56 rare | 7 | Conventional Warhead |
+| 10 | **Chemical Warhead** (`msl_chem`) | Chemical Missile (new) | Unlock | silos build Chemical Missiles | $183M, 40 mat, 55 rare | 7 | Conventional Warhead |
 | 16 | **Persistent Agent** (`chem_long`) | Chemical Missile | Upgrade | gas lasts 18 h instead of 12 | $130M, 45 mat, 30 rare | 5 | Chemical Warhead |
 | 20 | **Nuclear Warhead** (`msl_nuc`) | Nuclear Missile (new) | Unlock | Silos II and up build Tactical Nuclear Missiles | $390M, 90 mat, 112 rare | 10 | Heavier Warhead (`bm_pow`, day 14) |
 | 9 / 17 | **CBRN Defence** 1/2 (`cbrn`) | Command & Logistics | Upgrade, 2 levels | gas and radiation hurt your forces 50% / 75% less; your cities lose a quarter / half fewer people to them | $110M, 40 mat, 30 rare / $160M, 60 mat, 45 rare | 5 / 6 | nothing |
@@ -106,7 +106,7 @@ Why these numbers:
 | Nuclear Warhead | | 21 to 31 |
 | First missile built | **day 25.5** (84 h) | **day 35.5** (108 h at Silo II) |
 
-**Rare materials of research**: 151 for the chemical path (Cruise 31, Conventional 64, Chemical 56), 307 for the nuclear path (Cruise 31, Conventional 64, Heavier 44, Nuclear 112). At three quarters of income spent on research, a nation earning 8 rare a day (the classic world's middle) needs about 25 days for the chemical path and 51 for the nuclear one; one earning 16.5 a day (the nations world's richest at the start) needs 12 and 25. The tree's Strategic Weapons category rises from 728 to 926 rare materials (1,046 with the ICBM); CBRN Defence adds 75 to Command & Logistics.
+**Rare materials of research**: 150 for the chemical path (Cruise 31, Conventional 64, Chemical 55), 251 for the nuclear path (Cruise 31, Conventional 64, Heavier 44, Nuclear 112). At three quarters of income spent on research, a nation earning 8 rare a day (the classic world's middle) needs about 25 days for the chemical path and 42 for the nuclear one; one earning 16.5 a day (the nations world's richest at the start) needs 12 and 20. The tree's Strategic Weapons category rises from 728 to 925 rare materials (1,045 with the ICBM); CBRN Defence adds 75 to Command & Logistics.
 
 ## 5. Where missiles are built
 
@@ -161,7 +161,7 @@ Names only, no pictures, as for the other missiles (AIR-6, docs/DOCTRINES.md 3.5
 | Bunker | its usual protection, on the blast and on every hour of gas | **half** its protection (level II: 21% instead of 43%) |
 | CBRN Defence 1 / 2 | the gas 50% / 75% less | the radiation 50% / 75% less (not the blast) |
 | Buildings | none | every building in the province **knocked out for 48 h** (`knockOut`); **two building hits** (a level each; the Bunker shields as for any hit, BLD-9); roads and rails cut 96 h (72 for a ballistic missile today) |
-| The city's people | **civilian casualties 20** (10 in countryside): morale −20; **4% of the people** (a Bunker spares its level's share) | **civilian casualties 30** (the morale plan's limit): morale −30; **12% of the people**. Next door: 10 and 2% |
+| The city's people | **war damage 40** (20 in countryside), so **civilian casualties 20** (10) by the morale plan's rule (half the war damage): the morale target −20, fading by a third a day; **4% of the people** (a Bunker spares its level's share) | **war damage 60**, so **civilian casualties 30** (the morale plan's limit); **12% of the people**. Next door: war damage 20, casualties 10, 2% of the people |
 | Output | as morale | the province makes **half** for 48 h (on top of morale and the knocked-out buildings) |
 | At sea | not allowed (no target) | ships in the sea zone: the blast (40%); no radiation |
 | Intercepted | no gas, nothing happens | no detonation, nothing happens |
@@ -170,9 +170,29 @@ The gas and the radiation are rules state, one entry a province: `S.haz[p] = {k:
 
 ### 7.2 Morale and civilian casualties
 
-The new morale plan caps civilian casualties at **−30** morale. The weapons feed that term: cruise 4, ballistic 8 (today's war damage 12 and 22 is the stand-in), **chemical 20** in a city (10 in countryside), **nuclear 30** in the target (the whole limit) and 10 in each neighbouring province. The plan's own rule heals it. Until the morale plan is built, the same numbers go through today's `warDamage(p, v)` (morale −v, people −0.12% a point; it heals 2.5 a day), and the people lost (4% and 12%) are taken directly.
+These weapons use the morale plan's one rule (docs/REBELS-PLAN.md 2.5, on this branch), with nothing of their own: each point of war
+damage in a province adds half a point of civilian casualties there; casualties lower the province's morale **target** (at most −30) and
+shrink by a third at each day change; morale itself moves an eighth of the way to its target each day. War damage per strike: cruise 12 and
+ballistic 22 as today (casualties 6 and 11), **chemical 40** (casualties 20; countryside 20, casualties 10), **nuclear 60** in the target
+(casualties 30, the limit) and 20 in each neighbouring province (casualties 10).
 
-A gassed or nuked city that changes hands afterwards starts its occupation low: under the rebels rule (docs/REBELS-PLAN.md: a captured city starts at 70% at most, minus war damage), a nuked city starts at 40% and falls below 30% within two days without a garrison of two or more. Nuking a city is a poor way to take it.
+What that does to morale itself (worked out day by day, nothing else changing):
+
+| Strike | Civilian casualties | Morale the next day | Lowest (day 4) | Two weeks later |
+|---|---|---|---|---|
+| Cruise | 6 | −1 | −1 | −0.5 |
+| Ballistic | 11 | −1 | −3 | −1 |
+| Chemical | 20 | −3 | −5 | −2 |
+| Tactical nuclear | 30 | −4 | −7 | −3 |
+
+So a strike does not make a calm city rebel; it tips a city that is already near the 33% line (a nuked homeland city at 38% falls to
+about 31% and can rise). A city captured soon after a nuclear strike starts at 25% like any captured city, but its target is up to 24
+points lower for the first days than after an ordinary battle (casualties −30 instead of about −6): in the rebels plan's Dresden example the
+target falls from 29% to 5%, and morale sits near 22% for the first week instead of rising from 25% toward 29%, so the chance of a rising
+there is about 60% a night before the troop rule, against 40 to 50%. Nuking a city is a poor way to take it.
+
+Until the morale plan is built, the same war damage goes through today's `warDamage(p, v)` (morale −v at once, people −0.12% a point; it
+heals 2.5 a day), and the people lost (4% and 12%) are taken directly. Question 15 asks whether a strike should also cut morale at once.
 
 ### 7.3 Measured: the damage a stack takes
 
@@ -213,11 +233,11 @@ The game's opinion (`opinionParts`, `rules/diplomacy.js`) adds memory (`S.mem`, 
 
 | Act (at launch, intercepted or not) | The victim | Every other nation | Marks | Allies |
 |---|---|---|---|---|
-| **Chemical launch** | memory −30 | memory −15 (−8 if it is itself at war with the victim) | **treaty breaker** (the existing mark: −25 with everyone, fading over 50 days) | none |
-| **Nuclear launch** | memory −60 | memory −35 (−15 if at war with the victim) | treaty breaker, and **"Used nuclear weapons" −30, fading over 60 days** (new opinion line) | **the victim's allies and coalition partners join the war** (the existing `joinDefence`), unless in a truce or pact with the launcher; **a computer ally of the launcher whose opinion falls below 0 ends the alliance** |
+| **Chemical launch** | memory −30 | memory −15 (−8 if it is itself at war with the victim) | **"Used chemical weapons"** (a new opinion line with the treaty breaker mark's numbers: −25 with everyone, fading over 50 days; not shown as "treaty breaker") | none |
+| **Nuclear launch** | memory −60 | memory −35 (−15 if at war with the victim) | **"Used nuclear weapons" −55, fading over 60 days** (new opinion line; the same total at launch as the breaker mark and a −30 line together) | **the victim's allies and coalition partners join the war** (the existing `joinDefence`), unless in a truce or pact with the launcher; **a computer ally of the launcher whose opinion falls below 0 ends the alliance** |
 | Fallout on a third nation's province (nuclear, next door) | | that nation: memory −40 more | | no war (DIP-1) |
 
-A worked case: France likes Germany (opinion of Spain 0 before). Spain gasses a German army: France's opinion of Spain falls to −40 (memory −15, treaty breaker −25). France refuses a pact, passage and an alliance (they need 0, 25 and 35). Spain nukes a German army instead: France falls to −90 (−35, −25, −30); no pact, no deal; Germany's allies declare war on Spain. Two months later (memory back by 1 a day, the marks gone after 50 and 60 days) France is back where it was. The computer never starts a war over it (DIP-1 stays).
+A worked case: France likes Germany (opinion of Spain 0 before). Spain gasses a German army: France's opinion of Spain falls to −40 (memory −15, used chemical weapons −25). France refuses a pact, passage and an alliance (they need 0, 25 and 35). Spain nukes a German army instead: France falls to −90 (memory −35, used nuclear weapons −55); no pact, no deal; Germany's allies declare war on Spain. Two months later (memory back by 1 a day, the marks gone after 50 and 60 days) France is back where it was. The computer never starts a war over it (DIP-1 stays).
 
 Every seat gets a dispatch: "Nuclear launch detected: Spain fired a nuclear missile at Munich. Impact in 6 h." for every nuclear launch in the world, and "Spain used chemical weapons over Munich" on the impact of a chemical missile its seat can see or hears of (the victim and the victim's allies always).
 
@@ -252,15 +272,22 @@ Everything uses the existing looks (`fx.js` WFX and `drawMissiles`); what is new
 | Launch screen | the range circle (as today); the target's province outlined | the range circle; **the target and its neighbours shaded** and a list: "Also hit: 4 provinces, 2 of your forces, 1 province of Poland (not at war)"; a confirmation: "Nuclear strike. Every nation will think less of you (−35 to −90)." | the launch picker (docs/COMBAT.md, "the launch picker shows its range circle") |
 | Silo and menus | the silo panel lists the new missiles (it already lists every `MISSILES` entry); the missile strip gets Chemical and Nuclear cells with stock, "Locked" or "Needs Silo II" | | `citySiloHTML`, `mslDDSync` |
 
-**Pictures** (the existing looks in the game, United States test build, Mexico firing at Houston, and the two new zone markers drawn as mockups over a real frame) were sent with this plan: `missiles-map-sheet.png` (six panels: launch, flight with INCOMING, chemical impact at 4 s, nuclear impact at 1.5 s, gas zone mockup, radiation zone mockup) and the full frames `1-launch.png` to `6-mock-radiation-zone.png`. Nothing visual is built until the owner approves the zone markers.
+**Pictures** (United States test game, day 2: Mexico fires at Houston; the player fires at Monterrey). The existing looks are frames of the game today; the new parts are drawn over real frames and marked MOCKUP:
+
+- `docs/missiles-plan/missiles-map-desk.jpg` (desktop 1280 x 800, eight panels): 1 the launch plume (today), 2 the target marker reading NUCLEAR (mockup), 3 the chemical impact (today, at 4 s), 4 the tactical nuclear impact (today, at 1.5 s), 5 the gas zone on the province's own outline with its dashed rim and "GAS 9 h" (mockup), 6 the radiation zone with its hazard rim and "RAD 40 h" (mockup), 7 the launch confirmation with the target and its neighbours shaded (mockup), 8 the missile strip's Chemical and Nuclear cells and the radiation line in the city sheet and side panel (mockup).
+- `docs/missiles-plan/missiles-map-phone.jpg` (phone 390 x 844, five panels): the NUCLEAR marker, the two zones, the launch confirmation, the strip and the city sheet line.
+
+![The map and panels, desktop](missiles-plan/missiles-map-desk.jpg)
+
+Nothing visual is built until you approve these (question 13).
 
 ## 12. Worked examples
 
-**A. The siege of Kyiv.** Russia has 30 units (12 infantry, 10 tanks, 4 artillery, 4 SAMs) dug in round Kyiv, Ukraine holds the city with 10 units in a Bunker II. Day 24: Ukraine has Chemical Warhead and one chemical missile in its Lviv silo, 4 h away. It fires: Russia's 4 SAMs in the province stop it 18% of the time. It lands: the blast and 12 hours of gas cost the Russian stack about a quarter of its health (6 to 7 units) if it stays; Russia's stack fights at x0.8 while the gas lasts. Russia pulls back after 4 hours and loses 2. Ukraine is marked a treaty breaker: every other nation's opinion of it falls by 33 to 40, Russia's by 55. Ukraine can fire its next chemical missile 12 hours later, if it has one.
+**A. The siege of Kyiv.** Russia has 30 units (12 infantry, 10 tanks, 4 artillery, 4 SAMs) dug in round Kyiv, Ukraine holds the city with 10 units in a Bunker II. Day 24: Ukraine has Chemical Warhead and one chemical missile in its Lviv silo, 4 h away. It fires: Russia's 4 SAMs in the province stop it 18% of the time. It lands: the blast and 12 hours of gas cost the Russian stack about a quarter of its health (6 to 7 units) if it stays; Russia's stack fights at x0.8 while the gas lasts. Russia pulls back after 4 hours and loses 2. Ukraine is marked a having used chemical weapons: every other nation's opinion of it falls by 33 to 40, Russia's by 55. Ukraine can fire its next chemical missile 12 hours later, if it has one.
 
-**B. A nuclear answer.** Day 38, China is losing a war to India: it has lost 22% of its starting land, and an Indian army of 40 units stands next to Beijing. China holds Nuclear Warhead and one Tactical Nuclear Missile in a Silo II. The computer's rule (b) fires: "Nuclear launch detected" goes to every seat; the INCOMING marker on India's map reads NUCLEAR for 6 hours. India's 6 SAMs without the shield stop it 22% of the time. It lands: the Indian stack loses 18 units, every building in the province is knocked out for 48 h, the province's people fall 12% and its morale 30; the neighbouring provinces' forces lose 12%; radiation keeps hurting anyone who stays. India's allies join the war; every other nation thinks 70 to 90 points less of China. China cannot fire again for 24 hours.
+**B. A nuclear answer.** Day 38, China is losing a war to India: it has lost 22% of its starting land, and an Indian army of 40 units stands next to Beijing. China holds Nuclear Warhead and one Tactical Nuclear Missile in a Silo II. The computer's rule (b) fires: "Nuclear launch detected" goes to every seat; the INCOMING marker on India's map reads NUCLEAR for 6 hours. India's 6 SAMs without the shield stop it 22% of the time. It lands: the Indian stack loses 18 units, every building in the province is knocked out for 48 h, the province's people fall 12% and civilian casualties of 30 weigh on its morale target (morale itself falls about 7 points over four days); the neighbouring provinces' forces lose 12%; radiation keeps hurting anyone who stays. India's allies join the war; every other nation thinks 70 to 90 points less of China. China cannot fire again for 24 hours.
 
-**C. A human player rushing nuclear weapons** (a rich nation, 16 rare a day): Cruise Missiles, Conventional Warhead, Heavier Warhead and Nuclear Warhead back to back, a silo at once: the first nuclear missile on day 36 at the earliest, having spent 307 rare materials and $800M on research, $364M on Silos I and II and $400M on the missile. A second one needs 4.5 more days; three in store is the limit.
+**C. A human player rushing nuclear weapons** (a rich nation, 16 rare a day): Cruise Missiles, Conventional Warhead, Heavier Warhead and Nuclear Warhead back to back, a silo at once: the first nuclear missile on day 36 at the earliest, having spent 251 rare materials and $800M on research, $364M on Silos I and II and $400M on the missile. A second one needs 4.5 more days; three in store is the limit.
 
 ## 13. Old saves
 
@@ -276,11 +303,11 @@ Each phase ends green on the checks of section 15 and is its own commit. Rule ch
 
 | Phase | What | Files | Size |
 |---|---|---|---|
-| 0 | Start from master **with `auto-test/fixes` merged** (or rebase on it): its missile fixes (6195531 re-check on arrival, a8fa21c "Not your silo") touch the same functions. Answer Q8 and Q19 (section 17) | | |
+| 0 | **Blocker, your decision (question 14):** start from master **with `auto-test/fixes` merged** (or rebase on it): its missile fixes (6195531 re-check on arrival, a8fa21c "Not your silo") touch the same functions. Answer Q8 and Q19 (section 17) | | |
 | 1 | The silo needs Conventional Warhead; cruise missiles from Army Base, Airbase or Naval Yard cities; the 2-per-city limit; `msl2` renamed; old-save silo kept; the AI's silo rule | `rules/production.js` (`canBuildHere`, `canBuildMissile`, `buildMissile`, `mstock`), `rules/air.js` (`missileCheck`: launch city), `rules/data.js` (node text, silo text), `rules/ai.js`, `index.html` (`TECH_BLD`, build menu reason) | small |
 | 2 | The two missiles and the research: `MISSILES.chem`, `MISSILES.nuc`, the nodes `msl_chem`, `chem_long`, `msl_nuc`, `cbrn`; `mslOf` for the new kinds; silo-level requirement; stock limits; cooldowns; target rules | `rules/data.js`, `rules/research.js`, `rules/production.js`, `rules/air.js` | small |
 | 3 | The effects: impact by kind, `S.haz` and `hazHour()`, the x0.8 / x0.9 in battle, no healing, output, buildings, people, the civilian-casualties link (the morale plan's term, or `warDamage` until then), interception rates, self-destruct at peace, captured stock | `rules/air.js`, `rules/tick.js`, `rules/combat.js`, `rules/economy.js` | medium |
-| 4 | Diplomacy: memory, the breaker mark, "Used nuclear weapons", allies joining, allies leaving, fallout on third nations, the dispatches | `rules/diplomacy.js`, `rules/air.js` | small |
+| 4 | Diplomacy: memory, "Used chemical weapons", "Used nuclear weapons", allies joining, allies leaving, fallout on third nations, the dispatches | `rules/diplomacy.js`, `rules/air.js` | small |
 | 5 | The computer: research weights, silo, building, the use doctrine, routes round hazards (and IMP-8's moving-forces count, if not already done on `auto-test/fixes`) | `rules/ai.js`, `rules/movement.js` | medium |
 | 6 | The map and screens: `fxMissile` kinds, the NUCLEAR / CHEMICAL labels, nuclear launches seen by all, burning ground after `tac`, the gas and radiation zones, panels, the missile strip, the launch picker's blast area and confirmation, research icons for the new nodes. **Before/after screenshots to the owner before merging** | `fx.js`, `index.html` | medium |
 | 7 | Docs: docs/RESEARCH.md (12.5 moves to "as built", the tree tables by `node tools/research-proto.js --write`), docs/COMBAT.md (missiles), BUILD.md, RELEASES.md line, DECISIONS update for AIR-6 and RES-13 | docs | small |
@@ -293,7 +320,7 @@ Each phase ends green on the checks of section 15 and is its own commit. Rule ch
 | Test | Checks |
 |---|---|
 | `.test/missiles-silo.js` | no silo without Conventional Warhead; a silo with it; an old save's silo without it keeps building Cruise Missiles; Cruise Missiles build in an Army Base, Airbase or Naval Yard city with only Cruise Missiles researched; 2 per such city; none in a city with none of the three; launch range from the storing city; knockouts |
-| `.test/missiles-wmd.js` | prices and goods paid; Silo II for nuclear; stock limits (2 / 6, 1 / 3) counting queued ones; cooldowns 12 h and 24 h; no target in own land, no chemical at sea; shortest flights 4 h and 6 h; interception 5% and 4% a SAM with the shield; intercepted: no gas, no blast; the table of section 7.3 within 10% (seeded dice); own forces hit; `S.haz` set, renewed, expired; gas and radiation per hour, armour half, Bunker, CBRN Defence 1 and 2; battle x0.8 / x0.9; no healing; nuclear: buildings knocked out 48 h, two hits, links 96 h, output half; people 4% and 12%; morale 20 and 30 (or war damage); at peace in flight: self-destructs; captured silo: chemical and nuclear stock gone |
+| `.test/missiles-wmd.js` | prices and goods paid; Silo II for nuclear; stock limits (2 / 6, 1 / 3) counting queued ones; cooldowns 12 h and 24 h; no target in own land, no chemical at sea; shortest flights 4 h and 6 h; interception 5% and 4% a SAM with the shield; intercepted: no gas, no blast; the table of section 7.3 within 10% (seeded dice); own forces hit; `S.haz` set, renewed, expired; gas and radiation per hour, armour half, Bunker, CBRN Defence 1 and 2; battle x0.8 / x0.9; no healing; nuclear: buildings knocked out 48 h, two hits, links 96 h, output half; people 4% and 12%; war damage 40 and 60, so civilian casualties 20 and 30 (or today's war damage until the morale plan is built); at peace in flight: self-destructs; captured silo: chemical and nuclear stock gone |
 | `.test/missiles-diplo.js` | memory and marks after a chemical and a nuclear launch (victim, others, at war with the victim, third-nation fallout); allies joining; a computer ally leaving; dispatches to every seat; opinions back near 0 after 60 days |
 | `.test/missiles-ai.js` | 60-day nations-world games, seeds 12345, 7, 99: chemical and nuclear missiles built and fired only under the doctrine (log every launch with its reason); no nation fires at its own land; prints launches per kind per seed (expected: a handful of chemical, nuclear 0 to 2) |
 | `.test/missiles-old-save.js` | a save from master (silo with `msl1` only, stocks `{cm, bm}`) loads, plays 5 days, saves; nothing lost |
@@ -318,7 +345,7 @@ Each phase ends green on the checks of section 15 and is its own commit. Rule ch
 
 **`auto-test/fixes`** (read, nothing fixed twice): the missile re-check on arrival (6195531, Q8) and the own-silo check (a8fa21c, B2.16) are needed by this plan and come in first (phase 0); IMP-8 (the computer never fires) is the same problem as section 3 and phase 5 includes its moving-forces count unless it is done there first; Q8 and Q19 get chemical and nuclear answers in section 17.
 
-**The rebels branch** (`origin/rebels`, 419f514; not merged, the REBELS job has not started): nothing in it is needed for missiles. Two things meet: (1) rebels are independent forces (owner −1, `a.rebel`), at war with everyone, so a rule that lets missiles hit "forces at war with you" would let a nation gas rebels in its own captured city; this plan forbids targets in your own land, which closes that. (2) Its occupied-city morale (`occupied`, `integrated`, the 30% uprising line) is what makes a nuked or gassed city rebel soon after capture (section 7.2); when that branch is built, the civilian-casualty hits feed its morale with no extra work. Reusable from it for other jobs: the occupation morale functions in `rules/economy.js`, `rbMigrate` as the pattern for an old-save step with a dispatch, the crossed-rifles badge art (`assets/units/m-reb.webp`) and the 3D rebel figures in `units3d.js`.
+**The rebels plan** (docs/REBELS-PLAN.md on this branch, owner points 8-10; it replaces the old `rebels` branch, 419f514, which is not merged and whose unrest, integration and "30% uprising line" are dropped): missiles need nothing from it to work, but three things meet. (1) Rebels are their own side, at war with everyone: the rule "no target in your own land" stops a nation gassing or nuking rebels in a city it holds. (2) The morale plan's civilian-casualties modifier is how these weapons reach morale (section 7.2); until REBELS is built they go through today's `warDamage`, so **building REBELS first** (the owner's order: REBELS next) means missiles need no stand-in. (3) A struck city near the 33% line can tip into a rising, and a captured nuked city stays in the danger zone a week longer (7.2). What of the old branch is reused is listed in docs/REBELS-PLAN.md section 9 (the 3D rebel squad, the crossed-rifles badge, the city hand-over, the old-save pattern); none of it is needed for missiles.
 
 ## 17. Questions for the owner
 
@@ -335,3 +362,5 @@ Each phase ends green on the checks of section 15 and is its own commit. Rule ch
 11. **One CBRN Defence node** in Command & Logistics instead of a protection upgrade in every ground line (12.5)? *Suggested: one node.*
 12. **The numbers**: stock limits (2 per silo and 6 per nation chemical, 1 and 3 nuclear), cooldowns (12 h, 24 h), nuclear at least 6 h in flight, the nuclear blast at 50% / 40% of health and 12% next door, gas 2.5% an hour for 12 h? *Suggested: yes; the build's balance run (section 15) may tune the shares by up to a fifth and will say so.*
 13. **The two gas and radiation zone markers** (mockups in section 11): this look, an olive haze with a dashed rim and a "GAS 9 h" chip, a yellow tint with a hazard rim and a "RAD 40 h" chip? *Suggested: yes, as drawn.*
+14. **Build order and the `auto-test/fixes` branch:** this build touches the same missile functions as two fixes waiting on `auto-test/fixes` (missiles re-check their target on arrival; missiles fire only from your own silo). May the missiles build wait until that branch is merged, and come after REBELS (so the civilian-casualties rule exists)? *Suggested: yes to both.*
+15. **A direct morale cut:** through the casualties rule a chemical strike lowers a city's morale by about 5 points at most and a nuclear one by about 7 (section 7.2). Add a one-off cut at impact as well (for example −10 and −20, like the agent's "Incite revolt")? *Suggested: no; one rule for every kind of civilian loss, and the nuclear strike's real costs are the buildings, the output and the people.*

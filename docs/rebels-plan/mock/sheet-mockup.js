@@ -37,6 +37,7 @@ const CSS = `
 .cs-c.annex .cs-ci{display:grid; place-items:center}
 .cs-c.annex .tag{position:absolute; left:4px; right:4px; top:4px; padding:2px 0; border-radius:2px; background:rgba(20,26,30,.78); font:800 10px/1.1 var(--body); color:#ffe7a8; letter-spacing:.02em}
 .mob-off small{color:#ffcf8a !important}
+@media (max-width:820px){ .mob-off small{white-space:normal !important; overflow:visible !important; text-overflow:clip !important; line-height:1.15} .cs-c.annex .tag{font-size:8.5px; white-space:nowrap; letter-spacing:0} }
 @media (max-width:820px){ .mf-bd{grid-template-columns:1fr; padding:4px 10px 2px} .mf-r{height:23px} .mf-r.zero{display:none} .mf-hd{flex-wrap:wrap; gap:6px 10px; padding:7px 10px 6px} .mf-ft{padding:6px 10px 8px; gap:8px} .mf-ax{margin-left:0; width:100%; justify-content:center} .mf-note{padding:0 10px 8px} }
 `;
 const FIRE = `<svg viewBox="0 0 16 18" width="16" height="18" aria-hidden="true"><path d="M8 1c1 3.2 4.8 4.6 4.8 9.2A4.8 4.8 0 0 1 3.2 10.2C3.2 7.6 5 6.4 5.6 4.4c.9 1.4 1.1 2.6 1 3.6C7.9 6.6 8.4 4.2 8 1z" fill="#ff8a1e" stroke="#7a1f0a" stroke-width=".8"/><path d="M8 8.2c.8 1.6 2.4 2.2 2.4 4.2a2.4 2.4 0 0 1-4.8 0c0-1.2.8-1.8 1.1-2.8.5.6.6 1.1.6 1.6.6-.8.9-1.8.7-3z" fill="#ffe27a"/></svg>`;
@@ -51,11 +52,12 @@ const ICO = {
   short:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="9" width="3" height="2"/></g></svg>',
   cas:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><path d="M2 14V7l6-5 6 5v7h-4v-4H6v4z"/><path d="M11 1l2 3-3 1z" fill="#ff8a1e"/></g></svg>',
   cap:'<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M8 1l2 4.6 5 .4-3.8 3.2 1.2 4.8L8 11.4 3.6 14l1.2-4.8L1 6l5-.4z"/></svg>',
+  capl:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.8l1.8 4.1 4.5.4-3.4 2.9 1 4.3L8 11.2l-3.9 2.3 1-4.3L1.7 6.3l4.5-.4z"/><path d="M2 14 14 2"/></g></svg>',
   bunk:'<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M1 14V9q7-7 14 0v5h-4v-3H5v3z"/></svg>'};
 const row = (ic, lb, v, cls = '') => `<div class="mf-r ${v === 0 ? 'zero' : ''}"><span class="ic">${ICO[ic]}</span><span class="lb">${lb}</span><span class="v ${cls || (v > 0 ? 'pos' : v < 0 ? 'neg' : '')}">${v === 0 ? '0' : (v > 0 && cls !== 'base' ? '+' : v < 0 ? '−' : '') + Math.abs(v)}</span></div>`;
 const PANEL = `<div class="mf" id="mf">
   <div class="mf-hd"><span class="mf-big">Morale 28% <span class="mf-arrow">➜</span> 29% <em>target</em></span><span class="mf-trend up">+0.1 a day</span><span class="mf-sp"></span>
-    <span class="mf-rb">${FIRE}Rebels 16% <small>at the day change</small></span></div>
+    <span class="mf-rb">${FIRE}Rebels 8% <small>at the day change</small></span></div>
   <div class="mf-bd">
     ${row('base', 'Occupied city <i>(home 90 · annexed 75)</i>', 60, 'base')}
     ${row('unit', 'Enemy units in the city', 0)}
@@ -64,15 +66,16 @@ const PANEL = `<div class="mf" id="mf">
     ${row('war', 'At war with 1 nation <i>(Germany)</i>', -2)}
     ${row('short', 'Resource shortage', 0)}
     ${row('nb', '2 neighbours held by Germany', -10)}
-    ${row('cap', 'Capital lost', 0)}
+    ${row('capl', 'Capital lost', 0)}
     ${row('low', '2 neighbours at 40% or less <i>(countryside)</i>', -8)}
     ${row('bunk', 'Bunker', 0)}
     ${row('cas', 'Civilian casualties <i>(fades by a third a day)</i>', -6)}
+    ${row('cap', 'The capital city <i>(+25)</i>', 0)}
   </div>
   <div class="mf-ft"><span class="mf-tg">Target <b>29%</b></span>
     <span class="mf-out">Output <b>15%</b> of a home city: <b>25%</b> occupied × <b>60%</b> at this morale</span>
     <button class="mf-ax">Annex city <small>$80M · 15k · 4 d</small></button></div>
-  <div class="mf-note"><b>Rebels can rise at 33% morale or lower.</b> Tonight's chance: 31% at 28% morale, halved by your 2 units (4 units, as many as the rebels, stop risings). They fight your troops here; an empty city is lost to them.</div>
+  <div class="mf-note"><b>Rebels can rise at 33% morale or lower.</b> Tonight's chance: 31% at 28% morale, halved for each of your 2 units: <b>8%</b>. Each unit you add halves it again. They fight your troops here; an empty city is lost to them.</div>
 </div>`;
 const ANNEX_CARD = `<button class="cs-c annex" title="Annex City: $80M and 15k manpower, 4 days. Output 50% (from 25%), morale target 75% (from 60%), units can be mobilized here."><span class="cs-ci"><svg viewBox="0 0 48 48" width="50" height="50"><g fill="none" stroke="#3b2606" stroke-width="2.6"><rect x="9" y="7" width="30" height="34" rx="2" fill="#fff6dc"/><path d="M14 15h20M14 21h20M14 27h12"/></g><circle cx="33" cy="33" r="9" fill="#c4302a" stroke="#6e130f" stroke-width="2"/><path d="M29 33l3 3 5-6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span><span class="tag">$80M · 15k · 4 d</span><span class="cs-cn">Annex City</span></button>`;
 (async () => { const b = await chromium.launch();
@@ -95,7 +98,7 @@ const ANNEX_CARD = `<button class="cs-c annex" title="Annex City: $80M and 15k m
       stat.insertAdjacentHTML('afterend', PANEL);
       const rl = body.querySelector('.cs-rl'); if (rl) rl.remove();
       const blds = body.querySelector('.cs-blds'); blds.insertAdjacentHTML('afterbegin', ANNEX_CARD); blds.scrollLeft = 0;
-      for (const d of document.querySelectorAll('.status')) if (/Unrest/.test(d.textContent)) d.innerHTML = 'Morale 28% · target 29% · <b style="color:#ff9d93">rebels 16% at the day change</b>';
+      for (const d of document.querySelectorAll('.status')) if (/Unrest/.test(d.textContent)) d.innerHTML = 'Morale 28% · target 29% · <b style="color:#ff9d93">rebels 8% at the day change</b>';
       for (const d of document.querySelectorAll('dd')) if (/unrest/.test(d.textContent)) d.textContent = '28% · target 29%';
       const mob = sh.querySelector('.cs-mob small'); if (mob){ mob.textContent = 'Occupied: annex the city to mobilize here'; mob.parentElement.parentElement.classList.add('mob-off'); }
     }, {CSS, PANEL, ANNEX_CARD, FIRE, dev});
