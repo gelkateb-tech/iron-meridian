@@ -266,6 +266,17 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
   (`Math.min`, in `restore`, `rules/state.js`). A save from before naval cities (no `S.nc` mark; saves of this build carry it and load unchanged): troops at sea whose route comes ashore away from a naval city
   keep that route and land where they were going (`a.oldLand`, set in `restore`, dropped with the landing or a new order); a force still on
   land with such a route is planned again on load through a naval city.
+- **Columns meet (owner 2026-11-25).** Two hostile forces that are both on the move (marching a leg, sailing, or walking to a spot inside a
+  province) meet the first moment in the hour they are in the same province or sea zone; both stop there, at the spot each had reached, and
+  fight in that hour's battle step. A force on a leg counts in the province its spot lies in (the one it left until it crosses into the next);
+  on a leg between land and sea it counts at the sea end, still aboard (a fleet entering a port is still on the water, B2.4). Not met:
+  aircraft and forces in flight, a force standing still (a column marching on it fights it as it arrives at the centre, as before), and two
+  forces in the province both stood in as the hour began (they were together already: a battle there was fought, or one is withdrawing from
+  it). A force that meets the enemy in the province it was going to keeps its order: it walks on to its point (or the centre, which takes
+  the province) once the battle is won; any other order and its waypoints are dropped, as the old head-on clash did. A column that comes
+  into the province where another enemy force has just stopped after a meeting meets it too. Time order, then force id: deterministic, no
+  dice (`meetHour`, `rules/tick.js`; replaces the head-on clash, which caught only columns still on one road in opposite directions at the
+  end of the hour). Test: `.test/columns-meet.js`.
 - **AI.** The computer plays by the same rules (one planner); a computer force that stands off the heart of land it is taking (after a clash on
   the road) walks to the city. Its offensive search (`aiTarget`) crosses the sea only as
   the forces can (on board at its own or a friend's naval city, ashore at a naval city, or anywhere for a group of Marines alone); ground forces
