@@ -23,15 +23,20 @@ function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : '
 const reqText = (p, t, n) => canMobilize(n, p, t);
 // a time left in game hours, in words: minutes under an hour (a quick build: "30 min", "15 min"), else whole hours ("24 h")
 const hoursTxt = h => h > 0 && h < 1 ? `${Math.max(1, Math.round(h*60))} min` : `${Math.ceil(h)} h`;
-// ---------- training queue limit: at most QUEUE_MAX units waiting or training per city, for everyone (the AI too). A future premium pass gives
-// extra slots (LATER.md): ask queueMax(n), not the constant. Old saves with longer queues keep them but cannot add more until below the limit.
-// Missiles (silo) are not unit training and do not count.
-const QUEUE_MAX = 2;
-const queueMax = n => QUEUE_MAX;
+// ---------- training queue limit: how many units may wait or train in one city at once. The mobilization queue is a membership feature (owner,
+// 2026-11-25): a seat (a nation a person plays) without a membership trains one unit at a time per city (QUEUE_FREE: the unit in training, nothing
+// waiting); a member's city queues QUEUE_MAX. Computer nations keep QUEUE_MAX (their strength and every all-computer balance baseline as before).
+// The flag is S.nations[n].member (true, or absent: no membership), saved with the nation; there is no payment here: a host (the page's developer
+// tools today, a store later) sets it with setMember. Ask queueMax(n), not the constants. Old saves have no flag (no membership) and keep the
+// queues they hold, but cannot add to a city until it is below the limit. Missiles (silo) are not unit training and do not count.
+const QUEUE_MAX = 2, QUEUE_FREE = 1;
+const isMember = n => n >= 0 && !!(S.nations[n] && S.nations[n].member);
+function setMember(n, on){ const N = S.nations[n]; if (!N) return false; if (on) N.member = true; else delete N.member; return true; }
+const queueMax = n => isSeat(n) && !isMember(n) ? QUEUE_FREE : QUEUE_MAX;
 const queueUsed = p => S.queue[p].reduce((c, it) => c + (it.msl ? 0 : 1), 0);
 const queueFull = (n, p) => queueUsed(p) >= queueMax(n);
 // '' when city p can take another unit, else the reason in words
-const queueWhy = (n, p) => queueFull(n, p) ? `Training queue full (${queueMax(n)}/${queueMax(n)})` : '';
+const queueWhy = (n, p) => !queueFull(n, p) ? '' : queueMax(n) < QUEUE_MAX ? `One unit at a time (members queue ${QUEUE_MAX})` : `Training queue full (${queueMax(n)}/${queueMax(n)})`;
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // ---------- Recruiting Office (levels I-V): every unit trained in its city trains 10% faster per level, and the city gives 3k manpower a day at level I
 // and 1.5k more per level. recPct / recMp are per level (the page words its tooltips from them), recSpeed is the city's training-time factor
@@ -126,15 +131,15 @@ function repeatHour(n){ const D = desk(n), RP = D.repeat; if (!RP) return; const
     if (recruit(n, p, t)){ if (PS[p]){ delete PS[p]; tell(n, `Repeat production resumed in ${nm}: ${UNITS[t].name}.`, 'info', p); } }
     else if (!PS[p]){ PS[p] = 1; const why = canMobilize(n, p, t); tell(n, `Repeat production paused in ${nm}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[t].name}. It starts again by itself.`, 'info', p); } }
   for (const k in PS) if (!RP[k]) delete PS[k]; }
+// a construction of under an hour (h0 < 1: Army Base I, 30 minutes) counts down a quarter hour at each 15-minute step (consQuarter at the three
+// battle steps, consHour at the hour's own step), so it stands exactly on time; every other construction counts whole hours at the hour's step
+const consStep = c => c.h0 < 1 ? 0.25 : 1;
+function consQuarter(){ for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (c && c.h0 < 1) consHour(p); } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
     if ((c.h -= consStep(c)) <= 1e-9){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
       if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
 /*@DEV*/
-// a construction of under an hour (h0 < 1: Army Base I, 30 minutes) counts down a quarter hour at each 15-minute step (consQuarter at the three
-// battle steps, consHour at the hour's own step), so it stands exactly on time; every other construction counts whole hours at the hour's step
-const consStep = c => c.h0 < 1 ? 0.25 : 1;
-function consQuarter(){ for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (c && c.h0 < 1) consHour(p); } }
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
 // consHour, prodHour, engHour, addArmy. devHour runs at the top of every game hour; devDone also runs right after a click (instant while paused).
 function devFill(N){ for (const k of CK){ const v = DEV_FILL*(isGood(k) ? RES_K : 1); if (!((N[k] || 0) >= v)) N[k] = v; } }   // unlimited resources: all seven topped up

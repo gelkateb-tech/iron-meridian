@@ -563,10 +563,10 @@ const TIER_RANK = {S:0, A:1, B:2, C:3};
 // The Bunker at the start (owner, 2026-11-14, as Fortifications): every nation's capital starts with a Bunker of this level, and no other province has any
 // (before, a tier C capital and the border guards' provinces of tiers B and C had level I, and the classic world's small powers their capital and borders: about 150 forts)
 const START_FORT = 1;
-const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
 // The Airbase at the start (owner, 2026-11-25): every nation's capital also starts with an Airbase of this level and one wing of START_AIR_UNIT based
 // there (one Air Superiority Fighter), so every nation can patrol and scout from day one; computer nations alike. New games only (startAir, rules/state.js)
 const START_AIR = 1, START_AIR_UNIT = 'asf';
+const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
 const TIER_FULL = {
   S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, inf:6, tank:3, art:2, cityTanks:4, guards:5, recs:4},
   A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, inf:5, tank:2, art:1, cityTanks:2, guards:4, recs:3},
