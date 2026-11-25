@@ -190,7 +190,7 @@ function fillOffer(n, id, q){ const o = (S.book || []).find(x => x.id === id), N
   o.qty -= q; addMem(o.seller, n, 1); if (o.qty <= 0) S.book = S.book.filter(x => x !== o); return q; }
 const buyOffer = fillOffer;
 // nation n posts an offer on the order book; returns the quantity listed (what it holds or can pay for), 0 when nothing was
-function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0)) return 0;
+function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.nations[n]; if (!(price > 0) || !(qty > 0) || !MKT_BASE[k]) return 0;   // (market goods only)
   qty = kFloor(qty);   // whole lots of MKT_LOT units, priced per lot
   if (type === 'sell'){ qty = Math.min(qty, kFloor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
   else { qty = Math.min(qty, lotsFor(N.cash, price)); if (qty <= 0) return 0; N.cash -= lotCash(qty, price); }
