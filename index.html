@@ -8321,9 +8321,9 @@ function heartMove(ok, ux, uy, kmax){ let best = null, bc = Infinity; const th0 
   for (let j = 0; j <= 18 && j*24 < bc; j++) for (const s of j && j < 18 ? [1, -1] : [1]){ const th = th0 + s*j*Math.PI/18, cu = Math.cos(th), su = Math.sin(th);
     for (let k = 0; k <= kmax && k + j*24 < bc; k += 3) if (ok(cu*k, su*k)){ best = [cu*k, su*k]; bc = k + j*24; break; } }
   return best; }
-// (its pictures' middle, its tag and its dot on its own land: tmGround through heartGnd)
-const heartLand = (c, mx, my, ox, oy, tb) => { const f = c.fm.box, [dx, dy] = toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));
-  return heartGnd(c.at, (f[0] + f[2])/2 + ox - mx, (f[1] + f[3])/2 + oy - my) < 2 && heartGnd(c.at, dx + ox - mx, dy + oy - my) < 2 && (!tb || heartGnd(c.at, (tb[0] + tb[2])/2 - mx, (tb[1] + tb[3])/2 - my) < 2); };
+// (its pictures' middle, its tag and its dot on its own land: tmGround through heartGnd; lim 1: on its own province's, 2: its own country's)
+const heartLand = (c, mx, my, ox, oy, tb, lim = 2) => { const f = c.fm.box, [dx, dy] = toScreen(c.wx, c.wy + (c.form ? c.form.mid : 0));
+  return heartGnd(c.at, (f[0] + f[2])/2 + ox - mx, (f[1] + f[3])/2 + oy - my) < lim && heartGnd(c.at, dx + ox - mx, dy + oy - my) < lim && (!tb || heartGnd(c.at, (tb[0] + tb[2])/2 - mx, (tb[1] + tb[3])/2 - my) < lim); };
 function heartClear(clusters, hexPx){ let H = null;
   for (const c of clusters) if (c.heart && c.hp != null && c.fm){ if (!H) H = new Map(); H.set(c.hp, c); } if (!H) return;
   const R = heartRingR(hexPx), tagOn = tmU(hexPx) >= 0.3;
@@ -8331,11 +8331,11 @@ function heartClear(clusters, hexPx){ let H = null;
     const P = G.P[c.at], [mx, my] = toScreen(P.x, P.y), hb = h.fm.box, dH = Math.max(boxPt(hb, mx, my) + 24, 0.8*Math.hypot((hb[0] + hb[2])/2 - mx, (hb[1] + hb[3])/2 - my)), fb = c.fm.box;   // (dH: how near its pictures may come: farther than the city's force's nearest picture, and than most of its group)
     const dHt = plateDims(h.n, 1, clQuiet(h), true), hty = my - R - 4 - dHt.h/2 - dHt.bars, ht = plateRect(mx, hty, h.n, 1, clQuiet(h), true), htb = [ht.x, ht.y, ht.x + ht.w, ht.y + ht.h];
     const dT = plateDims(c.n, 1, clQuiet(c), true), [sx, sy] = toScreen(c.wx, c.pinY ?? c.wy), ty0 = sy - PLATE_GAP - (dT.h/2 + dT.bars + 3), nmb = [mx + R + 2, my - 10, mx + R + 80, my + 10];   // (nmb: where the city's name stands beside the ring)
-    const ok = (ox, oy) => { const b = [fb[0] + ox, fb[1] + oy, fb[2] + ox, fb[3] + oy]; if (boxGap(b, hb) < 14 || boxGap(b, nmb) < 4 || boxPt(b, mx, my) < Math.max(dH, R + 24)) return false;
-      if (!tagOn) return heartLand(c, mx, my, ox, oy, null); const t = plateRect(sx + ox, ty0 + oy, c.n, 1, clQuiet(c), true), tb = [t.x, t.y, t.x + t.w, t.y + t.h];
-      return boxGap(tb, htb) >= 24 && boxGap(tb, hb) >= 6 && boxGap(tb, nmb) >= 4 && boxPt(tb, mx, my) >= R + 44 && Math.hypot(sx + ox - mx, ty0 + oy - my) >= Math.hypot(hty - my, 0) + 48 && heartLand(c, mx, my, ox, oy, tb); };   // (and never off its own land: no sea, no other country)
+    const ok = (ox, oy, lim = 2) => { const b = [fb[0] + ox, fb[1] + oy, fb[2] + ox, fb[3] + oy]; if (boxGap(b, hb) < 14 || boxGap(b, nmb) < 4 || boxPt(b, mx, my) < Math.max(dH, R + 24)) return false;
+      if (!tagOn) return heartLand(c, mx, my, ox, oy, null, lim); const t = plateRect(sx + ox, ty0 + oy, c.n, 1, clQuiet(c), true), tb = [t.x, t.y, t.x + t.w, t.y + t.h];
+      return boxGap(tb, htb) >= 24 && boxGap(tb, hb) >= 6 && boxGap(tb, nmb) >= 4 && boxPt(tb, mx, my) >= R + 44 && Math.hypot(sx + ox - mx, ty0 + oy - my) >= Math.hypot(hty - my, 0) + 48 && heartLand(c, mx, my, ox, oy, tb, lim); };   // (and never off its own land: no sea, no other country)
     let ux = (fb[0] + fb[2])/2 - mx, uy = (fb[1] + fb[3])/2 - my; const d = Math.hypot(ux, uy); if (d < 1e-3){ ux = 0.6; uy = 0.8; } else { ux /= d; uy /= d; }
-    const mv = heartMove(ok, ux, uy, 400); if (!mv || (!mv[0] && !mv[1])) continue; const [ox, oy] = mv;
+    const mv = heartMove((ox, oy) => ok(ox, oy, 1), ux, uy, 400) || heartMove(ok, ux, uy, 400); if (!mv || (!mv[0] && !mv[1])) continue; const [ox, oy] = mv;   // (in its own province where it fits, else on its own country's land)
     c.wx += ox/view.s; c.wy += oy/view.s; if (c.pinY != null) c.pinY += oy/view.s;
     for (const e of c.fm.ents){ e.x += ox; e.y += oy; e.box = [e.box[0] + ox, e.box[1] + oy, e.box[2] + ox, e.box[3] + oy]; }
     c.fm.box = [fb[0] + ox, fb[1] + oy, fb[2] + ox, fb[3] + oy]; } }
@@ -8346,8 +8346,8 @@ function heartApart(clusters, hexPx){ const L = clusters.filter(c => c.fm && c.h
   for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++){ let a = L[i], b = L[j]; if (a.at !== b.at || a.owner === b.owner || boxGap(a.fm.box, b.fm.box) >= 14) continue;
     if (a.owner === PLAYER || (b.owner !== PLAYER && a.n > b.n)) [a, b] = [b, a];   // (a moves)
     const fa = a.fm.box, fb = b.fm.box, h = H.get(a.at), P = G.P[a.at], [mx, my] = toScreen(P.x, P.y); let ux = (fa[0] + fa[2] - fb[0] - fb[2])/2, uy = (fa[1] + fa[3] - fb[1] - fb[3])/2; const d = Math.hypot(ux, uy); if (d < 1e-3){ ux = 1; uy = 0; } else { ux /= d; uy /= d; }
-    const ok = (ox, oy) => { const q = [fa[0] + ox, fa[1] + oy, fa[2] + ox, fa[3] + oy]; return boxGap(q, fb) >= 14 && (!h || (boxGap(q, h.fm.box) >= 14 && boxPt(q, mx, my) >= R + 24)) && heartLand(a, mx, my, ox, oy, null); };
-    const mv = heartMove(ok, ux, uy, 300); if (!mv || (!mv[0] && !mv[1])) continue; const [ox, oy] = mv;
+    const ok = (ox, oy, lim = 2) => { const q = [fa[0] + ox, fa[1] + oy, fa[2] + ox, fa[3] + oy]; return boxGap(q, fb) >= 14 && (!h || (boxGap(q, h.fm.box) >= 14 && boxPt(q, mx, my) >= R + 24)) && heartLand(a, mx, my, ox, oy, null, lim); };
+    const mv = heartMove((ox, oy) => ok(ox, oy, 1), ux, uy, 300) || heartMove(ok, ux, uy, 300); if (!mv || (!mv[0] && !mv[1])) continue; const [ox, oy] = mv;
     a.wx += ox/view.s; a.wy += oy/view.s; if (a.pinY != null) a.pinY += oy/view.s;
     for (const e of a.fm.ents){ e.x += ox; e.y += oy; e.box = [e.box[0] + ox, e.box[1] + oy, e.box[2] + ox, e.box[3] + oy]; }
     a.fm.box = [fa[0] + ox, fa[1] + oy, fa[2] + ox, fa[3] + oy]; } }
