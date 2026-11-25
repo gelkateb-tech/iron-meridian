@@ -62,7 +62,7 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 900), PHONE = W <=
   await ev(n => { markRead(0, n); }, I.France);
   const s0 = await save();
   for (const step of [() => ev(() => { window.__im.dp.DV.tab = 'coal'; window.__im.dp.render(); }), () => ev(() => { window.__im.dp.DV.tab = 'msg'; window.__im.dp.DV.routes = true; window.__im.dp.render(); }),
-    () => ev(n => window.__im.dp.nation(n), I.Japan), () => click('.dp-chev'), () => click('[data-act="dp-rel"][data-k="war"]'), () => click('.dp-op'),
+    () => ev(n => window.__im.dp.nation(n), I.Japan), () => click('.dp-chev'), () => click('[data-act="dp-rel"][data-k="war"]'), () => click('.dp-opr'),
     () => ev(n => window.__im.dp.nation(n), I.Germany), () => ev(n => window.__im.dp.go('profile', n), I.Germany), () => ev(() => window.__im.dp.go('profile', 0)),
     () => ev(n => window.__im.dp.go('chat', n), I.France), () => ev(([n, v]) => { window.__im.dp.trade(n); const T = window.__im.dp.DV.T; T.give.provs = [v[1]]; T.get.cash = 60; T.treaty = ['nap']; T.pk = 'give'; T.loc = v[1]; window.__im.dp.render(); }, [I.Colombia, I.ven]),
     () => ev(n => window.__im.dp.trade(n, {gift:true}), I.Canada), () => ev(() => window.__im.dp.open())]) await step();
@@ -181,7 +181,7 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 900), PHONE = W <=
   await find('provinces / known army / at war with', page(I.Russia), '.dp-sr.war');
   await find('trade route row on the page (Show / Close)', page(I.Mexico), '.dp-stats [data-act="trade-close"]');
   await find('relation and days left', page(I.China), '.dp-notes span');
-  await find('opinion and its reasons', page(I.France), '.dp-op');
+  await find('opinion and its reasons', page(I.France), '.dp-opr');
   await find('Message (player): Send Message', page(I.Germany), '[data-act="dp-chat"]');
   await find('Message (computer): Write to a nation', list('msg'), '#dp-newchat');
   await find('Trade deal: New Trade', page(I.Japan), '[data-act="dp-trade"]');
@@ -204,6 +204,20 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 900), PHONE = W <=
   await find('quick messages, text box, Send', chat(I.France), '.dp-quick ~ .dp-comp [data-act="dp-send"]');
   await find('Withdraw my offer', async () => { await ev(n => { dealPropose(0, n, {give:{...emptySide(), cash:10}, get:emptySide()}); window.__im.dp.go('chat', n); }, I.Germany); }, '.dp-offer [data-a="withdraw"]');
   await find('Back (nation page)', page(I.France), '.rhead [data-act="dp-back"]');
+  // review fixes: what master's Territory tab and list showed (province details, price aids, neighbours, sales between you)
+  await find('Territory: province details (what goes with it, troops)', async () => { await ev(([n, v]) => { window.__im.dp.trade(n); const T = window.__im.dp.DV.T; T.pk = 'give'; T.loc = v[0]; window.__im.dp.render(); }, [I.Colombia, I.ven]); }, '.dp-loc .dp-pdet');
+  await find('Territory: % of value and suggested price', async () => { await ev(([n, v]) => { window.__im.dp.trade(n); const T = window.__im.dp.DV.T; T.give.provs = [v[0]]; T.get.cash = 50; window.__im.dp.render(); }, [I.Colombia, I.ven]); }, '.dp-flr em');
+  await find('Neighbours: sort and page row', async () => { await ev(n => window.__im.dp.nation(n), I.Mexico); }, '.dp-sr');
+  ok('Neighbours: a sort option, Mexico and Canada first', await ev(([mx, ca]) => { window.__im.dp.open(); window.__im.dp.DV.tab = 'info'; window.__im.dp.DV.sort = 'nbr'; window.__im.dp.render(); const ids = [...document.querySelectorAll('#sheet .dp-row')].slice(0, 4).map(r => +r.dataset.id); window.__im.dp.DV.sort = 'pts'; window.__im.dp.render(); return ids.includes(mx) && ids.includes(ca); }, [I.Mexico, I.Canada]));
+  ok('Neighbours: the page says so', await ev(n => { window.__im.dp.nation(n); return /neighbour of yours/i.test(document.getElementById('sheet').innerText); }, I.Mexico));
+  await find('Sales between you (nation page)', page(I.Brazil), '.dp-sales li');
+  // a tap that leaves the focus in a number box (iOS Safari) still redraws the builder
+  ok('focus: +10 and Send redraw with the focus in the money box', await ev(n => { window.__im.dp.trade(n); const inp = document.querySelector('#sheet [data-act="dp-tv"][data-k="cash"]'); inp.focus(); document.querySelector('#sheet [data-act="dp-tadd"][data-v="10"]').click();
+    const v1 = +document.querySelector('#sheet [data-act="dp-tv"][data-k="cash"]').value; document.querySelector('#sheet [data-act="dp-tv"][data-k="cash"]').focus(); document.querySelector('#sheet [data-act="dp-tsend"]').click();
+    return v1 === 10 && window.__im.dp.DV.view === 'chat' && !!document.querySelector('#sheet .dp-comp'); }, I.Japan));
+  // toasts drop in under the title band while Diplomacy fills a phone's screen (the bottom holds the message box)
+  if (PHONE) ok('toasts under the band on a phone', await ev(() => { window.__im.dp.toast('Test toast'); const box = document.getElementById('toasts'), band = document.querySelector('#sheet .dp-band'), t = box.querySelector('.toast');
+    const r = t.getBoundingClientRect(), ok = box.classList.contains('dptop') && r.top >= band.getBoundingClientRect().bottom - 1 && r.bottom < innerHeight/2; t.remove(); return ok; }));
   ok('inventory: openNationPage for other screens (Market seller flags)', await ev(n => { window.__im.dp.nation(n); return window.__im.dp.DV.view === 'nation' && window.__im.dp.DV.n === n; }, I.Spain));
   // entry points that stay: the D key, the bottom bar, buttons elsewhere (diplo-open)
   await p.keyboard.press('Escape'); await p.waitForTimeout(80); await p.keyboard.press('d'); await p.waitForTimeout(120);
