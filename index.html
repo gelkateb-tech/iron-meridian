@@ -5645,6 +5645,9 @@ function unkHTML(a){ const spotted = armyShown(a, visibleSet(PLAYER));
     <p class="small muted" style="margin:6px 0">${UNK_HOW}</p><div class="row"><button class="btn" data-act="clear">Close</button></div>`; }
 // is foreign force a identified for the player (rules/vision.js armyKnown: own and allied always; others only by recon or in a battle with you)?
 // Everything that would tell its nation, size, types, name or health asks this first; a force only spotted is the '?' badge and 'Unidentified army'
+// is the drawn point (x, y) in the player's sight (own or allied land, a revealed province, or inside a sight range): a foreign wing shows where it
+// flies in sight, not from take-off because its target is in sight (owner 2026-11-25: nothing foreign outside your land and your units' sight)
+const visAt = (vis, x, y) => { const c = worldToCell(x, y), p = c >= 0 ? G.prov[c] : -1; return (p >= 0 && vis.whole.has(p)) || (vis.ids || []).some(s => s[5] !== VK.sea && visIn(s, x, y)); };
 const knowA = (a, vis = visibleSet(PLAYER)) => !!a && (a.owner === PLAYER || armyKnown(a, vis));
 const foeLabel = a => knowA(a) ? armyLabel(a, PLAYER) : 'an unidentified army';
 // the '?' plate's dot: grey with a dark outline (owner's pick, 2026-11-19)
@@ -8428,7 +8431,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
       c.fillStyle = `rgba(208,222,232,${(0.8*L.a).toFixed(3)})`; c.fill(L.path); c.strokeStyle = `rgba(150,170,182,${(0.7*L.a).toFixed(3)})`; c.stroke(L.path); } }
   // the fog, over everything on the overlay (ground, roads, rivers, borders, snow): its own cached canvas, redrawn with the layer (the layer is rebuilt when
   // what you see changes). Land outside sight gets a plain grey veil, sea outside sight a lighter plain one; a province wholly in sight (yours or an
-  // ally's, revealed, where a force of yours is going) stays clear, and every sight range (circles, a satellite's strip) is cut out with a soft edge,
+  // ally's, or revealed) stays clear, and every sight range (circles, a satellite's strip) is cut out with a soft edge,
   // on both sides of the map's east-west seam. Maritime patrol ranges (VK.sea) clear the sea only.
   { const fgc = auxC('fg');
     const g = fgc.getContext('2d'); g.save(); clipA(g); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(dx0 - ax, dy0 - ay, dw, dh); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay);
@@ -9286,7 +9289,7 @@ function draw(now){ draw.now = now;
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000), airLbl = []; draw.lastT = now;
   for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v) continue; animFast();
     const pU = a.owner !== PLAYER && loWing(a) ? (c0 => c0 >= 0 ? G.prov[c0] : -1)(worldToCell(v.x, v.y)) : -1, lo = a.owner !== PLAYER && loHidden(a, PLAYER, pU), spot = pU >= 0 && !!a.fly && !lo;   // a foreign Stealth Bomber wing no SAM or jammer of yours is close to (spot: one is)
-    if ((!armyVisible(a, vis) && !vis.has(v.tgt) && !spot) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v)) || lo){   // stealthy UAVs (III+) only show near your air defence or under your AWACS; stealth bombers only near your SAMs and jammers
+    if ((!armyVisible(a, vis) && !visAt(vis, v.x, v.y) && !spot) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v)) || lo){   // stealthy UAVs (III+) only show near your air defence or under your AWACS; stealth bombers only near your SAMs and jammers
       /*@TEST*/(window.__airSeen || (window.__airSeen = {}))[a.id] = 'hidden';/*@ENDTEST*/
       if ((lo || (vis.locs && vis.locs.length)) && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && (lo ? loLocated(PLAYER, p0, v.x, v.y) : visLocAt(vis, v.x, v.y)) && !(a.u.drone && uavLv(a.owner) >= 3)){   /* AWACS: a '?' contact; a stealth bomber only inside half the radar's range */ /*@TEST*/window.__airSeen[a.id] = 'contact';/*@ENDTEST*/ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }
       continue; }
@@ -11895,7 +11898,7 @@ const HELP_SEC = [
     <li><b>Market</b> (T): nations list goods for sale or wanted; you can post your own offers. Embargoes worsen your prices.</li></ul>`],
   ['intel', 'Intelligence and missiles', `<ul>
     <li><b>Agents</b>: train up to 5 ($60M) and send them from any foreign province to scout, sabotage, stir unrest or steal technology. Failed agents are lost.</li>
-    <li><b>Fog of war</b>: you see everything on your own and allied land; beyond it, about 50 km around your forces (Special Forces 100), 80 km around your cities and 100 km around your airbases; aircraft, UAVs, satellites and AWACS see further (see Drones).</li>
+    <li><b>Fog of war</b>: you see everything on your own and allied land; beyond it, only what your units see: about 50 km around your forces (Special Forces 100); aircraft, UAVs, satellites and AWACS see further (see Drones). Your cities and airbases do not see past your border: an enemy army outside your land shows only once it crosses into it or comes into your units' sight.</li>
     <li><b>Strategic missiles</b>: research Cruise Missiles (Strategic Weapons), build a Missile Silo, produce Cruise or Ballistic missiles and launch them at any province in range. SAMs and frigates near the target can intercept.</li></ul>`],
 ];
 function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
