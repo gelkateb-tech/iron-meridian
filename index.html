@@ -8190,14 +8190,16 @@ function heartGndBox(p, x, y, w2, h2){ const g = heartGnd(p, x, y); if (g === 2)
   for (const [cx, cy] of [[x - w2 + 3, y - h2 + 3], [x + w2 - 3, y - h2 + 3], [x - w2 + 3, y + h2 - 3], [x + w2 - 3, y + h2 - 3]]) if (heartGnd(p, cx, cy) === 2) return 1.5; return g; }
 // the names round a city's point where the label pass first puts them (draw: labs, the same text, font and spot), relative to province p's point,
 // css px: own, its own city's name (below the point): an off-point force's dot and counter never take it, so the name stays where it is and never
-// has to step aside (across a border, say); near, the other city and province names round it: its dot keeps off them where it can. Kept a frame
-function heartNames(p, hexPx){ let R = HEARTF.nm.get(p); if (R && R.h === hexPx) return R; const P = G.P[p], s = view.s, kl = Math.min(zoomK(hexPx), 2), f0 = ctx.font; R = {own:null, near:[], mk:[], h:hexPx};
+// has to step aside (across a border, say); near, the other city and province names round it: its dot keeps off them where it can. Kept per
+// zoom until the hour turns (a pan asks the same question every frame)
+function heartNames(p, hexPx){ const M = HEARTF.nm; if (M.S !== S || M.h !== S.hour || M.G !== G || M.size > 400){ M.clear(); M.S = S; M.h = S.hour; M.G = G; }
+  const key = p + '|' + hexPx.toFixed(3); let R = M.get(key); if (R) return R; const P = G.P[p], s = view.s, kl = Math.min(zoomK(hexPx), 2), f0 = ctx.font; R = {own:null, near:[], mk:[]};
   const box = Q => { const cap = isCapital(Q.id), tier = Q.pop0 >= 8 ? 2 : Q.pop0 >= 2.5 ? 1 : 0, t = cap && hexPx >= 4 ? Q.cityName : Q.city && hexPx >= 8 ? Q.cityName : hexPx >= 9 && Math.sqrt(Q.cells.length)*HS*s >= 16 ? Q.name : ''; if (!t) return null;
     let x = (Q.x - P.x)*s, y = (Q.y - P.y)*s; if (t === Q.name && !Q.city && !cap && G.lakeLab && G.lakeLab.has(Q.id)){ const z = G.lakeLab.get(Q.id); x = (z[0] - P.x)*s; y = (z[1] - P.y)*s; }
     const f = cap ? 12.5 : Q.city ? 10.5 + tier*0.6 : 10, fnt = `${cap || tier === 2 ? 600 : Q.city ? 500 : 400} ${f}px ${BODY}`; ctx.font = fnt; const w = mtw(t, fnt) + 6, y0 = Q.city ? y + 11*kl : y - f/2;
     return [x - w/2, y0 - 1, x + w/2, y0 + f + 2]; };
   R.own = box(P); for (const Q of G.P){ if (Q.id === p || Q.sea || Math.abs(Q.x - P.x)*s > 160 || Math.abs(Q.y - P.y)*s > 160) continue; const b = box(Q); if (b) R.near.push(b); if (Q.city || isCapital(Q.id)) R.mk.push([(Q.x - P.x)*s, (Q.y - P.y)*s]); }   // (mk: the other cities' centre-point markers round it)
-  ctx.font = f0; HEARTF.nm.set(p, R); return R; }
+  ctx.font = f0; M.set(key, R); return R; }
 const heartPB = (x, y, n, q) => { const r = plateRect(x, y, n, 1, q, false); return [r.x, r.y, r.x + r.w, r.y + r.h]; };   // (a far counter's whole box, its marks included)
 // (p: the force's province, for the ground under each place. Returns [x, y, clear, ground, on its city's name])
 function heartBadge(n, q, vx, vy, hexPx, hb, p = null){ const D = plateDims(n, 1, q, false), Rk = heartRingR(hexPx) + 3, w2 = D.w/2 + 1, h2 = D.h/2 + 1;
@@ -8519,6 +8521,12 @@ function drawLinkFx(now, vis){ if (!S.links) return; const hexPx = view.s*HS0; i
 // The answers (and the power names' candidate spots) are kept until the view or the borders change, so an idle map does no province lookups.
 const NAMEC = {k:'', pn:new Map(), cl:new Map()};
 const namePts = (xx, yy, ww, ss) => [0, 1, 2, 3, 4, 5, 6].map(i => provAt(xx + ww*(i/6 - 0.5)*0.92, yy)).concat(provAt(xx, yy - ss*0.25));
+// (a city name's box z on screen: how many of its 8 test points lie on its own land (own); kept by the box relative to the city's point, so a pan
+// or a still frame asks once; the hour clears it: borders move)
+const NLC = new Map();
+function nameLand(p, x, y, z, f, own){ if (NLC.S !== S || NLC.h !== S.hour || NLC.G !== G || NLC.size > 2000){ NLC.clear(); NLC.S = S; NLC.h = S.hour; NLC.G = G; }
+  const k = p + '|' + view.s.toFixed(4) + '|' + (z[0] - x).toFixed(1) + '|' + (z[1] - y).toFixed(1) + '|' + (z[2] - z[0]).toFixed(1); let v = NLC.get(k);
+  if (v === undefined){ v = namePts((z[0] + z[2])/2, (z[1] + z[3])/2, z[2] - z[0], f).filter(own).length; NLC.set(k, v); } return v; }
 function nameFits(xx, yy, ww, ss, own){ const q = namePts(xx, yy, ww, ss); return own(q[0]) && own(q[6]) && q.filter(own).length >= 7; }
 function nameOverSea(xx, yy, ww, ss, own){ const q = namePts(xx, yy, ww, ss); return q.filter(own).length >= 2 && !q.some(p => p >= 0 && !G.P[p].sea && !own(p)); }
 function nameNotForeign(xx, yy, ww, ss, own){ return own(provAt(xx, yy)) && namePts(xx, yy, ww, ss).filter(p => p >= 0 && !G.P[p].sea && !own(p)).length <= 2; }
@@ -9259,7 +9267,7 @@ function draw(now){ draw.now = now;
   // WORLD ANCHORS: each force's spot on the map (world units): its province's slot for it (provLayout), its pinned spot, or on the march its
   // smoothed position easing between its old and new slots. The counter is pinned just above it at one pixel size; its models stand just under it.
   const HST = new Map(), hsTaken = p => { let L = HST.get(p); if (!L) HST.set(p, L = []); return L; };   // (units in cities: the dots placed off each city's point this frame)
-  const farT0 = performance.now(), HB = HEARTF.HB = heartHeld(clusters, hexPx); HEARTF.hexPx = hexPx; HEARTF.on = null; HEARTF.tb.clear(); HEARTF.nm.clear(); /*@TEST*/HBDBG = HB;/*@ENDTEST*/   // (units in cities: the held points' own counters, for the forces off their points)
+  const farT0 = performance.now(), HB = HEARTF.HB = heartHeld(clusters, hexPx); HEARTF.hexPx = hexPx; HEARTF.on = null; HEARTF.tb.clear(); /*@TEST*/HBDBG = HB;/*@ENDTEST*/   // (units in cities: the held points' own counters, for the forces off their points)
   for (const c of clusters){ const it = c.it, a = c.list[0]; let A;
     if (c.far){ const L0 = PLAY.get(c.at); if (!(L0 && L0.S === S) && performance.now() - farT0 > 6){ c.dead = true; continue; } }   // (an off-screen province not laid out yet waits for a frame with time to spare)
     if (c.pinned && !c.dock){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g';
@@ -9476,7 +9484,7 @@ function draw(now){ draw.now = now;
       let lx = L.x, ly = y0, late = false;
       // a city's name that steps off its spot never goes mostly over the sea or another country when its own spot was over its own land (units in
       // cities: Berlin's name never crosses into Poland); the test is made only once it has to step (its own spot first, once)
-      let land0 = null; const bD = b.slice(0, 4), offLand = bx => { if (!(L.city || L.cap)) return false; const ow = S.owner[L.p], own = q => q >= 0 && !G.P[q].sea && S.owner[q] === ow, cnt = z => namePts((z[0] + z[2])/2, (z[1] + z[3])/2, z[2] - z[0], f).filter(own).length;
+      let land0 = null; const bD = b.slice(0, 4), offLand = bx => { if (!(L.city || L.cap)) return false; const ow = S.owner[L.p], own = q => q >= 0 && !G.P[q].sea && S.owner[q] === ow, cnt = z => nameLand(L.p, L.x, L.my, z, f, own);
         if (land0 === null) land0 = cnt(bD) >= 4; return land0 && cnt(bx) < 4; };
       // units in cities: close in, while a force holds a city's point (its tag above the ring, its pictures below or beside it) the city's name stands
       // right beside the ring (where the force's pictures leave room for it: layoutCompute), where it says which city the ring is; else on its left,
