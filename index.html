@@ -5930,7 +5930,7 @@ const roleSort = rs => rs.slice().sort((a, b) => { const oa = roleOwner(a), ob =
 const fkey = (a, p) => a.air ? 'a' : !G.P[p].sea && shipsOnly(a) ? 's' : 'x';
 /* ---------------- Units in cities: the centre point (owner 2026-11-22) ----------------
    A land province is taken the hour a ground force reaches its CENTRE POINT, its heart (rules/movement.js atHeart: G.P[p].x, y, the city).
-   The map shows it: every city carries a small marker on that exact point (heartMarks), and a force standing on it (heartOn) has its position
+   The map shows it: a city carries a small marker on that exact point (heartMarks), and a force standing on it (heartOn) has its position
    dot on the marker, its counter and pictures anchored to it (its counter just above the ring, its pictures right beside the point: layoutCompute, heartRole; any other force of the city is kept farther off: heartClear), and lights the
    marker with a ring in its side's colour. A force anywhere else in the province stands where it stands: its dot off the marker, no ring.
    Near a held point it is drawn clearly outside, whatever its bearing: its dot never under the city's counter or above it, its own counter a
@@ -5944,7 +5944,10 @@ const fkey = (a, p) => a.air ? 'a' : !G.P[p].sea && shipsOnly(a) ? 's' : 'x';
    heartOn is the rules' own test (atHeart) for a force that STANDS on the point: not one that only walked through it on its way to a spot
    beyond (a.hrt: the rules still count that walk for the capture, but the force is drawn, listed and ringed where it really stands, outside),
    not one walking (a.sail) and not one already setting off this hour (its leg starts before the capture step). The same test lights the ring,
-   snaps the dot, and fills the city sheet's "In the city" line. */
+   snaps the dot, and fills the city sheet's "In the city" line.
+   The names stay where they are: no city's name or naval anchor ever moves for a marker (at every zoom they are drawn exactly as without the
+   markers). The marker gives way instead: a plain city's marker that would lie on a name or an anchor is left out; a capital's and a held
+   point's always show (drawn over it). Only close in, while a force holds the point, does the city's name stand beside the ring. */
 const heartCity = p => p != null && p >= 0 && !!G.P[p] && !G.P[p].sea && (G.P[p].city || isCapital(p));
 const heartOn = a => { if (!a || a.sail || (a.path.length && GO.S === S && GO.has(a.id)) || !atHeart(a)) return false; const q = a.pos; if (!q) return true; const P = G.P[a.at]; return Math.hypot(q[0] - P.x, q[1] - P.y) <= HEART_R; };
 // a force with a pinned spot (a pinpoint move) is laid out on that spot; one whose spot is a city's centre point stands in the city's layout
@@ -8315,10 +8318,12 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
   const onName = b => { for (let gx = Math.floor(b[0]/GC); gx <= Math.floor(b[2]/GC); gx++) for (let gy = Math.floor(b[1]/GC); gy <= Math.floor(b[3]/GC); gy++){ const L = grid.get(gx*4096 + gy); if (L && L.some(q => ovlB(q, b))) return true; } return false; };   // (the names near a box, by a coarse grid: a frame tests only its own few)
   const one = (p, cap) => { const P = G.P[p], sy = P.y*view.s + view.y; if (sy < -M || sy > ch + M) return; const [x, y] = toScreen(P.x, P.y); if (x < -M || x > cw + M) return;
     const L = on.get(p), held = !!(L && L.length), own = names.lab.get(p), far = held || cap || (own && own.city) ? 1 : fin; if (far <= 0.01) return;
-    // every mark is drawn: the names and the naval anchors step off the markers where they can (the label pass), and one that still lies on a name is
-    // drawn over it; a held one tells which city it is by a small name tag when the city's own name is not by it
-    const r0 = held ? R + 2.4 : hd + 1.5;
-    /*@TEST*/if (!window.__ucNoDbg){ const mb = [x - r0, y - r0, x + r0, y + r0]; HMDBG.push({p, x:+x.toFixed(2), y:+y.toFixed(2), r:+r0.toFixed(2), sides:held ? L.map(q => q.s) : [], drawn:1, onName:onName(mb) ? 1 : 0, a:+far.toFixed(2)}); }/*@ENDTEST*/
+    // the names stay where they are (owner: "City names stay where they are"; the label pass never moves a city's name or its anchor for a marker):
+    // a plain city's marker that would lie on a name or an anchor is left out; a capital's and a held point's always show (drawn over the name),
+    // and a held one tells which city it is by a small name tag when the city's own name is not by it
+    const r0 = held ? R + 2.4 : hd + 1.5, mb = [x - r0, y - r0, x + r0, y + r0], onN = onName(mb);
+    /*@TEST*/if (!window.__ucNoDbg) HMDBG.push({p, x:+x.toFixed(2), y:+y.toFixed(2), r:+r0.toFixed(2), sides:held ? L.map(q => q.s) : [], drawn:held || cap || !onN ? 1 : 0, onName:onN ? 1 : 0, a:+far.toFixed(2)});/*@ENDTEST*/
+    if (onN && !held && !cap) return;
     const dim = vis.has(p) ? 1 : 0.6;
     if (held){ const rs = heartRing(R, L.map(q => q.s === 'unk' ? '#b9c3c8' : sideHi(q.s))), RW = rs.W; ctx.drawImage(rs, x - RW/2, y - RW/2, RW, RW); }   // (the ring: one picture per size and sides, made once)
     const sp = heartSprite(hd, !held), W = sp.W; ctx.globalAlpha = ga*dim*far; ctx.drawImage(sp, x - W/2, y - W/2, W, W); ctx.globalAlpha = ga;
@@ -9415,7 +9420,7 @@ function draw(now){ draw.now = now;
   NCHIT = []; const ncLate = [];   // (NCHIT: the naval-city anchors drawn this frame, ncMark)
   cityPts = []; cityNames = [];   // the cities on screen: each one's point with its tap radius (nothing is drawn there), and the boxes of the city names drawn
   const labs = [], lateLabs = [], LPL = new Map(); let capLab = null;   // LPL: placed name boxes per province
-  const MKB = HMKB = [], mkR = heartHd(hexPx) + 2.5, HELDN = new Set(); for (const c of clusters) if (c.heart && c.hp != null && c.fm) HELDN.add(c.hp);   // units in cities: the centre-point markers shown this frame (heartMarks): the names and the anchors keep off them
+  const MKB = HMKB = [], mkR = heartHd(hexPx) + 2.5, HELDN = new Set(); for (const c of clusters) if (c.heart && c.hp != null && c.fm) HELDN.add(c.hp);   // units in cities: the centre-point markers of this frame (heartMarks): the province and power names keep off them (a city's name and its anchor never move for one: the marker gives way)
   for (let p = 0; p < G.P.length; p++){
     const P = G.P[p]; if (P.sea) continue;
     const [x, y] = toScreen(P.x, P.y);
@@ -9484,7 +9489,8 @@ function draw(now){ draw.now = now;
       let lx = L.x, ly = y0, late = false;
       // a city's name that steps off its spot never goes mostly over the sea or another country when its own spot was over its own land (units in
       // cities: Berlin's name never crosses into Poland); the test is made only once it has to step (its own spot first, once)
-      let land0 = null; const bD = b.slice(0, 4), offLand = bx => { if (!(L.city || L.cap)) return false; const ow = S.owner[L.p], own = q => q >= 0 && !G.P[q].sea && S.owner[q] === ow, cnt = z => nameLand(L.p, L.x, L.my, z, f, own);
+      // (only a step a counter or a force's pictures forced: a name that steps off another name takes master's spot, wherever that is)
+      let land0 = null, uStep = true; const bD = b.slice(0, 4), offLand = bx => { if (!(L.city || L.cap) || !uStep) return false; const ow = S.owner[L.p], own = q => q >= 0 && !G.P[q].sea && S.owner[q] === ow, cnt = z => nameLand(L.p, L.x, L.my, z, f, own);
         if (land0 === null) land0 = cnt(bD) >= 4; return land0 && cnt(bx) < 4; };
       // units in cities: close in, while a force holds a city's point (its tag above the ring, its pictures below or beside it) the city's name stands
       // right beside the ring (where the force's pictures leave room for it: layoutCompute), where it says which city the ring is; else on its left,
@@ -9496,11 +9502,12 @@ function draw(now){ draw.now = now;
       // out or jumps round its city as the view zooms or a force goes by; the plates are drawn over it
       // a standing diamond's middle (its icon) or its strength badge on the name: the name steps aside (or, a small one, is left out) like any blocked
       // name, so no name is half hidden under a counter; one a diamond only grazes (its corners or edge) keeps its spot and is drawn over it
-      const mkHit = bx => mkAny(bx, L.p), onMk = (L.city || L.cap) && mkHit(b);   // (another city's centre-point marker under a city's name: the name steps aside as from another name)
+      // (a city's name never moves for a centre-point marker, its own or another city's: the marker gives way, heartMarks; a province name steps off one, below)
+      const mkHit = bx => !(L.city || L.cap) && mkAny(bx, L.p);
       const blkN = bxNear(boxes, b).filter(hit), coreHit = blkN.some(q => q.ic && q.at !== -1 && q.ic.some(hit)), onlyUnits = blkN.length && !coreHit && blkN.every(q => q.unit && !q.hud && !q.tag);
       if (onlyUnits && blkN.every(q => q.ic ? !q.ic.some(hit) : !q.fmb)) late = blkN.some(q => q.ic);
-      if ((!onlyUnits && blkN.length) || onMk){ if (L.cap && blkN.some(q => !q.unit)) continue;   // a capital name gives way only to another name; stacks make it step aside
-        const b0 = b.slice();
+      if (!onlyUnits && blkN.length){ if (L.cap && blkN.some(q => !q.unit)) continue;   // a capital name gives way only to another name; stacks make it step aside
+        const b0 = b.slice(); uStep = blkN.some(q => q.unit && !q.b3 && !q.hud);   // (a force's counter or pictures: not a building model or a control)
         // a city name blocked below its city's point (by a stack or a bigger name) tries the right, then the left side of the point, then spots further below;
         // a province name blocked only by stacks steps just above or below them
         let cand;
@@ -9511,8 +9518,7 @@ function draw(now){ draw.now = now;
         let ok = false; for (const [x0, yt] of cand){ b[0] = x0; b[2] = x0 + w; b[1] = yt - 1; b[3] = yt + f + 2;
           if (b[0] < 0 || b[2] > cw || mkHit(b) || bxNear(boxes, b).some(hit) || cpNear(b).some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || offLand(b)) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
-        if (!ok && onMk && !blkN.length){ for (let i = 0; i < 4; i++) b[i] = b0[i]; lx = L.x; ly = y0; }   // (only a marker in the way and no free spot: the name keeps its place, the marker is drawn over it)
-        else if (!ok){ const mine = L.cap && L.p === S.nations[PLAYER].capital; if (!(mine || L.cap || (L.city && L.tier >= 1))) continue;
+        if (!ok){ const mine = L.cap && L.p === S.nations[PLAYER].capital; if (!(mine || L.cap || (L.city && L.tier >= 1))) continue;
           // boxed in on every side: a capital or big city may still take its spot (or a nearby one) over the edges of a counter - its marks, padding or figures -
           // drawn over the counters, but never over a plate's number, icons or bars, another name, a control or the tag. Your own capital's name always
           // shows: with no such spot it takes the nearby one covering the least of the plates and is drawn under the counters, so their numbers stay readable.
@@ -9523,9 +9529,9 @@ function draw(now){ draw.now = now;
           for (const [x0, yt] of [[b0[0], y0], ...cand]){ const bx = [x0, yt - 1, x0 + w, yt + f + 2], s0 = (blocked(bx) || (x0 !== b0[0] || yt !== y0) && offLand(bx) ? 1e7 : 0) + coreA(bx); if (s0 < bs){ bs = s0; bk = bx; } if (!s0) break; }
           if (bs > 0 && !(mine && bs < 1e7)) { if (!mine) continue; bk = b0; }
           for (let i = 0; i < 4; i++) b[i] = bk[i]; lx = b[0] + w/2; ly = b[1] + 1; late = !coreA(b); } }
-      // a name on a city's centre-point marker (its own or another city's) steps the least it takes off it (a few px down, up or aside) where that
-      // spot is free; where none is, it keeps its place and the marker is drawn over it (heartMarks): every city's marker shows
-      if (MKB.length && mkAny(b)){ const w0 = b[2] - b[0], lim = Math.max(14, 1.6*f); let nb = null, nd = Infinity;
+      // a province name on a city's centre-point marker steps the least it takes off it (a few px down, up or aside) where that spot is free; where
+      // none is, it keeps its place and the marker gives way (heartMarks). A city's name and its anchor never move for a marker
+      if (!(L.city || L.cap) && MKB.length && mkAny(b)){ const w0 = b[2] - b[0], lim = Math.max(14, 1.6*f); let nb = null, nd = Infinity;
         for (const m of mkAt(b)) for (const [ux, uy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]){ const d = (uy > 0 ? m[3] - b[1] : uy < 0 ? b[3] - m[1] : ux > 0 ? m[2] - b[0] : b[2] - m[0]) + 1; if (d > lim || d >= nd) continue;
           const q = [b[0] + ux*d, b[1] + uy*d, b[2] + ux*d, b[3] + uy*d]; if (q[0] < 0 || q[2] > cw || mkAny(q) || bxNear(boxes, q).some(z => ovl(z, q)) || offLand(q)) continue; nb = q; nd = d; }
         if (nb){ for (let i = 0; i < 4; i++) b[i] = nb[i]; lx = b[0] + w0/2; ly = b[1] + 1; } }
@@ -10139,7 +10145,6 @@ function ncPlace(L, lx, ly, f, w, b, boxes){ const s = Math.round(Math.min(17, M
     if (bx[0] < 0 || bx[2] > cw || bx[1] < 0 || bx[3] > ch) continue;
     if (bxNear(boxes, bx).some(q => q !== b && q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue;
     if (cpNear(bx).some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3])) continue;
-    if (mkAny(bx)) continue;   // (nor on a centre-point marker)
     bx.nc = true; boxes.push(bx); const m = {p:L.p, x:x0, y:y0, s, a:L.a}; NCHIT.push([x0, y0, x0 + s, y0 + s, L.p]); return m; }
   return null; }
 // the anchor in its frame: a dark navy tile with a light rim (the oil marker's colours), the anchor in the names' cream

@@ -18,10 +18,37 @@
 //      (hex 240, where a province is large on screen) the dot in its own province
 //  (N) the city's own name stays on its own spot over its own land while a force stands 4 km off its point (Berlin, Szczecin, Poznan; hex 30; at
 //      hex 12, where the stacks may take it as on master, a name drawn is over its own land and never under the off-point force's counter)
+//  (A) the empty map (no force anywhere), centres Berlin, Paris and Warsaw, hex 8, 12, 16, 20, 25 and 30: every city name master draws (its
+//      point on screen) is drawn within 3 px of master's spot, with its naval anchor where master has one; none added, none dropped. Master's
+//      places are in .test/fixtures/uc-names-master.json, captured from origin/master's page (440 x 956): to refresh it, build master's page and
+//      run UC_NAMES_SAVE=1 UC_PAGE=<master>/.test/page.html node .test/units-in-cities.js. The markers give way to the names, never the reverse
+//  (B) Hamburg held at hex 12 (mid zoom, every city's name up): "Berlin" is drawn nearer Berlin's point than Hamburg's (a held ring never
+//      reads as Berlin's)
 //  (E) no console or page error
-const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
+const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
+const NAMES_FIX = path.join(__dirname, 'fixtures', 'uc-names-master.json'), NAMES_AT = ['Berlin', 'Paris', 'Warsaw'], NAMES_HEX = [8, 12, 16, 20, 25, 30];
+// (A) and (B): a game of its own (Germany, the clock paused at noon, every force removed; Math.random seeded so master and branch draw alike)
+async function namesOpen(b, page){ const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, isMobile: PHONE, hasTouch: PHONE }), p = await ctx.newPage(); p.errs = [];
+  p.on('pageerror', e => p.errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') p.errs.push(m.text()); });
+  await p.addInitScript(() => { let s = 0x2f6b1d3; Math.random = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0)/4294967296; }; });
+  await p.goto('file://' + page); await p.waitForTimeout(600);
+  await p.click('[data-act="pickscn"][data-k="world64"]'); await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.waitForTimeout(800);
+  if (await p.locator('[data-act="start"]').count()) await p.click('[data-act="start"]');
+  await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 90000 }); await p.waitForTimeout(1000);
+  await p.evaluate(() => { document.querySelectorAll('.toast').forEach(t => t.remove()); const im = window.__im, S = im.S; S.speed = 0; im.SET.tipsOff = true; im.SET.saver = false; S.sunOff = 0;
+    S.hour = (Math.floor(S.hour/24) + 1)*24 + 11; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; im.sel.prov = null; im.sel.army = null; try { visCache = null; } catch (e) {} im.redraw(); });
+  return p; }
+async function namesView(p, city, hp, dx = 0){ await p.evaluate(([city, hp, dx]) => { const im = window.__im, Q = im.G.P.find(q => q.cityName === city && !q.sea), r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12;
+    v.s = s; v.x = r.width/2 - (Q.x + dx)*s; v.y = r.height/2 - Q.y*s; im.redraw(); }, [city, hp, dx]);
+  await p.waitForTimeout(400); for (let i = 0, ok = 0; i < 60 && ok < 3; i++){ await p.waitForTimeout(150); ok = await p.evaluate(() => { const im = window.__im; im.redraw(); return im.mapBusy ? !im.mapBusy() : true; }) ? ok + 1 : 0; } await p.waitForTimeout(300); }
+// the city names drawn (by province; in: its point on screen, clear of the bars) and their naval anchors
+const namesNow = p => p.evaluate(() => new Promise(res => { window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, G = im.G, r = document.getElementById('map').getBoundingClientRect(), nc = new Map(im.nc.hits().map(h => [h[4], h.slice(0, 4)]));
+  res(im.nc.names().map(c => { const Q = G.P[c.p], x = Q.x*im.view.s + im.view.x, y = Q.y*im.view.s + im.view.y; return {p:c.p, t:Q.cityName || Q.name, b:c.b.map(v => +v.toFixed(1)), nc:nc.get(c.p) || null, in:x >= 20 && x <= r.width - 20 && y >= 120 && y <= r.height - 120 ? 1 : 0}; })); })); }));
+async function namesAll(p){ const out = []; for (const at of NAMES_AT) for (const hp of NAMES_HEX){ await namesView(p, at, hp); out.push({at, hp, n:await namesNow(p)}); } return out; }
 (async () => { const b = await chromium.launch({ args: ['--allow-file-access-from-files'] }), errors = [], fails = [], out = {};
+  if (process.env.UC_NAMES_SAVE){ const p = await namesOpen(b, process.env.UC_PAGE || path.join(__dirname, 'page.html')), N = await namesAll(p);
+    fs.writeFileSync(NAMES_FIX, JSON.stringify({W, H, from:process.env.UC_PAGE || 'page.html', views:N})); console.log('saved', NAMES_FIX, N.map(v => v.n.length).join(' '), p.errs.slice(0, 3)); await b.close(); return; }
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, isMobile: PHONE, hasTouch: PHONE }); const p = await ctx.newPage();
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await p.goto('file://' + path.join(__dirname, 'page.html')); await p.waitForTimeout(600);
@@ -142,6 +169,24 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
         if (m.bad > 0.25) fail('N the city name over its own land', {k, bad:+m.bad.toFixed(2)});
         if (m.ob && m.lab[0] < m.ob[2] - 1 && m.lab[2] > m.ob[0] + 1 && m.lab[1] < m.ob[3] - 1 && m.lab[3] > m.ob[1] + 1) fail('N the off-point counter clear of the city name', {k, ob:m.ob, lab:m.lab});
         if (hp > 20 && m.dotIn.length) fail('N the off-point dot in no name', {k, dotIn:m.dotIn}); } } }
+  // (A) the empty map: every city name master draws stays on master's spot (with its anchor), none added or dropped; (B) Hamburg held at hex 12
+  if (!process.env.UC_NO_EMPTY){ const F = fs.existsSync(NAMES_FIX) ? JSON.parse(fs.readFileSync(NAMES_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')); out.empty = 0;
+    if (!F) fail('A master\'s name places (fixtures/uc-names-master.json)', 'missing');
+    else if (F.W !== W || F.H !== H) out.empty = 'skipped: master captured at ' + F.W + ' x ' + F.H;
+    else { const B = await namesAll(q), cen = z => [(z[0] + z[2])/2, (z[1] + z[3])/2];
+      for (let i = 0; i < F.views.length; i++){ const m = F.views[i], v = B[i], k = `${m.at} hex ${m.hp}`, bm = new Map(v.n.map(l => [l.p, l])), mm = new Map(m.n.map(l => [l.p, l]));
+        for (const l of m.n){ if (!l.in) continue; out.empty++; const z = bm.get(l.p); if (!z){ fail('A a name master draws is drawn', {k, t:l.t}); continue; }
+          const a = cen(l.b), c = cen(z.b), d = Math.hypot(a[0] - c[0], a[1] - c[1]); if (d > 3) fail('A a name stays on master\'s spot', {k, t:l.t, px:+d.toFixed(1)});
+          if (!!l.nc !== !!z.nc || (l.nc && Math.hypot(l.nc[0] - z.nc[0], l.nc[1] - z.nc[1]) > 3)) fail('A the naval anchor as on master', {k, t:l.t, master:l.nc, now:z.nc}); }
+        for (const l of v.n) if (l.in && !mm.has(l.p)) fail('A no name added', {k, t:l.t}); } }
+    const r = await q.evaluate(() => { const im = window.__im, G = im.G, Hm = G.P.find(P => P.cityName === 'Hamburg' && !P.sea); im.addArmy(0, Hm.id, {inf:4, tank:2}); try { visCache = null; } catch (e) {} return Hm.id; });
+    await namesView(q, 'Hamburg', 12, 0.3);
+    const h = await q.evaluate(hm => new Promise(res => { window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, G = im.G, pt = P => [P.x*im.view.s + im.view.x, P.y*im.view.s + im.view.y], Bp = G.P.find(P => P.cityName === 'Berlin' && !P.sea);
+      const gap = (b, x) => Math.hypot(Math.max(b[0] - x[0], 0, x[0] - b[2]), Math.max(b[1] - x[1], 0, x[1] - b[3])), nb = im.nc.names().find(c => c.p === Bp.id), ring = im.uc.marks().filter(m => m.p === hm && m.sides.length).length;
+      res({ring, berlin:nb ? {own:+gap(nb.b, pt(Bp)).toFixed(1), hamburg:+gap(nb.b, pt(G.P[hm])).toFixed(1)} : null}); })); }), r);
+    out.heldHamburg = h; if (!h.ring) fail('B Hamburg held: its ring', h);
+    if (!h.berlin || !(h.berlin.own < h.berlin.hamburg)) fail('B Hamburg held: "Berlin" nearer Berlin\'s point than Hamburg\'s', h.berlin);
+    errors.push(...q.errs); await q.context().close(); }
   if (errors.length) fail('E errors', errors.slice(0, 5));
-  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land, names:out.names}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
+  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land, names:out.names, empty:out.empty, heldHamburg:out.heldHamburg}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
   await b.close(); process.exit(fails.length ? 1 : 0); })();
