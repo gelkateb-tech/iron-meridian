@@ -361,7 +361,7 @@ function dealText(D, who){ const part = (side, ownerName) => [...DEAL_K.map(k =>
 function aiProposeTrade(n, me){ const DK = desk(me); if ((DK.offers || (DK.offers = [])).some(o => o.from === n)) return; const N = S.nations[n], M = mkt(), D = {give:emptySide(), get:emptySide()};
   // (computer-run nations never sell land: they only buy it, rules/territory.js terrDay)
   { const k = MKT_K[Math.floor(rng()*MKT_K.length)], lots = M.p[k] > 4 ? 20 : 40, q = lots*MKT_LOT; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(lots*M.p[k]*0.95); }
-  if (dealOK(me, n, D)) return; const o = {id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}; DK.offers.push(o); const txt = `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`; noteAdd(me, n, {t:'offer', src:'trade', id:o.id, from:n, to:me, exp:o.exp, text:txt}, true); IM.emit('chat', me, n, n, txt); }
+  if (dealOK(me, n, D)) return; const o = {id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}; DK.offers.push(o); const txt = `Proposal: ${dealSay(D, 'they')}.`; noteAdd(me, n, {t:'offer', src:'trade', id:o.id, from:n, to:me, exp:o.exp, text:txt, d:D}, true); IM.emit('chat', me, n, n, txt); }
 const sameBloc = (me, n) => { blocs(); const a = blocIdOf(me); return !!a && n !== me && a === blocIdOf(n); };   // fresh: alliances can break mid-day
 const sameBlocView = (me, n) => { const B = n !== me && blocOfView(me); return !!B && B.members.includes(n); };   // (the screen's: writes nothing)
 const GIFT_K = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'];
