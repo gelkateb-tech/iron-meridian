@@ -60,8 +60,14 @@ function noteAdd(me, n, e, unread){ if (!isSeat(me) || me === n || !(n >= 0)) re
   if (unread && (!isMuted(me, n) || e.k === 'war')){ const D = desk(me); (D.unread || (D.unread = {}))[n] = ((D.unread || {})[n] || 0) + 1; } return e; }
 // a system card for both sides that are seats (k: 'war', 'treaty', 'sale', 'trade'); a war card counts unread for the side it hits
 function sysNote(a, b, text, k = '', hit = -1){ for (const [me, n] of [[a, b], [b, a]]) noteAdd(me, n, {t:'sys', k, text, from:-1}, k === 'war' && me === hit); }
-// an offer card for both sides that are seats: src 'treaty' / 'trade' (a computer nation's desk offer), 'deal' (S.deals), 'terr' (S.terr.offers)
-function offerNote(o, src, text){ for (const [me, n] of [[o.from, o.to], [o.to, o.from]]) noteAdd(me, n, {t:'offer', src, id:o.id, from:o.from, to:o.to, exp:o.exp, text}, me === o.to); }
+// an offer card for both sides that are seats: src 'treaty' / 'trade' (a computer nation's desk offer), 'deal' (S.deals), 'terr' (S.terr.offers).
+// Each side's card is written from its own side: text(me) (a function) or the same text for both, and d, the deal from that side ({give, get})
+function offerNote(o, src, text){ for (const [me, n] of [[o.from, o.to], [o.to, o.from]]){ if (!isSeat(me)) continue; const e = {t:'offer', src, id:o.id, from:o.from, to:o.to, exp:o.exp, text:typeof text === 'function' ? text(me) : text};
+    if (o.D) e.d = me === o.from ? o.D : dealFlip(o.D); else if (src === 'terr') e.d = terrSides(o, me); noteAdd(me, n, e, me === o.to); } }
+// a territory offer as a deal from seat me's side (the seller gives the province, the buyer the price)
+const terrSides = (o, me) => { const D = {give:emptySide(), get:emptySide()}; if (o.seller === me){ D.give.provs = [o.p]; D.get.cash = o.price; } else { D.get.provs = [o.p]; D.give.cash = o.price; } return D; };
+// an offer card's words from each side: 'Proposal: you give ...; they give ...'
+const dealNoteText = (o, label) => me => `${label}: ${dealSay(me === o.from ? o.D : dealFlip(o.D), 'they')}.`;
 // the status written on an offer card once it is settled ('accepted', 'declined', 'countered', 'withdrawn', 'void')
 function offerSt(a, b, src, id, st){ for (const [me, n] of [[a, b], [b, a]]){ if (!isSeat(me)) continue; const L = (deskView(me).chat || {})[n]; if (!L) continue;
   for (const e of L) if (e.t === 'offer' && e.src === src && e.id === id) e.st = st; } }
@@ -214,15 +220,15 @@ function dealPropose(me, n, D0, opts = {}){ const D = dealNorm(D0), round = Math
   const why = isPerson(n) ? dealWhy(me, n, D) : null; if (why){ refuse(me, `Not possible: ${why}.`); return {ok:false, why}; }
   closeOld();
   if (isPerson(n)){ const o = {id:S.nid++, from:me, to:n, D, n:round, h:S.hour, exp:S.hour + DEAL_H}; if (co) o.counterOf = co.id;
-    dealsS().push(o); offerNote(o, 'deal', `Proposal: ${dealSay(D, 'they')}.`);
+    dealsS().push(o); offerNote(o, 'deal', dealNoteText(o, 'Proposal'));
     if (isSeat(n)) tell(n, `${personOf(me).name} (${S.nations[me].name}) sent you a trade offer. Answer in Diplomacy (D).`, 'info', null);
     IM.emit('deal', n, o); return {ok:true, act:'sent', o}; }
   // a computer nation: its answer now
   const ans = dealAnswer(me, n, D, round), mine = {id:S.nid++, from:me, to:n, exp:S.hour, n:round};
-  noteAdd(me, n, {t:'offer', src:'deal', id:mine.id, from:me, to:n, exp:S.hour, text:`Proposal: ${dealSay(D, 'they')}.`, st:ans.act === 'accept' ? 'accepted' : ans.act === 'counter' ? 'countered' : 'declined'}, false);
+  noteAdd(me, n, {t:'offer', src:'deal', id:mine.id, from:me, to:n, exp:S.hour, text:`Proposal: ${dealSay(D, 'they')}.`, d:D, st:ans.act === 'accept' ? 'accepted' : ans.act === 'counter' ? 'countered' : 'declined'}, false);
   if (ans.act === 'accept'){ if (!dealApply(me, n, D)) return {ok:false, why:'the deal failed'}; say(me, n, n, `${ans.why}.`); markRead(me, n); return {ok:true, act:'accept', why:ans.why}; }
   if (ans.act === 'counter'){ const o = {id:S.nid++, from:n, to:me, D:dealFlip(ans.D), n:round + 1, h:S.hour, exp:S.hour + DEAL_H, counterOf:mine.id};
-    dealsS().push(o); say(me, n, n, `${ans.why}.`); offerNote(o, 'deal', `Counter-offer: ${dealSay(ans.D, 'they')}.`); markRead(me, n); return {ok:true, act:'counter', why:ans.why, o}; }
+    dealsS().push(o); say(me, n, n, `${ans.why}.`); offerNote(o, 'deal', dealNoteText(o, 'Counter-offer')); markRead(me, n); return {ok:true, act:'counter', why:ans.why, o}; }
   addMem(n, me, -2); say(me, n, n, `${ans.why}.`); markRead(me, n); return {ok:true, act:'decline', why:ans.why, want:ans.want}; }
 // close an offer without carrying it out (st: the card's status)
 function offerClose(me, src, id, st){ if (src === 'deal'){ const o = (S.deals || []).find(x => x.id === id); if (o){ S.deals = S.deals.filter(x => x !== o); offerSt(o.from, o.to, 'deal', id, st); } return; }
@@ -377,7 +383,7 @@ function noteStatus(me, e, open){ if (e.t !== 'offer') return ''; if (open.has(e
 // seat me's thread with nation n, oldest first, with each offer card's status; muted: a person me muted (the page shows only war cards then)
 function threadView(me, n){ const L = (deskView(me).chat || {})[n] || [], open = new Set(offersWith(me, n).map(o => o.src + ':' + o.id)), muted = isMuted(me, n);
   return {n, person:personOf(n), leader:isPerson(n) ? '' : leaderOf(n), muted, unread:((deskView(me).unread || {})[n]) || 0, offers:offersWith(me, n),
-    items:L.map(e => ({t:e.t || 'msg', k:e.k || '', from:e.from, text:e.text, h:e.h, src:e.src, id:e.id, st:noteStatus(me, e, open), mine:e.from === me})).filter(e => !muted || (e.t === 'sys' && e.k === 'war'))}; }
+    items:L.map(e => ({t:e.t || 'msg', k:e.k || '', from:e.from, text:e.text, h:e.h, src:e.src, id:e.id, d:e.d || null, st:noteStatus(me, e, open), mine:e.from === me})).filter(e => !muted || (e.t === 'sys' && e.k === 'war'))}; }
 // every thread of seat me for the Messages & Trades tab, newest first: an unread war card pins its thread to the top, muted threads go last
 function threads(me){ const D = deskView(me), C = D.chat || {}, U = D.unread || {}, ids = new Set(Object.keys(C).map(Number));
   for (const o of D.offers || []) ids.add(o.from); for (const o of S.deals || []) if (o.from === me || o.to === me) ids.add(o.from === me ? o.to : o.from);
@@ -417,12 +423,12 @@ function devWrite(n, me){ const T = ['Hello neighbour. Shall we keep this border
 // the pretend person n offers seat me a trade: two lots of the good it holds most of, for money at world price
 function devOffer(n, me){ const N = S.nations[n], P = mktP(), k = MKT_K.slice().sort((x, y) => N[y] - N[x] || (x < y ? -1 : 1))[0], q = Math.min(2*RES_K, kFloor(N[k]));
   const D = {give:emptySide(), get:emptySide()}; if (q >= RES_K){ D.give[k] = q; D.get.cash = Math.max(10, Math.round(lotCash(q, P[k]))); } else D.give.cash = 20;
-  const o = {id:S.nid++, from:n, to:me, D:dealNorm(D), n:1, h:S.hour, exp:S.hour + DEAL_H}; dealsS().push(o); offerNote(o, 'deal', `Proposal: ${dealSay(o.D, 'they')}.`); return o; }
+  const o = {id:S.nid++, from:n, to:me, D:dealNorm(D), n:1, h:S.hour, exp:S.hour + DEAL_H}; dealsS().push(o); offerNote(o, 'deal', dealNoteText(o, 'Proposal')); return o; }
 // the pretend person answers seat me's open offer id: 'accept', 'decline' or 'counter' (it asks $10M more, or one lot less of its goods)
 function devAnswer(id, act){ const o = (S.deals || []).find(x => x.id === id); if (!o || isSeat(o.to)) return {ok:false, why:'no offer to a pretend person'}; const n = o.to, me = o.from;
   if (act === 'accept'){ const w = dealWhy(me, n, o.D); if (w){ offerClose(me, 'deal', id, 'void'); return {ok:false, why:w}; } S.deals = S.deals.filter(x => x !== o); dealApply(me, n, o.D); offerSt(me, n, 'deal', id, 'accepted'); say(me, n, n, 'Deal.'); return {ok:true}; }
   if (act === 'decline'){ offerClose(me, 'deal', id, 'declined'); say(me, n, n, 'No thanks.'); return {ok:true}; }
   const D = dealNorm(o.D); if (S.nations[me].cash >= D.give.cash + 10) D.give.cash += 10; else { const k = DEAL_K.find(x => x !== 'cash' && D.get[x] >= RES_K); if (k) D.get[k] -= RES_K; else D.give.cash = Math.floor(S.nations[me].cash); }
   offerClose(me, 'deal', id, 'countered'); const o2 = {id:S.nid++, from:n, to:me, D:dealFlip(D), n:o.n + 1, h:S.hour, exp:S.hour + DEAL_H, counterOf:id}; dealsS().push(o2);
-  say(me, n, n, 'Close. Here is my counter-offer.'); offerNote(o2, 'deal', `Counter-offer: ${dealSay(D, 'they')}.`); return {ok:true, o:o2}; }
+  say(me, n, n, 'Close. Here is my counter-offer.'); offerNote(o2, 'deal', dealNoteText(o2, 'Counter-offer')); return {ok:true, o:o2}; }
 /*@ENDDEV*/

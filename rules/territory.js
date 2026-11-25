@@ -93,7 +93,7 @@ function terrOffer(from, to, p, price, round = 1, lastAi = null){ price = Math.r
   const T = terrS(); T.offers = T.offers.filter(o => !(o.p === p && ((o.from === from && o.to === to) || (o.from === to && o.to === from))));
   const o = {id:S.nid++, p, seller, buyer, from, to, price, value:provValue(p), n:round, h:S.hour, exp:S.hour + TERR.offerH}; if (lastAi != null) o.lastAi = lastAi;
   if (!isSeat(to)) return terrAiAnswer(o);
-  T.offers.push(o); offerNote(o, 'terr', `${from === seller ? 'Sell' : 'Buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M).`);
+  T.offers.push(o); offerNote(o, 'terr', m => `${m === seller ? 'You sell' : 'You buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M).`);
   tell(to, `${S.nations[from].name} offers to ${from === seller ? 'sell you' : 'buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M). Answer in Diplomacy (D).`, 'info', p);
   if (isSeat(from)) tell(from, `Offer sent to ${S.nations[to].name}: ${provName(p)} for $${fmt(price)}M.`, 'info', p);
   IM.emit('terr', o.to, o); return {ok:true, o}; }
@@ -103,7 +103,7 @@ function terrAiAnswer(o){ const ai = o.to, me = o.from, want = terrWant(ai, o.p,
   const mn = terrMin(o.seller, ai, o.p), c = Math.max(mn, Math.floor(want/5)*5);
   if (want >= mn && o.n < TERR.rounds && c < o.price && (o.lastAi == null || c > o.lastAi)){
     const T = terrS(), o2 = {id:S.nid++, p:o.p, seller:o.seller, buyer:ai, from:ai, to:me, price:c, value:o.value, n:o.n + 1, h:S.hour, exp:S.hour + TERR.offerH, lastAi:c};
-    T.offers.push(o2); offerNote(o2, 'terr', `Counter-offer: buy ${provName(o.p)} for $${fmt(c)}M (value $${fmt(o.value)}M).`); tell(me, `${A.name} will not pay $${fmt(o.price)}M for ${provName(o.p)}: it offers $${fmt(c)}M. Answer in Diplomacy (D).`, 'info', o.p); IM.emit('terr', me, o2);
+    T.offers.push(o2); offerNote(o2, 'terr', m => `Counter-offer: ${m === o2.seller ? 'you sell' : 'you buy'} ${provName(o.p)} for $${fmt(c)}M (value $${fmt(o.value)}M).`); tell(me, `${A.name} will not pay $${fmt(o.price)}M for ${provName(o.p)}: it offers $${fmt(c)}M. Answer in Diplomacy (D).`, 'info', o.p); IM.emit('terr', me, o2);
     return {ok:false, countered:true, price:c, o:o2, why:`${A.name} offers $${fmt(c)}M instead`}; }
   (terrS().no || (S.terr.no = {}))[o.p + ':' + ai] = S.hour + 5*24;   // it does not bid for this province itself for 5 days
   const why = want <= 0 ? `${A.name} is not interested in ${provName(o.p)}` : `${A.name} will not pay that much`;
@@ -174,4 +174,4 @@ function terrDay(){ if (S.terr && S.terr.no) for (const k in S.terr.no) if (S.te
     if (!best || rng() >= TERR.aiBidP) continue;
     const price = Math.max(best.mn, Math.min(best.w, r5(Math.min(best.w, best.v)*TERR.aiBidF))), T = terrS();
     const o = {id:S.nid++, p:best.p, seller:me, buyer:best.ai, from:best.ai, to:me, price, value:best.v, n:1, h:S.hour, exp:S.hour + TERR.offerH, lastAi:price};
-    T.offers.push(o); offerNote(o, 'terr', `Buy ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M).`); tell(me, `${S.nations[best.ai].name} offers to buy ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M). Answer in Diplomacy (D).`, 'info', best.p); IM.emit('terr', me, o); } }
+    T.offers.push(o); offerNote(o, 'terr', m => `${m === o.seller ? 'You sell' : 'You buy'} ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M).`); tell(me, `${S.nations[best.ai].name} offers to buy ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M). Answer in Diplomacy (D).`, 'info', best.p); IM.emit('terr', me, o); } }
