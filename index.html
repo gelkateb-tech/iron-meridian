@@ -7902,7 +7902,8 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
   g.restore(); }
 // the building lots' ground (cityLots; owner 2026-11-25: "the lot is part of the city's ground (paving, grass, a fence line), not a slab under
 // the picture"): drawn into the town's own canvases like its streets and parks, the same whatever is built, mostly the map's own ground with
-// soft, uneven edges (never a filled rectangle): the square round the town's point paved (a kerb close in) and, where the HQ stands, a
+// soft, uneven edges (never a filled rectangle): the square round the town's point paved in a mid grey (pale paving lit up by night: the lights are
+// made from the day canvas) (a kerb close in) and, where the HQ stands, a
 // promenade from it up to the HQ; a park on the lots of the Army Base, the Bunker and the Recruiting Office: an uneven lawn in the town's
 // own park green (in a dry town a dust maidan), a pond in some, two curving gravel paths, its trees in clumps (cityLotTrees); the Arms
 // Industry a works yard's hard standing and its drive; the Airbase and the Missile Silo open ground with a track round it; the Naval Yard
@@ -7921,20 +7922,20 @@ function cityLotDraw(g, I, LT, S, X0, Y0, W, H, pk, pkc, C){ const Ek = I.E/KM_W
       for (let j = 0; j < m; j++){ const t = j/m, d = inset + amp*c3H(sd, k++, 7); o.push(ax + (bx - ax)*t - nx*d, ay + (by - ay)*t - ny*d); } } return o; };
   const bl = `blur(${Math.max(0.6, 0.55*pk).toFixed(1)}px)`, soft = (A, col, a) => { if (a <= 0.004) return; gs.fillStyle = col; poly(A); gs.globalAlpha = a; gs.filter = bl; gs.fill(); gs.filter = 'none'; };   // (its edge blurred half a km: no hard edge, no rim)
   let kd = 1; const fence = pg => { if (kF <= 0) return; gs.globalAlpha = 0.6*kF*kd; gs.strokeStyle = 'rgb(40,38,34)'; gs.lineWidth = Math.max(px(1.1), 0.22); poly(pg); gs.stroke(); };
-  for (const l of vis){ const [a, b, c, d] = l.q, cx = (a + c)/2, cy = (b + d)/2; kd = sstep(0.06, 0.4, Math.max(dn(cx, cy), dn((a + cx)/2, (b + cy)/2), dn((c + cx)/2, (b + cy)/2), dn((a + cx)/2, (d + cy)/2), dn((c + cx)/2, (d + cy)/2))); const sd = I.p*13 + l.k.charCodeAt(0)*7 + l.k.charCodeAt(1), h = k => c3H(sd, k, 3), pg = cityLotPoly(l.q, l.c), pin = cityLotPoly([a + 0.4, b + 0.4, c - 0.4, d - 0.4], Math.max(0, l.c - 0.2));
-    if (l.st === 'fc'){ gs.globalAlpha = 0.42; gs.fillStyle = C.st; gs.fillRect(a + 0.3, b + 0.3, c - a - 0.6, d - b - 0.6); gs.globalAlpha = 0.14; gs.strokeStyle = C.kerb; gs.lineWidth = 0.9; gs.strokeRect(a + 1.4, b + 1.4, c - a - 2.8, d - b - 2.8);   // the square round the point: paving, a darker band of setts inside its edge
+  for (const l of vis){ const [a, b, c, d] = l.q, cx = (a + c)/2, cy = (b + d)/2; kd = sstep(0.15, 0.55, Math.max(dn(cx, cy), dn((a + cx)/2, (b + cy)/2), dn((c + cx)/2, (b + cy)/2), dn((a + cx)/2, (d + cy)/2), dn((c + cx)/2, (d + cy)/2))); const sd = I.p*13 + l.k.charCodeAt(0)*7 + l.k.charCodeAt(1), h = k => c3H(sd, k, 3), pg = cityLotPoly(l.q, l.c), pin = cityLotPoly([a + 0.4, b + 0.4, c - 0.4, d - 0.4], Math.max(0, l.c - 0.2));
+    if (l.st === 'fc'){ gs.globalAlpha = 0.36; gs.fillStyle = 'rgb(124,120,110)'; gs.fillRect(a + 0.3, b + 0.3, c - a - 0.6, d - b - 0.6); gs.globalAlpha = 0.14; gs.strokeStyle = C.kerb; gs.lineWidth = 0.9; gs.strokeRect(a + 1.4, b + 1.4, c - a - 2.8, d - b - 2.8);   // the square round the point: paving, a darker band of setts inside its edge
       if (kF > 0){ gs.globalAlpha = 0.35*kF; gs.strokeStyle = C.kerb; gs.lineWidth = Math.max(px(0.8), 0.15); gs.strokeRect(a + 0.3, b + 0.3, c - a - 0.6, d - b - 0.6); } continue; }   // (close in its kerb)
     if (l.st === 'sq'){ const [ga, gb, gc, gd] = l.g, mx = (ga + gc)/2, my = (gb + gd)/2;   // the HQ's own lot: a promenade from the square to its front, gravel under it, lawns either side
-      soft(wob(pin, 0.4, 1.0, sd), dust, (dry ? 0.3 : 0.42)*kd); gs.globalAlpha = 0.45; gs.fillStyle = C.plaza;
-      gs.globalAlpha = 0.38; gs.strokeStyle = C.st; gs.lineWidth = 2.2; gs.lineCap = 'butt'; gs.beginPath(); gs.moveTo(0, 0); gs.lineTo(mx, my); gs.stroke(); gs.lineCap = 'round';
+      soft(wob(pin, 0.4, 1.0, sd), dust, (dry ? 0.2 : 0.26)*kd); gs.globalAlpha = 0.45; gs.fillStyle = C.plaza;
+      gs.globalAlpha = 0.3; gs.strokeStyle = 'rgb(124,120,110)'; gs.lineWidth = 2.2; gs.lineCap = 'butt'; gs.beginPath(); gs.moveTo(0, 0); gs.lineTo(mx, my); gs.stroke(); gs.lineCap = 'round';
       gs.globalAlpha = 0.3; poly(cityLotPoly([ga + 1.5, gb + 1.5, gc - 1.5, gd - 1.5], Math.max(0, l.c - 1))); gs.fill(); continue; }
-    if (l.st === 'park'){ soft(wob(pin, 0.3, 1.4, sd), dust, (dry ? 0.34 : 0.5)*kd);   // a park: an uneven lawn (a dust maidan in a dry town), a pond, two curving paths
+    if (l.st === 'park'){ soft(wob(pin, 1.2, 1.6, sd), dust, (dry ? 0.2 : 0.28)*kd);   // a park: an uneven lawn (a dust maidan in a dry town), a pond, two curving paths
       if (!dry && h(1) < 0.5){ const px0 = a + (c - a)*(0.3 + 0.4*h(2)), py0 = b + (d - b)*(0.3 + 0.4*h(3)), r = Math.min(c - a, d - b)*0.13; gs.globalAlpha = 0.85; gs.fillStyle = C.pond; gs.beginPath(); gs.ellipse(px0, py0, r*1.4, r*0.85, 0.3 + h(4), 0, Math.PI*2); gs.fill(); }
-      gs.globalAlpha = 0.5; gs.strokeStyle = C.plaza; gs.lineWidth = 0.55;
+      gs.globalAlpha = 0.4*kd; gs.strokeStyle = C.plaza; gs.lineWidth = 0.55;
       for (let k = 0; k < 2; k++){ const s0 = k ? [a + 1, b + (d - b)*(0.3 + 0.4*h(5))] : [a + (c - a)*(0.3 + 0.4*h(6)), b + 1], s1 = k ? [c - 1, b + (d - b)*(0.3 + 0.4*h(7))] : [a + (c - a)*(0.3 + 0.4*h(8)), d - 1];
         gs.beginPath(); gs.moveTo(...s0); gs.quadraticCurveTo(cx + (h(9 + k) - 0.5)*(c - a)*0.5, cy + (h(11 + k) - 0.5)*(d - b)*0.5, ...s1); gs.stroke(); }
       fence(pg); continue; }
-    if (l.st === 'works'){ soft(wob(pin, 0.6, 1.2, sd), dust, (dry ? 0.28 : 0.4)*kd); gs.globalAlpha = 0.5*kd; gs.strokeStyle = C.st; gs.lineWidth = 0.9; gs.beginPath(); gs.moveTo(cx, d - 0.4); gs.lineTo(cx, cy); gs.stroke(); fence(pg); continue; }   // the works' plot: rough grass (dust) and its drive in from the street
+    if (l.st === 'works'){ soft(wob(pin, 1.2, 1.4, sd), dust, (dry ? 0.16 : 0.22)*kd); gs.globalAlpha = 0.5*kd; gs.strokeStyle = C.st; gs.lineWidth = 0.9; gs.beginPath(); gs.moveTo(cx, d - 0.4); gs.lineTo(cx, cy); gs.stroke(); fence(pg); continue; }   // the works' plot: rough grass (dust) and its drive in from the street
     if (l.st === 'field'){ fence(pg); continue; }   // open ground (the map's own), close in its fence
     gs.globalAlpha = 0.55; gs.fillStyle = C.av; gs.fillRect(a + 1.5, (l.g[3] + d)/2 - 0.45, c - a - 3, 0.9); fence(pg); }   // a quay: its road along the front
   gs.globalAlpha = 1;
@@ -8357,7 +8358,7 @@ function drawCityLights(hexPx){ const fa = cityFade(hexPx); if (fa <= 0 || cityA
     let on; if (F.hold || F.fd >= 0){ ctx.globalAlpha = F.hold ? a0 : a0*(1 - F.fd); on = cityNightStand(ctx, p, I, S, F, x0, y0, x1, y1, sx, sy); if (!F.hold){ ctx.globalAlpha = a0*F.fd; animFast(); } }
     if (!F.hold) on = cityDraw(ctx, p, I, S, x0, y0, x1, y1, true, false) || on;   // its lights (pieces newly in view at a tier already shown: from the best canvas there is while they are made)
     { const lgV = cityLegK(2*I.E*view.s*dpr*1.41*cityOver()), gc = lgV > 0 ? cityLgGlow(p, true) : null; if (gc){ ctx.globalAlpha = a0*0.3*lgV; ctx.drawImage(gc, I.x - I.E, I.y - I.E, 2*I.E, 2*I.E); } }
-    const G0 = CGLOW(), gr = cityGlowR(p); ctx.globalAlpha = nf*fa*(on ? CN_GLOW*1.1 : CN_GLOW)*(1 - 0.65*sstep(130, 220, hexPx)); ctx.drawImage(G0, I.x - gr, I.y - gr, gr*2, gr*2); });   // a small glow on the town's point, inside its reach (alone until its lights are made; at the closest zooms, where the point is the paved square's open middle with no picture over it, a fainter one: no hot spot on the paving)
+    const G0 = CGLOW(), gr = cityGlowR(p); ctx.globalAlpha = nf*fa*(on ? CN_GLOW*1.1 : CN_GLOW)*(1 - sstep(130, 220, hexPx)); ctx.drawImage(G0, I.x - gr, I.y - gr, gr*2, gr*2); });   // a small glow on the town's point, inside its reach (alone until its lights are made; at the closest zooms, where the point is the paved square's open middle with no picture over it, a fainter one: no hot spot on the paving)
   CITY_GO = false; if (saved) ctx.restore(); }
 // a town's lights cross-fade from the stand-in to the right canvas when that lands (CNF_MS); a new tier (the view zoomed) shows what there is
 // at once. Returns the share of the right canvas while fading, else -1
