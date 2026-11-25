@@ -311,3 +311,43 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 **D2. "Their" and "your" relation.** In our rules a treaty (ceasefire, peace, NAP, right of way, alliance) binds both sides, so the two diamonds usually match. They differ only for one-sided things: an embargo, or right of way given one way. **Default:** both diamonds show the treaty; a one-sided embargo or passage shows only on the side that set it.
 
 **D3. Real-player features before online play.** Add Friend, Player Profile, Mute and chat need a server for real players. **Default:** they are built and work locally now (friends list, profile page, mute and chat stored with your game), with one connection point for the server later. A dev-only test switch marks a computer nation as "played by a real player" so the screens can be tested and shown. The public build never fakes real players.
+
+### Rebels plan (points 8-11; docs/REBELS-PLAN.md on plans-1125, 19dd3af). Suggested answer after the arrow; REBELS waits for your OK on R1.
+
+- **R1. The three proposals.** → Annex City option B (town $50M · 10k · 3 days, city $80M · 15k · 4 days, large city $120M · 25k · 5 days, metropolis $180M · 40k · 6 days); distance as straight-line km from the capital, −5 per 1,000 km rounded; each of your ground units in the city halves the rebel chance. Also: the chance reaches 100% at 10% morale; shortage scales with the share of the day's need unmet; casualties come from the province's war damage.
+- **R2.** Cap distance at −30 (your rule has no cap; Baghdad held by the US would be −50)? → Yes.
+- **R3.** Liberated homeland always 55%, also land handed back by treaty? → Yes.
+- **R4.** Countryside around an annexed city annexed with it (occupied countryside whose nearest city it is, same country)? → Yes.
+- **R5.** Land received by treaty, sale or gift → arrives annexed, unless it was your homeland.
+- **R6.** Independent land counts as an enemy neighbour? → No.
+- **R7.** Enemy units in the province −1: flat or per unit? → Flat.
+- **R8.** Neighbour −7/−4 and +3/+1 by the neighbour's type or the province's own? → The neighbour's.
+- **R9.** "Rebels included" in wars: only while rebels stand in one of your cities? → Yes, only while present.
+- **R10.** Homeland and annexed cities can rebel too at 33% or lower (supersedes REB-3)? → Yes.
+- **R11.** Keep Pacify? → No.
+- **R12.** Keep Mobilisation's strain on homeland morale as −5 per level? → Yes.
+- **R13.** The spy's "Incite unrest" becomes "Incite revolt" (−20 morale at once in an occupied city)? → Yes.
+- **R14.** Rebels take an empty city at once? → Yes.
+- **R15.** Trade partners (point 11): option C (the lost route's slot stays empty while at war or holding their cities unannexed, and your other routes pay 25% less until you annex)? → C. B is the literal "I lose that trade".
+- **R16.** Show the fire on foreign cities wherever you can see the city? → Yes.
+- **R17.** Administration: occupied land counts a quarter and annexed land a half against the administration factor (today every province counts fully, so conquest by a small nation never pays)? → Yes; point 11's results depend on it.
+
+### Missiles plan (point 12; docs/MISSILES-PLAN.md on plans-1125). MISSILES waits for your OK on the plan.
+
+- **M1.** Cruise missiles need no silo: built in any city with an Army Base, Airbase or Naval Yard, 2 stored there? → Yes.
+- **M2.** Nuclear Warhead needs Heavier Warhead rather than Chemical Warhead? → Yes.
+- **M3.** ICBM now or later? → Later.
+- **M4.** Your own forces are hit by your own gas and blast, with a warning? → Yes.
+- **M5.** No target in your own land, even with enemies or rebels there? → Yes.
+- **M6.** Every nation sees a nuclear launch? → Yes.
+- **M7.** The victim's allies join the war; a computer ally of the launcher leaves below opinion 0? → Yes.
+- **M8.** Chemical and nuclear missiles self-destruct at peace and are destroyed when their silo is captured? → Yes.
+- **M9.** The computer's strict use rule, and fix "the computer fires no missiles" (IMP-8) in the same build? → Yes and yes.
+- **M10.** Generic names, no pictures of real weapons? → Yes.
+- **M11.** One CBRN Defence research node instead of an upgrade in every ground line? → Yes.
+- **M12.** Limits, cooldowns and damage as written; the build's balance run may tune them by up to a fifth? → Yes.
+- **M13.** Gas and radiation zone markers as mocked up? → Yes.
+- **M14.** Build missiles after auto-test/fixes is merged (it fixes the same missile functions) and after REBELS? → Yes to both.
+- **M15.** Also cut morale at once when a strike lands? → No; one rule for all civilian losses.
+
+The Diplomacy layout options (A/B/C) from the same job are superseded by your reference layout; their button inventory is the checklist of actions to keep.
