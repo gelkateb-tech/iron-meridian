@@ -8312,7 +8312,7 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
   for (const a of unkA) if (!a.air && heartCity(a.at) && heartOn(a)) add(a.at, 'unk', -9);
   for (const [p, L] of on){ const h = L.findIndex(q => q.o === S.owner[p]); if (h > 0) L.unshift(L.splice(h, 1)[0]); }
   /*@TEST*/HMDBG.length = 0;/*@ENDTEST*/
-  const hd = heartHd(hexPx), R = heartRingR(hexPx), ga = ctx.globalAlpha, M = R + 6, NB = names.concat(NCHIT.map(q => [q[0], q[1], q[2], q[3]]));
+  const hd = heartHd(hexPx), R = heartRingR(hexPx), ga = ctx.globalAlpha, M = R + 6, NB = names.map(q => [q[0] + 3, q[1] + 1, q[2] - 3, q[3] - 2]).concat(NCHIT.map(q => [q[0], q[1], q[2], q[3]]));   // (a name's lettering: its box less the padding round it)
   const fin = hexPx >= 12 ? 1 : smooth01((hexPx - 8)/4);   // (out at the world view only the capitals and the held points show; the other cities' marks come in from hex 8 to 12)
   const GC = 64, grid = new Map(); for (const q of NB) for (let gx = Math.floor(q[0]/GC); gx <= Math.floor(q[2]/GC); gx++) for (let gy = Math.floor(q[1]/GC); gy <= Math.floor(q[3]/GC); gy++){ const k = gx*4096 + gy; let L = grid.get(k); if (!L) grid.set(k, L = []); L.push(q); }
   const onName = b => { for (let gx = Math.floor(b[0]/GC); gx <= Math.floor(b[2]/GC); gx++) for (let gy = Math.floor(b[1]/GC); gy <= Math.floor(b[3]/GC); gy++){ const L = grid.get(gx*4096 + gy); if (L && L.some(q => ovlB(q, b))) return true; } return false; };   // (the names near a box, by a coarse grid: a frame tests only its own few)
@@ -8321,7 +8321,7 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ if (!S || !G) return;
     // the names stay where they are (owner: "City names stay where they are"; the label pass never moves a city's name or its anchor for a marker):
     // a plain city's marker that would lie on a name or an anchor is left out; a capital's and a held point's always show (drawn over the name),
     // and a held one tells which city it is by a small name tag when the city's own name is not by it
-    const r0 = held ? R + 2.4 : hd + 1.5, mb = [x - r0, y - r0, x + r0, y + r0], onN = onName(mb);
+    const r0 = held ? R + 2.4 : hd + 1.5, r1 = held ? r0 : hd + 1, onN = onName([x - r1, y - r1, x + r1, y + r1]);   // (a marker clear of the lettering by a px or more shows)
     /*@TEST*/if (!window.__ucNoDbg) HMDBG.push({p, x:+x.toFixed(2), y:+y.toFixed(2), r:+r0.toFixed(2), sides:held ? L.map(q => q.s) : [], drawn:held || cap || !onN ? 1 : 0, onName:onN ? 1 : 0, a:+far.toFixed(2)});/*@ENDTEST*/
     if (onN && !held && !cap) return;
     const dim = vis.has(p) ? 1 : 0.6;
