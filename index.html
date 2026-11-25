@@ -6991,7 +6991,7 @@ function bnFrontMake(I, q, nm, M, mir, wx0, wy0, Ww, Hw, pkW, N, ki, kf){ const 
   const lod = pkc >= C3_LOD, far = pkc < C3_MASS, inB = bb => bb[0] < bx1 && bb[2] > bx0 && bb[1] < by1 && bb[3] > by0, B = [], add = b => { if (b.k > kA && inB(b.bb)) B.push(b); };
   for (const b of P.B){ if (!inB(b.bb)) continue; if (b.lv === 4){ if (far) add(b); continue; } if (b.lv === 0){ if (far && b.mb) continue; if (lod){ for (const l of c3Lots(b, P)) add(l); } else add(b); continue; } add(b); }   // (the buildings the tier shows: as cityPlanDraw picks them)
   if (!B.length) return null;
-  const W = Math.max(1, Math.min(2048, Math.ceil(Ww*pkW))), H = Math.max(1, Math.min(2048, Math.ceil(Hw*pkW))), im = bnPic(nm, Math.max(W, H), 0); if (!im) return undefined;
+  const W = Math.max(1, Math.min(2048, Math.ceil(Ww*pkW))), H = Math.max(1, Math.min(2048, Math.ceil(Hw*pkW))), im = bnPic(nm, Math.max(W, H), 0); if (!im) return ART.failed(nm) ? null : undefined;   // (undefined: the picture still loading, asked again)
   B.sort((a, b) => a.k - b.k);
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), sx = W/(bx1 - bx0), sy = H/(by1 - by0), px = v => v/sx;
   g.setTransform(sx, 0, 0, sy, -bx0*sx, -by0*sy); g.lineJoin = 'miter';
@@ -7503,7 +7503,7 @@ function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null;
   // the building lots (cityLots: the town's own, the same whatever is built): stamped taken, so no block, tower, park or tree stands on one;
   // the streets that would cross one end at its fence (below); their ground is drawn as the town's (cityLotDraw)
   // (a neighbour's lots over the square too: no block of this town on them, its streets ending at them; drawn by that town: nb)
-  const LT = [], LTN = []; for (const Q of G.P){ if (!Q.city || Q.sea) continue; let dx = Q.x - I.x; if (Math.abs(dx) > WORLD_W/2) dx -= Math.sign(dx)*WORLD_W; const dy = Q.y - I.y; if (Math.abs(dx) > 2.5*I.E || Math.abs(dy) > 2.5*I.E) continue;
+  const LT = [], LTN = []; for (const Q of G.P){ if (!Q.city || Q.sea) continue; let dx = Q.x - I.x; if (Math.abs(dx) > WORLD_W/2) dx -= Math.sign(dx)*WORLD_W; const dy = Q.y - I.y, EQ = Q.id === I.p ? I.E : cityR(Q.id).E; if (Math.abs(dx) > I.E + EQ || Math.abs(dy) > I.E + EQ) continue;   // (a town whose square reaches this one's)
     const Lo = yield* cityLotsWait(Q.id); if (Lo) for (const l of Lo.list){ const q = [(l.q[0] + dx)/KM_W, (l.q[1] + dy)/KM_W, (l.q[2] + dx)/KM_W, (l.q[3] + dy)/KM_W]; if (q[2] < -Ek || q[0] > Ek || q[3] < -Ek || q[1] > Ek) continue;
       (Q.id === I.p ? LT : LTN).push({k:l.k, st:l.st, q, g:[(l.g[0] + dx)/KM_W, (l.g[1] + dy)/KM_W, (l.g[2] + dx)/KM_W, (l.g[3] + dy)/KM_W], x:(l.x + dx)/KM_W, y:(l.y + dy)/KM_W, side:l.side || null}); stamp([q[0], q[1], q[2], q[1], q[2], q[3], q[0], q[3]], 0.45); } }
   const lotOv = (q, g = 0) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (let k = 0; k < q.length; k += 2){ x0 = Math.min(x0, q[k]); x1 = Math.max(x1, q[k]); y0 = Math.min(y0, q[k + 1]); y1 = Math.max(y1, q[k + 1]); }
