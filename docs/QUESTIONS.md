@@ -317,13 +317,13 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 - **D4. Several treaties in one trade?** → One treaty per trade.
 - **D5. May two nations at war trade money and goods directly?** → Yes, as computer nations already could; offers made before the war lapse.
 - **D6. Should a computer nation's refusal of your trade cost opinion?** → No, as before.
-- **D7. Pop-up notes on a phone while Diplomacy is open** cover the tabs for a few seconds. → To fix before merge: show them below the tabs, or let taps pass through.
+- **D7. Pop-up notes on a phone while Diplomacy is open** cover the tabs for a few seconds. → Done (be33bed): below the tabs and sort bar, taps pass through.
 - **D8. Province details and price aids in the land picker** (value, floor, suggested price, locator map). → Kept.
 - **D9. Keep the Neighbours sort and the Border row on the nation page?** → Yes.
 - **D10. A computer nation that likes you keeps giving money for nothing** (already so before this work). → Unchanged for now; one option is that it refuses deals where it gets nothing.
-- **D11. Invented leader names:** a few share a surname with a real minister (higher risk: Syria's Nabil Sabbagh, Yemen's Tawfiq al-Mikhlafi; lower: Japan's Tadokoro, Spain's Valcárcel, Norway's Haugland, Mali's Tangara). → Swap at least Syria and Yemen before merge.
+- **D11. Invented leader names:** a few share a surname with a real minister (higher risk: Syria's Nabil Sabbagh, Yemen's Tawfiq al-Mikhlafi; lower: Japan's Tadokoro, Spain's Valcárcel, Norway's Haugland, Mali's Tangara). → Done (be33bed): Syria Rafiq Dabbouri, Yemen Jalal Samawati, Japan Itsuki Moriwaki, Spain Inés Montalbetti, Norway Sigrid Vollaneset, Mali Moussa Kébalou. Please skim them once.
 - **D12. The computer's own alliance check can wrongly say "coalition is full"** (already so before this work). → Unchanged, so computer-only games stay identical.
-- **D13. Known Army Size** compares the forces you have seen with their whole military, so Russia with one force seen reads "8 units, weaker military". → Show "8 units seen" and no comparison unless all their forces are known.
+- **D13. Known Army Size** compares the forces you have seen with their whole military, so Russia with one force seen reads "8 units, weaker military". → Done (be33bed): "8 units seen"; the comparison shows only when all their forces are known.
 
 ### Rebels plan (points 8-11; docs/REBELS-PLAN.md on plans-1125, 19dd3af). Suggested answer after the arrow; REBELS waits for your OK on R1.
 
