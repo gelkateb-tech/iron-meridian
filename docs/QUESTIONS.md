@@ -303,3 +303,11 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 ## Questions from the owner notes of 2026-11-25
 
 Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their questions here (each with the default used) as they report.
+
+### Diplomacy (owner's reference layout, point 14)
+
+**D1. Quick messages to computer nations.** Today you can send a computer nation six quick messages (Message tab). Your computer-nation page has no Send Message button, but you also said "nothing gets removed". **Default:** the quick messages move into that nation's thread in Messages & Trades, under its trades; the page itself shows only New Trade.
+
+**D2. "Their" and "your" relation.** In our rules a treaty (ceasefire, peace, NAP, right of way, alliance) binds both sides, so the two diamonds usually match. They differ only for one-sided things: an embargo, or right of way given one way. **Default:** both diamonds show the treaty; a one-sided embargo or passage shows only on the side that set it.
+
+**D3. Real-player features before online play.** Add Friend, Player Profile, Mute and chat need a server for real players. **Default:** they are built and work locally now (friends list, profile page, mute and chat stored with your game), with one connection point for the server later. A dev-only test switch marks a computer nation as "played by a real player" so the screens can be tested and shown. The public build never fakes real players.
