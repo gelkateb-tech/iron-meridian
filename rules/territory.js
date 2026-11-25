@@ -93,7 +93,7 @@ function terrOffer(from, to, p, price, round = 1, lastAi = null){ price = Math.r
   const T = terrS(); T.offers = T.offers.filter(o => !(o.p === p && ((o.from === from && o.to === to) || (o.from === to && o.to === from))));
   const o = {id:S.nid++, p, seller, buyer, from, to, price, value:provValue(p), n:round, h:S.hour, exp:S.hour + TERR.offerH}; if (lastAi != null) o.lastAi = lastAi;
   if (!isSeat(to)) return terrAiAnswer(o);
-  T.offers.push(o);
+  T.offers.push(o); offerNote(o, 'terr', `${from === seller ? 'Sell' : 'Buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M).`);
   tell(to, `${S.nations[from].name} offers to ${from === seller ? 'sell you' : 'buy'} ${provName(p)} for $${fmt(price)}M (value $${fmt(o.value)}M). Answer in Diplomacy (D).`, 'info', p);
   if (isSeat(from)) tell(from, `Offer sent to ${S.nations[to].name}: ${provName(p)} for $${fmt(price)}M.`, 'info', p);
   IM.emit('terr', o.to, o); return {ok:true, o}; }
@@ -103,7 +103,7 @@ function terrAiAnswer(o){ const ai = o.to, me = o.from, want = terrWant(ai, o.p,
   const mn = terrMin(o.seller, ai, o.p), c = Math.max(mn, Math.floor(want/5)*5);
   if (want >= mn && o.n < TERR.rounds && c < o.price && (o.lastAi == null || c > o.lastAi)){
     const T = terrS(), o2 = {id:S.nid++, p:o.p, seller:o.seller, buyer:ai, from:ai, to:me, price:c, value:o.value, n:o.n + 1, h:S.hour, exp:S.hour + TERR.offerH, lastAi:c};
-    T.offers.push(o2); tell(me, `${A.name} will not pay $${fmt(o.price)}M for ${provName(o.p)}: it offers $${fmt(c)}M. Answer in Diplomacy (D).`, 'info', o.p); IM.emit('terr', me, o2);
+    T.offers.push(o2); offerNote(o2, 'terr', `Counter-offer: buy ${provName(o.p)} for $${fmt(c)}M (value $${fmt(o.value)}M).`); tell(me, `${A.name} will not pay $${fmt(o.price)}M for ${provName(o.p)}: it offers $${fmt(c)}M. Answer in Diplomacy (D).`, 'info', o.p); IM.emit('terr', me, o2);
     return {ok:false, countered:true, price:c, o:o2, why:`${A.name} offers $${fmt(c)}M instead`}; }
   (terrS().no || (S.terr.no = {}))[o.p + ':' + ai] = S.hour + 5*24;   // it does not bid for this province itself for 5 days
   const why = want <= 0 ? `${A.name} is not interested in ${provName(o.p)}` : `${A.name} will not pay that much`;
@@ -132,8 +132,17 @@ function terrMoveOut(p, seller, buyer){ let dest = -1;
     atMove(a, d); a.to = null; a.t = 0; a.path = []; a.pos = null; a.legFrom = null; a.dest = null; if (a.wp) delete a.wp; a.forced = false; if (a.owner === seller && dest < 0) dest = d; }
   removeEmpty(); return dest; }
 // the sale itself: money, the province with its buildings, the troops out, the 3-day resale lock, the log and a dispatch to each side
-function terrSell(seller, buyer, p, price){ const A = S.nations[seller], B = S.nations[buyer], value = provValue(p), back = origOwner(p) === buyer, T = terrS();
+function terrSell(seller, buyer, p, price){ const A = S.nations[seller], B = S.nations[buyer], value = provValue(p);
   B.cash -= price; A.cash += price;
+  const moved = terrTransfer(seller, buyer, p, price, value);
+  tell(seller, `You sold ${provName(p)} to ${B.name} for $${fmt(price)}M (value $${fmt(value)}M).${moved >= 0 ? ` Your troops there moved to ${provName(moved)}.` : ''}`, 'good', p);
+  tell(buyer, `You bought ${provName(p)} from ${A.name} for $${fmt(price)}M (value $${fmt(value)}M). Its buildings are yours; it cannot be resold for 3 days.`, 'good', p);
+  IM.emit('terrSold', p, seller, buyer, price);
+  checkNation(seller, buyer); checkEnd(); return true; }
+// the land part of a sale, shared with a trade deal (rules/dealings.js dealApply, which pays in money and goods): the owner, the title, the troops
+// out, the 3-day resale lock, the province's other offers dropped, the log at price, goodwill and a card in both threads. Returns where the
+// seller's troops went (-1: none moved)
+function terrTransfer(seller, buyer, p, price, value = provValue(p)){ const A = S.nations[seller], B = S.nations[buyer], back = origOwner(p) === buyer, T = terrS();
   S.owner[p] = buyer; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null;
   // the seller's title passes on: land it held by treaty becomes the buyer's by treaty; land it only occupied stays occupied land (the occupation
   // clock and the unrest carry over). Land sold back to the country it was taken from is home again: no occupation, unrest down to 5% at most
@@ -142,14 +151,13 @@ function terrSell(seller, buyer, p, price){ const A = S.nations[seller], B = S.n
   const moved = terrMoveOut(p, seller, buyer);
   T.lock[p] = {by:buyer, until:S.hour + TERR.lockH};
   for (const q in T.lock) if (T.lock[q].until <= S.hour) delete T.lock[q];
+  for (const o of T.offers) if (o.p === p) offerSt(o.from, o.to, 'terr', o.id, o.price === price && o.seller === seller && o.buyer === buyer ? 'accepted' : 'void');
   T.offers = T.offers.filter(o => o.p !== p);
   T.log.push({h:S.hour, p, seller, buyer, price, value}); if (T.log.length > 100) T.log.shift();
   addMem(buyer, seller, 3); addMem(seller, buyer, 3);
   geoChanged(); visCache = null; INCC.v = -1;
-  tell(seller, `You sold ${provName(p)} to ${B.name} for $${fmt(price)}M (value $${fmt(value)}M).${moved >= 0 ? ` Your troops there moved to ${provName(moved)}.` : ''}`, 'good', p);
-  tell(buyer, `You bought ${provName(p)} from ${A.name} for $${fmt(price)}M (value $${fmt(value)}M). Its buildings are yours; it cannot be resold for 3 days.`, 'good', p);
-  IM.emit('terrSold', p, seller, buyer, price);
-  checkNation(seller, buyer); checkEnd(); return true; }
+  sysNote(seller, buyer, `${A.name} sold ${provName(p)} to ${B.name} for $${fmt(price)}M (value $${fmt(value)}M).`, 'sale');
+  return moved; }
 // every hour: offers that ran out, or whose province changed hands, lapse
 function terrHour(){ const T = S.terr; if (!T || !T.offers.length) return;
   T.offers = T.offers.filter(o => { const ok = o.exp > S.hour && S.owner[o.p] === o.seller && S.nations[o.from].alive && S.nations[o.to].alive && !atWar(o.from, o.to);
@@ -166,4 +174,4 @@ function terrDay(){ if (S.terr && S.terr.no) for (const k in S.terr.no) if (S.te
     if (!best || rng() >= TERR.aiBidP) continue;
     const price = Math.max(best.mn, Math.min(best.w, r5(Math.min(best.w, best.v)*TERR.aiBidF))), T = terrS();
     const o = {id:S.nid++, p:best.p, seller:me, buyer:best.ai, from:best.ai, to:me, price, value:best.v, n:1, h:S.hour, exp:S.hour + TERR.offerH, lastAi:price};
-    T.offers.push(o); tell(me, `${S.nations[best.ai].name} offers to buy ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M). Answer in Diplomacy (D).`, 'info', best.p); IM.emit('terr', me, o); } }
+    T.offers.push(o); offerNote(o, 'terr', `Buy ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M).`); tell(me, `${S.nations[best.ai].name} offers to buy ${provName(best.p)} for $${fmt(price)}M (value $${fmt(best.v)}M). Answer in Diplomacy (D).`, 'info', best.p); IM.emit('terr', me, o); } }
