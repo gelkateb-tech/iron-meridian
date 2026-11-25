@@ -267,8 +267,9 @@ territory, victory points, dispatches) is unchanged; only the moment changed.
   keep that route and land where they were going (`a.oldLand`, set in `restore`, dropped with the landing or a new order); a force still on
   land with such a route is planned again on load through a naval city.
 - **Columns meet (owner 2026-11-25).** Two hostile forces that are both on the move (marching a leg, sailing, or walking to a spot inside a
-  province) meet the first moment in the hour they are in the same province or sea zone; both stop there, at the spot each had reached, and
-  fight in that hour's battle step. A force on a leg counts in the province its spot lies in (the one it left until it crosses into the next);
+  province) meet the first moment in the hour they are in the same province or sea zone; both stop there and fight in that hour's battle
+  step. They stand halfway from where they met to the province's point (as the old head-on clash had it: the drawn border can run up to a
+  cell off the cells' edge, so the battle stays inside the province as drawn), 20 km apart, each on the side it came from (`meetSpots`). A force on a leg counts in the province its spot lies in (the one it left until it crosses into the next);
   on a leg between land and sea it counts at the sea end, still aboard (a fleet entering a port is still on the water, B2.4). Not met:
   aircraft and forces in flight, a force standing still (a column marching on it fights it as it arrives at the centre, as before), and two
   forces in the province both stood in as the hour began (they were together already: a battle there was fought, or one is withdrawing from
@@ -417,14 +418,16 @@ foreign force.
 
 **Shown at all (owner 2026-11-25: "enemy armies outside my territory still show as 'unidentified'. They shouldn't show at all. I only see
 them once they cross into my land, or when one of my units sees them within its sight range").** A foreign force appears on your map only
-when (1) it stands in your or an ally's land, or, on the move, its spot is over that land (a column marching in shows the moment it crosses
-the border, not when it sets off); (2) it is inside the sight range of one of your or an ally's units (VIS-1: ground forces and fleets 50 km,
+when (1) it stands in your or an ally's land, or, on the move, it is over that land (a column marching in shows the moment it crosses
+the border, not when it sets off: on the screen by the province drawn under it as it is drawn along the road, `armyVisibleAt`; for the rules
+by its spot at the hour mark); (2) it is inside the sight range of one of your or an ally's units (VIS-1: ground forces and fleets 50 km,
 Special Forces 100 / 150; aircraft in flight 150; drones, fighter patrols and recon wings 200; a UAV on station 250-500; a maritime patrol 400,
 ships at sea; a satellite's strip 150; warships' sonar for submarines); (3) a recon reveal covers its province; (4) your forces are fighting
 it (B3.8); or (5) as a location-only '?' inside an AWACS orbit (AIR-3). Nothing else shows it: cities and airbases no longer see past the
 border, and sending a force into a province no longer shows what is in it before you get there. The fog drawn on the map follows the same
 sight. Ranged fire needs the same sight (`armyVisible`): a gun needs your land or a unit of yours to spot its target. A foreign air wing shows
-where it flies in your sight, not from take-off. The border advisor counts only forces you see.
+where it flies in your sight, not from take-off. The border advisor counts only forces you have identified (it names their nation and
+strength). A province's panel tells of a battle there only when you have a force in it or see one of the forces fighting.
 
 **Spotted (only the '?' badge).** Anything shown that nothing identifies: ordinary sight of any force (infantry, tanks, ships: 50 km), your
 own and allied land, a province revealed by someone else's UAV, manned aircraft in flight (150 km, patrols 200 km), and a plain AWACS

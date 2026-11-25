@@ -13,6 +13,7 @@
 //  W      withdrawal still works: a force fighting in Winnipeg ordered back home leaves, and is not pulled back by the enemy it was fighting
 //  K      a column that meets the enemy in the province it was going to keeps its order: once it has won it walks on to the centre and takes it
 //  P      forces of nations at peace pass each other (no meeting)
+//  1s, 7s where the two stand once met: apart (20 km), in the province they fight in, each on the side it came from
 //  S      troops sailing into an enemy port meet a fleet coming out of it on the water: they are still aboard (no landing, as B2.4)
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
@@ -68,6 +69,15 @@ const seaHead = at => c => { const [s1, s2] = seaPair(c); clear(c.S, new Set([s1
 fought('10 fleets head-on, same hour', seaHead(null));
 fought('10b fleets head-on, B sets off at 85%', seaHead(0.85));
 fought('10c fleets head-on, B sets off at 95%', seaHead(0.95));
+// where they stand once met (meetSpots): apart in the province they met in, each on the side it came from, so neither counter covers the other
+// (head-on, and overtaking: the faster column stands behind the one it caught)
+for (const [id, build] of [['1s head-on: where the two stand', headOn({inf:3}, {inf:3})], ['7s overtaking: where the two stand', c => { const B = addArmy(c.Q, c.u, {inf:3}); B.to = c.v; B.t = 0.2;
+    const A = addArmy(SEAT, c.u, {tank:3}); api.orderMove(A, c.v); api.orderMove(B, c.w); return {pair:[A, B]}; }]]){
+  const R = fought(id, build); if (!R || R.res !== 'FOUGHT') continue; const [A, B] = R.F.pair, U = R.G.P[R.u], KM = ev('KM_W'), pv = ev('provOfPt');
+  if (!count(A) || !count(B)) continue; const d = q => Math.hypot(q[0] - U.x, q[1] - U.y);
+  ok(A.pos && B.pos && Math.hypot(A.pos[0] - B.pos[0], A.pos[1] - B.pos[1])/KM >= 15, id + ': the two stand apart', A.pos && B.pos && Math.hypot(A.pos[0] - B.pos[0], A.pos[1] - B.pos[1])/KM);
+  ok(A.pos && B.pos && pv(A.pos[0], A.pos[1]) === A.at && pv(B.pos[0], B.pos[1]) === B.at, id + ': both stand in the province they fight in');
+  ok(A.pos && B.pos && d(A.pos) < d(B.pos), id + ': each on the side it came from'); }
 // W: withdrawal. A and B fight in v; A is ordered home and leaves (B stays): A is not pulled back
 { const R = run('W withdrawal', c => { const A = addArmy(SEAT, c.v, {inf:4}), B = addArmy(c.Q, c.v, {inf:4}); A.pos = [c.G.P[c.v].x, c.G.P[c.v].y];
     let ordered = false; return {pair:[A, B], each(h){ if (h === 2 && !ordered){ ordered = true; api.orderMove(A, c.u); } }, stop(){ return false; }}; }, {hours:24});

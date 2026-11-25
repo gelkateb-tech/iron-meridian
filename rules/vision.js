@@ -121,7 +121,13 @@ function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   if (a.owner === vis.n) return true;
   const M = vis.seen, c = M && M.get(a); if (c !== undefined) return c;
   const r = armySeen(a, vis); if (M) M.set(a, r); return r; }
-function armySeen(a, vis){ const me = vis.n;
+// the screen's test for a foreign force on the move by where the map draws it: dp, the province drawn under it (the page's armyPos follows the
+// road, ahead of and beside the spot at the hour mark, and the drawn border runs up to a cell off the cells' edge). As armyVisible, but over
+// own or allied land by dp, so a column shows as it is drawn crossing the border and hides as it is drawn leaving (sight ranges still reach its
+// spot). Not cached (the drawn point moves every frame)
+function armyVisibleAt(a, vis, dp){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
+  return a.owner === vis.n || armySeen(a, vis, dp); }
+function armySeen(a, vis, dp = null){ const me = vis.n;
   if (a.owner >= 0 && friendly(me, a.owner) && rel(me, a.owner).st === 'ally') return true;
   const ids = vis.ids || [], [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea, W0 = vis.whole || vis;
   if (a.owner >= 0 && specOnly(a)) return ids.some(s => s[5] === VK.gf && visIn(s, x, y));   // special forces: only seen up close, by a force
@@ -130,7 +136,7 @@ function armySeen(a, vis){ const me = vis.n;
   // in own or allied land (or a revealed province): a force standing in it; a force on the move (or flying) whose spot is over it, so a column
   // marching in shows the moment it crosses the border, not when it sets off (owner 2026-11-25)
   if (!a.fly && a.to === null && !a.sail){ if (W0.has(a.at)) return true; }
-  else { const c = worldToCell(x, y), p0 = c >= 0 ? G.prov[c] : -1; if (p0 >= 0 && W0.has(p0)) return true; }
+  else { const p0 = dp != null ? dp : provOfPt(x, y); if (p0 >= 0 && W0.has(p0)) return true; }   // (dp: where the screen draws it, armyVisibleAt)
   for (const s of ids) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
   return false; }
 /* Identified or only spotted (owner's rule, 2026-11-18, as in Conflict of Nations): seeing a foreign force (armyVisible) only tells that something
@@ -146,7 +152,8 @@ function armySeen(a, vis){ const me = vis.n;
    Ordinary sight (any other unit, infantry included, own land, a revealed province, aircraft, a plain AWACS) only spots.
    Own and allied forces are always known. Nothing is remembered once the recon has gone, except the UAV's and the agent's span.
    The rules themselves never ask (the AI plays on the full state; ranged fire needs only a spotted target, armyVisible, the same sight the
-   screen shows): this is what a seat's screen shows. */
+   screen shows), but for what a seat is told: this is what a seat's screen shows, and the border warning counts only forces it has identified
+   (rules/tick.js: it names their nation and strength). */
 const isAlly = (me, o) => o >= 0 && me >= 0 && friendly(me, o) && rel(me, o).st === 'ally';
 // a foreign force standing in a battle against vis.n's own (or an ally's) force: seen and identified for as long as the battle lasts, however far
 // apart the two stand in the province (VIS-2, UNI-9). For the screen only (armyShown, armyKnown, armyView): the rules never ask, and armyVisible,
