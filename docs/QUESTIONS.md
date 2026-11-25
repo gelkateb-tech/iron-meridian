@@ -312,6 +312,19 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 
 **D3. Real-player features before online play.** Add Friend, Player Profile, Mute and chat need a server for real players. **Default:** they are built and work locally now (friends list, profile page, mute and chat stored with your game), with one connection point for the server later. A dev-only test switch marks a computer nation as "played by a real player" so the screens can be tested and shown. The public build never fakes real players.
 
+**Answers from the built job (branch diplomacy-ref 20ecbc2).** D1-D3 were built with the defaults above. New questions, default after the arrow:
+
+- **D4. Several treaties in one trade?** → One treaty per trade.
+- **D5. May two nations at war trade money and goods directly?** → Yes, as computer nations already could; offers made before the war lapse.
+- **D6. Should a computer nation's refusal of your trade cost opinion?** → No, as before.
+- **D7. Pop-up notes on a phone while Diplomacy is open** cover the tabs for a few seconds. → To fix before merge: show them below the tabs, or let taps pass through.
+- **D8. Province details and price aids in the land picker** (value, floor, suggested price, locator map). → Kept.
+- **D9. Keep the Neighbours sort and the Border row on the nation page?** → Yes.
+- **D10. A computer nation that likes you keeps giving money for nothing** (already so before this work). → Unchanged for now; one option is that it refuses deals where it gets nothing.
+- **D11. Invented leader names:** a few share a surname with a real minister (higher risk: Syria's Nabil Sabbagh, Yemen's Tawfiq al-Mikhlafi; lower: Japan's Tadokoro, Spain's Valcárcel, Norway's Haugland, Mali's Tangara). → Swap at least Syria and Yemen before merge.
+- **D12. The computer's own alliance check can wrongly say "coalition is full"** (already so before this work). → Unchanged, so computer-only games stay identical.
+- **D13. Known Army Size** compares the forces you have seen with their whole military, so Russia with one force seen reads "8 units, weaker military". → Show "8 units seen" and no comparison unless all their forces are known.
+
 ### Rebels plan (points 8-11; docs/REBELS-PLAN.md on plans-1125, 19dd3af). Suggested answer after the arrow; REBELS waits for your OK on R1.
 
 - **R1. The three proposals.** → Annex City option B (town $50M · 10k · 3 days, city $80M · 15k · 4 days, large city $120M · 25k · 5 days, metropolis $180M · 40k · 6 days); distance as straight-line km from the capital, −5 per 1,000 km rounded; each of your ground units in the city halves the rebel chance. Also: the chance reaches 100% at 10% morale; shortage scales with the share of the day's need unmet; casualties come from the province's war damage.
