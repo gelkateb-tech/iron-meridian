@@ -369,3 +369,13 @@ The Diplomacy layout options (A/B/C) from the same job are superseded by your re
 - **E6.** Old saves: an Army Base already being built keeps its 24-hour clock. → Yes.
 - **E7.** Anyone can switch membership on from the browser console or a save edit until payments exist. → Acceptable; the payment system must check membership on its own side.
 - **E8.** Readings used: the day-one infantry research is Ceramic Body Armour; your "20 hours" was 24 h in the game, now exactly 30 min; "an Arms Industry in any city" = one Arms Industry at the unchanged price; Army Base level 1 no longer gets dearer per city (levels 2-5 still rise 40%, counting only cities with level 2+); the computer now builds about twice as many interceptors and 15% fewer infantry (balance passes); the start fighter costs about $6M a day upkeep. → All yes.
+
+### FOG-CLASH (points 1-2; branch fog-clash 0f5ba0f)
+
+- **F1.** Guns reach further than units see (artillery 80 km, rockets and cruisers 150, a force sees 50). Give guns an extra sight ring around your cities? → No: one sight rule for everything; guns need a spotter (in computer wars ranged fire drops a lot because of this).
+- **F1b.** Show the edge of your units' sight on the map? → Keep today's faint veil.
+- **F2.** Should the border warning also say "unidentified armies are gathering" for '?' forces? → No, identified forces only.
+- **F3.** Two columns that meet stand 20 km apart, halfway between where they met and the province's centre. Or stay exactly where they met? → Halfway.
+- **F4.** A force that wins a meeting outside the province it was going to loses its order. Carry on instead? → It stops; the computer plans again.
+- **F5.** You attack blind until one of your units is within 50 km (the odds chip shows no defenders). OK? → Yes.
+- **F6.** Other defaults: AWACS '?' contacts stay; ordinary sight only spots ('?'), recon identifies; no meeting with a force standing just off the road; a column fights a standing enemy at the centre; submarine-only forces are stopped by a meeting; enemy air wings show only where they fly in your sight. → All as listed.
