@@ -19,7 +19,6 @@ function* tickHourG(){
   // research
   for (const N of S.nations) if (N.alive && (N.research || N.research2)) researchHour(N);   // both slots
   diploHour(); terrHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
-  if (S.hour === 1) bookOpen();   // (the Market's first offers on both sides: rules/economy.js)
   airTick();
   missileTick();
   spyHour();

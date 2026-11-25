@@ -52,7 +52,7 @@ globalThis.__C = {days:0, cash:0, goods:0};
   // a computer nation's world-market buy takes a person's cheaper sell offer first (and the person is told)
   S.book = []; me.metal = 100*K; ai.cash = 2000; ai.metal = 0; const p0 = S.mkt.p.metal, log0 = (S.log || []).length; R.postOffer(0, 'metal', 30*K, +(p0*0.95).toFixed(2), 'sell');
   const c0 = me.cash, got = R.trade(ai.id, 'metal', 50*K);
-  ok(got === 50*K && !S.book.length && Math.abs(me.cash - c0 - 30*(p0*0.95)) < 0.05, 'a computer nation\'s buy takes the cheaper sell offer first, the rest from the world', {got, paid:me.cash - c0});
+  ok(got === 50*K && !S.book.length && Math.abs(me.cash - c0 - 30*+(p0*0.95).toFixed(2)) < 1e-6, 'a computer nation\'s buy takes the cheaper sell offer first, the rest from the world', {got, paid:me.cash - c0});
   ok((S.log || []).length > log0, 'the seller is told');
   S.book = []; R.postOffer(0, 'metal', 30*K, +(p0*1.3).toFixed(2), 'sell'); R.trade(ai.id, 'metal', 10*K); ok(S.book.length === 1 && S.book[0].qty === 30*K, 'an offer dearer than the world price is left alone');
   // topOffers: cheapest sell offers first (the older first at one price), highest buy offers first; never my own

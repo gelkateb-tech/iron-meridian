@@ -120,6 +120,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
   INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
   if (T){ tierCatchUp(mode); INCC.v = -1; }
+  bookOpen();   // the Market's first offers, on both sides where stocks allow (rules/economy.js)
   tellAll(me => `${S.nations[me].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   IM.emit('newGame');
 }
