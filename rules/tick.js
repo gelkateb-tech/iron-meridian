@@ -112,8 +112,8 @@ function* tickHourG(){
    standing in a province, and a force on a leg still counts in the province it set out from until it arrives, so two hostile columns could walk
    through each other: on one road in opposite directions, one leaving a province as the other enters it, one catching up with the other, two
    leaving together. The rule now: two hostile forces that are both on the move (marching a leg, sailing, or walking to a spot inside a province)
-   MEET the first moment in the hour they are in the same province or sea zone, and both stop there, at the spot each had reached, and fight
-   (the battle step of this same hour). Where a moving force counts: on a leg u -> v, in the province its spot lies in (u until it crosses into v,
+   MEET the first moment in the hour they are in the same province or sea zone, and both stop there and fight (the battle step of this same
+   hour): halfway from where they met to the province's point, 20 km apart, each on its own side (meetSpots). Where a moving force counts: on a leg u -> v, in the province its spot lies in (u until it crosses into v,
    then v); on a leg between land and sea, at the sea end, aboard (EMB-2: troops come ashore only by a landing; a fleet entering a port is still on
    the water); walking inside a province, in it. The hour's path of each force is a straight line from where it stood as the hour began to where it
    stands now (bent at the province centre when it began a new leg within the hour), sampled 8 times and at the two forces' closest approach.
@@ -160,11 +160,24 @@ function meetHour(L){ const M = [];
   C.sort((x, y) => x.s - y.s || x.r.a.id - y.r.a.id || x.q.a.id - y.q.a.id);
   const met = new Map(), say = (a, b, p) => { for (const me of new Set([a.owner, b.owner])) if (isSeat(me)) tell(me, `Columns clash near ${G.P[p].cityName || G.P[p].name}: ${armyLabel(a, me)} met ${armyLabel(b, me)} on the road.`, 'bad', p); };
   for (const c of C){ const a = c.r.a, b = c.q.a, ma = met.get(a), mb = met.get(b); if (ma && mb) continue;
-    if (!ma && !mb){ meetStop(a, c.r, c.pr, c.p); meetStop(b, c.q, c.pq, c.p); met.set(a, {s:c.s, p:c.p, r:c.r}); met.set(b, {s:c.s, p:c.p, r:c.q}); say(a, b, c.p); continue; }
+    if (!ma && !mb){ const [sr, sq] = meetSpots(c); meetStop(a, c.r, sr, c.p); meetStop(b, c.q, sq, c.p); met.set(a, {s:c.s, p:c.p, r:c.r}); met.set(b, {s:c.s, p:c.p, r:c.q}); say(a, b, c.p); continue; }
     // one of the two has already met another force and stopped there: the other meets it too if it comes into that province later in the hour
     const m = ma || mb, ur = ma ? c.q : c.r, u = ur.a;
     for (const s of c.ts){ if (s < m.s) continue; const [pu, au] = meetAt(ur, s); if (au !== m.p || (au === ur.at && au === m.r.at)) continue;
-      meetStop(u, ur, pu, au); met.set(u, {s, p:au, r:ur}); say(a, b, au); break; } } }
+      const o = m.r.a, op = o.pos || [G.P[au].x, G.P[au].y]; let dx = wrapDX(ur.xy[0] - op[0]), dy = ur.xy[1] - op[1], d = Math.hypot(dx, dy); if (d < 1e-6){ dx = 1; dy = 0; d = 1; }
+      meetStop(u, ur, [op[0] + dx/d*2*MEET_SEP*KM_W, op[1] + dy/d*2*MEET_SEP*KM_W], au); met.set(u, {s, p:au, r:ur}); say(a, b, au); break; } } }   // (it stands on its own side of the force it met)
+// where two forces stand once they have met (meeting c): halfway from the meeting point to the province's point, as the old head-on clash had it
+// (a meeting is mostly near a border, and the drawn border runs up to a cell off the cells' edge: this keeps the battle inside the province as
+// drawn), MEET_SEP km either side of it along the line they came together on, each on its own side: the two face each other, and neither
+// counter, nor its troops, covers the other's
+const MEET_SEP = 10;   // km
+const wrapDX = d => d - Math.round(d/WORLD_W)*WORLD_W;   // (across the map's east-west seam)
+function meetSpots(c){ const P = G.P[c.p], s0 = Math.max(0, c.s - 0.125), r0 = meetAt(c.r, s0)[0], q0 = meetAt(c.q, s0)[0];
+  let dx = wrapDX(r0[0] - q0[0]), dy = r0[1] - q0[1];   // (from q to r just before they met; else against their motion relative to each other)
+  if (Math.hypot(dx, dy) < 1e-6){ dx = wrapDX(c.r.xy[0] - c.r.xy1[0]) - wrapDX(c.q.xy[0] - c.q.xy1[0]); dy = (c.r.xy[1] - c.r.xy1[1]) - (c.q.xy[1] - c.q.xy1[1]); }
+  let d = Math.hypot(dx, dy); if (d < 1e-6){ dx = 1; dy = 0; d = 1; }
+  const ux = dx/d*MEET_SEP*KM_W, uy = dy/d*MEET_SEP*KM_W, mx = c.pq[0] + wrapDX(c.pr[0] - c.pq[0])/2, my = (c.pr[1] + c.pq[1])/2, bx = mx + wrapDX(P.x - mx)/2, by = (my + P.y)/2;
+  return [[bx + ux, by + uy], [bx - ux, by - uy]]; }
 // a force that met an enemy: it stops in province p at point xy (keeping on only to its point in p, when p is where it was going: meetHour)
 function meetStop(x, r, xy, p){
   // where it was going: the province, and the point there (its exact point; the end of its walk; the centre; where it already stands)
@@ -302,8 +315,9 @@ function* dailyG(){
   for (const me of seats()) if (S.nations[me].alive){ const D = desk(me), W = D.warn || (D.warn = {}), day = dayOf(S.hour);
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === me && P.nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== me));
     // (a computer nation at peace is left out: it never starts a war, AI_STARTS_WARS, and its forces near the border are its own cities' garrisons)
-    // (only forces the seat can see: an army outside its land and out of its units' sight tells it nothing, owner 2026-11-25)
-    const mass = new Map(), sv = visibleSet(me); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally' || (!AI_STARTS_WARS && r !== 'war' && !isSeat(x.owner)) || !armyVisible(x, sv)) continue;
+    // (only forces the seat has identified, armyKnown: the warning names their nation and strength, which a force only spotted ('?') does not
+    // tell, and an army outside its land and out of its units' sight tells it nothing, owner 2026-11-25)
+    const mass = new Map(), sv = visibleSet(me); for (const x of S.armies){ if (x.owner < 0 || x.owner === me || x.air || !S.nations[x.owner].alive) continue; const r = rel(me, x.owner).st; if (r === 'ally' || (!AI_STARTS_WARS && r !== 'war' && !isSeat(x.owner)) || !armyKnown(x, sv)) continue;
       if (border.some(P => P.nbs.includes(x.at) || P.id === x.at)) mass.set(x.owner, (mass.get(x.owner) || 0) + power(x)); }
     const mine = border.reduce((s0, P) => s0 + armiesOf(me).filter(x => x.at === P.id && !x.air).reduce((s1, x) => s1 + power(x), 0), 0);
     for (const [o, pw] of mass){ const grew = pw > (W['p' + o] ?? pw)*1.2; W['p' + o] = Math.max(pw*0.9, Math.min(W['p' + o] ?? pw, pw));

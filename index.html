@@ -5639,8 +5639,8 @@ function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
 // the hover text and the panel of an unidentified force: nothing about it but that it is there (and how it was found: spotted or an AWACS contact)
 const UNK_HOW = 'Nation, size and unit types unknown. Recon identifies it: a UAV or other drone over it, a satellite, Special Forces, a Phased-Array AWACS, or a battle with it.';
-const unkTipHTML = fa => `<b>Unidentified army</b><div class="small" style="color:#9fd8ff">${fa.some(a => armyShown(a, visibleSet(PLAYER))) ? 'Spotted' : 'Detected by AWACS'}: unidentified</div><div class="small muted">${UNK_HOW}</div>`;
-function unkHTML(a){ const spotted = armyShown(a, visibleSet(PLAYER));
+const unkTipHTML = fa => `<b>Unidentified army</b><div class="small" style="color:#9fd8ff">${fa.some(a => shownNow(a, visibleSet(PLAYER))) ? 'Spotted' : 'Detected by AWACS'}: unidentified</div><div class="small muted">${UNK_HOW}</div>`;
+function unkHTML(a){ const spotted = shownNow(a, visibleSet(PLAYER));
   return `<div class="abar unk"><div class="ab-top"><span class="unkq" aria-hidden="true">?</span><div class="ab-nm"><h2 class="aname">Unidentified army</h2><div class="ab-sub">${spotted ? 'Spotted' : 'Detected by AWACS'}</div></div></div></div>
     <p class="small muted" style="margin:6px 0">${UNK_HOW}</p><div class="row"><button class="btn" data-act="clear">Close</button></div>`; }
 // is foreign force a identified for the player (rules/vision.js armyKnown: own and allied always; others only by recon or in a battle with you)?
@@ -5648,6 +5648,10 @@ function unkHTML(a){ const spotted = armyShown(a, visibleSet(PLAYER));
 // is the drawn point (x, y) in the player's sight (own or allied land, a revealed province, or inside a sight range): a foreign wing shows where it
 // flies in sight, not from take-off because its target is in sight (owner 2026-11-25: nothing foreign outside your land and your units' sight)
 const visAt = (vis, x, y) => { const c = worldToCell(x, y), p = c >= 0 ? G.prov[c] : -1; return (p >= 0 && vis.whole.has(p)) || (vis.ids || []).some(s => s[5] !== VK.sea && visIn(s, x, y)); };
+// is force a on the screen now: armyShown, except a foreign column on the move whose leg touches your (or an ally's) land, which shows by the
+// province drawn under it (rules/vision.js armyVisibleAt): it appears as it is drawn crossing your border, not an hour or two later, deep inside
+const shownNow = (a, vis) => { if (a.owner === vis.n || a.air || a.fly || !(a.to !== null || a.sail) || !(vis.whole.has(a.at) || (a.to !== null && vis.whole.has(a.to)))) return armyShown(a, vis);
+  const [x, y] = armyPos(a); return fightsMe(a, vis) || armyVisibleAt(a, vis, provAtW(x, y)); };
 const knowA = (a, vis = visibleSet(PLAYER)) => !!a && (a.owner === PLAYER || armyKnown(a, vis));
 const foeLabel = a => knowA(a) ? armyLabel(a, PLAYER) : 'an unidentified army';
 // the '?' plate's dot: grey with a dark outline (owner's pick, 2026-11-19)
@@ -8937,11 +8941,11 @@ function draw(now){ draw.now = now;
   const boxes0 = [];   // screen boxes claimed so far: counters and map controls first, then country and sea names, then city and province names
   const showNeutral = GS > 1 ? hexPx >= 49 : hexPx >= 11, items = [];   // (they fade in where they show)   // independent garrisons stay hidden until zoomed in (or selected / fighting)
   const unkA = [], ROLES = new Map(); LAY_R = ROLES; SIDEC.clear(); TMAS = tmArtSig();
-  for (const a of S.armies){ if (!armyShown(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; }
+  for (const a of S.armies){ if (!shownNow(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; }
     if (!knowA(a, vis)){ if (!a.fly && !(a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at)){ unkA.push(a); tmRoleAdd(ROLES, a); } continue; }   // (its spot in the province is the one it would have identified: the '?' stands where it stands)   // spotted, not identified: only the '?' badge (no flag, count, type, name or 3D models)
     tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
-    let [wx, wy] = armyPos(a); const mv = a.to !== null || !!a.sail || (a.path.length > 0 && GO.S === S && GO.has(a.id));
+    let [wx, wy] = armyPos(a); const mv = a.to !== null || (!!a.sail && (G.P[a.at].sea || !S.battles.includes(a.at))) || (a.path.length > 0 && GO.S === S && GO.has(a.id));   // (a walk held by a battle where it stands: standing, laid out with the other side's counter, not faded under it)
     let mvm = null; if (!a.air){ const m = mvm = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
     // (standing forces off screen count too: the zoom bands are resolved over every force you can see, so a counter never shifts as others come
     // into view; a province not laid out yet waits for a frame with time to spare)
@@ -10938,7 +10942,7 @@ function rRender(keep = true){ const sc = keep && document.getElementById('rtscr
 function ctxHTML(){
   if (SPLIT && (sel.army !== SPLIT.id || sel.group.length > 1 || !armyById(SPLIT.id) || count(armyById(SPLIT.id)) < 2)) SPLIT = null;
   if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return sel.group.length > 1 ? groupHTML() : a.air ? wingHTML(a) : SPLIT ? splitHTML(a) : armyHTML(a); }
-  if (sel.foe !== null){ const f = armyById(sel.foe), v0 = visibleSet(PLAYER); if (f && count(f) && f.owner !== PLAYER && armyShown(f, v0)) return knowA(f, v0) ? foeHTML(f) : unkHTML(f);
+  if (sel.foe !== null){ const f = armyById(sel.foe), v0 = visibleSet(PLAYER); if (f && count(f) && f.owner !== PLAYER && shownNow(f, v0)) return knowA(f, v0) ? foeHTML(f) : unkHTML(f);
     if (f && count(f) && f.owner !== PLAYER && (armyLocated(f, v0) || (f.fly && visLocAt(v0, ...armyXY(f))))) return unkHTML(f); sel.foe = null; }   // (an AWACS contact: the same 'Unidentified army')
   if (sel.prov !== null) return provHTML(sel.prov);
   const N = S.nations[PLAYER], mine = S.armies.filter(a => a.owner === PLAYER);
@@ -11406,7 +11410,7 @@ function provHTML(p){
   if (!P.sea && (o === PLAYER && unrestOf(p) > 0 || o !== PLAYER && unrestOf(p) > 20)){ const u = Math.round(unrestOf(p));
     html += `<div class="status" style="border-left-color:${u > 60 ? 'var(--danger)' : u > 30 ? 'var(--accent)' : 'var(--ok)'}">Unrest ${u}%${u > 60 ? ' · revolt risk' : ''} · output −${Math.round(u/2)}% <div class="bar" style="margin-top:4px"><i style="width:${u}%;background:${u > 60 ? 'var(--danger)' : 'var(--accent)'}"></i></div>${o === PLAYER ? `<div class="row" style="margin-top:6px"><button class="btn" data-act="pacify" data-id="${p}" ${S.nations[PLAYER].cash >= 40 ? '' : 'disabled'} style="padding:3px 8px;font-size:12px">Pacify · $40M (−25%)</button><span class="small muted">Garrisons lower unrest every day.</span></div>` : ''}</div>`; }
   if (!P.sea && o !== PLAYER){ html += `<div class="eyebrow">Intelligence · ${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}</div><div class="row">${Object.entries(SPY_OPS).map(([k, O]) => { const c = spyCheck(PLAYER, p, k); return `<button class="btn" data-act="spy" data-k="${k}" data-id="${p}" ${c.ok ? '' : 'disabled'} title="${O.desc}${c.ok ? ` ${Math.round(c.chance*100)}% chance.` : ' ' + c.why}" style="padding:4px 8px;font-size:11.5px">${O.name} · $${O.cost}M</button>`; }).join('')}</div>`; }
-  if (S.battles.includes(p)){ const B = S.bt && S.bt[p];
+  if (S.battles.includes(p) && here.some(a => count(a) && (a.owner === PLAYER || isAlly(PLAYER, a.owner) || armyShown(a, vis)))){ const B = S.bt && S.bt[p];   // (a battle you cannot see is not told: owner 2026-11-25, nothing of foreign forces outside your land and sight)
     html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${pluN(frontage(p), 'unit')}${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => o !== PLAYER && !isAlly(PLAYER, o) && !here.some(a => a.owner === o && knowA(a, vis)) ? '\u0001' : o).filter((o, i, A) => o !== '\u0001' || A.indexOf(o) === i).map(o => { if (o === '\u0001') return '<br><span style="color:#9fd8ff">?</span> Unidentified army'; const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${pluN(b.n, 'unit')}${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
   if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${armyName(a)} · ${count(a)}</span></span><span class="muted">Command</span></button>`).join('')}</div>`;

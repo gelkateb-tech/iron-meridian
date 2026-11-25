@@ -9,6 +9,7 @@
 // E. my fighter patrol: sees it 180 km away, not 260 km
 // F. a force of mine setting off into its province does not reveal it
 // G. fighting it: shown and identified for the whole battle, wherever the two stand (B3.8, fightsMe)
+// H. the screen's test for a column on the move (armyVisibleAt): by the province drawn under it, in place of its spot at the hour mark
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
@@ -40,6 +41,14 @@ if (T){ const {u, v, Q} = T, U = G.P[u], V = G.P[v]; S.nations[Q].ai = false; ap
       if (inMine ? st !== '?' : st !== 'hidden') bad++; }
     ok(!bad && seq.some(s => s.startsWith('IN')) && seq.some(s => s.startsWith('out')), 'B: a column marching in is hidden until its spot crosses my border, then shown as ?', seq);
     E.to = null; E.t = 0; }
+  // H. the screen (armyVisibleAt): a column on the move shows by the province drawn under it, in place of its spot, both ways: drawn over my
+  //    land while its spot is still outside, shown; drawn outside while its spot is already inside, hidden
+  { const at = ev('armyVisibleAt'); E.pos = null; E.to = u; E.path = []; let tOut = null, tIn = null;
+    for (let t = 0; t <= 1.0001; t += 0.05){ E.t = Math.min(1, t); const [x, y] = armyXY(E), mine = S.owner[provOfPt(x, y)] === ME; if (!mine && tIn === null) tOut = E.t; if (mine && tIn === null) tIn = E.t; }
+    if (tOut !== null && tIn !== null){ E.t = tOut; ok(at(E, view(), u) && state(E) === 'hidden', 'H: drawn over my land (its spot still outside): shown on the screen');
+      E.t = tIn; ok(!at(E, view(), v) && state(E) === '?', 'H: drawn outside my land (its spot already inside): hidden on the screen'); }
+    else ok(false, 'H: found the border crossing', {tOut, tIn});
+    E.to = null; E.t = 0; E.pos = [V.x, V.y]; }
   // C. standing in my land
   E.at = u; E.pos = [U.x, U.y]; ok(state(E) === '?', 'C: the army standing inside my land is shown, unidentified', state(E)); E.at = v; E.pos = [V.x, V.y];
   // D. my infantry outside my land, 40 km and 70 km from it (points of v, or any foreign land, around its centre)
