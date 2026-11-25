@@ -16,6 +16,8 @@
 //  (L) the same at coastal and border cities (Szczecin NW, Hamburg NW and N, Berlin N and E, Munich SE, Poznan S), 4 and 15 km out, at hex 12, 30,
 //      60 and 240: the dot and the counter's middle over its own country's land (tmGround, and the drawn border: provAt), never the sea; close in
 //      (hex 240, where a province is large on screen) the dot in its own province
+//  (N) the city's own name stays on its own spot over its own land while a force stands 4 km off its point (Berlin, Szczecin, Poznan; hex 30; at
+//      hex 12, where the stacks may take it as on master, a name drawn is over its own land and never under the off-point force's counter)
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
@@ -117,6 +119,29 @@ const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(proc
           const o = L.find(c => c.ids.includes(I.b)); let ob = o && o.bx; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) ob = q.b; const at = im.S.armies.find(a => a.id === I.b).at;
           res(o ? [im.uc.land(at, o.px, o.py), im.uc.land(at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)] : null); })); }), I);
         const k = `${city} ${km} km ${dn} hex ${hp}`; out.land++; if (!m){ fail('L counters missing', k); continue; } if (m.some(z => !z.own)) fail('L off the point: dot and counter on its own land', {k, land:m}); else if (hp >= 120 && m[0].g !== 'prov') fail('L close in: the dot in its own province', {k, land:m}); } } }
+  // (N) the city's own name stays where it is (owner: "City names stay where they are"): a second force 4 km off a held point (Berlin E, SE and S,
+  //     Szczecin S, SE and SW, Poznan S, SE and E) at hex 30 and 12: the city's name is drawn on its own spot below the point (within 3 px of
+  //     where the label pass first puts it: heartNames), over its own country's land; the off-point force's counter never covers that name and
+  //     at play zoom its dot is in no drawn name's box
+  if (!process.env.UC_NO_NAMES){ out.names = 0;   // (UC_NO_NAMES=1 skips it; UC_NO_DIRS=1 does not)
+    const KW = await p.evaluate(() => KM_W), D8 = {E:[1, 0], SE:[1, 1], S:[0, 1], SW:[-1, 1]};
+    for (const [city, dirs] of [['Berlin', ['E', 'SE', 'S']], ['Szczecin', ['S', 'SE', 'SW']], ['Poznań', ['S', 'SE', 'E']]]) for (const dn of dirs){ const dv = D8[dn], l = Math.hypot(dv[0], dv[1]), off = [dv[0]/l*4*KW, dv[1]/l*4*KW];
+      const I = await p.evaluate(([city, off]) => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const C = G.P.find(P => P.cityName === city && !P.sea), o = S.owner[C.id];
+        const a = im.addArmy(o, C.id, {inf:4, tank:2}), b2 = im.addArmy(o, C.id, {inf:2}); b2.pos = [C.x + off[0], C.y + off[1]]; if (o !== 0){ const sc = im.addArmy(0, C.id, {spec:1}); sc.pos = [C.x + 3, C.y + 3]; }
+        try { visCache = null; } catch (e) {} return {a:a.id, b:b2.id, p:C.id, x:C.x, y:C.y, n:C.cityName}; }, [city, off]);
+      for (const hp of [30, 12]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(400);
+        const m = await p.evaluate(([I, hp]) => new Promise(res => { window.__uclOn = true; window.__dbgBoxes = {}; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, S = im.S, G = im.G, L = window.__ucl || [], D = window.__dbgBoxes || {}; window.__uclOn = false; window.__dbgBoxes = null;
+          const pt = im.toScreen(G.P[I.p].x, G.P[I.p].y), own = S.owner[I.p], labs = D.lab || [], lab = labs.find(q => q.t === I.n), e = im.uc.names(I.p, hp).own;
+          const o = L.find(c => c.ids.includes(I.b)); let ob = o && o.bx; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) ob = q.b;
+          let nb = 0, nt = 0; if (lab) for (let i = 0; i <= 8; i++) for (let j = 0; j <= 2; j++){ const q = im.provAt(lab.b[0] + (lab.b[2] - lab.b[0])*i/8, lab.b[1] + (lab.b[3] - lab.b[1])*j/2); nt++; if (q < 0 || G.P[q].sea || S.owner[q] !== own) nb++; }
+          res({lab:lab && lab.b, exp:e && [e[0] + pt[0], e[1] + pt[1], e[2] + pt[0], e[3] + pt[1]], bad:nt ? nb/nt : 1, ob, dot:o && [o.px, o.py], dotIn:o ? labs.filter(q => o.px > q.b[0] - 1 && o.px < q.b[2] + 1 && o.py > q.b[1] - 1 && o.py < q.b[3] + 1).map(q => q.t) : []}); })); }), [I, hp]);
+        const k = `${city} 4 km ${dn} hex ${hp}`; out.names++; if (hp < 20 && !m.lab) continue;   // (mid zoom: a name with no free spot is left out, as on master)
+        if (!m.lab || !m.exp){ fail('N the city name is drawn', {k, m}); continue; }
+        const dx = (m.lab[0] + m.lab[2] - m.exp[0] - m.exp[2])/2, dy = (m.lab[1] + m.lab[3] - m.exp[1] - m.exp[3])/2;
+        if (Math.hypot(dx, dy) > 3 && hp > 20) fail('N the city name stays on its own spot', {k, dx:+dx.toFixed(1), dy:+dy.toFixed(1)});
+        if (m.bad > 0.25) fail('N the city name over its own land', {k, bad:+m.bad.toFixed(2)});
+        if (m.ob && m.lab[0] < m.ob[2] - 1 && m.lab[2] > m.ob[0] + 1 && m.lab[1] < m.ob[3] - 1 && m.lab[3] > m.ob[1] + 1) fail('N the off-point counter clear of the city name', {k, ob:m.ob, lab:m.lab});
+        if (hp > 20 && m.dotIn.length) fail('N the off-point dot in no name', {k, dotIn:m.dotIn}); } } }
   if (errors.length) fail('E errors', errors.slice(0, 5));
-  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
+  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land, names:out.names}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
   await b.close(); process.exit(fails.length ? 1 : 0); })();
