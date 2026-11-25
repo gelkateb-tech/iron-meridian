@@ -260,7 +260,8 @@ function aiAllowance(){ const M = mkt();
 // the depth floor: every good has at least 3 computer offers on each side. A side with fewer gets bargain bids (2-8 lots at 0.74-0.82x the world price,
 // at most 6% of the bidder's money above $10M) from the richest computer nations with room (under 75% of their storage) and no bid of their own for it,
 // and premium asks (1.06-1.16x) from the biggest holders above their shortage line and 15 days of upkeep (a third of that surplus, 10-30K). In the first
-// week nobody has a surplus yet (every nation starts below its shortage line): small lots (5-10K, a third of the stock above its low line AI_LOW) at 1.25-1.35x, dear enough that the computer nations
+// week nobody has a surplus yet (every nation starts below its shortage line): small lots at 1.25-1.35x (5,000 from a nation whose cities make the good and
+// that holds 20,000 or more; else 5-10K, a third of the stock above its low line AI_LOW), dear enough that the computer nations
 // do not buy them back (they pay 1.15x at most), so a person can buy a little from day 1. Marked depth:1; they do not count toward a nation's five listings. Also run once at the start
 // of a game (bookOpen), so the first day's market is not empty. No rng(): the prices are jittered by mkH
 function depthFloor(open){ const M = mkt(), AIs = S.nations.filter(N => N.alive && !isSeat(N.id)), early = open || S.hour < 24*7; if (!S.book) S.book = [];
@@ -269,7 +270,7 @@ function depthFloor(open){ const M = mkt(), AIs = S.nations.filter(N => N.alive 
       const price = +(M.p[k]*(0.74 + 0.08*mkH(N.id, S.hour, 17))).toFixed(2), lots = Math.floor(Math.min(8, 0.06*(N.cash - 10)/price, (0.75*cap - N[k])/MKT_LOT)); if (lots < 2) continue;
       N.cash -= lots*price; S.book.push({id:S.nid++, type:'buy', seller:N.id, res:k, qty:lots*MKT_LOT, q0:lots*MKT_LOT, price, exp:S.hour + 72, depth:1}); nb++; }
     if (na < 3) for (const N of AIs.slice().sort((a, b) => b[k] - a[k] || a.id - b.id)){ if (na >= 3) break; if (S.book.some(o => o.seller === N.id && o.res === k)) continue;
-      const sur = early ? N[k] - AI_LOW[k] : N[k] - AI_SHORT[k] - 15*Math.max(0, income(N.id).upkeep[k]), q = kFloor(Math.min(early ? 10*RES_K : 30*RES_K, sur/3)); if (q < (early ? 5 : 10)*RES_K) continue;
+      const sur = early ? (N[k] >= 20*RES_K && aiMains(N.id).has(k) ? 15*RES_K : N[k] - AI_LOW[k]) : N[k] - AI_SHORT[k] - 15*Math.max(0, income(N.id).upkeep[k]), q = kFloor(Math.min(early ? 10*RES_K : 30*RES_K, sur/3)); if (q < (early ? 5 : 10)*RES_K) continue;
       N[k] -= q; S.book.push({id:S.nid++, type:'sell', seller:N.id, res:k, qty:q, q0:q, price:+(M.p[k]*(early ? 1.25 + 0.10*mkH(N.id, S.hour, 19) : 1.06 + 0.10*mkH(N.id, S.hour, 19))).toFixed(2), exp:S.hour + 72, depth:1}); na++; } } }
 // a new game (newGame, rules/state.js): the depth floor, so the Market shows offers from the first hour
 function bookOpen(){ mkt(); depthFloor(true); }
