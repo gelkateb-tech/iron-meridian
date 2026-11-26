@@ -8610,7 +8610,10 @@ function cityWarmPump(now){ if (CWARM && !CWARM.length){ CWARM_URG = false; retu
   if (now - (cityWarmPump.t || 0) < (CWARM_URG ? (saverOn() ? 50 : 0) : saverOn() ? 120 : 40)) return; cityWarmPump.t = now;
   const p0 = CITY_PEND; cityWarm(now); if (CITY_PEND && !p0) redraw(); }
 // world-space bounds of what the layer or the screen shows
-function cityEach(x0, y0, x1, y1, fn){ for (let p = 0; p < G.P.length; p++){ const P = G.P[p]; if (!P.city || P.sea) continue; const I = CGEO.get(p), e = I ? I.E : 22;
+// (the towns' ids once per map: a frame walks a few hundred towns, not every province; polish 2, the zoom's frames on a phone)
+let CEACH = null;
+function cityEach(x0, y0, x1, y1, fn){ if (!CEACH || CEACH.g !== G || CEACH.n !== G.P.length || CEACH.s !== S || CEACH.o !== OWNV){ const a = []; for (let p = 0; p < G.P.length; p++) if (G.P[p].city && !G.P[p].sea) a.push(p); CEACH = {g:G, n:G.P.length, s:S, o:OWNV, a}; }   // (again on a new game or an owner's change: a moved capital is a town from then)
+  for (const p of CEACH.a){ const P = G.P[p]; if (!P.city || P.sea) continue; const I = CGEO.get(p), e = I ? I.E : 22;
     if (P.x + e < x0 || P.x - e > x1 || P.y + e < y0 || P.y - e > y1) continue; if (I) I._u = CITY_GEN; fn(p, P); } }   // (_u: the towns in use stay in the kept budget)
 // layer pass (world transform set, coast clip on): the urban areas laid on the ground
 function drawCitiesLayer(c, x0, y0, x1, y1, hexPx, lite){ const fa = cityFade(hexPx); if (fa <= 0) return;
