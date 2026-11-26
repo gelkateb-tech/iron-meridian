@@ -627,8 +627,12 @@ function mechanics(srcx = SRCX){ const t0 = Date.now(), R = new Function(srcx)()
     const inf0 = countAt(S, n, p, 'inf'), need = X.trainH(p, 'inf', n), cash0 = N.cash;
     const r1 = act(`recruit inf in ${G.P[p].cityName}`, () => api.recruit(n, p, 'inf'), () => X.canMobilize(n, p, 'inf'));
     check('mobilize', 'the unit is queued and paid', r1.r === true && S.queue[p].length === 1 && N.cash < cash0, `queue ${JSON.stringify(S.queue[p])}, money ${cash0} -> ${N.cash}`);
-    const r2 = act('recruit a second inf', () => api.recruit(n, p, 'inf')), r3 = act('recruit a third inf (queue limit 2)', () => api.recruit(n, p, 'inf'), () => X.queueWhy(n, p));
-    check('mobilize', 'the training queue holds 2 and refuses a third, with a reason', r2.r === true && r3.r === false && /queue/i.test(r3.e.why), r3.e.kind + ': ' + r3.e.why);
+    // (the mobilization queue is a membership feature, rules/production.js queueMax: a seat without one trains one unit at a time per city)
+    const r1b = act('recruit a second inf (no membership: one at a time)', () => api.recruit(n, p, 'inf'), () => X.queueWhy(n, p));
+    check('mobilize', 'without a membership a seat\'s city trains one unit at a time and refuses a second, with a reason', r1b.r === false && /one unit at a time/i.test(r1b.e.why), r1b.e.kind + ': ' + r1b.e.why);
+    api.setMember(n, true);
+    const r2 = act('recruit a second inf (member)', () => api.recruit(n, p, 'inf')), r3 = act('recruit a third inf (queue limit 2)', () => api.recruit(n, p, 'inf'), () => X.queueWhy(n, p));
+    check('mobilize', 'a member\'s training queue holds 2 and refuses a third, with a reason', r2.r === true && r3.r === false && /queue/i.test(r3.e.why), r3.e.kind + ': ' + r3.e.why);
     const h = hours(need + 2, () => countAt(S, n, p, 'inf') > inf0); check('mobilize', `the unit is ready in its time (${need} h) at the city`, countAt(S, n, p, 'inf') === inf0 + 1 && Math.abs(h - need) <= 1, `took ${h} h, infantry ${inf0} -> ${countAt(S, n, p, 'inf')}`);
     const q = G.P.find(P => S.owner[P.id] === n && !P.city && !P.sea); if (q){ const a = act(`recruit inf in ${q.name} (not a city)`, () => api.recruit(n, q.id, 'inf'), () => X.canMobilize(n, q.id, 'inf')); check('mobilize', 'outside a city it is refused, with a reason', a.r === false && a.e.why, a.e.kind + ': ' + a.e.why); }
     const t = X.UT.find(u => X.UNITS[u].tech && !X.unlocked(n, u) && X.UNITS[u].cls !== 'air'); if (t){ const a = act(`recruit ${t} (not researched)`, () => api.recruit(n, p, t), () => X.canMobilize(n, p, t)); check('mobilize', 'a unit not researched is refused, with a reason', a.r === false && /Research/.test(a.e.why), a.e.kind + ': ' + a.e.why); } }
