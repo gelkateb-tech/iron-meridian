@@ -8,10 +8,11 @@ function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = 
 const reqsOf = t => { const U = UNITS[t]; return U && U.reqs ? U.reqs : U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };   // (U.reqs: infantry, from INF_NEEDS)
 const bldOk = (p, t) => (!UNITS[t].coastal || navalCity(p)) && reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.b));   // (Marines: a coastal city)
 // why nation n cannot mobilize unit t in province p: null when it can, else {kind, why, b}: kind 'own' (not its province), 'city' (not a city),
-// 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
+// 'occ' (an occupied city: annex it first), 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
 function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why:'Unknown unit'};
   if (S.owner[p] !== n) return {kind:'own', why:'Not your city'};
   if (!G.P[p].city) return {kind:'city', why:'Units are mobilized in cities'};
+  if (occSt(p) === 'occ') return {kind:'occ', why:'Occupied: annex the city to mobilize here'};   // (an occupied city: rules/economy.js annexCity)
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   if (U.coastal && !navalCity(p)) return {kind:'coast', why:`${U.name} train only in a coastal city (a naval city)`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
@@ -138,6 +139,7 @@ const consStep = c => c.h0 < 1 ? 0.25 : 1;
 function consQuarter(){ for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (c && c.h0 < 1) consHour(p); } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
+    if (c.k === 'annex'){ if (S.owner[p] !== c.o){ S.cons[p] = null; return; } if ((c.h -= 1) <= 1e-9) annexDone(p); return; }   // Annex City (rules/economy.js): whole hours
     if ((c.h -= consStep(c)) <= 1e-9){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
       if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
 /*@DEV*/

@@ -256,13 +256,14 @@ function* dailyG(){
         : lowElec ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.elec)} electronics for aircraft, drones and air defence: buy more on the Market (T) or build an Arms Industry in an electronics city.`
         : `At war with $${fmt(N0.cash)}M unspent and ${idle.length} idle ${idle.length === 1 ? 'city' : 'cities'}: open Production (P) to queue defenders.`, 'bad', idle[0].id); } }
   for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id), was = N.short || {};
-    N.short = {};
+    N.short = {}; const SU = {}; let su = false;   // SU: the share of the day's need of each short resource left unmet (the morale target's shortage: rules/economy.js natMor)
     const cap = stockCap(N.id), capMp = stockCap(N.id, 'mp');   // (goods at RES_K; manpower in thousands)
-    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(R.k === 'mp' ? capMp : cap, v); }
+    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; const need = inc.upkeep[R.k] || 0; SU[R.k] = need > 0 ? Math.round(Math.min(1, -v/need)*1000)/1000 : 1; su = true; } else N[R.k] = R.k === 'cash' ? v : Math.min(R.k === 'mp' ? capMp : cap, v); }
+    if (su) N.shortU = SU; else delete N.shortU;
     if (isSeat(N.id)){ const D = desk(N.id), st0 = D.stats || (D.stats = {}), mk = st0.made || (st0.made = {}); for (const R of RES) mk[R.k] = (mk[R.k] || 0) + Math.max(0, inc.gross[R.k]); }   // produced over the campaign (statistics)
     if (isSeat(N.id)){ for (const k of ['oil', 'iron', 'elec', 'cash']) if (N.short[k] && !was[k]) tell(N.id, SHORT_MSG[k], 'bad'); } }
   yield;
-  unrestDay();
+  moraleDay();   // (morale, casualties and rebels: rules/economy.js)
   recordStats();
   makePaper();
   checkEnd();

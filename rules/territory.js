@@ -145,10 +145,10 @@ function terrSell(seller, buyer, p, price){ const A = S.nations[seller], B = S.n
 // seller's troops went (-1: none moved)
 function terrTransfer(seller, buyer, p, price, value = provValue(p)){ const A = S.nations[seller], B = S.nations[buyer], back = origOwner(p) === buyer, T = terrS();
   S.owner[p] = buyer; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null;
-  // the seller's title passes on: land it held by treaty becomes the buyer's by treaty; land it only occupied stays occupied land (the occupation
-  // clock and the unrest carry over). Land sold back to the country it was taken from is home again: no occupation, unrest down to 5% at most
-  if (back || S.home[p] === seller) S.home[p] = buyer;
-  if (back){ if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = Math.min(unrestOf(p), 5); }
+  // land bought arrives annexed (50% output, morale base 75); land sold back to the country it was taken from is its homeland again, handed back
+  // (morale 55): rules/economy.js landGiven, owner question 5
+  if (back) S.home[p] = buyer;
+  landGiven(p, buyer);
   const moved = terrMoveOut(p, seller, buyer);
   T.lock[p] = {by:buyer, until:S.hour + TERR.lockH};
   for (const q in T.lock) if (T.lock[q].until <= S.hour) delete T.lock[q];
