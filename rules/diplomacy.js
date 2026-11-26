@@ -95,6 +95,7 @@ function surpriseWar(a, b){ if (a === b || atWar(a, b)) return;
   for (const al of alliesOf(b)){ if (al === a || atWar(al, a) || ['truce', 'nap', 'pass'].includes(rel(al, a).st)) continue;
     if (isSeat(al)){ tell(al, `Your ally ${S.nations[b].name} was attacked by ${S.nations[a].name} without warning. You may join the war from Diplomacy.`, 'info', null); continue; }
     if (opinion(al, b) >= 30) joinDefence(al, a); }
+  sysNote(a, b, `${S.nations[a].name} launched a surprise attack on ${S.nations[b].name}.`, 'war', b);
   for (const me of seats()){
     if (b === me){ tell(me, `${S.nations[a].name} launched a surprise attack on you! You are at war.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
     else if (a === me) tell(me, `Surprise attack: you are now at war with ${S.nations[b].name}. Other nations think less of you.`, 'bad', S.nations[b].capital);
@@ -116,6 +117,7 @@ function declareWar(a, b){
   addMem(b, a, -50);
   for (const c of S.nations) if (c.alive && c.id !== a && c.id !== b && opinion(c.id, b) >= 25) addMem(c.id, a, -15);
   if (isSeat(b) && desk(b).chat !== undefined) say(b, a, a, 'Our patience is at an end. We are at war.');
+  sysNote(a, b, `${S.nations[a].name} declared war on ${S.nations[b].name}.`, 'war', b);
   for (const me of seats()){
     if (b === me){ tell(me, `${S.nations[a].name} has formally declared war on you. Fighting starts now.`, 'bad', S.nations[a].capital); alarm(me); IM.emit('war', me, a); }
     else if (a === me) tell(me, `You formally declared war on ${S.nations[b].name}: you are at war now, without the surprise-attack penalty.`, 'info', S.nations[b].capital);
@@ -135,7 +137,7 @@ function startWar(by, to){
 // so foe's own allies are not called in by it; the old rule called them in when a coalition member declared war). A seat it joins against is warned
 // as for a declaration (when the coalition, not the alliance, brings al in).
 function joinDefence(al, foe, bloc = null){ if (al === foe || atWar(al, foe) || !S.nations[al].alive || !S.nations[foe].alive) return false;
-  setRel(al, foe, 'war', null, foe);
+  setRel(al, foe, 'war', null, foe); sysNote(al, foe, `${S.nations[al].name} joined the war against ${S.nations[foe].name}.`, 'war', foe);
   tellAll(`${S.nations[al].name} honours its ${bloc ? 'coalition' : 'alliance'} and joins the war against ${S.nations[foe].name}.`, me => foe === me ? 'bad' : '', null);
   if (bloc && isSeat(foe)){ alarm(foe); IM.emit('war', foe, al); }
   relVer++; return true; }
@@ -158,7 +160,7 @@ function acceptOffer(ai, from, kind){
   if (kind === 'pass') return op >= 25 ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs 25`};
   if (kind === 'ally'){
     if (alliesOf(ai).length >= 3 || alliesOf(from).length >= 3) return {ok:false, why:'too many allies'};
-    { const Ba = blocOf(ai), Bf = blocOf(from); if (Ba !== Bf && (Ba ? Ba.members.length : 1) + (Bf ? Bf.members.length : 1) > 4) return {ok:false, why:'their coalition is full (4 members)'}; }
+    { const Ba = blocOfView(ai), Bf = blocOfView(from); if (Ba !== Bf && (Ba ? Ba.members.length : 1) + (Bf ? Bf.members.length : 1) > 4) return {ok:false, why:'their coalition is full (4 members)'}; }
     const common = S.nations.some(c => c.alive && c.id !== ai && c.id !== from && atWar(ai, c.id) && atWar(from, c.id));
     if (!common) return {ok:false, why:'no common enemy'};
     if (score(from) > 2*score(ai)) return {ok:false, why:'they fear your size'};
@@ -182,6 +184,7 @@ function applyDeal(a, b, kind){
   else if (kind === 'pass') setRel(a, b, 'pass');
   else if (kind === 'ally') setRel(a, b, 'ally');
   const word = {peace:'signed a 10-day truce', nap:'signed a non-aggression pact', pass:'agreed on right of passage', ally:'formed an alliance'}[kind];
+  sysNote(a, b, `${S.nations[a].name} and ${S.nations[b].name} ${word}.`, 'treaty');
   for (const me of seats()){
     if (a === me || b === me) tell(me, `${S.nations[a === me ? b : a].name} and you ${word}.`, 'good', null);
     else if (kind === 'ally' || ((kind === 'peace') && (borders(me, a) || borders(me, b)))) tell(me, `${S.nations[a].name} and ${S.nations[b].name} ${word}.`, '', null); }
@@ -191,6 +194,7 @@ function diploHour(){
   for (const k in S.rel){ const r = S.rel[k]; if (r.until == null || S.hour < r.until) continue;
     relChanged(); if (r.st === 'truce'){ r.st = 'peace'; r.until = null; r.since = S.hour; r.afterTruce = true; } else if (r.st === 'nap'){ r.st = 'peace'; r.until = null; r.since = S.hour; const [x, y] = k.split(',').map(Number); for (const me of [x, y]) if (isSeat(me)) tell(me, `Your non-aggression pact with ${S.nations[x === me ? y : x].name} has expired.`, 'info', null); } }
   for (const me of seats()){ const D = desk(me); D.offers = (D.offers || []).filter(o => o.exp > S.hour && S.nations[o.from].alive); }
+  dealHour();
 }
 const BLOC_NAMES = ['Northern Compact', 'Meridian Accord', 'Atlantic Concord', 'Eastern Covenant', 'Southern League', 'Pacific Charter', 'Continental Pact', 'Iron Concord'];
 // coalitions: groups of 2+ powers linked by alliances, led by the strongest member, with a common enemy
@@ -206,6 +210,18 @@ function blocs(){ const seen = new Set(), out = [];
   for (const k in reg) if (!res.some(B => B.id === k)) reg[k].members = [];   // dissolved coalitions: nobody is a member any more
   return res; }
 const blocOf = n => blocs().find(b => b.members.includes(n)) || null;
+// the same coalitions for the screen, written nowhere (UI-1): the components as blocs() finds them, with the ids and names already in
+// S.blocReg; a group blocs() has not registered yet shows with id null and the name it will get. No dispatch
+function blocsView(){ const seen = new Set(), out = [];
+  for (const N of S.nations){ if (!N.alive || seen.has(N.id) || !alliesOf(N.id).length) continue; const comp = [N.id]; seen.add(N.id);
+    for (let i = 0; i < comp.length; i++) for (const m of alliesOf(comp[i])) if (!seen.has(m)){ seen.add(m); comp.push(m); }
+    if (comp.length >= 2) out.push(comp.sort((a, b) => a - b)); }
+  const reg = S.blocReg || {}, used = new Set(Object.values(reg).map(r => r.name));
+  return out.map(m => { const leader = m.slice().sort((a, b) => score(b) - score(a))[0];
+    const id = Object.keys(reg).find(k => reg[k].members && reg[k].members.some(x => m.includes(x)) && !out.some(o => o !== m && reg[k].members.every(x => o.includes(x)))) || null;
+    const name = id ? reg[id].name : (nm => (used.add(nm), nm))(BLOC_NAMES.find(nm => !used.has(nm)) || `Coalition ${Object.keys(reg).length + 1}`);
+    return {id, name, members:m, leader, focus:id ? reg[id].focus ?? null : null}; }); }
+const blocOfView = n => blocsView().find(b => b.members.includes(n)) || null;
 function blocDay(){ const reg = S.blocReg || (S.blocReg = {}), day = Math.floor(S.hour/24);
   for (const B of blocs()){ const R = reg[B.id];
     // the leader names a common enemy: the power at war with most members, else the weakest bordering rival
@@ -284,7 +300,7 @@ function* diploDayG(){
 /* ---------------- Direct messages and trade deals ---------------- */
 // the messages between seat `me` and nation n; say adds one (from: who wrote it) and counts it unread when the other side wrote
 function chatLog(me, n){ const D = desk(me), C = D.chat || (D.chat = {}); return C[n] || (C[n] = []); }
-function say(me, n, from, text){ const L = chatLog(me, n); L.push({from, text, h:S.hour}); if (L.length > 60) L.shift(); if (from !== me){ const D = desk(me); (D.unread || (D.unread = {}))[n] = ((D.unread || {})[n] || 0) + 1; IM.emit('chat', me, n, from, text); } }
+function say(me, n, from, text){ const L = chatLog(me, n); L.push({from, text, h:S.hour}); if (L.length > 60) L.shift(); if (from !== me){ const D = desk(me); if (D.mute && D.mute[n]) return; (D.unread || (D.unread = {}))[n] = ((D.unread || {})[n] || 0) + 1; IM.emit('chat', me, n, from, text); } }   // (a person the seat muted: kept, not counted, no toast)
 // how nation n feels about nation `me`, and its answer to a message from `me`
 const mood = (me, n) => { const op = opinion(n, me); return op >= 40 ? 'warm' : op >= 10 ? 'friendly' : op > -20 ? 'neutral' : op > -50 ? 'cold' : 'hostile'; };
 function aiReply(me, n, text){ const t = text.toLowerCase(), op = opinion(n, me), m = mood(me, n), war = atWar(n, me);
@@ -304,7 +320,7 @@ function aiReply(me, n, text){ const t = text.toLowerCase(), op = opinion(n, me)
   if (/\b(thanks|thank you)\b/.test(t)){ addMem(n, me, 1); return 'You are welcome.'; }
   return {warm:'We value our friendship. What do you propose?', friendly:'Interesting. Tell us more, or send a proposal.', neutral:'We have noted your message.', cold:'We do not trust you.', hostile:'We have nothing to discuss.'}[m]; }
 // now and then an AI nation writes to a seat
-function chatDay(){ for (const me of seats()) for (const N of S.nations){ if (!N.alive || isSeat(N.id) || rng() > 0.04) continue; const n = N.id, op = opinion(n, me), war = atWar(n, me);
+function chatDay(){ for (const me of seats()) for (const N of S.nations){ if (!N.alive || isSeat(N.id)) continue; /*@DEV*/if (S.devPeople && S.devPeople[N.id]) continue;/*@ENDDEV*/ if (rng() > 0.04) continue; const n = N.id, op = opinion(n, me), war = atWar(n, me);
     if (war && acceptOffer(n, me, 'peace').ok) say(me, n, n, 'This war bleeds us both. Shall we talk peace?');
     else if (!war && op < -45 && borders(n, me)) say(me, n, n, 'Your troops near our border are noted. Do not test us.');
     else if (op >= 35 && rel(n, me).st !== 'ally' && alliesOf(n).length < 3) say(me, n, n, 'We would welcome closer ties. An alliance, perhaps?');
@@ -323,14 +339,16 @@ function dealValueFor(me, ai, D){ // value of the deal to the AI: what it receiv
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) v += k === 'pass' ? (D.get.treaty.includes(k) ? tv(k, true) : 0) + (D.give.treaty.includes(k) ? tv(k, false) : 0) : tv(k, true);
   return v + opinion(ai, me)*1.2; }
 function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
+  for (const side of [D.give, D.get]) for (const k of DEAL_K){ const v = side[k]; if (v != null && v !== 0 && !(Number.isFinite(v) && v >= 0)) return 'amounts must be zero or more'; }   // (IM.api: the page's inputs never give a negative or a non-number)
   for (const k of DEAL_K){ const e = 0.01*(isGood(k) ? RES_K : 1); if ((D.give[k] || 0) > N[k] + e) return `you do not have ${k === 'cash' ? '$' + fmt(D.give[k]) + 'M' : resFull(k, D.give[k])}`; if ((D.get[k] || 0) > A[k] + e) return `they do not have ${k === 'cash' ? '$' + fmt(D.get[k]) + 'M' : resFull(k, D.get[k])}`; }
   if (D.give.provs.some(p => S.owner[p] !== me) || D.get.provs.some(p => S.owner[p] !== ai)) return 'a province changed hands';
   if (D.give.provs.some(p => isCapital(p)) ) return 'you cannot hand over your capital';
-  if (D.get.provs.length) return `${A.name} never sells territory`;   // land is sold in the Territory tab (rules/territory.js), never by a computer-run nation
-  if (D.give.provs.length) return 'land is sold in the Territory tab, for money';
+  if (D.get.provs.length) return `${A.name} never sells territory`;   // land is traded with New Trade (rules/dealings.js, rules/territory.js), never by a computer-run nation
+  if (D.give.provs.length) return 'land is traded with New Trade in Diplomacy';
   if (D.give.treaty.includes('peace') && !atWar(ai, me)) return 'you are not at war';
   return null; }
 function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
+  { const why = dealOK(me, ai, D); if (why){ refuse(me, `Not possible: ${why}.`); return false; } }   // (every caller asks dealOK first; IM.api callers may not)
   for (const k of DEAL_K){ const d = (D.get[k] || 0) - (D.give[k] || 0); N[k] += d; A[k] -= d; }
   const cedeTo = (p, to) => { const prev = S.owner[p]; S.owner[p] = to; ownChanged(); S.home[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = 0; evict(prev, to); geoChanged(); if (prev >= 0) checkNation(prev, to); };
   if (D.give.treaty.includes('peace') || D.get.treaty.includes('peace')) if (atWar(ai, me)) setRel(ai, me, 'truce', 10);
@@ -343,14 +361,15 @@ function dealText(D, who){ const part = (side, ownerName) => [...DEAL_K.map(k =>
 function aiProposeTrade(n, me){ const DK = desk(me); if ((DK.offers || (DK.offers = [])).some(o => o.from === n)) return; const N = S.nations[n], M = mkt(), D = {give:emptySide(), get:emptySide()};
   // (computer-run nations never sell land: they only buy it, rules/territory.js terrDay)
   { const k = MKT_K[Math.floor(rng()*MKT_K.length)], lots = M.p[k] > 4 ? 20 : 40, q = lots*MKT_LOT; if (N[k] < q*2) return; D.get[k] = q; D.give.cash = Math.round(lots*M.p[k]*0.95); }
-  if (dealOK(me, n, D)) return; DK.offers.push({id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}); say(me, n, n, `Proposal: ${dealText(D, 'we').replace('you give', 'you give us')}.`); }
+  if (dealOK(me, n, D)) return; const o = {id:S.nid++, from:n, kind:'trade', deal:D, exp:S.hour + 48}; DK.offers.push(o); const txt = `Proposal: ${dealSay(D, 'they')}.`; noteAdd(me, n, {t:'offer', src:'trade', id:o.id, from:n, to:me, exp:o.exp, text:txt, d:D}, true); IM.emit('chat', me, n, n, txt); }
 const sameBloc = (me, n) => { blocs(); const a = blocIdOf(me); return !!a && n !== me && a === blocIdOf(n); };   // fresh: alliances can break mid-day
+const sameBlocView = (me, n) => { const B = n !== me && blocOfView(me); return !!B && B.members.includes(n); };   // (the screen's: writes nothing)
 const GIFT_K = ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp'];
 const giftRoom = (n, k) => k === 'cash' ? 1e9 : k === 'mp' ? Math.max(0, Math.floor(stockCap(n, k) - S.nations[n][k])) : Math.max(0, kFloor(stockCap(n) - S.nations[n][k]));   // what the recipient can store (goods in whole RES_K)
 // nation `me` gives stocks and provinces (g) to its coalition partner n
 function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g || !sameBloc(me, n)) return false; const parts = [];
   for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, isGood(k) ? kFloor(M0[k]) : Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${fmt(q)} ${rlbl(k)}`); }
-  for (const p of g.provs){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
+  for (const p of g.provs || []){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
   if (!parts.length) return false; addMem(n, me, Math.min(15, 2 + parts.length*2));
   if (isSeat(me)){ say(me, n, me, `Sending you ${parts.join(', ')}.`); say(me, n, n, 'Received with thanks. The coalition stands together.'); const D = desk(me); if (D.unread) D.unread[n] = 0; }
   tell(me, `You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); checkEnd(); return true; }
@@ -370,7 +389,8 @@ function coalitionAid(){ const BL = blocs(), ask = S.aidAsk || (S.aidAsk = {});
 function offerSeat(me, from, kind){ const D = desk(me), L = D.offers || (D.offers = []);
   if (L.some(o => o.from === from) || (D.lastOffer && D.lastOffer[from] && S.hour - D.lastOffer[from] < 5*24)) return;
   if (kind !== 'peace' && rel(from, me).st === kind) return;
-  L.push({id:S.nid++, from, kind, exp:S.hour + 48}); (D.lastOffer || (D.lastOffer = {}))[from] = S.hour;
+  const o = {id:S.nid++, from, kind, exp:S.hour + 48}; L.push(o); (D.lastOffer || (D.lastOffer = {}))[from] = S.hour;
+  noteAdd(me, from, {t:'offer', src:'treaty', id:o.id, from, to:me, exp:o.exp, text:`${S.nations[from].name} proposes ${{peace:'a ceasefire (peace after 10 days)', nap:'a non-aggression pact (20 days)', pass:'right of way', ally:'an alliance'}[kind]}.`}, true);
   tell(me, `${S.nations[from].name} proposes ${{peace:'peace', nap:'a non-aggression pact', pass:'right of passage', ally:'an alliance'}[kind]}. Open Diplomacy (D) to answer.`, 'info', null);
 }
 /* ---------------- Espionage ---------------- */

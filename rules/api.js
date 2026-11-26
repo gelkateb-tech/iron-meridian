@@ -20,6 +20,9 @@ IM.api = {
   orderMove, haltArmy, splitArmy, splitPlan, merge, addStop, undoStop, stopsOf, stopsEta,
   orderAir, orderDrop, launchMissile, launchSat, startSpy,
   declareWar, surpriseWar, acceptOffer, applyDeal,
+  // the Diplomacy screens (rules/dealings.js): people, threads, trades and the relation menu (first argument: the seat), and their pure readers
+  leaderOf, personOf, isPerson, seatInfo, muteSet, isMuted, friendSet, friendsOf, markRead, msgSend, dealNorm, dealWhy, dealAnswer, dealPreview, dealPropose, dealApply, offerAct,
+  relView, relRows, relInfo, relMenu, relAct, natStats, natStatsAll, knownArmy, warList, offersWith, threads, threadView, unreadAll, treatyWhy, treatyPropose, giftCash, payTribute, blocRename, blocLeave, embargoAct, terrTransfer, blocsView,
   tradeOpen, tradeClose, postOffer, fillOffer, escortSet,
   // a seat's dealings with an AI nation (first argument: the seat)
   say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk,

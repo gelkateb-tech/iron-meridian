@@ -27,6 +27,12 @@ const HASH = `s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s
   // the current build: through the real Continue button, then the same 5 days
   const n = await mk(NEW); await n.evaluate(sv => localStorage.setItem('iron-meridian-save-v5', sv), save); await n.reload(); await n.waitForTimeout(700);
   await n.click('[data-act="continue"]'); await n.waitForTimeout(500);
+  // the Diplomacy screens (point 14) on the old save: every view opens and writes nothing (no S.ppl, deals, mute or friends in the save)
+  const dip = await n.evaluate(() => { S.speed = 0; const s0 = saveJSON(), D = window.__im.dp;   // (paused: opening a window pauses the game)
+    D.open(); const t = []; for (const k of ['info', 'coal', 'msg']){ D.DV.tab = k; D.render(); t.push(document.querySelectorAll('#sheet .dp-tab').length === 3); }
+    D.nation(1); t.push(!!document.querySelector('#sheet .dp-stats')); D.DV.menu = true; D.render(); t.push(!!document.querySelector('#sheet .dp-menu')); D.trade(1); t.push(!!document.querySelector('#sheet .dp-tf')); D.go('profile', 0); t.push(!!document.querySelector('#sheet .dp-prof'));
+    const same = saveJSON() === s0; D.open(); document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); return {views:t.every(Boolean), same}; });
+  if (!dip.views || !dip.same) errs.push('diplomacy on the old save: ' + JSON.stringify(dip));
   const cont = await n.evaluate(() => ({hour:S.hour, me:S.nations[0].name, scn:SCN}));
   const rn = await n.evaluate(`(${play})(${JSON.stringify(save)})`);
   // and once more after a nations-world game was played in the same page (the world switch must give the old world back)
