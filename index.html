@@ -8314,7 +8314,7 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
   let best = run(true);
   if (best && best.real && (!hb || st)) return {dot:best.dot, ctr:null, cc:0};   // (one already standing clear of the marker where it is keeps the counter it has anywhere, above its dot: heartBadge)
   if (fold && HC && (!best || best.near)){ const b0 = run(false); if (b0) best = {dot:b0.dot, ctr:[(HC[0] + HC[2])/2, (HC[1] + HC[3])/2], fold:true}; }   // (no room by its dot in its own city's area: it joins the city's counter)
-  if (!best){ const b0 = run(false, 10); if (b0) best = {dot:b0.dot, ctr:null, cc:0}; }   // (no place for its counter by its dot: its dot still stands outside the ring, its counter where the stacking finds room)
+  if (!best && d < (hb ? R + 2.4 : hd + 1) + dR){ const b0 = run(false, 10); if (b0) best = {dot:b0.dot, ctr:null, cc:0}; }   // (no place for its counter by its dot, its dot on the ring or the marker: its dot still goes outside, its counter where the stacking finds room)
   return best; }
 // (its dot and its counter stay on its own province's land, else its own country's: never in the sea or across a border. Nothing found: null,
 // where it stands)
