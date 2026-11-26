@@ -319,6 +319,8 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 
 So: R1-R17, M1-M12, M14, M15, D4-D9, D11-D13, K1-K8, U1-U4, E1-E8, F1-F6 and Q1-Q31 are answered with the defaults written above. D10 is answered "fix it" (job D10-FIX). M13 waits: the zone mockup was sent again on 2026-11-26.
 
+**Q1-Q31 defaults (job Q-DEFAULTS, branch q-defaults, 2026-11-26):** no Q default needs new code on master 32455e9. Already in force: Q1, Q9, Q10, Q11, Q12, Q14, Q16, Q18, Q23, Q25, Q26 (their fixes came with auto-test/fixes). Default "unchanged" or "nothing built": Q2, Q3, Q4, Q5, Q6, Q7, Q13, Q15, Q17, Q20, Q21, Q22, Q24, Q29, Q30, Q31. Handed to MISSILES: Q8 (keep the arrival re-check of rules/air.js: land damage only where the land is hostile or enemy forces stand; no abort, no refund) and Q19 (a captured silo's stock passes to the captor and may be fired). Handed to REBELS: Q27 (partisans stand down in land that is its holder's home land; since RB5 keeps a ceded province's old home country, rebels-2 must stand them down explicitly after a peace cede) and Q28 (a coalition gift gives home title, as now). The one build on this branch is the D10 tightening (D10 above).
+
 ## Questions from the owner notes of 2026-11-25
 
 Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their questions here (each with the default used) as they report.
