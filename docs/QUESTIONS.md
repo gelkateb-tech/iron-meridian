@@ -300,6 +300,17 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## Owner's answers, 2026-11-26 second set (verbatim)
+
+> Answers:
+> - REBELS: approved. RB1–RB5: your defaults, including the new wording of RB5. Merge it now.
+> - MISSILES M13: approved, with one change: give the gas zone a stronger sickly-green tint and a dashed hazard border like the radiation one; on green land it nearly disappears.
+> - UNITS IN CITIES: UC1 and UC3–UC6: your defaults; UC2 as I corrected. Merge once I've seen the dot fix sheets.
+> - CITY LOTS questions: 1. Park lots: yes. 2. Dim square with street lamps at night: yes. 3. Roads should curve round the HQ square and carry on, not stop at its edge.
+> - CITY LOTS next round (A6/A7): no visible lot outline (the faint octagons in the grass read as a slab). Pull the lots a bit closer to the city core so the town doesn't look scattered (the Airbase stays at the edge, the Naval Yard on the water). Keep the Airbase off the highway.
+
+So: RB1-RB5 = my defaults (RB5 in its new wording); REBELS merged. M13 = approved, with the gas zone changed: a stronger sickly-green tint and a dashed hazard border like the radiation zone (job MISSILES). UC1, UC3-UC6 = my defaults, UC2 as corrected; UNITS IN CITIES merges after the owner sees the UC-DOT sheets. City lots: 1 park lots yes; 2 night square with lamps yes; 3 roads curve round the HQ square and carry on (not stop at its edge). Next city lots round: no visible lot outline, lots a bit closer to the core (Airbase at the edge, Naval Yard on the water), Airbase off the highway (job CITY LOTS 3).
+
 ## D10 tighten questions, 2026-11-26 (merged in v69; my default in brackets)
 - DT1. Is 20 days the right wait before a nation you left will ally with you again? (yes)
 - DT2. Counter-offers ask for extra money in $10M steps, so on a tiny deal a counter can ask several times the goods' worth (as before). Step small deals in $1M? (yes, small interface follow-up)
