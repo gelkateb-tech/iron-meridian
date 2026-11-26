@@ -6884,9 +6884,10 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   // the lots of the bigger towns round it (by size, then by id: a town's lots wait only for bigger ones', so the order never loops and every
   // town's lots are the same whatever is worked out first), their squares too: no lot of this town over one of theirs (polish 1: Kobe's over
   // Osaka's, Beersheba's over its neighbours', where a lot's way in was cut off)
-  for (const Q of G.P){ if (Q === P || !Q.city || Q.sea) continue; const RQ = cityR(Q.id); if (RQ.r < r || (RQ.r === r && Q.id > p)) continue; let dx = Q.x - P.x; if (Math.abs(dx) > WORLD_W/2) dx -= Math.sign(dx)*WORLD_W; const dy = Q.y - P.y;
+  const iN0 = placed.length; for (const Q of G.P){ if (Q === P || !Q.city || Q.sea) continue; const RQ = cityR(Q.id); if (RQ.r < r || (RQ.r === r && Q.id > p)) continue; let dx = Q.x - P.x; if (Math.abs(dx) > WORLD_W/2) dx -= Math.sign(dx)*WORLD_W; const dy = Q.y - P.y;
     if (Math.abs(dx) > E + 1.5*RQ.E || Math.abs(dy) > E + 1.5*RQ.E) continue; const Lo = yield* cityLotsWait(Q.id); if (!Lo) continue;
     for (const q of Lo.list.map(l => l.q).concat([Lo.fc])) if (Math.abs(q[0] + dx) < 1.6*E || Math.abs(q[2] + dx) < 1.6*E) placed.push([q[0] + dx, q[1] + dy, q[2] + dx, q[3] + dy]); }
+  const iN1 = placed.length;   // (placed[iN0..iN1): the bigger towns' lots; a town hemmed in by them on every side looks past them at the very last, rx 3)
   const mine = q => { for (const [x, y] of [[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]], [(q[0] + q[2])/2, (q[1] + q[3])/2]]){ const d = Math.hypot(x, y); for (const n of nbr){ const dn = Math.hypot(x - n[0], y - n[1]); if (dn*n[2] < d || dn < 0.8*d) return false; } } return true; };
   const mineR = q => { for (const [x, y] of [[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]]){ const d = Math.hypot(x, y); for (const n of nbr) if (Math.hypot(x - n[0], y - n[1]) < d) return false; } return true; };
   // the open sectors between the town's roads and railways out (its links) and its neighbours: the widest first (the Airbase's), then the next
@@ -6915,7 +6916,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   // sweep stops at the first off them); FB: the anchors whose lot would reach another lot, or whose pictures the town's name or the square
   // round its point (boxes, tested before the rest); wide: the overflow, out to 1.5 times the square
   function* ring(k, pics, m, f, wide, rx, dq = 0, dm = 2, hf = 0){ const R0 = BN_LOTR[k], a0 = R0.sec != null ? sec[Math.min(R0.sec, sec.length - 1)] : am != null && BN_LOTDN[k] ? am + BN_LOTDN[k][1] : R0.a, e = wide ? 1.5*E : E*0.97, Rm = wide ? 1.45*E : Math.min(E*0.92, R0.t*r + Math.max(1.1*r, 2.4*BN_WPX)), t = wide ? Math.min(Math.max(R0.t*r, E*0.6), Rm) : Math.min(R0.t*r, Rm), rl = lotR(pics, m, f), rad = [t], g = BN_LOTG + (dq ? 0.6*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : dm < 2 ? 0.5*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : 0);   // (among the blocks: a row of the town's blocks kept between it and the next lot; a field out of them: open ground between it and the next lot, no compound of lots side by side)
-    const FB = placed.map(b => [b[0] - g - rl[2], b[1] - g - rl[3], b[2] + g - rl[0], b[3] + g - rl[1]]), br = boxR(pics, m, f); for (const b of nb ? [nb, pt] : [pt]) FB.push([b[0] - br[2], b[1] - br[3], b[2] - br[0], b[3] - br[1]]);   // (the name and the point's square clear of its pictures' whole boxes)
+    const FB = (rx > 2 ? placed.filter((b, i) => i < iN0 || i >= iN1) : placed).map(b => [b[0] - g - rl[2], b[1] - g - rl[3], b[2] + g - rl[0], b[3] + g - rl[1]]), br = boxR(pics, m, f); for (const b of nb ? [nb, pt] : [pt]) FB.push([b[0] - br[2], b[1] - br[3], b[2] - br[0], b[3] - br[1]]);   // (the name and the point's square clear of its pictures' whole boxes)
     const sx0 = -e - rl[0], sx1 = e - rl[2], sy0 = -e - rl[1], sy1 = e - rl[3], o = [null, null, null]; let nc = 0;
     if (R0.out){ for (let v = t + st; v <= Rm; v += st) rad.push(v); for (let v = t - st; v >= 0; v -= st) rad.push(v); }   // (out first: past the target ring to the edge of the room, only then back in)
     else for (let j = 1; t + j*st <= Rm || t - j*st >= 0; j++){ const a = t + j*st <= Rm ? t + j*st : -1, b = t - j*st; for (const v of [b, a]) if (v >= 0) rad.push(v); }
@@ -6938,7 +6939,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
     for (const [f, lv, w] of BN_LOTR[k].out ? ORDE : ORD){ let o = S.get(f + '|' + (w || 0)); if (!o){ o = yield* ring(k, pics, m, f, !!w); S.set(f + '|' + (w || 0), o); }
       if (ctr && !lv && o[0] && o[1] && o.r1 + (o[1][5][2] - o[1][5][0]) < o.r0) return put(...o[1]);   // (the centre's buildings: on a road beside the centre rather than a lot's width or more further out)
       if (o[lv]) return put(...o[lv]); }
-    for (const [f, rx, w] of [[0.7, 1, 0], [0.45, 1, 0], [0.7, 0, 1], [0.45, 0, 1], [0.45, 1, 1], [0.35, 1, 1], [0.45, 2, 0], [0.45, 2, 1], [0.35, 2, 1]]){ const o = yield* ring(k, pics, m, f, !!w, rx); const c = o[0] || o[1] || o[2]; if (c) return put(...c); }   // (in its square nearer its own point by plain distance first, then out past it: polish 1, a lot out in the country has no town round it)   // (rx: hemmed in by its neighbours, nearer its own point than theirs by plain distance alone; 2: hemmed in on every side, as the split map's small Israeli provinces, anywhere on its own country's dry land: open item 4, every town every lot)
+    for (const [f, rx, w] of [[0.7, 1, 0], [0.45, 1, 0], [0.7, 0, 1], [0.45, 0, 1], [0.45, 1, 1], [0.35, 1, 1], [0.45, 2, 0], [0.45, 2, 1], [0.35, 2, 1], [0.45, 3, 0], [0.35, 3, 1]]){ const o = yield* ring(k, pics, m, f, !!w, rx); const c = o[0] || o[1] || o[2]; if (c) return put(...c); }   // (in its square nearer its own point by plain distance first, then out past it: polish 1, a lot out in the country has no town round it)   // (rx: hemmed in by its neighbours, nearer its own point than theirs by plain distance alone; 2: hemmed in on every side, as the split map's small Israeli provinces, anywhere on its own country's dry land: open item 4, every town every lot)
     return null; }
   for (const k of BN_LOTS){ if (k === 'yard' && !P.coast) continue; const pics = bnLotPics(k); let l = null; yield;
     if (k === 'yard'){ const e5 = {k:'yard', lv:5, nm:'bn-yard-5'}, hq = out.k.hq ? [out.k.hq.q] : [];   // (the spot for its biggest picture off the lots, the square and the other towns' names; where that is over the town's own name, off the HQ alone)
@@ -7839,7 +7840,8 @@ function* cityLotPrep(I, P){ if (P.LT) return P.LT; const Ek = I.E/KM_W;
       if (me && l.cq){ const cq = km(l.cq); LT.push({k:l.k, st:'park', cr:1, q:cq, c:l.cc/KM_W, g:cq, x:(l.x + dx)/KM_W, y:(l.y + dy)/KM_W, side:null, bit:BN_LOTC(l.k), f:l.f, sh:null}); } } }   // (an empty lot's small park: BN_LOTC)
   yield; P.TL = cityLotTrees(I, LT); cityLotTag(I, P, LT);
   { const G0 = CGEO.get(I.p); if (G0 && G0.occ){ const f = CO/(2*Ek), cl = v => Math.max(0, Math.min(CO - 1, Math.floor((v + Ek)*f)));
-      for (const l of LT){ if (l.bit & BN_LOTNB) continue; for (let j = cl(l.q[1]) - 1; j <= cl(l.q[3]) + 1; j++) for (let i = cl(l.q[0]) - 1; i <= cl(l.q[2]) + 1; i++) if (i >= 0 && j >= 0 && i < CO && j < CO) G0.occ[j*CO + i] = 1; } } }
+      for (const l of LT){ if (l.bit & BN_LOTNB) continue; const cs = []; for (let j = cl(l.q[1]) - 1; j <= cl(l.q[3]) + 1; j++) for (let i = cl(l.q[0]) - 1; i <= cl(l.q[2]) + 1; i++) if (i >= 0 && j >= 0 && i < CO && j < CO) cs.push(j*CO + i);
+        if (l.st === 'field' || l.st === 'quay') (P.occL || (P.occL = [])).push([l.bit, cs]); else for (const c of cs) G0.occ[c] = 1; } } }   // (a field's or a quay's chunks, out on open ground or a far shore, only once its building stands or goes up: cityPlanDraw; no chunk made for an empty lot no one sees)
   return (P.LT = LT); }
 /* ---- The building lots in a town's plan (cityLots; owner 2026-11-25: "the city blocks never cover those lots, and roads lead to them") ----
    The plan is made as it always was (so where a lot stays the town's, far out, the town is exactly as approved), then cityLotTag marks with
@@ -8051,6 +8053,7 @@ function* cityPlanDraw(g, I, S, X0, Y0, night){ const P = yield* cityPlanWait(I)
   const pe = night ? pkc*(S > CCH ? 2 : S === CCH ? 1.4 : 1) : pkc, lod = pe >= C3_LOD, far = pe < C3_MASS, Bv = [];
   if (cityLotOn(pe) && !P.LT) yield* cityLotPrep(I, P);
   const om = P.LT && P.LT.length && cityLotOn(pe) ? cityLotMask(I) : 0; if (om) CHQB.set(I.p, !!(om & BN_LOTB('hq')));   // the lots open close in (their ground, their own trees; what stood on them left out), the HQ's only where one stands (remembered: cityLotWatch)
+  if (om && P.occL){ const G0 = CGEO.get(I.p); if (G0 && G0.occ) for (const [b, cs] of P.occL) if (b & om) for (const c of cs) G0.occ[c] = 1; }
   let GW = null; if (om){ const sg = cityGrowSig(I.p); if (sg){ if (!P.GR) yield* cityGrowPrep(I, P); GW = cityGrowFor(P, sg); } CGRW.set(I.p, sg); }   // the town's growth round what is built (A7; the signature remembered: cityGrowWatch)
   c3Pick(P, om, far, lod, inB, b => Bv.push(b)); if (GW && GW.B.length){ for (const b of GW.B) if (inB(b.bb)) Bv.push(b); Bv.sort((a, b) => a.k - b.k); }
   const tIn = t => (t[3] === 0 || pkc >= t[4]) && t[0] + 3*t[2] > x0 - m && t[0] - t[2] < x1 + m && t[1] + 3*t[2] > y0 - m && t[1] - 2*t[2] < y1 + m;
