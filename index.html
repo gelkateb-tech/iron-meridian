@@ -6562,7 +6562,7 @@ const BN_HQ = new Map(); const BN_REG = {'Europe':'western', 'Americas':'latin-a
 function bnHqStyle(n){ const N = S.nations[n]; if (!N) return 'western'; let st = BN_HQ.get(N.name + '|' + N.country); if (st) return st;
   const L = window.NATIONS && NATIONS.nations || [], e = L.find(q => q.country === N.country) || L.find(q => q.name === N.name);
   st = e && BN_STYLES.includes(e.hq) ? e.hq : e && BN_REG[e.region] || 'western'; BN_HQ.set(N.name + '|' + N.country, st); return st; }
-let BN_LW = false, BNL = new Map(), BNSH = new Map(), BNSC = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BN_TL = 0, BN_LT = 0, BN_LF = true, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
+let BNL = new Map(), BNSH = new Map(), BNSC = new Map(), BNND = new Map(), BNL_G = null, BNHIT = [], BN_NEW = 0, BN_TL = 0, BNP = null; const BNC = new Map(); /*@TEST*/const BNDBG = [];/*@ENDTEST*/   // BN_NEW: layouts still to be worked out this frame (the rest wait for the next: no long frame)
 // a province's buildings that have a picture, the most important first: {k, lv, nm (picture), c (its construction), site (a new one)}
 function bnItems(p){ const B = bldSeen(p, PLAYER), o = S.owner[p], c = o >= 0 ? consSeen(p, PLAYER) : null, out = [], hq = bnHqAt(p);   // (a foreign Bunker, or one going up, is hidden: rules/vision.js bunkerSeen)
   if (hq >= 0) out.push({k:'hq', lv:1, nm:bnName('hq', bnHqStyle(hq)), c:null, site:false});
@@ -6815,8 +6815,18 @@ function* cityLotsWait(p){ for (;;){ const o = cityLotsRun(p, performance.now() 
 const BNLQ = new Set(); let BNLQ_T = 0, BNLQ_E = 0;   // BNLQ_E: when the last task ended
 const viewMoving = now => !!(camFly || ZTW || pinch || (drag && drag.moved) || now - (lastPanT || 0) < 200 || now - (draw.zt || 0) < 200);
 function cityLotsQueue(p){ BNLQ.add(p); if (!BNLQ_T) BNLQ_T = setTimeout(cityLotsPump, 0); }
+// the view the map is at or on its way to (a new game's home view while its briefing is open, a flight's goal): world rect, middle, hexPx
+function lotTarget(){ const F = camFly, D = DT.pre; let s = view.s, cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s;
+  if (F){ s = F.s1; cx = F.x1; cy = F.y1; } else if (D){ s = D.s; cx = (cw/2 - D.x)/D.s; cy = (ch/2 - D.y)/D.s; }
+  const hw = cw/2/s, hh = ch/2/s; return {cx, cy, x0:cx - hw, x1:cx + hw, y0:cy - hh, y1:cy + hh, hx:s*HS0}; }
+// ahead of the pictures: the towns with a picture in and round the view the map is at or heading for (half a screen past each edge) queued
+// for their lots, so the pump works them out while the view rests (a new game's briefing, a pause after a pan) and they are there when shown
+function cityLotsPrefetch(now, caps){ if (now - (cityLotsPrefetch.t || 0) < 500 || !G || !loadWorld.lines) return; cityLotsPrefetch.t = now;
+  const T = lotTarget(); if (T.hx < BN_IN0*0.9) return; const ex = (T.x1 - T.x0)/2, ey = (T.y1 - T.y0)/2; let n = 0;
+  for (let p = 0; p < G.P.length && n < 120; p++){ const P = G.P[p]; if (!P.city || P.sea || CLOTS.has(p) || BNLQ.has(p)) continue; const x = wrapNear(P.x, T.cx);
+    if (x < T.x0 - ex || x > T.x1 + ex || P.y < T.y0 - ey || P.y > T.y1 + ey || !bnHas(p, caps)) continue; cityLotsQueue(p); n++; } }
 function cityLotsPump(){ BNLQ_T = 0; if (!BNLQ.size || !G) return; const t0 = performance.now(); if (viewMoving(t0)){ /*@TEST*/cityLotsPump.mv = (cityLotsPump.mv || 0) + 1;/*@ENDTEST*/ BNLQ_T = setTimeout(cityLotsPump, 120); return; }
-  const gap = BNLQ_E && t0 - BNLQ_E < 1000 ? t0 - BNLQ_E : 0, dl = t0 + Math.min(saverOn() ? 16 : 40, Math.max(saverOn() ? 4 : 7, 0.5*gap)), cx = (cw/2 - view.x)/view.s, cy = (ch/2 - view.y)/view.s, caps = BNHQ_S === S ? BNHQ : bnHqScan();
+  const gap = BNLQ_E && t0 - BNLQ_E < 1000 ? t0 - BNLQ_E : 0, dl = t0 + Math.min(saverOn() ? 16 : 40, Math.max(saverOn() ? 4 : 7, 0.5*gap)), LT0 = lotTarget(), cx = LT0.cx, cy = LT0.cy, caps = BNHQ_S === S ? BNHQ : bnHqScan();
   const Q = [...BNLQ].filter(p => G.P[p]).map(p => { const P = G.P[p], x = wrapNear(P.x, cx); return [p, S && S.nations[PLAYER] && S.nations[PLAYER].capital === p ? -1 : ((x - cx)**2 + (P.y - cy)**2)*(caps.has(p) ? 0.3 : 1)]; }).sort((a, b) => a[1] - b[1]); let got = false;
   for (const [p] of Q){ if (performance.now() > dl) break; const o = cityLotsRun(p, dl); if (o !== undefined){ BNLQ.delete(p); got = true; } else if (performance.now() <= dl){ BNLQ.delete(p); } }   // (undefined before the deadline: the map's lines not loaded yet; asked for again by the next frame)
   for (const p of BNLQ) if (!G.P[p]) BNLQ.delete(p);
@@ -6933,7 +6943,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
 const bnNameBox = p => { const P = G.P[p]; if (!P.city && bnHqAt(p) < 0) return null; const k = HS0/BN_NAMEH, hw = ((P.cityName || P.name || '').length*6.2 + 6)/2*k; return [-hw, 21*k, hw, 37*k]; };
 const BN_NAMEH = 100, BN_DIRS = [180, 0, 150, 30, 120, 60, 90, 205, -25, 235, -55, -90].map(d => d*Math.PI/180);
 const bnGz = h => bnL(h)/(BN_K0*Math.min(h, BN_HMAX)), BN_GROW0 = bnGz(BN_IN0), BN_GROW1 = bnGz(BN_ALL0);   // (how much bigger than laid out a picture is drawn at hexPx h)
-function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.map(e => e.nm + (e.site ? 's' : '')).join(','); let L = BNL.get(p); if (L && L.sig === sig) return L;
+function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.map(e => e.nm + (e.site ? 's' : '')).join(','); let L = BNL.get(p); if (L && L.sig === sig && !(L.prov && (!cheap || CLOTS.get(p) !== undefined))) return L;
   if (cheap && (BN_NEW-- <= 0 || performance.now() > BN_TL)) return null;
   const P = G.P[p], n = its.length, pos = [], mirs = its.map(() => false), shr = its.map(() => 1), grow = its.map(() => 1), placed = [], yi = its.findIndex(e => e.k === 'yard'); let sh = null;
   const nms = e => e.lay || [e.nm], cw = bnNear(p)*2.2, sz = e => Math.min(BN_WPX*bnF(e.k, e.lv), cw);
@@ -6945,8 +6955,10 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
   const fits = (e, x, y, m, s) => free(bx(e, x, y, m, s)) && dry(e, x, y, m, s);
   // a town's pictures stand on their lots (cityLots), at full size where it is dry (the lot was found dry for every picture of its building),
   // else a size smaller; a yard on its lot sized as it was on its shore. A picture with no lot keeps off them all
-  const LT = P.city ? (cheap ? cityLotsRun(p, BN_LF ? (BN_LF = false, Math.max(BN_LT, performance.now() + 0.5)) : BN_LT) : cityLots(p)) : null, lot = its.map(() => null);   // (the towns' lots a ms a frame in all, BN_LT, the first asked at least half a ms: a pan stays smooth, the pictures of towns new to the view come a few frames later)
-  if (LT === undefined){ if (cheap){ cityLotsQueue(p); BN_LW = true; } return null; }
+  let LT = P.city ? (cheap ? cityLotsRun(p, 0) : cityLots(p)) : null, lot = its.map(() => null);   // (in a frame only lots already worked out: the rest the pump works out while the view rests, cityLotsPump)
+  // (its lots not worked out yet: for now the pictures stand where they stood before the lots, the town's old cluster (prov), so they never
+  // vanish while the pump works the lots out; laid out again once they are)
+  let prov = false; if (LT === undefined){ if (!cheap || !loadWorld.lines) return null; cityLotsQueue(p); LT = null; prov = true; }
   if (LT){ for (const l of LT.list) placed.push(l.q.slice()); placed.push(LT.fc.slice());
     for (let i = 0; i < n; i++){ const e = its[i], l = LT.k[e.k]; if (!l) continue; mirs[i] = l.m;
       if (e.k === 'yard'){ let k = 0, bw = Infinity; sh = l.sh || null;
@@ -6973,7 +6985,7 @@ function bnLayout(p, its, cheap){ if (BNL_G !== G) bnReset(); const sig = its.ma
     pos[i] = r[0]; shr[i] = r[1]; if (r[1]) placed.push(bx(e, r[0][0], r[0][1], mirs[i], sz(e)*r[1])); }
   for (let i = 0; i < n; i++){ if (shr[i] < 1) continue; const e = its[i];
     for (let g = i ? BN_GROW1 : BN_GROW0; g > 1.001; g = Math.max(1, g/1.12)) if (dry(e, pos[i][0], pos[i][1], mirs[i], sz(e)*g)){ grow[i] = g; break; } }
-  L = {sig, pos, mir:mirs, shr, grow, shore:sh, ext:Math.max(0, ...pos.map(q => Math.hypot(q[0], q[1]))), lot}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
+  L = {sig, pos, mir:mirs, shr, grow, shore:sh, ext:Math.max(0, ...pos.map(q => Math.hypot(q[0], q[1]))), lot, prov}; BNL.set(p, L); if (BNL.size > 3000) BNL.clear(); return L; }
 // a picture's drawn long side (css px) at the current zoom: bnL's size for it, no bigger than its layout lets it grow on land, nor than cap
 const bnDrawL = (e, Lo, i, L1, cap) => Math.min(L1*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*view.s, cap);
 // a picture px device px on its long side (bnTier: made a little bigger than drawn, so it stays sharp), plain or darkened for the night (lk: 0..8);
@@ -7112,8 +7124,8 @@ function bnFrontMake(I, q, nm, M, mir, wx0, wy0, Ww, Hw, pkW, N, ki, kf){ const 
 // every building picture on screen this frame (under the troop models and the names): their boxes go into boxes0 (the names keep their spots over them,
 // the power and sea names keep clear) and into BNHIT (taps)
 function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.length = 0; if (window.__bnOff) return;/*@ENDTEST*/
-  if (!S) return; const a1 = bnA(hexPx); if (a1 <= 0.003) return;
-  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_TL = performance.now() + 2.5; BN_LT = performance.now() + 1; BN_LF = true; BN_MK = 6;   // (new layouts: up to 2.5 ms a frame, the first always)
+  if (!S) return; cityLotsPrefetch(now, BNHQ_S === S ? BNHQ : bnHqScan()); const a1 = bnA(hexPx); if (a1 <= 0.003) return;
+  const a2 = a1*bnB(hexPx), L1 = bnL(hexPx), m = 40 + L1*1.2, list = [], day = viewLight().day, lk = Math.round((1 - day)*8), q0 = saverOn() ? 0.75 : 1; let more = false; BN_NEW = 16; BN_TL = performance.now() + 2.5; BN_MK = 6;   // (new layouts: up to 2.5 ms a frame, the first always)
   const caps = bnHqScan(); cityLotWatch(); BNF_MK = 8; BNFR_MK = 3; BNF_WAVE = !saverOn() && !afxReduced();
   if (!BNP || BNP.S !== S || BNP.G !== G || BNP.o !== OWNV || now - BNP.t > 400 || now < BNP.t){ const L = []; for (let p = 0; p < G.P.length; p++) if (!G.P[p].sea && bnHas(p, caps)) L.push(p); BNP = {S, G, o:OWNV, t:now, L, I:new Map()}; }   // (the provinces with pictures and their buildings, looked at again every 0.4 s and at once when an owner changes: a captured capital's HQ goes at once)
   const V = []; for (const p of BNP.L){ const P = G.P[p]; const [x, y] = toScreen(P.x, P.y), mf = m + BN_YFAR*view.s; if (x < -mf || y < -mf || x > cw + mf || y > ch + m + mf) continue;
@@ -7121,8 +7133,8 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
     { const L0 = BNL.get(p), me = m + (L0 ? L0.ext : its.some(e => e.k === 'yard') ? BN_YFAR : 0)*view.s; if (x < -me || y < -me || x > cw + me || y > ch + m + me) continue; }   // (a Naval Yard may stand out on its province's shore: BN_YFAR)
     V.push([p, x, y, its, S.nations[PLAYER] && S.nations[PLAYER].capital === p ? -1 : ((x - cw/2)**2 + (y - ch/2)**2)*(caps.has(p) ? 0.3 : 1)]); }
   V.sort((u, v) => u[4] - v[4]);   // (the player's capital first, then from the middle of the screen out, a capital as if nearer: the frame's ms for new layouts and lots goes to them)
-  for (const [p, x, y, its] of V){ const P = G.P[p]; BN_LW = false;
-    const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ if (!BN_LW) more = true; continue; }   // (a town waiting for its lots: cityLotsPump draws the map again when they are ready)
+  for (const [p, x, y, its] of V){ const P = G.P[p];
+    const Lo = bnLayout(p, its, true), nd = bnNear(p, true); if (!Lo || nd == null){ more = true; continue; }   // (a town waiting for its lots stands in its old cluster meanwhile: cityLotsPump draws the map again when they are ready)
     const cap = nd*2*view.s*1.1;   // (a picture's long side stays under the way to the next city)
     for (let i = 0; i < its.length; i++){ const al = i ? a2 : a1; if (al <= 0.003) break; const [dx, dy] = Lo.pos[i], e = its[i];
       if (e.k === 'hq' && !caps.has(p) || !Lo.shr[i]) continue;   // (an HQ whose capital fell this moment: destroyed; a picture with no dry room: none)
