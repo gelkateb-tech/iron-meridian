@@ -156,6 +156,9 @@ function joinDefence(al, foe, bloc = null){ if (al === foe || atWar(al, foe) || 
   relVer++; return true; }
 // the attacker in the war between a and b (-1 when they are not at war or the war is older than the record: an old save's war)
 const warBy = (a, b) => { const r = atWar(a, b) && a >= 0 && b >= 0 ? rel(a, b) : null; return r && r.by != null ? r.by : -1; };
+// a nation a seat left an alliance with (blocLeave notes N.allyLeft[seat] = hour) will not ally with it again for ALLY_GAP days, so an
+// alliance, and the money it is worth to them, cannot be signed and left over and over
+const ALLY_GAP = 20;
 function acceptOffer(ai, from, kind){
   const op = opinion(ai, from), wars = warsOf(ai);
   if (kind === 'peace'){
@@ -177,6 +180,7 @@ function acceptOffer(ai, from, kind){
     const common = S.nations.some(c => c.alive && c.id !== ai && c.id !== from && atWar(ai, c.id) && atWar(from, c.id));
     if (!common) return {ok:false, why:'no common enemy'};
     if (score(from) > 2*score(ai)) return {ok:false, why:'they fear your size'};
+    { const L = S.nations[ai].allyLeft, h = L && L[from]; if (h != null && S.hour - h < ALLY_GAP*24) return {ok:false, why:`you left our alliance: we will consider a new one in ${Math.ceil((h + ALLY_GAP*24 - S.hour)/24)} d`}; }
     return op >= 35 ? {ok:true, why:`opinion ${Math.round(op)}`} : {ok:false, why:`opinion ${Math.round(op)}, needs 35`};
   }
   return {ok:false, why:''};
