@@ -7471,8 +7471,13 @@ function cbakeDrop(k0, c0){ CBAKE.delete(k0); CBAKE_PX -= c0.width*c0.height; co
 // over the budget: first canvases no recent render used, then stand-ins of the current view, and only then (a view that needs more than the
 // budget, which the tiers are sized never to) the oldest of what the view shows; the canvas just made always stays
 function cbakePut(key, c){ c._g = CITY_GEN; if (CBAKE.has(key)) cbakeDrop(key, CBAKE.get(key)); CBAKE.set(key, c); CBAKE_PX += c.width*c.height; { const t = cbTier(key); if (t) CBTN.set(t, (CBTN.get(t) || 0) + 1); }
-  const mx = cbakeMax(); if (CBAKE_PX <= mx) return;
-  for (const pass of [0, 1, 2]) for (const [k0, c0] of CBAKE){ if (CBAKE_PX <= mx) return; if (k0 === key || (pass === 0 && c0._g === CITY_GEN) || (pass === 1 && c0._e === CITY_GEN)) continue; cbakeDrop(k0, c0); } }
+  if (CBAKE_PX <= cbakeMax()) return;
+  for (const pass of [0, 1, 2]){ if (pass === 2) cityKeepFree(); const mx = cbakeMax(); for (const [k0, c0] of CBAKE){ if (CBAKE_PX <= mx) return; if (k0 === key || (pass === 0 && c0._g === CITY_GEN) || (pass === 1 && c0._e === CITY_GEN)) continue; cbakeDrop(k0, c0); } } }
+// before what the view shows is let go: the footprints of the towns the last two renders did not draw (their masks and low tiers share the
+// budget, up to cityKeepMax), oldest first, as far as the view's canvases need (recheck 1: Kolkata among the delta's towns at the closest zoom,
+// after a tour of Germany, never settled: its view needed more than the budget the kept footprints left, so each canvas made dropped another)
+function cityKeepFree(){ const old = [...CGEO].filter(([, I]) => !(I._u >= CITY_GEN - 1)).sort((a, b) => (a[1]._u || 0) - (b[1]._u || 0));
+  for (const [p] of old){ if (CBAKE_PX <= cbakeMax()) break; cityForget(p); } }
 // bake times per tier (ms: count, total, worst; the sum of a bake's slices) and the memory the city canvases hold (MB), for the tests;
 // CBT.slice: the slices themselves (count, total, worst): the longest stretch city work holds the main thread
 const CBT = {slice:[0, 0, 0]};
