@@ -1382,6 +1382,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .crow .cn b{font-size:15px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .crow .capst{font-style:normal; color:var(--cn-gold)}
 .crow .cl{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--cn-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .crow .cl > span{overflow:hidden; text-overflow:ellipsis}
+.crow .cmc{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; min-width:0} .crow .cmc .oc-chip{flex:none}   /* the morale chips on a line of their own: never cut (rebels, burning, occupied, annexed) */
 .crow .cbl{display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; font-size:11.5px; color:var(--cn-fg2)}   /* the city's buildings (no city level: BLD-RULES) */
 .crow .cbk{display:inline-flex; align-items:center; gap:1px; flex:none} .crow .cbk b{font:700 10.5px/1 var(--body); color:var(--cn-fg2)} .crow .cbk.ko{opacity:.5}
 .crow .cbx{display:flex; align-items:center; gap:10px; min-width:0}
@@ -1746,7 +1747,7 @@ button.cs-c.add:hover .cs-plus{transform:scale(1.1)}
 .cs-bp.ax, .bi.ax{display:grid; place-items:center; background:linear-gradient(180deg, #f4d58b, #c48f2c)} .bi.ax{width:var(--bs); height:var(--bs); border-radius:2px} .bi.ax svg{width:80%; height:80%}
 .cs-bmod .bld.annex{border-color:#d9a43a; box-shadow:inset 0 0 0 1px rgba(244,213,139,.35), inset 0 1px 0 rgba(255,255,255,.08)}
 .mob-off small{color:#ffcf8a !important}
-.oc-chip{display:inline-flex; align-items:center; gap:4px; padding:1px 8px 1px 6px; border-radius:9px; font-weight:700; font-size:11.5px; color:#fff; white-space:nowrap; vertical-align:1px}
+.oc-chip{display:inline-flex; align-items:center; gap:4px; padding:1px 8px 1px 6px; border-radius:9px; font-weight:700; font-size:12px; color:#fff; white-space:nowrap; vertical-align:1px}
 .oc-chip.fire{background:#c4302a} .oc-chip.on{background:#5e1b17; box-shadow:inset 0 0 0 1px #ff8f86} .oc-chip svg{flex:none}
 .trr.lost{opacity:.62; border-style:dashed} .trr.lost .st{color:var(--danger-t)}
 .dp-wn.reb svg{flex:none; color:#ffc7a0}
@@ -10647,7 +10648,7 @@ function citiesHTML(){ const N = S.nations[PLAYER], cities = cpCities(), QM = qu
     const tTxt = q0 ? `<b>${(UNITS[q0.t] || MISSILES[q0.t]).name}</b><em>${csTime(q0.h)} left${q.length > 1 ? ` · +${q.length - 1} waiting` : ''}</em>` : `<b class="idle">${csMobIdle(p)}</b>${used < QM ? '' : '<em>Queue full</em>'}`;
     return `<div class="cw${CP.sel.has(p) ? ' sel' : ''}${on ? ' open' : ''}" data-id="${p}"><div class="crow${q.length || c ? '' : ' idle'}" data-id="${p}">
       <label class="ccb" title="Tick ${nm} to queue in several cities at once"><input type="checkbox" data-act="cp-chk" data-id="${p}" ${CP.sel.has(p) ? 'checked' : ''} aria-label="Select ${nm}"></label>
-      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl">${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%${cpMorChip(p)}</span>${cityBldsHTML(p)}</span>
+      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl">${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span>${(c => c ? `<span class="cmc">${c}</span>` : '')(cpMorChip(p))}${cityBldsHTML(p)}</span>
       <span class="cbx" title="Construction${c ? '' : ': nothing is being built'}">${csBldIcon(p, c)}<span class="ct">${bTxt}${slotPips(c ? 1 : 0, 1, 'Build')}</span></span>
       <span class="cbx" title="Training${q0 ? '' : ': nothing is being trained'}">${csMobIcon(q0)}<span class="ct">${tTxt}${slotPips(used, QM, 'Train')}</span></span>
       <span class="ca"><button class="btn cbtn${on === 'bld' ? ' on' : ''}" data-act="cp-open" data-kind="bld" data-id="${p}" aria-expanded="${on === 'bld'}" ${on === 'bld' ? 'aria-controls="cpi"' : ''} title="Build in ${nm}: the options open here">Build</button><button class="btn cbtn${on === 'trn' ? ' on' : ''}" data-act="cp-open" data-kind="trn" data-id="${p}" aria-expanded="${on === 'trn'}" ${on === 'trn' ? 'aria-controls="cpi"' : ''} title="Train in ${nm}: the options open here">Train</button><button class="btn cbtn cgo" data-act="goto" data-id="${p}" aria-label="Go to ${nm}" title="Go to ${nm} on the map">${GOICO}</button></span></div>${on ? cpInlineHTML(p, on) : ''}</div>`; }).join('');
@@ -10829,7 +10830,7 @@ const axShow = p => S.owner[p] === PLAYER && G.P[p].city && (occSt(p) === 'occ' 
 function axBldRow(p){ const N = S.nations[PLAYER], c = S.cons[p], run = c && c.k === 'annex', k = annexCost(p), why = run ? '' : annexWhy(PLAYER, p);
   return `<div class="bld annex" data-bk="annex"><span class="bh">${consImg({k:'annex'}, 54)}<span><span class="nm">Annex City</span> <span class="lv">${run ? 'Annexing' : 'Occupied'}</span></span></span>
     ${run ? `<span class="lv">${csTime(c.h)} left</span>` : `<button class="btn" data-act="annex" data-id="${p}" ${why ? 'disabled' : ''} title="${why ? cap1(why) : ''}"><span class="bt">Annex · ${k.days} d</span>${costHTML({cash:k.cash, mp:k.mp}, N)}</button>`}
-    <span class="ds">${why && !run ? `<span class="needt" style="color:#ffcf8a">${cap1(why)}.</span>` : ''}Occupied: ${Math.round(MOR.occOut*100)}% of the city's output and no mobilizing. Annexed: ${Math.round(MOR.anxOut*100)}% output, morale target ${MOR.anx}% (from ${MOR.occT}%), units can be mobilized, and the occupied countryside whose nearest city it is is annexed with it. It takes the city's construction slot; a capture or a rising loses it with its cost.</span></div>`; }
+    <span class="ds">${why && !run ? `<span class="needt" style="color:#ffcf8a">${cap1(why)}.</span>` : ''}Occupied: ${Math.round(MOR.occOut*100)}% of the city's output and no mobilizing. Annexed: ${Math.round(MOR.anxOut*100)}% output, morale target ${MOR.anx}% (from ${MOR.occT}%), units can be mobilized, and the occupied countryside around it (the provinces nearest to this city) is annexed with it. It takes the city's construction slot; a capture or a rising loses it with its cost.</span></div>`; }
 function axCpOpt(p){ const N = S.nations[PLAYER], c = S.cons[p], run = c && c.k === 'annex', k = annexCost(p), w0 = run ? '' : annexWhy(PLAYER, p), why = run ? 'Being annexed: ' + csTime(c.h) + ' left' : w0 ? cap1(w0) : '';
   return `<div class="cpo${why ? ' blk' : ''}" data-bk="annex"><span class="cpn">${consImg({k:'annex'}, 30)}<span><b>Annex City</b><small>occupied: ${Math.round(MOR.occOut*100)}% output</small></span></span>
     <span class="cpc">${costHTML({cash:k.cash, mp:k.mp}, N)}<i class="cpt" title="Time">${k.days} d</i></span>
@@ -12053,7 +12054,7 @@ function armsHere(p, lv){ const o = cityOut(p); if (!o) return ''; const d1 = v 
 function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '';
     const c = S.cons[p];
     html += `<div class="eyebrow">Construction</div>`;
-    if (c) html += `<div class="queue"><div class="qi"><span>${consImg(c, 22)}${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><span class="muted">${hoursTxt(c.h)} left</span></div><div class="bar"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></div></div>`;
+    if (c) html += `<div class="queue"><div class="qi"><span>${consImg(c, 22)}${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><span class="muted">${c.k === 'annex' ? csTime(c.h) : hoursTxt(c.h)} left</span></div><div class="bar"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></div></div>`;
     html += `<div>${axShow(p) ? axBldRow(p) : ''}${BK.filter(k => canBuildHere(p, k)).map(k => { const B = BUILD[k], lv = S.bld[p][k], nl = lv + 1, cc = buildCost(PLAYER, k, nl, p);
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc), need = k === 'fac' && !lv && G.P[p].city;
       return `<div class="bld${need ? ' need' : ''}" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
