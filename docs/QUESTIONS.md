@@ -311,6 +311,13 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 
 So: RB1-RB5 = my defaults (RB5 in its new wording); REBELS merged. M13 = approved, with the gas zone changed: a stronger sickly-green tint and a dashed hazard border like the radiation zone (job MISSILES). UC1, UC3-UC6 = my defaults, UC2 as corrected; UNITS IN CITIES merges after the owner sees the UC-DOT sheets. City lots: 1 park lots yes; 2 night square with lamps yes; 3 roads curve round the HQ square and carry on (not stop at its edge). Next city lots round: no visible lot outline, lots a bit closer to the core (Airbase at the edge, Naval Yard on the water), Airbase off the highway (job CITY LOTS 3).
 
+## CITY LOTS A6/A7 questions, 2026-11-26 (cities-redo c09d832, sheets in shots/2026-11-26/city-lots-a6a7/; my default in brackets)
+- CL1. Berlin's Naval Yard as a river port on the Elbe, about 130 km SW (the Oder is the border)? (yes; or the Baltic coast about 170 km; or none)
+- CL2. Ten towns 150-290 km from any sea (Tobruk, Lulea, Shiraz...) keep their yard in a dock basin cut into the town, as before? (yes)
+- CL3. First full draw at closest zoom on a Pixel 7 class phone about 2.8 s instead of 2.0 s, pans and zooms as fast as before: OK? (yes)
+- CL4. New growth among dense blocks may replace some ordinary houses, never towers or landmarks? (yes)
+- UC7. At hex 240 the line from an off-point army's dot to its counter can be long (up to about 250 px) because the counter stays above its pictures; keep, or put the counter by the dot? (keep)
+
 ## D10 tighten questions, 2026-11-26 (merged in v69; my default in brackets)
 - DT1. Is 20 days the right wait before a nation you left will ally with you again? (yes)
 - DT2. Counter-offers ask for extra money in $10M steps, so on a tiny deal a counter can ask several times the goods' worth (as before). Step small deals in $1M? (yes, small interface follow-up)
