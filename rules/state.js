@@ -213,8 +213,9 @@ function bunkerMigrate(){ if (S.bk) return; S.bk = 1; let mine = new Map();
 // saves from before the morale rule (no S.mv; owner points 8-11, docs/REBELS-PLAN.md 8): each land province's morale is what it was (100 - unrest -
 // war damage), so nothing the player sees jumps on load; civilian casualties start at 0 (the war damage is in that morale already). Land occupied
 // for 10 days or more (it gave full output already), integrated, or held with no date of occupation is annexed at no cost; land occupied for less
-// stays occupied. Partisans become rebels: in the countryside, which no longer rebels, they stand down; in a city without the holder's troops they
-// wait 24 hours once (a.rbH) before the city goes over, with a dispatch, so a load never loses a city on the spot; with troops there they fight on.
+// stays occupied. Partisans become rebels: in the countryside, which no longer rebels, and in land held by its home nation (question Q27, option A)
+// they stand down; in a city without the holder's troops they wait 24 hours once (a.rbH) before the city goes over, with a dispatch, so a load
+// never loses a city on the spot; with troops there they fight on.
 // Unrest, integration and the old cooldowns are dropped (S.occ stays: it dates the occupation). The opening calibration is not redone. Each seat is told once
 function moraleMigrate(){ if (S.mv) return; S.mv = 1; const U = Array.isArray(S.unrest) ? S.unrest : [], D0 = Array.isArray(S.dmg) ? S.dmg : [], I = S.integ || {};
   S.mor = G.P.map((P, p) => P.sea ? 0 : Math.round(Math.max(0, Math.min(100, 100 - (+U[p] || 0) - (+D0[p] || 0)))*100)/100);
@@ -224,7 +225,7 @@ function moraleMigrate(){ if (S.mv) return; S.mv = 1; const U = Array.isArray(S.
   const wait = new Map();
   for (const a of S.armies){ if (!a.rebel || !count(a)) continue; const p = a.at, o = S.owner[p]; delete a.hold;
     if (!(o >= 0)){ delete a.rebel; continue; }   // (independent land: they are its garrison)
-    if (!G.P[p].city){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } continue; }   // (the countryside no longer rebels: they stand down)
+    if (!G.P[p].city || S.home[p] === o){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } continue; }   // (the countryside no longer rebels, and land back with its home nation has none (Q27 A): they stand down)
     (S.rbl || (S.rbl = [])).push({id:a.id, p, o});
     if (garrisonOf(p, o) === 0){ a.rbH = S.hour + 24; if (isSeat(o)) (wait.get(o) || wait.set(o, []).get(o)).push(p); } }
   S.rbG = S.hour + 24;   // (no city rises in the first 24 hours: a converted city may sit at 33% or less, rules/economy.js rebelRolls)

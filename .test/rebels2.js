@@ -5,7 +5,8 @@
 // and its curve; 6 a rising against troops (a real fight, dug in, the annexing carries on) and against an empty city (city, annexing and cost
 // lost; back to its country, or independent); 7 Annex City from start to end (price, slot, mobilizing, countryside, lost on capture); 8 land by
 // treaty, sale or gift; Incite revolt; 9 trade (point 11): the lost slot, the 25% shock, the end; 10 the computer's habits; 11 an old save with
-// the old unrest rule loads and converts (.test/fixtures/unrest-oldsave.json, made by master c779703) and plays on; 12 point 11 over 30 days.
+// the old unrest rule loads and converts (.test/fixtures/unrest-oldsave.json, made by master c779703) and plays on, and partisans in home land
+// of their holder stand down (Q27 A); 12 point 11 over 30 days.
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..')), QUICK = process.argv.includes('--quick');
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
@@ -269,6 +270,20 @@ const dresden = city(DE, 'Dresden').id, berlin = S.nations[DE].capital, warsaw =
   // it saves and loads again unchanged
   const s1 = a2.saveJSON(); a2.restore(JSON.parse(s1)); const s2 = a2.saveJSON(), o1 = JSON.parse(s1), o2 = JSON.parse(s2), dk = Object.keys(o1).filter(k => k !== 'bt' && JSON.stringify(o1[k]) !== JSON.stringify(o2[k]));   // (S.bt, the battle charts, start afresh on a load)
   ok(dk.length === 0, 'a converted save saves and loads unchanged: ' + dk.join()); }
+// the same save with partisans in two German home cities Germany holds, one empty and one with German troops: under Q27 A land back with its
+// home nation has no rebels, so they stand down on load (no rising, no S.rbl entry) and both cities stay German
+{ const R3 = load(), a3 = R3.IM.api, d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'unrest-oldsave.json'), 'utf8')), ger = d.nations.findIndex(N => N.name === 'Germany'); a3.restore(JSON.parse(JSON.stringify(d))); const G3 = R3.G;   // (a first load gives the map)
+  const hc = G3.P.filter(P => P.city && d.owner[P.id] === ger && d.home[P.id] === ger && P.id !== d.nations[ger].capital && !d.armies.some(a => a.at === P.id && a.rebel)).map(P => P.id);
+  const [pE, pG] = hc; d.armies = d.armies.filter(a => a.at !== pE || a.air);
+  if (!d.armies.some(a => a.at === pG && a.owner === ger && !a.air && Object.values(a.u).some(x => x > 0))) d.armies.push({id:d.nid++, owner:ger, at:pG, to:null, t:0, path:[], forced:false, m:80, u:{inf:3}, w:{}});
+  for (const p of [pE, pG]) d.armies.push({id:d.nid++, owner:-1, at:p, to:null, t:0, path:[], forced:false, m:80, u:{inf:4}, w:{}, rebel:true, hold:5});
+  ok(hc.length >= 2 && a3.restore(d), 'an old save with partisans in German home cities held by Germany loads'); const S3 = R3.S;
+  ok(![pE, pG].some(p => S3.armies.some(a => a.rebel && a.at === p && R3.count(a) > 0)), 'partisans in home land of the holder stand down on load (Q27 A)');
+  ok(!(S3.rbl || []).some(e => e.p === pE || e.p === pG), 'no rising recorded for them');
+  ok(!S3.log.some(e => /Rebels hold/.test(e.text) && (e.p === pE || e.p === pG)), 'no "Rebels hold ... goes over in 24 h" dispatch for them');
+  for (let h = 0; h < 30; h++) a3.tick();
+  ok(S3.owner[pE] === ger && S3.owner[pG] === ger, `after 30 hours both cities are still German (${G3.P[pE].cityName}, ${G3.P[pG].cityName})`);
+  ok(!S3.log.some(e => /rebels destroyed your garrison|went over to the rebels/i.test(e.text) && (e.p === pE || e.p === pG)), 'and no rebel dispatch about them'); }
 
 // ---- 12. point 11 over 30 days (plan 5.3): Poland occupies 4 German cities; Germany a trade partner against a non-partner
 if (!QUICK){ const { execFileSync } = require('child_process');
