@@ -2920,10 +2920,10 @@ span.fchip{cursor:default} span.fchip::before{display:none}
         <div class="hbox clock" id="clock"></div>
         <div class="seg" id="speed" role="group" aria-label="Game speed">
           <button id="sp0" data-speed="0" aria-pressed="true" aria-label="Pause" title="Pause (Space)"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2.2" y="1.6" width="2.6" height="8.8" rx=".6" fill="currentColor"/><rect x="7.2" y="1.6" width="2.6" height="8.8" rx=".6" fill="currentColor"/></svg></button>
-          <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)&#10;1 real minute = 4 game minutes, a game day every 6 minutes">1×</button>
-          <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game minutes">2×</button>
-          <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game minutes">4×</button>
-          <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game minutes">8×</button>
+          <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)&#10;1 real minute = 4 game hours, a game day every 6 minutes">1×</button>
+          <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game hours">2×</button>
+          <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game hours">4×</button>
+          <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game hours">8×</button>
 <!--@DEV-->
           <button id="sp5" class="devsp" data-speed="5" aria-pressed="false" title="Developer 16× (9 cycles the developer speeds)">16×</button>
           <button id="sp6" class="devsp" data-speed="6" aria-pressed="false" title="Developer 50× (9 cycles the developer speeds)">50×</button>
@@ -3424,6 +3424,12 @@ function terrUnitsText(k){ const T = TERRAIN[k] || TERRAIN.plains, strong = [], 
 function terrMoveText(k){ const T = TERRAIN[k] || TERRAIN.plains, m = mt => Math.round(T.spd*((TERR_F[mt] && TERR_F[mt][k]) || 1)*100); return `foot ${m('foot')}% · wheels ${m('wheel')}% · tracks ${m('track')}%`; }
 let tab = 'cmd', seenLog = 0, showAllPowers = false, lockedOpen = false, seenHour = -1;
 document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('locked')) lockedOpen = e.target.open; }, true);
+// a More menu (the Diplomacy rows' actions) opens under its button, right-aligned; on a narrow screen, where the row wraps and the button sits at
+// the left, that runs off the left edge: it is shifted back inside the screen (and the other way at the right edge), then scrolled into view
+document.addEventListener('toggle', e => { const d = e.target; if (!d.open || !d.classList || !d.classList.contains('more')) return; const box = d.querySelector('.morebox'); if (!box) return;
+  box.style.right = ''; const vw = document.documentElement.clientWidth, R = [box, ...box.children].map(x => x.getBoundingClientRect()), l = Math.min(...R.map(q => q.left)), r = Math.max(...R.map(q => q.right));
+  let dx = 0; if (r > vw - 4) dx = vw - 4 - r; if (l + dx < 4) dx = 4 - l; if (dx) box.style.right = `${-dx}px`;
+  box.scrollIntoView({block:'nearest'}); }, true);
 // a panel that comes into view slides in (transform/opacity only, skipped with reduced motion)
 /* reduced motion: the in-game setting or the OS preference (prefers-reduced-motion) */
 const AFX_RM = (() => { try { return window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) { return null; } })();
@@ -3431,7 +3437,7 @@ const afxReduced = () => SET.motion === 'reduced' || !!(AFX_RM && AFX_RM.matches
 function slideIn(el, dx = 16, dy = 0, ms = 220){ if (!el || !el.animate || afxReduced()) return; try { el.animate([{opacity:0, transform:`translate(${dx}px,${dy}px)`}, {opacity:1, transform:'none'}], {duration:ms, easing:'cubic-bezier(.2,.8,.25,1)'}); } catch (e) {} }
 function setTab(t){ const was = tab; tab = t; document.querySelectorAll('[data-pane]').forEach(el => { el.hidden = el.dataset.pane !== t; if (!el.hidden && was !== t) slideIn(el, 0, 8, 200); }); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenHour = S.hour; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
 function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16); const ch2 = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${ch2(16)},${ch2(8)},${ch2(0)})`; }
-const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
+const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game hours (a game hour every 15 s)
 /*@DEV*/
 // Developer mode (test build only: tools/build.js strips every @DEV block from the public build). The switches live in this browser
 // (localStorage 'iron-meridian-dev'); every override is off unless its switch is on. Speeds 5-7 = 16x / 50x / 100x.
@@ -6836,6 +6842,9 @@ function layoutCompute(p, roles){
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
     for (let dy = -24; dy <= 12; dy += 2) for (let dx = -22; dx <= 22; dx += 2) cand.push([dx, dy, 0]);
     if (cls === 's' && !P.sea) for (const q of dockCands(p)) cand.push(q);   // a fleet docked in a port: on the water off the city's shore (the grid above rarely reaches it)
+    // a force's counter is anchored in its own holder's land whenever any spot there is left (a small province: the counters overlap inside the
+    // country rather than one standing over the border in a neighbour's land, or at sea; whatever the overlaps would cost)
+    if (cls === 'g' || cls === 'a'){ const home = cand.filter(([dx, dy]) => tmGround(p, cls, P.x + dx, P.y + dy, 1) < 2600); if (home.length && home.length < cand.length) cand.splice(0, cand.length, ...home); }
     if (pg) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
     // a spot's cost (B: an optional breakdown, for the tests)
     const ev = (dx, dy, bonus, bc, B) => { let c = 0; const add = B ? (k, v) => { c += v; B[k] = Math.round((B[k] || 0) + v); } : (k, v) => { c += v; };
@@ -10311,6 +10320,7 @@ function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) ret
   joinForces(a, b); }
 // a into b: at once when both stand in the same province, otherwise a marches to b and merges on arrival
 function joinForces(a, b){ if (!a || !b || a === b) return false;
+  if (a.fly || b.fly){ toast('Paratroopers in the air: orders once they land.', 'bad', null); return false; }   // (a drop in flight takes no one aboard and joins no one)
   const sp = stackPenaltyIf(b, a), warn = sp.over ? ` ${stackWarn(sp)}` : '';   // over the stack limit: say what it costs
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
@@ -10546,12 +10556,12 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
   if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
-  const nst = stopsOf(a).length;
-  return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, false, 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
-    + (wpMode || (a.wp && a.wp.length) ? b('cm-undo', '↶', 'Undo', '', false, !nst, `Remove the last stop${matchMedia('(pointer: fine)').matches ? ' (Backspace)' : ''}; with one stop left it cancels the order`) : '') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
-    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null && !a.sail, 'Stop right now, where the force stands')
+  const nst = stopsOf(a).length, fl = !!a.fly, flt = 'Paratroopers in the air: orders once they land';   // (a drop in flight takes no ground orders)
+  return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move', fl, fl ? flt : '') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, fl, fl ? flt : 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
+    + (wpMode || (a.wp && a.wp.length) ? b('cm-undo', '↶', 'Undo', '', false, !nst, `Remove the last stop${matchMedia('(pointer: fine)').matches ? ' (Backspace)' : ''}; with one stop left it cancels the order`) : '') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack', fl, fl ? flt : '') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, fl, fl ? flt : 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
+    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2 || fl, fl ? flt : 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2 || fl, fl ? flt : '') + b('stop', '■', 'Halt', 'X', false, fl || (!a.path.length && a.to === null && !a.sail), fl ? flt : 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
-    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
+    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id, fl, fl ? flt : '') : ''); }   // no Close button: tap empty map (or Esc) to deselect
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || wpMode || dropFor !== null || !!aimMsl); }
 function sendToTarget(a, keep = false){
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
@@ -11076,7 +11086,7 @@ const RCNT = {}; let rcntRaf = 0;
 // compact like CoN's strip: below 1,000 the plain figure, then one decimal under 10 of the next unit ('3.2B', '4.5k'), whole numbers above ('53k', '249k')
 const RES_UNITS = {cash:['M', 'B', 'T'], mp:['k', 'M', 'B']};
 // a day's change as a chip shows it (+34K, -1.2K; money and manpower as before) and a resource chip's tooltip: the full amount with its unit
-const resDay = (k, d) => isGood(k) ? (d >= 0 ? '+' : '') + fmtQ(d) : (d >= 0 ? '+' : '') + fmt(d);
+const resDay = (k, d) => { if (isGood(k)) return (d >= 0 ? '+' : '') + fmtQ(d); const R = RES.find(x => x.k === k); return (d >= 0 ? '+' : '-') + R.pre + fmt(Math.abs(d)) + R.unit; };   // (money and manpower with their units, as the stock beside: +$278M, +56k)
 const resChipTip = (k, v, d) => { const R = RES.find(x => x.k === k); return isGood(k) ? `${resFull(k, v)}, ${d >= 0 ? '+' : '-'}${fmt(Math.abs(d))} a day` : `${R.name}: ${R.pre}${fmt(v)}${R.unit}${k === 'mp' ? ` (${resFull('mp', v)})` : ''}, ${d >= 0 ? '+' : ''}${fmt1(d)}${R.unit} a day`; };
 function resText(R, v){ if (isGood(R.k)) return fmtQ(v); const a = Math.abs(v); if (a < 1000) return R.pre + fmt(v) + R.unit; const U = RES_UNITS[R.k] || ['', 'k', 'M']; let q = v, i = 0;
   while (Math.abs(q) >= 1000 && i < U.length - 1){ q /= 1000; i++; }
@@ -11118,7 +11128,7 @@ function renderSide(force){
     const day = Math.floor(S.hour/24) + 1, lc = localClock(S.hour).split(' · ');
     setHTML($('hday'), `${HB_ICO.cal}<b>${day}</b>`); setTip($('hday'), `Day ${day} of the war\nThe war began on day 1; every game day is 24 game hours.`);
     setHTML($('clock'), `${HB_ICO.clk}<b><span class="cd">${lc[0]} </span>${lc[1]}</b>`); setTip($('clock'), `Capital local time\n${lc[0]}, ${lc[1]} in ${G.P[N.capital].cityName || G.P[N.capital].name} · day ${day} of the war`);
-    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS}`}<small> VP</small></b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
+    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}<small> VP</small>` : `${capsHeld(PLAYER)}/${WIN_CAPS}<small> capitals</small>`}</b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
     $('vbar').setAttribute('aria-label', `Victory ${Math.round(Math.min(1, best)*100)}%`); }
   mslDDSync(N);
   $('seedlbl').textContent = '';
@@ -11173,7 +11183,7 @@ function renderSide(force){
   else if (rallyFor !== null) hint = rallyPick ? `Rally point for ${G.P[rallyFor].cityName}: ${rallyName(rallyPick.p)}. Tap it again or press <button class="hb" data-act="rally-set">Set</button> <button class="hb" data-act="rally-cancel">Cancel</button>` : `Tap the map to set the rally point for ${G.P[rallyFor].cityName} · <button class="hb" data-act="rally-cancel">Cancel</button>`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Press the mission button, then tap a province inside the blue ring. Tap empty map or press Esc to deselect.';
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
-  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
+  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : targetPath && targetPath.length ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.` : `${embarkWhy(a, sel.target) || 'No route there.'} Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
 }
@@ -11796,27 +11806,27 @@ function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k
   return `<div class="eyebrow" style="margin-top:12px">Achievements · ${got} of ${keys.length}</div><div class="achs">${keys.map(k => `<div class="ach ${ACHS[k] ? 'on' : ''}" title="${ACH[k][1]}"><b>${ACHS[k] ? '★' : '☆'} ${ACH[k][0]}</b><span class="small muted">${ACH[k][1]}</span></div>`).join('')}</div>`; }
 function statusText(a){
   const P = G.P;
-  if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${P[a.at].name}`};
+  if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${cpName(a.at)}`};
   if (a.wp && a.wp.length && a.to === null && !a.path.length && !a.sail) return {cls:'move', short:'at a stop', long:`At a waypoint in ${P[a.at].cityName || P[a.at].name}: it sets off for the next stop within the hour (${pluN(a.wp.length, 'stop')} to go)`};
-  if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${P[a.at].name}, resupplied at sea by the convoys`}`}; }
-  if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${P[a.at].name}: it attacks any convoy within ${fleetKm(a)} km`}; }
+  if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${cpName(a.at)}, resupplied at sea by the convoys`}`}; }
+  if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${cpName(a.at)}: it attacks any convoy within ${fleetKm(a)} km`}; }
   if (a.blk){ const n = S.trade ? S.trade.routes.filter(r => r.bk === a.id) : [], cut = n.filter(r => r.f0 === 0).length, [x, y] = armyXY(a), ch = chokeAt(x, y, fleetKm(a)), here = ch ? chokeByKey(ch).name : P[a.at].name;
     if (a.to !== null || a.path.length || a.sail || !P[a.at].sea) return {cls:'move', short:'to blockade', long:`Blockade order: it blockades once it stands at sea${a.to !== null || a.path.length || a.sail ? `, about ${a.sail ? sailHours(a) : etaHours(a)} h` : ''}`};
     return {cls:'battle', short:'blockading', long:`Blockading ${here} (${fleetKm(a)} km)${n.length ? `: ${cut ? `${cut} enemy route${cut > 1 ? 's' : ''} cut` : ''}${cut && n.length > cut ? ', ' : ''}${n.length > cut ? `${n.length - cut} rerouted` : ''}` : ': no enemy convoys pass here now'}`}; }
   if (a.land > 0 && a.to === null) return {cls:'move', short:'landing', long:`Landing at ${P[a.at].cityName || P[a.at].name}: ${durTxt(a.land)} left before it is ashore. Until then it cannot move on or capture, and fights at ${Math.round(rLandF(a.owner)*100)}%.`};
-  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${P[a.at].name}, about ${sailHours(a)} h${capturable(a.owner, a.at) && ground(a) ? (a.sail.nx || Math.hypot(a.sail.to[0] - P[a.at].x, a.sail.to[1] - P[a.at].y) <= HEART_R ? ': it takes the province on reaching the city' : ': it stops short of the city, so it will not capture the province') : ''}`};
+  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${cpName(a.at)}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${cpName(a.at)}, about ${sailHours(a)} h${capturable(a.owner, a.at) && ground(a) ? (a.sail.nx || Math.hypot(a.sail.to[0] - P[a.at].x, a.sail.to[1] - P[a.at].y) <= HEART_R ? ': it takes the province on reaching the city' : ': it stops short of the city, so it will not capture the province') : ''}`};
   if (a.emb != null && a.to === null && a.path.length && !S.battles.includes(a.at)) return {cls:'move', short:'embarking', long:`Embarking at ${P[a.at].cityName || P[a.at].name}: ${durTxt(a.emb)} left, then it sails for ${P[a.path[a.path.length - 1]].name}. It cannot move until it is aboard.`};
   if (a.to !== null || a.path.length){ const dest = a.path.length ? a.path[a.path.length - 1] : a.to; const blocked = a.to === null && !canProceed(a);
-    if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${P[dest].name}, about ${etaHours(a)} h`}; }
-  if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
+    if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${cpName(dest)}, about ${etaHours(a)} h`}; }
+  if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${cpName(a.at)}. Ground units take extra damage at sea.`};
   if (a.to === null && !a.path.length && ground(a) && capturable(a.owner, a.at)){ const nm = P[a.at].cityName || P[a.at].name;   // (rules/movement.js atHeart: capture is at once at the heart)
-    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${P[a.at].name}: a province becomes yours the moment ground troops reach its centre point (${P[a.at].city ? nm : 'the crossroads in its middle'}, where its roads meet) with no defenders left, no timer. Tap the city to march there.`};
-    if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN === 1 ? 'a ground unit is' : CAP_MIN + ' ground units are'} needed to capture ${P[a.at].name}.`}; }
+    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${cpName(a.at)}: a province becomes yours the moment ground troops reach its centre point (${P[a.at].city ? nm : 'the crossroads in its middle'}, where its roads meet) with no defenders left, no timer. Tap the city to march there.`};
+    if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN === 1 ? 'a ground unit is' : CAP_MIN + ' ground units are'} needed to capture ${cpName(a.at)}.`}; }
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
-  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct(P[a.at].city)}% defence (it takes ${Math.round((1 - digP(a.at))*100)}% less damage${P[a.at].city ? ', the city bonus' : ', in the open'}) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
+  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${cpName(a.at)}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct(P[a.at].city)}% defence (it takes ${Math.round((1 - digP(a.at))*100)}% less damage${P[a.at].city ? ', the city bonus' : ', in the open'}) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
   { const own = S.owner[a.at] === a.owner || (bunkerLv(a.at) > 0 && S.owner[a.at] >= 0 && friendly(a.owner, S.owner[a.at])), h = a.still != null ? S.hour - a.still : 0;
-    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${P[a.at].name}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
-  return {cls:'', short:'holding', long:`Holding ${P[a.at].name}`};
+    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
+  return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}`};
 }
 function oddsHTML(a, t, foes){
   if (!foes.length) return G.P[t].sea || S.owner[t] === PLAYER ? '' : `<br><span class="small">No defenders seen${visibleSet(PLAYER).has(t) ? '' : ' (fog: there may be some)'}.</span>`;
@@ -12636,7 +12646,8 @@ const TIP_ICO = {
 };
 const tipIco = k => `<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TIP_ICO[k]}</svg>`;
 // the three briefing tips (6 words at most each). The win line follows the real rule: land provinces OR starting capitals.
-const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
+// (win false: the Continue panel, shown before the save is loaded, when WIN_CAPS and landNeed still describe this build's default game, not the save's)
+const briefTips = (win = true) => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ...(win ? [['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]] : [])];
 // keys, for the small Controls link on the briefing (desktop only) and the manual
 const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
 // the full text of the old briefing, kept in the Field Manual ("Getting started")
@@ -12778,7 +12789,7 @@ function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
   openModal(`${LOGO}
     <p class="bline">${flagHTML(me.name, 28, 'big')}<span>You command <b style="color:${me.color}">${me.name}</b>. Win the war.</span></p>
-    <ul class="btips">${briefTips().map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
+    <ul class="btips">${briefTips(!sv).map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
     <div class="bbtns">${first
       ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
       : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign</button>`}</div>

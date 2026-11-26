@@ -101,9 +101,11 @@ function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:f
   return {ok:true, d, hours:Math.max(1, Math.ceil(d/AIR_SPEED))}; }
 function orderDrop(a, p){ const c = canDrop(a, p); if (!c.ok){ refuse(a.owner, c.why); return false; } a.fly = {kind:'drop', from:a.at, tgt:p, t:0, dt:AIR_SPEED/Math.max(1, c.d)}; a.path = []; cue(a.owner, 'order'); return true; }
 function dropTick(){ for (const a of S.armies){ const f = a.fly; if (!f || f.kind !== 'drop') continue; f.t += f.dt; if (f.t < 1) continue;
+    // peace made while they flew (the same test as canDrop): the drop is called off, the force never left its airbase (MOV-6; Q8 answer A)
+    { const o = S.owner[f.tgt]; if (o >= 0 && o !== a.owner && !atWar(a.owner, o)){ a.fly = null; if (isSeat(a.owner)) tell(a.owner, `Drop on ${G.P[f.tgt].cityName || G.P[f.tgt].name} called off: no longer at war with ${nationName(o)}. The paratroopers stay at ${G.P[a.at].cityName || G.P[a.at].name}.`, 'info', a.at); continue; } }
     const p = f.tgt, sams = stationaryAt(p).filter(b => atWar(a.owner, b.owner)).reduce((s0, b) => s0 + (b.u.sam || 0), 0), lossF = Math.min(0.6, sams*0.15);
-    if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; }
-    a.fly = null; a.from = f.from; a.froms = [f.from]; atMove(a, p); a.to = null; a.m = Math.max(0, (a.m ?? 80) - 10); a.lastAt = null;
+    if (lossF > 0) for (const t of UT) if (a.u[t]){ const k = Math.round(a.u[t]*lossF); a.u[t] -= k; if (!a.u[t]) a.w[t] = 0; else a.w[t] = Math.min(a.w[t], a.u[t]*UNITS[t].hp*0.9); }   // (the wounds go with the units lost, as on every other loss)
+    a.fly = null; a.from = f.from; a.froms = [f.from]; atMove(a, p); a.to = null; a.t = 0; a.path = []; a.legFrom = null; a.dest = null; a.pos = null; if (a.wp) delete a.wp; delete a.sail; a.m = Math.max(0, (a.m ?? 80) - 10); a.lastAt = null;
     IM.emit('fxDrop', a, p);
     if (isSeat(a.owner)) tell(a.owner, `Paratroopers landed at ${G.P[p].cityName || G.P[p].name}${lossF > 0 ? `, losing ${Math.round(lossF*100)}% to air defences` : ''}.`, lossF > 0.3 ? 'bad' : 'good', p); }
   removeEmpty(); }
@@ -229,11 +231,13 @@ function resolveStrike(a, p){
   const BF = rBombF(a.owner, T);   // bomb load: 1 Heavy Bomber, 0.6 Stealth Bomber, 0 anything else
   let preLost = 0; if (BF){ const aaD = defs.filter(b => (b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0); if (aaD.length){ const b0 = count(a); aaFire(a, aaD, 1.2); preLost = b0 - count(a);
       if (!count(a)){ if (isSeat(o)) tell(o, `Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
-  warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
+  // (checked again over the target: the land is hurt only where it is hostile, an enemy's or nobody's, or where enemy forces stand)
+  const landHit = S.owner[p] < 0 || (S.owner[p] !== o && atWar(o, S.owner[p])) || defs.length > 0;
+  if (landHit) warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
   const enemyLand = S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]);
   let bnote = '';
   if (enemyLand){ if (BF) bnote = bombBuildings(p, a.u[T], BF); else if (T === 'sdrone') bnote = preciseHit(p, a.u.sdrone >= 2 ? 0.35 : 0.15, rKoHours(a.owner)); if (bnote) noteHit(S.owner[p], T, p); }
-  const cut = S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
+  const cut = landHit && S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
   if (cut && !defs.length) for (const me of new Set([o, S.owner[p]])) if (isSeat(me)) tell(me, o === me ? `Strike on ${G.P[p].cityName || G.P[p].name} cut ${cut} road and rail link${cut > 1 ? 's' : ''} for ${LINK_DMG.strike} h.` : `${nationName(o)} bombed the roads and railways at ${G.P[p].cityName || G.P[p].name}: ${cut} link${cut > 1 ? 's' : ''} out for ${LINK_DMG.strike} h.`, o === me ? 'good' : 'bad', p);
   const label = T === 'stealth' ? 'Stealth raid' : BF ? 'Bombing raid' : T === 'swarm' ? 'Swarm attack' : T === 'sdrone' ? 'Drone strike' : 'Air strike';
   if (!defs.length){ if (isSeat(o) && (bnote || !cut)) tell(o, bnote ? `${label} on ${where}: ${bnote}${adLost ? `; ${adLost} drones lost to air defence` : ''}.` : `Strike on ${where} found no targets.`, bnote ? 'good' : 'info', p);
@@ -255,14 +259,20 @@ function resolveStrike(a, p){
 function airTick(){
   for (const a of S.armies) if (a.sat){ a.sat = Math.max(0, a.sat - 0.04); if (!a.sat) delete a.sat; }   // saturated air defence recovers
   for (const a of S.armies){ if (!a.air || !count(a)) continue;
-    if (a.air.car != null){ const cv = armyById(a.air.car); if (cv && cv.u.carr > 0){ if (!a.fly){ a.air.base = cv.at; atMove(a, cv.at); } else a.air.base = cv.to ?? cv.at; continue; }
-      a.air.car = null; const nb = nearestAirbase(a.owner, a.at); if (nb >= 0){ a.air.base = nb; if (!a.fly){ atMove(a, nb); } if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} lost its carrier and diverted to ${G.P[nb].cityName || G.P[nb].name}.`, 'bad', nb); } else for (const t of UT) a.u[t] = 0; }
-    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; else if (a.air.wear){ a.air.wear = Math.max(0, a.air.wear - maintRate(a)/24); if (a.air.wear < 1e-4) delete a.air.wear; } if (!G.P[a.air.base].sea && S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; a.at = nb; } continue; }
+    if (a.air.car != null){ const cv = armyById(a.air.car); if (cv && cv.u.carr > 0){ if (!a.fly){ a.air.base = cv.at; atMove(a, cv.at); } else a.air.base = cv.to ?? cv.at; }   // (then on: rearm and deck repairs, or the flight)
+      else {
+      a.air.car = null; const nb = nearestAirbase(a.owner, a.at); if (nb >= 0){ a.air.base = nb; if (!a.fly){ atMove(a, nb); } if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} lost its carrier and diverted to ${G.P[nb].cityName || G.P[nb].name}.`, 'bad', nb); } else for (const t of UT) a.u[t] = 0; } }
+    if (!a.fly){ if (a.air.cd > 0) a.air.cd--; else if (a.air.wear){ a.air.wear = Math.max(0, a.air.wear - maintRate(a)/24); if (a.air.wear < 1e-4) delete a.air.wear; } if (!G.P[a.air.base].sea && S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0){ for (const t of UT) a.u[t] = 0; continue; } a.air.base = nb; atMove(a, nb); }
+      if (a.air.car == null && a.at !== a.air.base) atMove(a, a.air.base);   // (a wing left over the sea when its carrier sank: a save from before this was fixed)
+      continue; }
     const f = a.fly, B = G.P[a.air.base], T = G.P[f.tgt], dist = Math.max(1, hexDist(B.cc, T.cc)), dt = wingSpd(a)/dist;
     if (f.ph === 'out' && f.kind === 'strike' && stormAt(f.tgt)){ f.ph = 'back'; f.t = Math.max(0, 1 - f.t); if (isSeat(a.owner)) tell(a.owner, `Strike on ${G.P[f.tgt].cityName || G.P[f.tgt].name} aborted: a storm closed in over the target.`, 'info', f.tgt); continue; }
     if (f.ph === 'out'){ f.t += dt; if (f.t >= 1){
         wearWing(a, f.kind, dist, f.kind === 'patrol' || f.kind === 'hunt' ? 12 : f.kind === 'orbit' ? 16 : f.kind === 'recon' ? uavOf(a.owner).loiter : 0);
-        if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; } a.air.base = f.tgt; atMove(a, f.tgt); a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
+        if (f.kind === 'rebase'){ const cv = G.P[f.tgt].sea ? carrierAt(a.owner, f.tgt) : null; if (G.P[f.tgt].sea && !cv){ f.ph = 'back'; f.t = 0; continue; }
+          // the airbase fell while the wing flew: it turns back to the base it left (the 'back' leg diverts if that one is lost too)
+          if (!G.P[f.tgt].sea){ const o = S.owner[f.tgt]; if (o !== a.owner && !(o >= 0 && friendly(a.owner, o))){ f.ph = 'back'; f.t = 0; if (isSeat(a.owner)){ const nm = G.P[f.tgt].cityName || G.P[f.tgt].name; tell(a.owner, `Rebase to ${nm} called off: ${nm} fell to ${o >= 0 ? nationName(o) : 'independent forces'}. ${armyName(a)} turns back.`, 'bad', f.tgt); } continue; } }
+          a.air.base = f.tgt; atMove(a, f.tgt); a.air.car = cv ? cv.id : null; a.fly = null; a.air.cd = 2;
           if (isSeat(a.owner) && cv) tell(a.owner, `${armyName(a)} landed on ${armyName(cv)}: it now strikes from wherever the carrier sails.`, 'good', f.tgt); continue; }
         if (f.kind === 'strike'){ resolveStrike(a, f.tgt); f.ph = 'over'; f.hrs = 1; f.t = 0; }
         else if (f.kind === 'recon'){ const L = uavOf(a.owner), seen = visProvsAt(G.P[f.tgt].x, G.P[f.tgt].y, L.vis); S.reveal = S.reveal || {};
@@ -277,11 +287,12 @@ function airTick(){
         if (f.kind === 'hunt' && ++f.nx >= 3){ f.nx = 0; mpaHunt(a, f.tgt); if (!count(a)) continue; }
         if (f.kind === 'recon' && f.salvo > 0 && f.hrs === Math.ceil((f.h0 || 12)/2)){ f.salvo--; uavSalvo(a, f.tgt); if (!count(a)) continue; } }
       if (--f.hrs <= 0){ f.ph = 'back'; f.t = 0; visCache = null; } }
-    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (a.air.car != null){ atMove(a, a.air.base); } else if (S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; atMove(a, nb); } } } }
+    else if (f.ph === 'back'){ f.t += dt; if (f.t >= 1){ a.fly = null; a.air.cd = 6; if (a.air.pend){ for (const t in a.air.pend) a.u[t] += a.air.pend[t]; a.air.pend = null; } if (a.air.car != null){ atMove(a, a.air.base); } else if (S.owner[a.air.base] !== a.owner && !(S.owner[a.air.base] >= 0 && friendly(a.owner, S.owner[a.air.base]))){ const nb = nearestAirbase(a.owner, a.air.base); if (nb < 0) for (const t of UT) a.u[t] = 0; else { a.air.base = nb; atMove(a, nb); } } else if (a.at !== a.air.base) atMove(a, a.air.base); } }   // (the last: a carrier wing whose carrier sank while it flew lands at the base it was given)
   }
   removeEmpty();
 }
 function missileCheck(n, from, to, k){
+  if (!G.P[from] || S.owner[from] !== n) return {ok:false, why:'Not your silo: missiles fire only from your own provinces.'};
   const M0 = mslOf(S.owner[from], k), d = hexDist(G.P[from].cc, G.P[to].cc), o = S.owner[to];
   if (!mstock(from)[k]) return {ok:false, why:`No ${M0.name}s stored here.`};
   if (bdis(from, 'silo')) return {ok:false, why:`The silo was knocked out by a strike: ${bdisH(from, 'silo')} h.`};
@@ -324,12 +335,15 @@ function missileImpact(m){
     if (isSeat(m.owner)) tell(m.owner, `Your ${MISSILES[m.k].name} was intercepted over ${P.cityName || P.name}.`, 'info', m.to);
     if (S.owner[m.to] !== m.owner && isSeat(S.owner[m.to])) tell(S.owner[m.to], `Air defences intercepted an enemy ${MISSILES[m.k].name} over ${P.cityName || P.name}.`, 'good', m.to);
     return; }
-  warDamage(m.to, m.k === 'bm' ? 22 : 12); if (S.owner[m.to] !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48);
+  // checked again at impact (a peace, or the province changing hands, while it flew): the land is hurt only where it is hostile, an enemy's or
+  // nobody's, or where enemy forces stand (a target in one's own land held by enemies); otherwise only troops at war with the launcher are hit
+  const o0 = S.owner[m.to], foesHere = stationaryAt(m.to).some(b => atWar(m.owner, b.owner) && count(b) > 0), landHit = o0 < 0 || (o0 !== m.owner && atWar(m.owner, o0)) || foesHere;
+  if (landHit){ warDamage(m.to, m.k === 'bm' ? 22 : 12); if (o0 !== m.owner) damageLinks(m.to, LINK_DMG[m.k] || 48); }
   const M0 = mslOf(m.owner, m.k), defs = stationaryAt(m.to).filter(b => atWar(m.owner, b.owner) && count(b) > 0), unitsBefore = defs.reduce((s0, b) => s0 + count(b), 0), hpBefore = defs.reduce((s0, b) => s0 + effHP(b), 0);
   if (defs.length){ const tot = defs.reduce((s0, b) => s0 + armyHP(b), 0) || 1, f0 = K*M0.power*(0.85 + rng()*0.3)*12;
     const av = {soft:f0*MSL_VS.soft, armored:f0*MSL_VS.armored, air:f0*MSL_VS.air, naval:f0*MSL_VS.naval}; for (const b of defs){ hurt(b, av, bunkerF(b, m.to)/tot); if (m.k === 'bm') b.m = Math.max(0, (b.m ?? 80) - 25); } removeEmpty(); }   // (the garrison's Bunker)
   let wrecked = '';
-  if (m.k === 'bm' && S.owner[m.to] >= 0){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)], h = bldHit(m.to, k); bunkerNews(m.to, [h], 'Ballistic missile'); if (h.lost && !h.bunker) wrecked = BUILD[k].name; } }
+  if (m.k === 'bm' && S.owner[m.to] >= 0 && landHit){ const ks = BK.filter(k => S.bld[m.to][k] > 0); if (ks.length){ const k = ks[Math.floor(rng()*ks.length)], h = bldHit(m.to, k); bunkerNews(m.to, [h], 'Ballistic missile'); if (h.lost && !h.bunker) wrecked = BUILD[k].name; } }
   const killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), dealt = Math.round(hpBefore - defs.reduce((s0, b) => s0 + effHP(b), 0));
   IM.emit('fxMissile', {m, hit:true, dealt, owner:S.owner[m.to]});
   const where = P.cityName || P.name;

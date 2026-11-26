@@ -343,17 +343,20 @@ function unrestDay(){
     const before = unrestOf(p); S.unrest[p] = Math.max(0, Math.min(100, before + d));
     if (isSeat(o) && before <= 50 && S.unrest[p] > 50) tell(o, `${G.P[p].cityName || G.P[p].name} is close to revolt (${Math.round(S.unrest[p])}% unrest): garrison 2+ units there or pacify it.`, 'bad', p);
     if (S.unrest[p] > 60 && rng() < (S.unrest[p] - 60)/160 && !S.armies.some(a => a.rebel && a.at === p)){
-      const r = addArmy(NEUTRAL, p, {inf:2 + Math.floor(rng()*3) + (G.P[p].city ? 2 : 0)}); r.rebel = true; S.unrest[p] -= 20;
+      const r = addArmy(NEUTRAL, p, {inf:2 + Math.floor(rng()*3) + (G.P[p].city ? 2 : 0)}); r.rebel = true; r.hold = 0; S.unrest[p] -= 20;
       if (isSeat(o)) tell(o, `Partisans rose up in ${G.P[p].cityName || G.P[p].name}! Garrison or pacify occupied land to prevent revolts.`, 'bad', p);
     } }
 }
 function rebelHour(){
   // partisans holding a province alone for a day hand it back to its original nation (or independence)
   for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at;
+    // home land of its holder again (sold or given back, ceded at peace, annexed): the partisans stand down, as unrestDay raises none there
+    if (S.owner[p] >= 0 && S.owner[p] === S.home[p]){ for (const t of UT) a.u[t] = 0; a.hold = 0; if (isSeat(S.owner[p])) tell(S.owner[p], `The partisans in ${G.P[p].cityName || G.P[p].name} lay down their arms: it is home land again.`, 'info', p); continue; }
     if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
-    if (++a.hold < 24) continue;
+    a.hold = (a.hold || 0) + 1; if (a.hold < 24) continue;   // (|| 0: older saves carry no count, or NaN saved as null)
     const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
     S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
+    if (S.occ && to >= 0 && to === home) S.occ[p] = null;   // (back with its home nation: no longer occupied, as capture and cede do)
     if (to >= 0) addArmy(to, p, {inf:2});
     if (isSeat(prev)) tell(prev, `${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
     if (isSeat(to)) tell(to, `Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);

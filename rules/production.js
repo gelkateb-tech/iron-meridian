@@ -100,12 +100,17 @@ function build(n, p, k){
 function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
   const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
-  if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
+  // (ground units only: a new ship stays in port and joins its fleet below. With no route there the rally point is dropped, the seat is told,
+  // and the unit joins the forces here as if there were none)
+  if (!air && DOM_T[t] !== 'sea' && RL && RL[p] != null && RL[p] !== p){ const r = RL[p], na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, r); if (na.path.length) return;
+    na.u[t] = 0; removeEmpty(); delete RL[p]; const nm = v => G.P[v].cityName || G.P[v].name;
+    tell(n, `Rally point from ${nm(p)} to ${nm(r)} removed: new units have no route there. They stay in ${nm(p)}.`, 'info', p); }
   const k = rPack(n, t);   // (a card of swarm drones holds six)
   // new units join an idle force of the same kind here that has room under its stack limit (STACK_LIM), otherwise they form a new force
+  // (of the same kind: a new ship joins a fleet, ships only, and a ground unit a force with no ships, not the port's garrison or its docked fleet)
   const dm = DOM_T[t], room = x => stackSizes(x)[dm] + (dm === 'air' ? 1 + Object.values((x.air && x.air.pend) || {}).reduce((s0, v) => s0 + Math.ceil(v/k), 0) : k) <= STACK_LIM[dm];
   if (air){ const w = armiesOf(n).find(x => x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u]) && room(x)); if (w && !armiesOf(n).some(x => x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
-  let a = armiesOf(n).find(x => x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])) && room(x));
+  let a = armiesOf(n).find(x => x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (air ? UT.every(u => u === t || !x.u[u]) : dm === 'sea' ? shipsOnly(x) : !shipsN(x)) && room(x));
   if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp*k)/(h0 + UNITS[t].hp*k) : 80;
   a.u[t] += k;

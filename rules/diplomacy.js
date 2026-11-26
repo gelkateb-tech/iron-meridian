@@ -69,21 +69,34 @@ function setRel(a, b, st, days = null, by = null){
 // a force left standing in land it may not be in (peace, or too small to capture) walks to its nearest own province
 function sendHome(a){ const seen = new Set([a.at]), q = [a.at]; let dest = -1;
   for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === a.owner){ dest = v; break; } q.push(v); }
-  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (a.wp) delete a.wp; if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; } atMove(a, dest); a.path = []; if (a.pos) a.pos = null; if (a.dest) a.dest = null; delete a.sail; return true; } return false; }
+  if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (a.wp) delete a.wp; if (pth.length){ a.path = pth; if (a.dest) a.dest = null; a.forced = true; return true; }
+    const j = jumpDest(a); if (j < 0) return false; jumpTo(a, j); return true; } return false; }
+// a force that must leave and has no route jumps (sendHome, evict). Where to: a fleet to the sea zone it is sailing to or the one beside it, else the
+// nearest own naval city; troops (and wings) to the nearest own province, but when that means crossing water, troops come ashore only at an own naval
+// city (EMB-1): the nearest one, or the nearest own province when the nation has none. -1: nowhere
+function jumpDest(a, n = a.owner){ const so = shipsOnly(a);
+  if (so){ if (a.to !== null && G.P[a.to].sea) return a.to; if (G.P[a.at].sea) return a.at; const sz = G.P[a.at].nbs.find(v => G.P[v].sea); if (sz != null) return sz; }
+  const gr = !so && !a.air, seen = new Set([a.at]), wet = new Set(G.P[a.at].sea ? [a.at] : []), q = [a.at]; let first = -1;
+  for (let h = 0; h < q.length; h++){ const u = q[h]; for (const v of G.P[u].nbs){ if (seen.has(v)) continue; seen.add(v); const w = wet.has(u) || G.P[v].sea; if (w) wet.add(v);
+    if (S.owner[v] === n && !G.P[v].sea){ if (so ? portOk(n, v) : !gr || !w || navalCity(v)) return v; if (first < 0 && !so) first = v; } q.push(v); } }
+  return first; }
+// the jump itself: no leg, route, landing, boarding or carried time goes with it
+function jumpTo(a, d){ atMove(a, d); a.to = null; a.t = 0; a.path = []; if (a.carry) a.carry = 0; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; if (a.wp) delete a.wp;
+  delete a.sail; delete a.land; delete a.emb; delete a.oldLand; }
 function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea || shipsN(a)) continue;
     const o = S.owner[a.at]; if (o === a.owner) continue;
     const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
     const tooSmall = !isSeat(a.owner) && groundN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
     if (peaceful || tooSmall) sendHome(a); } }
 function evict(n, host){
-  // forces of n standing in host's land go to their nearest own province
+  // forces of n standing in host's land go to their nearest own province (jumpDest: a fleet to the sea, troops ashore only at a naval city when
+  // the way home crosses water; jumpTo drops any landing or boarding under way)
   for (let p = 0; p < G.P.length; p++) if (S.cap[p] && S.cap[p].by === n && S.owner[p] === host) S.cap[p] = null;
   for (const a of armiesOf(n)){
     if (a.to !== null){ if (S.owner[a.to] === host){ a.to = null; a.t = 0; if (a.legFrom) a.legFrom = null; if (a.pos) a.pos = null; } else if (S.owner[a.at] !== host) continue; }
     if (S.owner[a.at] !== host) continue;
-    const seen = new Set([a.at]), q = [a.at]; let dest = -1;
-    for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0){ atMove(a, dest); a.to = null; a.t = 0; a.path = []; if (a.pos) a.pos = null; if (a.legFrom) a.legFrom = null; if (a.dest) a.dest = null; if (a.wp) delete a.wp; delete a.sail; } else for (const t of UT) a.u[t] = 0; }
+    const dest = jumpDest(a, n);
+    if (dest >= 0) jumpTo(a, dest); else for (const t of UT) a.u[t] = 0; }
   removeEmpty();
 }
 // crossing a peaceful border or striking a nation you are not at war with starts the war at once
@@ -107,7 +120,7 @@ function surprisePath(a, from, to){ const so = shipsOnly(a), ok = v => (G.P[v].s
   const am = amphib(a), pe = [], emb = so || a.air || am ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(a.owner, u); return r; };
   const lnd = so || a.air || am || !NAVAL_CITIES ? null : navalCity;   // (and land only at a naval city: rules/movement.js pathFor)
   if (emb && G.P[to].sea && !G.P[from].sea && !emb(from)) return {pth:[], viol:[]};
-  const pth = findPath(from, to, ok, pathMT(a), a.owner, emb, null, lnd); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
+  const pth = findPath(from, to, ok, pathMT(a), a.owner, emb, null, lnd, so); const viol = [...new Set(pth.filter(v => !G.P[v].sea && S.owner[v] >= 0 && S.owner[v] !== a.owner && !canEnter(a.owner, v)).map(v => S.owner[v]))];
   return {pth, viol}; }
 function declareWar(a, b){
   if (a === b || atWar(a, b) || S.decl.some(d => d.by === a && d.to === b)) return false;
@@ -422,6 +435,7 @@ function spyHour(){
   for (const ag of (S.spies || [])){ if (!ag.op || --ag.op.h > 0) continue;
     const {k, p} = ag.op, n = ag.owner, o = S.owner[p], where = G.P[p].cityName || G.P[p].name; ag.op = null;
     if (!S.nations[n].alive){ continue; }
+    if (o === n){ if (isSeat(n)) tell(n, `${SPY_OPS[k].name} in ${where} called off: it is your own province now.`, 'info', p); continue; }   // (taken while the agent worked: spyCheck refuses own provinces at the start)
     if (rng() > spyChance(n, p, k)){ S.spies = S.spies.filter(x => x !== ag); if (o >= 0) addMem(o, n, -20);
       if (isSeat(n)) tell(n, `Your agent was caught in ${where}${o >= 0 ? ` by ${S.nations[o].name} (relations −20)` : ''}.`, 'bad', p);
       if (o !== n && isSeat(o)) tell(o, `Counter-intelligence caught ${artA(S.nations[n].name)} agent in ${where}.`, 'good', p); continue; }
@@ -429,7 +443,7 @@ function spyHour(){
     if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; intelNote(n, [p, ...G.P[p].nbs], S.hour + 72); visCache = null; res = 'the area is revealed for 3 days'; }
     else if (k === 'sabotage'){ if (S.cons[p]){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ const h = bldHit(p, b); res = h.shielded ? `the ${BUILD.fort.name} here shielded the ${BUILD[b].name}` : h.bunker ? `${BUILD.fort.name} damaged${h.lost ? '' : ' (still standing)'}` : `${BUILD[b].name} damaged`; } } }
     else if (k === 'incite'){ S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = Math.min(100, unrestOf(p) + 35); res = `unrest now ${Math.round(S.unrest[p])}%`; }
-    else if (k === 'steal' && o >= 0){ const ts = rStealable(n, o).filter(t => rReqsOk(n, RN[t], rLevel(n, t) + 1)); const t = ts[Math.floor(rng()*ts.length)]; if (t){ const lv = rLevel(n, t) + 1; rGrant(S.nations[n], t, lv); res = `${rName(RN[t], lv)} acquired`; } else res = 'nothing usable found'; }
+    else if (k === 'steal' && o >= 0){ const ts = rStealable(n, o).filter(t => rReqsOk(n, RN[t], rLevel(n, t) + 1) && !rRunning(S.nations[n], t)); const t = ts[Math.floor(rng()*ts.length)]; if (t){ const lv = rLevel(n, t) + 1; rGrant(S.nations[n], t, lv); res = `${rName(RN[t], lv)} acquired`; } else res = 'nothing usable found'; }
     if (isSeat(n)) tell(n, `${SPY_OPS[k].name} in ${where} succeeded: ${res}.`, 'good', p);
     if (o !== n && isSeat(o) && k !== 'recon') tell(o, `Enemy agents struck ${where}: ${res}.`, 'bad', p);
   }
