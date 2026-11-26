@@ -8301,9 +8301,9 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
       for (const nb of NM.near) if (boxGap(pb, nb) < 0) cost += 150; for (const nb of ON) if (boxGap(pb, nb) < 0) cost += 150; for (const z of MC) if (boxGap(b, z) < 2) cost += 300; if (taken) for (const t of taken) if (boxPt(b, t[0], t[1]) < dR + 1) cost += 300;   // (off the counters and the dots of the forces placed off this point before it) for (const m of MK) if (boxPt(pb, m[0], m[1]) < 2) cost += 40; if (cost >= bc) continue;
       const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; cost += g === 1.5 ? 40 : 15*g; if (cost < bc){ bc = cost; best = [x, y]; bn = e > 0; } }
     return [bc, best, bn]; };
-  const run = cf => { let best = null, bc = Infinity;
+  const run = (cf, nD = 4) => { let best = null, bc = Infinity;
     for (let j = 0; j <= 18; j++) for (const s of j && j < 18 ? [sg, -sg] : [j ? sg : 0]){ const th = th0 + s*j*Math.PI/18, cu = Math.cos(th), su = Math.sin(th);
-      for (let D1 = D0, i = 0; i < 4; i++, D1 += 2.5){ const c0 = j*10 + (D1 - D0)*5; if (c0 >= bc) break; const vx = cu*D1, vy = su*D1;
+      for (let D1 = D0, i = 0; i < nD; i++, D1 += 2.5){ const c0 = j*10 + (D1 - D0)*5; if (c0 >= bc) break; const vx = cu*D1, vy = su*D1;
         if ((far && (j || i)) || (taken && taken.some(t => Math.hypot(t[0] - vx, t[1] - vy) < sp))) continue;   // (one standing well clear of the point is drawn where it stands)
         if ((hb && boxPt(hb, vx, vy) < dR + 1) || (NM.own && boxPt(NM.own, vx, vy) < dR + 1) || nl.some(b => boxPt(b, vx, vy) < dR + 2) || (col && vx > col[0] && vx < col[2] && vy < col[3]) || (st && hb && boxPt([hb[0], hb[1], hb[2], Math.max(hb[3], -R)], vx, vy) < 9)) continue;   // (never under the city force's counter or on its city's name)
         const real = !j && D1 === d, g = real ? 0 : heartGnd(p, vx, vy); if (g === 2) continue;
@@ -8314,6 +8314,7 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
   let best = run(true);
   if (best && best.real && (!hb || st)) return {dot:best.dot, ctr:null, cc:0};   // (one already standing clear of the marker where it is keeps the counter it has anywhere, above its dot: heartBadge)
   if (fold && HC && (!best || best.near)){ const b0 = run(false); if (b0) best = {dot:b0.dot, ctr:[(HC[0] + HC[2])/2, (HC[1] + HC[3])/2], fold:true}; }   // (no room by its dot in its own city's area: it joins the city's counter)
+  if (!best){ const b0 = run(false, 10); if (b0) best = {dot:b0.dot, ctr:null, cc:0}; }   // (no place for its counter by its dot: its dot still stands outside the ring, its counter where the stacking finds room)
   return best; }
 // (its dot and its counter stay on its own province's land, else its own country's: never in the sea or across a border. Nothing found: null,
 // where it stands)
