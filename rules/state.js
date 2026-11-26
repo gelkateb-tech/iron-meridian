@@ -383,7 +383,7 @@ function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === 
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
 // a force as nation `me` names it: its own by name alone, another's with the nation in front
-const armyLabel = (a, me) => a.owner === me ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
+const armyLabel = (a, me) => a.owner === me ? armyName(a) : a.rebel ? 'Rebels' : `${nationName(a.owner)} ${armyName(a)}`;   // (rebels are just "Rebels", not "Independent Rebels")
 const STC = [];
 function st(o, t, k){
   if (o < 0) return UNITS[t][k] || 0;

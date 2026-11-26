@@ -460,18 +460,27 @@ function rebelFlip(p, o, n, how){ const nm = placeNm(p), home = S.home[p], to = 
   if (isSeat(to)) tell(to, `Rebels liberated ${nm}: it is yours again.`, 'good', p);
   checkNation(o); }
 // every hour: a rising whose rebels are gone was crushed; rebels standing in a city whose holder has no ground unit there any more take it at once
-// (an old save's partisans once wait until a.rbH: moraleMigrate); the holder's troops there keep counting as dug in
+// (an old save's partisans once wait until a.rbH: moraleMigrate); the holder's troops there keep counting as dug in. Rebels in land that is home
+// land of its holder again (given or sold back, retaken, a fallen nation's land annexed by it) lay down their arms (question Q27, option A); a
+// rising of a homeland city against its own holder (an S.rbl entry for that holder) goes on
 function rebelHour(){
   if (S.rbl && S.rbl.length) S.rbl = S.rbl.filter(e => { if (S.owner[e.p] !== e.o) return false; const a = armyById(e.id); if (a && a.rebel && count(a) > 0) return true;
     IM.emit('rebelsCrushed', e.p, e.o); if (isSeat(e.o)) tell(e.o, `Your troops crushed the rebels in ${placeNm(e.p)}.`, 'good', e.p); return false; });
   const flip = [];
   for (const a of S.armies){ if (!a.rebel || a.to !== null || !count(a)) continue; const p = a.at, o = S.owner[p];
     if (!(o >= 0)){ delete a.rebel; continue; }   // (independent land already: they are its garrison)
+    if (S.home[p] === o && !(S.rbl && S.rbl.some(e => e.id === a.id && e.o === o))){ rebelsDisband(p, 'home'); continue; }
     if (garrisonOf(p, o) > 0){ rebelDig(p, o); continue; }
     if (a.rbH != null && S.hour < a.rbH) continue;
     flip.push(a); }
   for (const a of flip){ const p = a.at, o = S.owner[p]; if (!(o >= 0) || !a.rebel || !count(a)) continue; rebelFlip(p, o, count(a), S.rbl && S.rbl.some(e => e.id === a.id) ? 'fought' : 'empty'); }
   removeEmpty(); }
+// the rebels in province p lay down their arms (question Q27, option A): it is home land of its holder again (why 'home'), or a peace treaty
+// ceded it to its holder (why 'peace': the peace settles it). Their rising, if any, ends with no battle and no capture; the holder is told
+function rebelsDisband(p, why){ let k = 0; for (const a of S.armies) if (a.rebel && a.at === p && count(a) > 0){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } k++; }
+  if (S.rbl) S.rbl = S.rbl.filter(e => e.p !== p);
+  const o = S.owner[p]; if (k && isSeat(o)) tell(o, `The rebels in ${placeNm(p)} lay down their arms: ${why === 'peace' ? 'the peace treaty settles it' : 'it is home land again'}.`, 'info', p);
+  return k; }
 // air wings based in a province that changed hands escape to their nation's nearest airbase, or are destroyed on the ground (a capture, a revolt)
 function wingsFlee(p, O){ for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p);
     if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${placeNm(p)} to ${placeNm(nb)}.`, 'info', nb); }
@@ -480,10 +489,11 @@ function wingsFlee(p, O){ for (const w of S.armies){ if (!w.air || w.fly || w.ai
 // other land is occupied (25); an annexed status goes with the old holder
 function morCaptured(p, O){ if (S.anx) delete S.anx[p]; setMor(p, S.home[p] === O ? MOR.lib : MOR.occ); }
 // land received by a treaty, a sale or a gift (questions 3 and 5): the receiver's own homeland is handed back (liberated, 55); any other land arrives
-// annexed (its morale as it was)
+// annexed (its morale as it was). A coalition gift makes the land the receiver's homeland first (question Q28, option B: rules/diplomacy.js
+// sendGift), so it arrives liberated. Rebels in land handed to its home nation lay down their arms at once (question Q27: rebelsDisband)
 function landGiven(p, to){ if (S.occ) S.occ[p] = null; if (S.anx) delete S.anx[p];
   { const c = S.cons[p]; if (c && c.k === 'annex'){ const N = S.nations[c.o]; S.cons[p] = null; if (N){ N.cash += c.cash || 0; N.mp += c.mp || 0; if (isSeat(c.o)) tell(c.o, `The annexing of ${placeNm(p)} changed hands by treaty or sale: the annexing under way there was called off and its $${c.cash}M and ${c.mp}k manpower refunded.`, 'info', p); } } }   // (an annexing under way is pointless now: refunded to whoever paid)
-  if (S.home[p] === to) setMor(p, MOR.lib); else (S.anx || (S.anx = {}))[p] = to; }
+  if (S.home[p] === to){ setMor(p, MOR.lib); if (S.owner[p] === to) rebelsDisband(p, 'home'); } else (S.anx || (S.anx = {}))[p] = to; }
 /* ---- Annex City (point 8): a construction in the city's one slot (S.cons[p] = {k:'annex', o, h, h0, cash, mp}), ANNEX_COST by the city's size
    band, paid when it starts; any time, even while the city burns, rebels are in it or it is under attack. It ends with S.anx[p] = the holder, and the
    holder's occupied countryside provinces taken from the same country whose nearest city it is are annexed with it (question 4). A capture or a

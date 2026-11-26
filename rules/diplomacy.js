@@ -186,8 +186,9 @@ const tribute = (me, m) => Math.round(Math.max(100, 0.15*S.nations[me].cash + 3*
 const tributeOk = (me, m) => atWar(m, me) && (S.hour - rel(m, me).since)/24 >= 2 && natPower(m) < 2.5*Math.max(1, natPower(me));
 // provinces each side holds of the other's home land: these change hands for good when peace is signed
 function warTerms(a, b){ const toA = [], toB = []; for (const P of G.P){ if (P.sea) continue; if (S.home[P.id] === b && S.owner[P.id] === a) toA.push(P.id); else if (S.home[P.id] === a && S.owner[P.id] === b) toB.push(P.id); } return {toA, toB}; }
-// (the land a peace treaty hands over arrives annexed, or liberated when it is the receiver's own homeland: rules/economy.js landGiven; owner question 5)
-function cede(list, to){ for (const p of list) landGiven(p, to); if (list.length){ geoChanged(); INCC.v = -1; } }
+// (the land a peace treaty hands over arrives annexed, or liberated when it is the receiver's own homeland: rules/economy.js landGiven; owner question 5;
+// it keeps its old home country. Rebels in it lay down their arms: the peace settles it, question Q27 option A)
+function cede(list, to){ for (const p of list){ landGiven(p, to); rebelsDisband(p, 'peace'); } if (list.length){ geoChanged(); INCC.v = -1; } }   // (the emptied rebel forces go at the next removeEmpty)
 // the land terms of a peace in words, as read by nation `me` ("you" where it is a party)
 const termsText = (a, b, T, me) => { const nm = id => G.P[id].cityName || G.P[id].name, part = (lst, from, to) => lst.length ? `${S.nations[from].name} cedes ${lst.slice(0, 3).map(nm).join(', ')}${lst.length > 3 ? ` and ${lst.length - 3} more` : ''} to ${to === me ? 'you' : S.nations[to].name}` : '';
   return [part(T.toA, b, a), part(T.toB, a, b)].filter(Boolean).join('; ') || 'No land changes hands'; };
@@ -383,7 +384,7 @@ const giftRoom = (n, k) => k === 'cash' ? 1e9 : k === 'mp' ? Math.max(0, Math.fl
 // nation `me` gives stocks and provinces (g) to its coalition partner n
 function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g || !sameBloc(me, n)) return false; const parts = [];
   for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, isGood(k) ? kFloor(M0[k]) : Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${fmt(q)} ${rlbl(k)}`); }
-  for (const p of g.provs || []){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); landGiven(p, n); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
+  for (const p of g.provs || []){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; landGiven(p, n); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }   // (a gift gives home title: question Q28, option B)
   if (!parts.length) return false; addMem(n, me, Math.min(15, 2 + parts.length*2));
   if (isSeat(me)){ say(me, n, me, `Sending you ${parts.join(', ')}.`); say(me, n, n, 'Received with thanks. The coalition stands together.'); const D = desk(me); if (D.unread) D.unread[n] = 0; }
   tell(me, `You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); checkEnd(); return true; }

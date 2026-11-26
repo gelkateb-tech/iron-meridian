@@ -282,7 +282,7 @@ function battleStep(hourly){
     for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
     for (const a of list) if (count(a) === 0) for (const me of here){
       if (a.owner === me) tell(me, `${armyName(a)} was destroyed at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p);
-      else tell(me, `${armyLabel(a, me)} destroyed at ${G.P[p].name}.`, 'good', p);
+      else if (!(a.rebel && S.rbl && S.rbl.some(e => e.id === a.id && e.o === me))) tell(me, `${armyLabel(a, me)} destroyed at ${G.P[p].cityName || G.P[p].name}.`, 'good', p);   // (a rising crushed: rebelHour reports it once)
     }
   }
   removeEmpty();
