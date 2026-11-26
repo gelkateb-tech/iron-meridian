@@ -59,6 +59,7 @@ function healInfo(a){ const hurtN = UT.some(t => a.w[t] > 0.01);
   if (a.to === null && S.battles.includes(a.at)) return {kind:'fight', rate:0, city:false};
   if (!a.air && !supplied(a) && !cmdF(a, 'supply')) return {kind:'cut', rate:0.04, city:false};
   if (!hurtN) return {kind:'full', rate:0, city:false};
+  if (hazHeal(a)) return {kind:'haz', rate:0, city:false, z:hazAt(a.at).k};   // no healing in a gas or radiation zone (rules/air.js, armyUpkeep)
   const own = a.to === null && S.owner[a.at] === a.owner && !!G.P[a.at].city; return {kind:'heal', rate:healPerDay(a), city:own}; }
 // damage factors of the missiles against each class of unit (a missile's strength times these)
 const MSL_VS = {soft:1.2, armored:1, air:0.4, naval:0.9};

@@ -122,10 +122,16 @@ function aiInterdict(n, B, r){ let best = -1, bs = 0;
     let moving = 0; for (const x of S.armies) if (x.owner === o && x.to !== null && (x.to === P.id || x.at === P.id)) moving++;
     sc *= near*(1 + moving); if (sc > bs){ bs = sc; best = P.id; } }
   return bs >= 6 ? best : -1; }
-function aiMissiles(n){
+// enemy power of n in each province: forces standing there and forces arriving within `soon` hours (the cruise and ballistic missiles' targets: IMP-8,
+// a force on the move counts where it will stand when the missile lands; a person's forces weigh a tenth more)
+function aiFoePw(n, soon){ const M = new Map();
+  for (const b of S.armies){ if (b.fly || b.owner < 0 || b.owner === n || !atWar(n, b.owner) || !count(b)) continue; const q = b.to === null ? b.at : (1 - b.t)*legH(b) <= soon ? b.to : -1;
+    if (q >= 0) M.set(q, (M.get(q) || 0) + power(b)*(isSeat(b.owner) ? 1.1 : 1)); }
+  return M; }
+function aiMissiles(n){ let FP = null;
   for (const [ps, st] of Object.entries(S.mstock || {})){ const p = +ps; if (S.owner[p] !== n) continue;
-    for (const k of ['bm', 'cm']){ if (!st[k]) continue; let best = -1, bs = 0;
-      for (const [pid, list] of provPowers()){ let sc = 0; for (const [o, pw] of list) if (o >= 0 && o !== n && atWar(n, o)) sc += pw*(isSeat(o) ? 1.1 : 1); if (sc < (k === 'bm' ? 60 : 30)) continue; if (!missileCheck(n, p, pid, k).ok) continue; if (sc > bs){ bs = sc; best = pid; } }
+    for (const k of ['bm', 'cm']){ if (!st[k]) continue; let best = -1, bs = 0; FP = FP || aiFoePw(n, 4);
+      for (const [pid, sc] of FP){ if (sc < (k === 'bm' ? 60 : 30)) continue; if (!missileCheck(n, p, pid, k).ok) continue; if (sc > bs){ bs = sc; best = pid; } }
       if (best >= 0) launchMissile(n, p, best, k); }
     if (st.chem > 0 && mslStored(p, 'chem')) aiChem(n, p);
     if (st.nuc > 0 && mslStored(p, 'nuc')) aiNuc(n, p); }
@@ -136,9 +142,9 @@ function aiMissiles(n){
    where enemy forces of 8 units and power 80 stand or will stand within 6 hours (forces on the move counted: IMP-8), with none of its own there and
    not twice at one province within 2 days; a nuclear one only in answer to a chemical or nuclear strike on itself or an ally within 7 days, or when
    desperate (a quarter of its home land lost to that enemy, or enemy forces of 1.5 times its garrison's power in or next to its capital) */
-const AI_CHEM = {units:8, power:80, soon:6, again:48}, AI_NUC = {answer:7*24, lost:0.25, cap:1.5}, AI_WMD_CASH = 250;
-// enemy forces of n standing in q, or arriving within `soon` hours: [units, power] by province (enemy-held provinces only)
-function aiFoeMass(n, soon){ const M = new Map(), add = (q, b) => { if (!(S.owner[q] >= 0) || !atWar(n, S.owner[q])) return; const e = M.get(q) || {u:0, pw:0, own:false}; e.u += count(b); e.pw += power(b); M.set(q, e); };
+const AI_CHEM = {units:8, power:80, soon:6, again:48}, AI_NUC = {answer:7*24, lost:0.25, cap:1.5, units:8, power:80}, AI_WMD_CASH = 250;
+// enemy forces of n standing in q, or arriving within `soon` hours: [units, power] by province (enemy-held provinces only; only: those nations' forces)
+function aiFoeMass(n, soon, only){ const M = new Map(), add = (q, b) => { if (!(S.owner[q] >= 0) || !atWar(n, S.owner[q]) || (only && !only.has(b.owner))) return; const e = M.get(q) || {u:0, pw:0, own:false}; e.u += count(b); e.pw += power(b); M.set(q, e); };
   for (const b of S.armies){ if (b.fly || b.air || !count(b)) continue;
     if (b.owner === n){ for (const q of [b.at, b.to]) if (q != null){ const e = M.get(q); if (e) e.own = true; else M.set(q, {u:0, pw:0, own:true}); } continue; }
     if (b.owner < 0 || !atWar(n, b.owner)) continue;
@@ -159,27 +165,36 @@ function aiNuc(n, p){ const wars = warsOf(n); if (!wars.length) return; const N 
   if (!foes.size) return;
   const clear = q => ![q, ...G.P[q].nbs].some(v => S.armies.some(a => a.owner === n && a.at === v && !a.fly && count(a)));   // none of its own forces there or next door
   let best = -1, bs = 0;
-  // in an answer: the attacker's silo city when it is in range
+  // in an answer: the attacker's silo city when it is in range (the one the strike came from first, then any of the attacker's)
+  const fromQ = (S.wmd || []).filter(e => ans.has(e.by) && e.f != null && S.hour - e.h <= AI_NUC.answer).map(e => e.f);
+  for (const q of fromQ) if (best < 0 && S.bld[q].silo > 0 && ans.has(S.owner[q]) && clear(q) && missileCheck(n, p, q, 'nuc').ok) best = q;
   for (let q = 0; q < G.P.length && best < 0; q++) if (S.bld[q].silo > 0 && ans.has(S.owner[q]) && clear(q) && missileCheck(n, p, q, 'nuc').ok) best = q;
-  if (best < 0) for (const [q, list] of pp){ if (!(S.owner[q] >= 0) || !atWar(n, S.owner[q]) || S.owner[q] === n) continue; let sc = 0; for (const [o, pw] of list) if (foes.has(o)) sc += pw;
-    if (sc > bs && clear(q) && missileCheck(n, p, q, 'nuc').ok){ bs = sc; best = q; } }
+  // otherwise the strongest stack of those enemies, 8 units and power 80 or more (forces arriving within 6 h counted), in an enemy-held province; when
+  // desperate (no answer), only at the front: its own home land, or a province next to land it holds (not a stack far from the threat)
+  const front = q => S.home[q] === n || G.P[q].nbs.some(v => S.owner[v] === n);
+  if (best < 0) for (const [q, e] of aiFoeMass(n, AI_CHEM.soon, foes)){ if (e.own || e.u < AI_NUC.units || e.pw < AI_NUC.power || S.owner[q] === n || (!ans.size && !front(q))) continue;
+    if (e.pw > bs && clear(q) && missileCheck(n, p, q, 'nuc').ok){ bs = e.pw; best = q; } }
   if (best >= 0) launchMissile(n, p, best, 'nuc'); }
 // at war, in a silo city: one chemical missile a silo, one nuclear missile in all (stored, building or in flight), never with under $250M left
 function aiWmdBuild(n, p, N){ if (!warsOf(n).length) return;
   for (const k of ['nuc', 'chem']){ const M0 = MISSILES[k]; if (!has(n, M0.tech) || N.cash - M0.cost < AI_WMD_CASH || !canBuildMissile(n, p, k)) continue;
     if (k === 'chem' ? mslHeld(p, k) >= 1 : mslNation(n, k) + (S.inflight || []).filter(m => m.owner === n && m.k === k).length >= 1) continue;
     buildMissile(n, p, k); return; } }
+// a city of n's that its forces hold through gas or radiation: its capital, or a city of its with enemy forces in or next to it (or on their way)
+const hazHold = (n, p) => S.owner[p] === n && !!G.P[p].city && (p === S.nations[n].capital || S.battles.includes(p) || [p, ...G.P[p].nbs].some(v => S.armies.some(b => (b.at === v || b.to === v) && b.owner >= 0 && b.owner !== n && atWar(n, b.owner) && count(b) > 0)));
 // computer forces standing in a gas or radiation zone walk out (to a neighbouring province without one, their own first), unless they hold a city
-// of theirs under attack (rules/air.js hazHour, every hour)
+// of theirs (hazHold: the capital, or a city with enemies in or next to it; rules/air.js hazHour, every hour)
 function aiHazOut(){ if (!S.haz) return;
-  for (const k in S.haz){ const p = +k; if (!hazAt(p)) continue; const siege = S.owner[p] >= 0 && G.P[p].city && S.battles.includes(p);
+  for (const k in S.haz){ const p = +k; if (!hazAt(p)) continue; const hold = new Map();
     for (const a of S.armies){ if (a.at !== p || a.owner < 0 || isSeat(a.owner) || a.air || a.fly || a.rebel || a.to !== null || a.path.length || !count(a) || shipsOnly(a)) continue;
-      if (siege && S.owner[p] === a.owner) continue;
+      if (!hold.has(a.owner)) hold.set(a.owner, hazHold(a.owner, p)); if (hold.get(a.owner)) continue;
       let dest = -1, dv = -1; for (const v of G.P[p].nbs){ if (G.P[v].sea || hazAt(v) || !canEnter(a.owner, v)) continue; const sc = (S.owner[v] === a.owner ? 2 : friendly(a.owner, S.owner[v]) ? 1 : 0) - v*1e-6; if (sc > dv){ dv = sc; dest = v; } }
       if (dest >= 0){ const pth = pathFor(a, a.at, dest); if (pth.length){ a.path = pth; a.dest = null; a.forced = true; } } } } }
-// a computer nation's march routes keep out of gas and radiation zones on the way when the detour costs under a day (after its turn: rules/tick.js)
+// a computer nation's march routes keep out of gas and radiation zones on the way when the detour costs under a day, and a march into a zone in its
+// own or a friend's land stops short of it unless it holds a city there (hazHold); an attack on an enemy's province goes on (after its turn: rules/tick.js)
 function aiHazRoutes(n){ if (!S.haz) return; const bad = new Set(); for (const k in S.haz) if (hazAt(+k)) bad.add(+k); if (!bad.size) return;
-  for (const a of S.armies){ if (a.owner !== n || a.air || a.fly || !a.path.length || shipsOnly(a)) continue; const dest = a.path[a.path.length - 1];
+  for (const a of S.armies){ if (a.owner !== n || a.air || a.fly || !a.path.length || shipsOnly(a)) continue; let dest = a.path[a.path.length - 1];
+    if (bad.has(dest) && !(S.owner[dest] >= 0 && S.owner[dest] !== n && atWar(n, S.owner[dest])) && !hazHold(n, dest)){ a.path.pop(); if (a.dest && a.dest.p === dest) a.dest = null; if (!a.path.length) continue; dest = a.path[a.path.length - 1]; }
     if (!a.path.slice(0, -1).some(v => bad.has(v))) continue; const from = a.to !== null ? a.to : a.at, alt = pathFor(a, from, dest, false, bad);
     if (alt.length && etaHours(a, alt) - etaHours(a, a.path) < 24) a.path = alt; } }
 function aiSpies(n){
@@ -684,6 +699,7 @@ function aiTurn0(n, N){
     }
     if (S.bld[p].silo && S.queue[p].length < 2 && N.cash > 320 && rng() < 0.25){ const k = has(n, 'msl2') && rng() < 0.4 ? 'bm' : 'cm'; if (mstock(p)[k] < 3) buildMissile(n, p, k); }
     if (S.bld[p].silo && S.queue[p].length < 2) aiWmdBuild(n, p, N);
+    else if (!S.bld[p].silo && S.queue[p].length < 2 && N.cash > 320 && warsOf(n).length && has(n, MISSILES.cm.tech) && mslHost(p) && rng() < 0.1 && mstock(p).cm < MSL_CITY) buildMissile(n, p, 'cm');   // cruise missiles without a silo too (AI-1: owner point 12), at war only
     if (p === N.capital && S.queue[p].length < 3 && (threatNear(p, n) || enemiesAt(p, n)) && canAfford(n, 'inf')) recruit(n, p, 'inf');   // capital under threat: infantry first, savings or not
     else if (p === N.capital && S.queue[p].length < 2 && warsOf(n).length && canAfford(n, 'inf') && N.cash > 60){ const keep = Math.max(4, Math.min(12, Math.round(units*0.07)));   // at war: keep the garrison topped up
       if (stationaryAt(p).filter(b => b.owner === n && !b.air).reduce((s0, b) => s0 + count(b), 0) + S.queue[p].length < keep) recruit(n, p, 'inf'); }

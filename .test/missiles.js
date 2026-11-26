@@ -265,6 +265,61 @@ const strike = (k, from, to, n = PL) => { f('missileImpact')({id:S.nid++, owner:
   fresh([PL]); api.declareWar(PL, DE); const zq = deLand(); strip(zq); const za = f('addArmy')(DE, zq, {inf:4}); f('setHaz')(zq, 'gas', 12, PL); S.hour++; f('hazHour')(); ok(za.path.length && !f('hazAt')(za.path[0]), 'a computer force walks out of the gas');
   const pa = f('addArmy')(PL, city(PL, 'Warsaw').id, {inf:2}); f('setHaz')(city(PL, 'Warsaw').id, 'gas', 12, DE); S.hour++; f('hazHour')(); ok(!pa.path.length, 'a person\'s force stays where it was put'); }
 
+// ---- 11. polish round 1 (the rules critic's findings)
+{ // M8: a chemical missile at independent land, or a nuclear one at sea, self-destructs when no enemy of the user stands there any more
+  fresh(); grant(PL, 'msl1', 'msl2', 'msl_chem', 'bm_pow', 'msl_nuc'); X('interceptChance = () => 0'); api.declareWar(PL, DE);
+  const w = siloAt(PL, 'Warsaw', 2), M = f('mstock')(w); M.chem = 2; M.nuc = 1; M.wo = PL;
+  const q = G.P.find(P => !P.sea && !P.city && S.owner[P.id] === DE && f('hexDist')(G.P[w].cc, P.cc) < 40).id; S.owner[q] = -1; X('ownChanged()'); strip(q);
+  const a = f('addArmy')(DE, q, {inf:10}), h0 = hp(a);
+  ok(api.launchMissile(PL, w, q, 'chem'), 'chemical at independent land where German forces stand: allowed'); api.applyDeal(PL, DE, 'peace'); hours(12);
+  ok(hp(a) === h0 && !(S.haz && S.haz[q]) && log(PL).some(t => /self-destructed.*no longer at war with Germany/.test(t)) && !log(DE).some(t => /used chemical/.test(t)), 'independent land, peace in flight: it self-destructs (M8)');
+  fresh(); grant(PL, 'msl1', 'msl2', 'bm_pow', 'msl_nuc'); X('interceptChance = () => 0'); api.declareWar(PL, DE);
+  const w2 = siloAt(PL, 'Warsaw', 2), M2 = f('mstock')(w2); M2.nuc = 1; M2.wo = PL;
+  const sq = G.P.filter(P => P.sea && f('hexDist')(G.P[w2].cc, P.cc) < 60).sort((x, y) => f('hexDist')(G.P[w2].cc, x.cc) - f('hexDist')(G.P[w2].cc, y.cc))[0].id; strip(sq);
+  const sh = f('addArmy')(DE, sq, {frig:4}), s0 = hp(sh);
+  ok(api.launchMissile(PL, w2, sq, 'nuc'), 'nuclear at German ships at sea: allowed'); api.applyDeal(PL, DE, 'peace'); hours(12);
+  ok(hp(sh) === s0 && log(PL).some(t => /self-destructed/.test(t)), 'at sea, peace in flight: it self-destructs (M8)');
+  // a neutral garrison alone is no enemy: independent land with only it cannot take a chemical or nuclear missile
+  fresh(); grant(PL, 'msl1', 'msl2', 'msl_chem'); api.declareWar(PL, DE); const w3 = siloAt(PL, 'Warsaw', 1), M3 = f('mstock')(w3); M3.chem = 1; M3.wo = PL;
+  const q3 = G.P.find(P => !P.sea && !P.city && S.owner[P.id] === DE && f('hexDist')(G.P[w3].cc, P.cc) < 40).id; S.owner[q3] = -1; X('ownChanged()'); strip(q3); f('addArmy')(-1, q3, {inf:6});
+  const c3 = f('missileCheck')(PL, w3, q3, 'chem'); ok(!c3.ok && /Independent land/.test(c3.why), 'independent land with only a neutral garrison: refused');
+  // a silo kind launches only from a silo: the silo wrecked, an Army Base left, its chemical missiles wait
+  const tq = deLand(); strip(tq); f('addArmy')(DE, tq, {inf:10}); S.bld[w3].fac = 1; M3.cm = 1; S.bld[w3].silo = 0;
+  const c4 = f('missileCheck')(PL, w3, tq, 'chem'); ok(!c4.ok && /No Missile Silo/.test(c4.why), 'no silo (an Army Base still stands): the chemical missile cannot launch');
+  ok(f('missileCheck')(PL, w3, G.P.filter(P => S.owner[P.id] === DE && !P.sea).sort((x, y) => f('hexDist')(G.P[w3].cc, x.cc) - f('hexDist')(G.P[w3].cc, y.cc))[0].id, 'cm').why !== c4.why, '...a cruise missile there is not refused for the silo');
+  // a nuclear missile building in a Silo II waits when the silo falls to I
+  fresh(); rich(PL); grant(PL, 'msl1', 'msl2', 'bm_pow', 'msl_nuc'); const w5 = siloAt(PL, 'Warsaw', 2); S.queue[w5] = []; ok(api.buildMissile(PL, w5, 'nuc'), 'a nuclear missile starts in a Silo II');
+  S.bld[w5].silo = 1; const h5 = S.queue[w5][0].h; hours(3); ok(S.queue[w5][0] && S.queue[w5][0].h === h5, 'its silo down to I: the missile waits');
+  S.bld[w5].silo = 2; hours(1); ok(S.queue[w5][0].h === h5 - 1, '...and goes on once Silo II stands again');
+  // a city lost and retaken within one hour: its chemical stock is destroyed all the same
+  fresh(); grant(PL, 'msl1', 'msl2', 'msl_chem'); api.declareWar(DE, PL); const w6 = siloAt(PL, 'Warsaw', 1), M6 = f('mstock')(w6); M6.chem = 2; M6.wo = PL;
+  strip(w6); f('capture')(w6, DE); f('capture')(w6, PL); hours(1); ok(f('mstock')(w6).chem === 0 && f('mslStored')(w6, 'chem') === 0, 'lost and retaken within the hour: the chemical stock is gone');
+  // healing in a zone: ground forces none (and the army bar is told so), ships in its port heal
+  fresh(); api.declareWar(PL, DE); const zq = deLand(); strip(zq); const g = f('addArmy')(DE, zq, {inf:4}); g.w.inf = 5; f('setHaz')(zq, 'gas', 12, PL);
+  ok(f('healInfo')(g).kind === 'haz' && f('healInfo')(g).z === 'gas', 'healInfo: a ground force in the gas reads "no healing" (kind haz)');
+  const port = G.P.find(P => P.city && S.owner[P.id] === DE && P.nbs.some(v => G.P[v].sea)).id; strip(port); const fl = f('addArmy')(DE, port, {frig:2}); fl.w.frig = 4; f('setHaz')(port, 'rad', 48, PL);
+  ok(!f('hazHeal')(fl) && f('healInfo')(fl).kind !== 'haz', 'ships in an irradiated port still heal');
+  // the computer's garrisons hold their capital, and a city with enemies next door, through the gas; a march into its own gassed land stops short
+  fresh([PL]); api.declareWar(PL, DE); const cap = S.nations[DE].capital; strip(cap); const gar = f('addArmy')(DE, cap, {inf:5}); f('setHaz')(cap, 'gas', 12, PL); S.hour++; f('hazHour')();
+  ok(!gar.path.length, 'a computer garrison stays in its gassed capital');
+  const dc = G.P.find(P => P.city && S.owner[P.id] === DE && P.id !== cap && P.nbs.some(v => !G.P[v].sea && S.owner[v] === DE)), dn = dc.nbs.find(v => !G.P[v].sea && S.owner[v] === DE); strip(dc.id); strip(dn);
+  const g2 = f('addArmy')(DE, dc.id, {inf:4}); f('setHaz')(dc.id, 'gas', 12, PL); S.hour++; f('hazHour')(); ok(g2.path.length > 0, 'a quiet city: its garrison walks out of the gas');
+  g2.path = []; f('addArmy')(PL, dn, {inf:6}); S.hour++; f('hazHour')(); ok(!g2.path.length, '...but holds it with enemies next door');
+  const ww = G.P.find(P => !P.sea && S.owner[P.id] === DE && P.id !== dc.id && P.nbs.includes(dc.id) && P.id !== dn); if (ww){ strip(ww.id); const mv = f('addArmy')(DE, ww.id, {inf:3}); const dz = G.P.find(P => !P.sea && !P.city && S.owner[P.id] === DE && P.nbs.includes(ww.id)); if (dz){ strip(dz.id); f('setHaz')(dz.id, 'gas', 12, PL); mv.path = [dz.id]; f('aiHazRoutes')(DE); ok(!mv.path.length, 'a computer march ending in its own gassed land stops short of it'); } }
+  // nuclear: no answer at a 1-unit target; a desperate launch only at the front
+  fresh([PL]); X('interceptChance = () => 0'); grant(DE, 'msl1', 'msl2', 'bm_pow', 'msl_nuc'); api.declareWar(PL, DE); const dn2 = S.nations[DE].capital; S.bld[dn2].silo = 2; const sn = f('mstock')(dn2); sn.nuc = 1; sn.wo = DE;
+  for (const P of G.P) if (S.owner[P.id] === PL) strip(P.id);
+  const pn = G.P.filter(P => !P.sea && S.owner[P.id] === PL && f('hexDist')(G.P[dn2].cc, P.cc) <= 80 && P.nbs.every(v => !S.armies.some(a => a.owner === DE && a.at === v)))[0].id; f('addArmy')(PL, pn, {inf:1});
+  S.wmd = [{by:PL, on:DE, k:'chem', h:S.hour - 10, p:dn2}]; f('aiNuc')(DE, dn2); ok(sn.nuc === 1, 'an answer, but only a 1-unit enemy force in range: no nuclear missile');
+  strip(pn); f('addArmy')(PL, pn, {inf:12, tank:6}); f('aiNuc')(DE, dn2); ok(sn.nuc === 0, '...one at 18 units of power 80 or more');
+  // the computer aims cruise missiles at a column arriving within 4 hours (IMP-8), and builds them in a city with an Army Base (at war)
+  fresh([PL]); X('interceptChance = () => 0'); grant(DE, 'msl1'); api.declareWar(PL, DE); const dc2 = S.nations[DE].capital, sc = f('mstock')(dc2); S.bld[dc2].silo = 1; sc.cm = 1;
+  for (const P of G.P) if (S.owner[P.id] === PL) strip(P.id);
+  const tgt = G.P.filter(P => !P.sea && S.owner[P.id] === PL && f('hexDist')(G.P[dc2].cc, P.cc) <= 26 && P.nbs.some(v => !G.P[v].sea && S.owner[v] === PL))[0]; if (tgt){ const fr = tgt.nbs.find(v => !G.P[v].sea && S.owner[v] === PL);
+    const colm = f('addArmy')(PL, fr, {inf:12, tank:6}); colm.to = tgt.id; colm.t = 0.9; f('aiMissiles')(DE); ok(sc.cm === 0 && S.inflight.some(m => m.k === 'cm' && m.owner === DE && m.to === tgt.id), 'a cruise missile at a column arriving within 4 hours'); }
+  fresh([]); rich(DE); grant(DE, 'msl1'); api.declareWar(PL, DE); const hc = G.P.filter(P => P.city && S.owner[P.id] === DE && !S.bld[P.id].silo).map(P => P.id); for (const p of hc){ S.bld[p].fac = Math.max(1, S.bld[p].fac || 0); S.queue[p] = []; }
+  for (let i = 0; i < 40; i++) f('aiTurn')(DE); ok(hc.some(p => S.queue[p].some(it => it.msl && it.t === 'cm') || f('mstock')(p).cm > 0), 'at war, the computer builds cruise missiles in an Army Base city without a silo (AI-1)'); }
+
 // ---- 10. an old save (master 0fb9d76: a silo built with Cruise Missiles only, stocks {cm, bm})
 { const fx = path.join(__dirname, 'fixtures', 'missiles-oldsave.json');
   if (!fs.existsSync(fx)) ok(false, 'the old-save fixture is missing: ' + fx);

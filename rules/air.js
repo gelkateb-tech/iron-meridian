@@ -301,6 +301,7 @@ function missileCheck(n, from, to, k){
   const M0 = mslOf(S.owner[from], k), W = MSL_WMD[k], d = hexDist(G.P[from].cc, G.P[to].cc), o = S.owner[to];
   if (!M0) return {ok:false, why:'Unknown missile.'};
   if (!mslStored(from, k)) return {ok:false, why:`No ${M0.name}s stored here.`};
+  if (M0.silo >= 1 && !(S.bld[from].silo > 0)) return {ok:false, why:`No Missile Silo here: a ${M0.name} launches only from a silo.`};   // (the silo lost to building hits: its stock waits for a new one)
   if (mslDown(from)) return {ok:false, why:S.bld[from].silo > 0 ? `The silo was knocked out by a strike: ${bdisH(from, 'silo')} h.` : mslHost(from) ? `Its Army Base, Airbase and Naval Yard are knocked out: ${bdisH(from)} h.` : 'Nothing here can launch it: it needs a Missile Silo, or an Army Base, Airbase or Naval Yard.'};
   if (d > M0.range) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km (max ${M0.range*KM_HEX} km).`};
   if (W){ const L = S.nations[n].wmdT && S.nations[n].wmdT[k]; if (L != null && S.hour - L < W.cd) return {ok:false, why:`One ${M0.name} launch every ${W.cd} h: the next in ${W.cd - (S.hour - L)} h.`};
@@ -309,7 +310,7 @@ function missileCheck(n, from, to, k){
   if (G.P[to].sea && !stationaryAt(to).some(b => atWar(n, b.owner))) return {ok:false, why:'No targets at sea there.'};
   if (o >= 0 && o !== n && !atWar(n, o)) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   if (o === n && !stationaryAt(to).some(b => atWar(n, b.owner))) return {ok:false, why:'No enemies there.'};
-  if (W && o < 0 && !G.P[to].sea && !stationaryAt(to).some(b => atWar(n, b.owner) && count(b) > 0)) return {ok:false, why:`Independent land: a ${M0.name} only where your enemies stand.`};
+  if (W && o < 0 && !G.P[to].sea && !wmdFoesAt(n, to)) return {ok:false, why:`Independent land: a ${M0.name} only where your enemies stand.`};
   return {ok:true, d, hours:Math.max(M0.minH || 2, Math.ceil(d/M0.speed))};
 }
 function launchMissile(n, from, to, k){
@@ -344,8 +345,10 @@ function missileTick(){
 function missileImpact(m){
   const P = G.P[m.to];   // the blast events go to every client: each shows them for its own seat's missile, its own land, or what its seat can see
   // a chemical or nuclear missile arriving where its user is now at peace, or over its own land, self-destructs: nothing happens (M8)
-  if (MSL_WMD[m.k]){ const o = S.owner[m.to]; if (o === m.owner || (o >= 0 && !atWar(m.owner, o))){ IM.emit('mslGone', {m, owner:o});
-      if (isSeat(m.owner)) tell(m.owner, `Your ${MISSILES[m.k].name} self-destructed over ${P.cityName || P.name}: ${o === m.owner ? 'the province is yours now' : `you are no longer at war with ${nationName(o)}`}.`, 'info', m.to);
+  // (land nobody holds, or the sea: only where a nation's forces at war with the user still stand; a victim now at peace counts for nothing there)
+  if (MSL_WMD[m.k]){ const o = S.owner[m.to], gone = o === m.owner || (o >= 0 && !atWar(m.owner, o)) || (o < 0 && !wmdFoesAt(m.owner, m.to)); if (gone){ IM.emit('mslGone', {m, owner:o});
+      const why = o === m.owner ? 'the province is yours now' : o >= 0 ? `you are no longer at war with ${nationName(o)}` : m.vic >= 0 && !atWar(m.owner, m.vic) ? `you are no longer at war with ${nationName(m.vic)}` : 'no enemy of yours stands there now';
+      if (isSeat(m.owner)) tell(m.owner, `Your ${MISSILES[m.k].name} self-destructed over ${P.cityName || P.name}: ${why}.`, 'info', m.to);
       return; } }
   if (rng() < interceptChance(m)){
     IM.emit('fxMissile', {m, hit:false, owner:S.owner[m.to], by:interceptorOf(m)});
@@ -393,7 +396,9 @@ function setHaz(p, k, hrs, by){ const H = S.haz || (S.haz = {}), z = H[p];
 const hazAt = p => { const z = S.haz && S.haz[p]; return z && S.hour < z.until ? z : null; };
 const hazFight = p => { const z = S.haz && S.haz[p]; return z && S.hour < z.until ? MSL_WMD[z.k === 'gas' ? 'chem' : 'nuc'].fight : 1; };   // attack and defence in the zone (battle and ranged fire)
 const hazOut = p => { const z = S.haz && S.haz[p]; return z && z.k === 'rad' && S.hour < z.until ? MSL_WMD.nuc.out : 1; };   // radiation: the province makes half
-const hazHeal = a => !a.air && !!hazAt(a.at);   // no healing in a zone
+const hazHeal = a => !a.air && !!hazAt(a.at) && !shipsOnly(a);   // no healing in a zone (ships in its port are untouched by it, and heal)
+// a nation's forces at war with n standing at p (independent land or the sea: a neutral garrison is no enemy for a chemical or nuclear missile)
+const wmdFoesAt = (n, p) => stationaryAt(p).some(b => b.owner >= 0 && b.owner !== n && atWar(n, b.owner) && count(b) > 0);
 // the hourly share a zone takes: gas 2.5% of the present health, radiation 2% falling to 0 over its 48 h
 const hazRate = z => z.k === 'gas' ? MSL_WMD.chem.rate : MSL_WMD.nuc.rate*Math.max(0, z.until - S.hour)/Math.max(1, z.until - z.h0);
 // one hour of a zone on force a (ground units only: aircraft and ships untouched; armour half; CBRN Defence; the Bunker as on any hit)
@@ -403,7 +408,8 @@ function hazHurt(a, z){ const W = MSL_WMD[z.k === 'gas' ? 'chem' : 'nuc'], f = h
     while (a.w[t] >= UNITS[t].hp - 1e-9 && a.u[t] > 0){ a.w[t] = Math.max(0, a.w[t] - UNITS[t].hp); a.u[t]--; lost++; } if (!a.u[t]) a.w[t] = 0; }
   return {dmg, lost}; }
 // the hourly step of the zones (rules/tick.js, after the missiles): every ground force in a zone takes its share, a zone ends at its hour; a chemical
-// or nuclear stock in a city its builder no longer holds is destroyed (M8); computer forces walk out of a zone (aiHazOut, rules/ai.js)
+// or nuclear stock in a city its builder no longer holds is destroyed (M8: at once, from ownChanged, and again here for safety); computer forces walk
+// out of a zone (aiHazOut, rules/ai.js)
 function hazHour(){ wmdSweep(); const H = S.haz; if (!H) return; let any = false;
   for (const k in H){ const z = H[k], p = +k; if (S.hour >= z.until){ delete H[k]; continue; } any = true; let dmg = 0, lost = 0;
     for (const a of S.armies){ if (a.at !== p || a.air || a.fly || !count(a)) continue; const r = hazHurt(a, z); dmg += r.dmg; lost += r.lost;
@@ -420,7 +426,7 @@ function wmdSweep(){ const M = S.mstock; if (!M) return;
 // user that now thinks ill of it leaves the alliance (docs/MISSILES.md 9)
 function wmdLaunch(n, m){ const W = MSL_WMD[m.k], N = S.nations[n], v = m.vic = wmdVictim(n, m.to);
   (N.wmdT || (N.wmdT = {}))[m.k] = S.hour;
-  (S.wmd || (S.wmd = [])).push({by:n, on:v, k:m.k, h:S.hour, p:m.to}); S.wmd = S.wmd.filter(e => S.hour - e.h <= 14*24);
+  (S.wmd || (S.wmd = [])).push({by:n, on:v, k:m.k, h:S.hour, p:m.to, f:m.from}); S.wmd = S.wmd.filter(e => S.hour - e.h <= 14*24);
   if (v >= 0) addMem(v, n, W.mem[0]);
   for (const c of S.nations) if (c.alive && c.id !== n && c.id !== v) addMem(c.id, n, v >= 0 && atWar(c.id, v) ? W.mem[2] : W.mem[1]);
   if (m.k !== 'nuc') return;

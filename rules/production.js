@@ -156,7 +156,7 @@ function mslDone(p, k){ const m = mstock(p); if (MSL_WMD[k]){ if (m.wo !== S.own
 // the hour steps of production, construction, unit upgrades and research (one province / nation each; tick() runs them every game hour)
 function prodHour(p){ const q = S.queue[p];
     if (S.owner[p] < 0){ q.length = 0; return; }
-    { const it0 = q[0]; if (it0.msl ? mslDown(p) : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits (missiles: the silo, or a city's every launcher)
+    { const it0 = q[0]; if (it0.msl ? mslDown(p) || !mslSite(p, it0.t) : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits (missiles: the silo, or a city's every launcher; a missile whose silo level was wrecked below its own waits for it)
     const lines = 1 + S.bld[p].fac;            // each Army Base level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mslDone(p, it.t); if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
