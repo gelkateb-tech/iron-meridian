@@ -307,6 +307,7 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 - UC4. At the world view, should every city have a diamond, not only capitals and occupied cities? (no)
 - UC5. Should provinces without a city get a diamond on their centre? (no)
 - UC6. Zoomed right in, the city's name moves beside the ring while an army holds the city. Keep? (yes)
+- **Owner's answer, 2026-11-26 (verbatim):** "Correction to my last answers, UNITS IN CITIES, UC2: no, not your default. The dot is the army's true position (my position-dot rule) and must never move. When something is in the way, move the counter aside instead, with a thin line to its dot. Everything else in that block stands." Read as: UC2 = the dot never moves, the counter moves aside with a thin line to its dot; UC1, UC3, UC4, UC5, UC6 = my defaults (yes, yes, no, no, yes). Job UC-DOT.
 
 ## REBELS questions, 2026-11-26 (rebels-2 776769e, phone sheets sent; my default in brackets)
 - RB1. Is "a garrison fights rebels to the end and never retreats" the right reading of "rebels attack them, the city stays mine"? (yes)
