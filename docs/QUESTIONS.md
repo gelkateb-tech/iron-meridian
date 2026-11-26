@@ -243,7 +243,7 @@ This also concerns the rebels branch (REB-2).
 - C: today's rule.
 
 **Until you answer.** A, both halves. The fix (auto-test/fixes 0156928, B3.10) stands the partisans down whenever the province is
-home land of its holder. A peace cede makes the ceded land the receiver's home land (cede() sets `S.home`), so it is covered too:
+home land of its holder. A peace cede makes the ceded land the receiver's home land (cede() sets `S.home`; on rebels-2 ceded land instead stays annexed with its old home country and its rebels lay down their arms, see RB5), so it is covered too:
 rebelhome.js peace on the branch keeps Tromsø with Finland (it went independent before). If you want partisans to keep fighting in land
 ceded at peace (B), that is one condition to undo for the cede path.
 
@@ -314,7 +314,7 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 - RB2. Should poor computer nations keep a smaller cash reserve before annexing, so they annex too (Vietnam never does)? (yes: reserve = half the price instead of $150M)
 - RB3. Keep the extra "Mobilisation (homeland only)" row in the morale list (−5 per mobilisation level, homeland)? (yes)
 - RB4. Old saves: is a 24 h grace with no risings enough, or should converted cities also get a 34% floor? (24 h grace only)
-- RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes)
+- RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country, but rebels in it lay down their arms (Q27 A); gifted land arrives as the receiver's home land (Q28 B); land bought in a sale arrives annexed (not occupied) unless it was the buyer's own home land; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes) [updated 2026-11-26 after the REBELS refresh reconciled Q27/Q28]
 
 ## Owner's answers, 2026-11-26 (verbatim)
 
