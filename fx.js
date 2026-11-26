@@ -127,6 +127,93 @@ function afxAmbient(now, vis){
   for (const [p, m] of AFX.heat){ const age = S.hour - m.h; if (age < 0 || age > m.d || S.battles.includes(p)){ if (age < 0 || age > m.d) AFX.heat.delete(p); continue; }
     const P = G.P[p]; if (afxOff(P.x, P.y, 100) || !vis.has(p)) continue; const f = 1 - age/m.d;
     if (afxTimer('c' + p, now, 700 + (1 - f)*1400 + Math.random()*400)) afxPuff(P.x + (Math.random() - 0.5)*5, P.y + (Math.random() - 0.5)*3, {s0:4, s1:13 + 9*f, a:0.22 + 0.14*f, dur:5200 + Math.random()*2400, vx:windX(5, 4), vy:-(8 + Math.random()*5) + windY(5, 4)}); } }
+/* ---- burning cities (owner point 10; docs/REBELS-PLAN.md 6.2). Every city held by a nation whose morale shows 33% or lower (the rules' MOR.rebelAt,
+   read with morShown) burns where the viewer can see it (its own cities always, others where the fog allows: question 16). Display only: it reads
+   the morale and nothing else, keeps no particles in the shared pool and never casts a die. It fades in over 1 s and goes out over 2 s.
+   Each look is a pure function of the clock (and the city's own phase), drawn from sprites made once, so a frame costs a few drawImage calls:
+   - effects High (desktop): flame tongues over the city's centre (additive, white-yellow core to orange to a dark-red tip, each flickering at its own
+     6-10 Hz), a soft orange glow on the ground, and a column of smoke puffs drifting with the display wind (windSync), dark at the base and greying as
+     they rise, lit orange from below at night. 26-33%: 5 tongues and 5 puffs; 25% and lower: 7 and 7, drawn 25% larger. At most 12 cities animated
+     (those nearest the middle of the screen), the others the still flame. Frames: ambient (animAmb: they rest with the rest of the ambient motion).
+   - effects Low (the phone default, or the Battery saver): a 4-frame flame sprite cycled at 8 fps and one smoke puff every 1.5 s; 25% and lower 20%
+     larger; at most 6 animated. Frames: one every 125 ms, only while a burning city is on screen and the game runs or the map was touched lately
+     (PG.fireTick: the ambient rule), so a paused, untouched map draws nothing.
+   - effects Off, reduce motion, or zoomed out (below hexPx 7, where city smoke stops today): the still flame only, beside the city's name.
+   The size follows the city (town x0.8, city x1, large city x1.2, metropolis x1.4) and the zoom (kzNow, within its usual limits). */
+const CF = {S:null, G:null, cities:[], set:new Set(), st:new Map(), first:true, spr:null, tg:null, n:0, anim:0, ms:0, gl:null};
+const CF_MAX = [0, 6, 12];
+// the burning cities, read every frame (a few hundred cities: microseconds), so an Incite revolt or a capture shows at once
+function cfSet(){ if (CF.S !== S){ CF.S = S; CF.st.clear(); CF.first = true; } if (CF.G !== G){ CF.G = G; CF.cities = G.P.filter(P => P.city).map(P => P.id); }
+  const set = CF.set; set.clear(); for (const p of CF.cities) if (S.owner[p] >= 0 && morShown(p) <= MOR.rebelAt) set.add(p);
+  return set; }
+const cfBand = p => { const pp = popOf(p); return pp >= 20 ? 1.4 : pp >= 5 ? 1.2 : pp >= 1.5 ? 1 : 0.8; };
+const cfPh = p => fxh(p*7919 + 13);   // (each city its own phase: they never flicker in step)
+// the flame tongue (one teardrop, its gradient drawn once) and the 4 frames of the phone's flame (3 tongues each)
+// a candle-like teardrop: round at its foot, pointed at its tip; an orange-to-dark-red body with a white-yellow core in its lower half
+const cfDrop = (g, cx, by, w, h) => { g.beginPath(); g.moveTo(cx, by); g.bezierCurveTo(cx - w*0.95, by, cx - w, by - h*0.3, cx - w*0.62, by - h*0.52); g.bezierCurveTo(cx - w*0.3, by - h*0.72, cx - w*0.05, by - h*0.82, cx, by - h);
+  g.bezierCurveTo(cx + w*0.05, by - h*0.82, cx + w*0.3, by - h*0.72, cx + w*0.62, by - h*0.52); g.bezierCurveTo(cx + w, by - h*0.3, cx + w*0.95, by, cx, by); g.closePath(); };
+function cfTongue(){ if (CF.tg) return CF.tg; const c = document.createElement('canvas'); c.width = 32; c.height = 64; const g = c.getContext('2d');
+  let gr = g.createLinearGradient(0, 64, 0, 0); gr.addColorStop(0, 'rgba(255,190,80,.95)'); gr.addColorStop(0.35, 'rgba(255,128,26,.9)'); gr.addColorStop(0.72, 'rgba(214,52,14,.6)'); gr.addColorStop(1, 'rgba(150,20,4,0)');
+  g.fillStyle = gr; cfDrop(g, 16, 63, 15, 63); g.fill();
+  gr = g.createLinearGradient(0, 64, 0, 18); gr.addColorStop(0, 'rgba(255,255,236,.98)'); gr.addColorStop(0.45, 'rgba(255,232,120,.9)'); gr.addColorStop(1, 'rgba(255,190,60,0)');
+  g.fillStyle = gr; cfDrop(g, 16, 61, 8, 40); g.fill(); return (CF.tg = c); }
+// the phone's 4 frames: an ember bed and 4 tongues (the middle ones tallest) whose heights and lean change from frame to frame
+function cfFrames(){ if (CF.spr) return CF.spr; CF.spr = []; const H = [[16, 26, 21, 13], [13, 22, 27, 15], [17, 27, 20, 12], [12, 21, 25, 17]], L = [0.6, -0.4, 0.2, -0.7];
+  for (let f = 0; f < 4; f++){ const c = document.createElement('canvas'); c.width = c.height = 48; const g = c.getContext('2d');
+    const eb = g.createRadialGradient(24, 45, 0, 24, 45, 15); eb.addColorStop(0, 'rgba(255,150,50,.85)'); eb.addColorStop(0.55, 'rgba(170,40,10,.55)'); eb.addColorStop(1, 'rgba(60,10,4,0)'); g.fillStyle = eb; g.beginPath(); g.ellipse(24, 45, 15, 4.5, 0, 0, Math.PI*2); g.fill();
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++){ const h = H[f][i], w = 5.2 + (i === 1 || i === 2 ? 1.2 : 0), cx = 13.5 + i*7; g.save(); g.translate(cx, 46); g.transform(1, 0, L[(f + i) % 4]*0.18, 1, 0, 0); g.drawImage(cfTongue(), -w, -h, w*2, h); g.restore(); }
+    CF.spr.push(c); }
+  return CF.spr; }
+const CFSM = () => softSprite('cfsm', 'rgba(38,34,31,.85)', 'rgba(50,46,42,.42)', 'rgba(60,56,52,0)');   // (a soft dark core under the smoke's puffs: it reads on a busy map)
+const CFGLOW = () => softSprite('cfglow', 'rgba(255,176,70,.95)', 'rgba(255,124,32,.38)', 'rgba(255,90,20,0)');
+// the fade of each burning city: 0..1 (1 s in, 2 s out), and whether a fade still runs
+function cfFade(set, now){ let run = false;
+  for (const p of set){ const e = CF.st.get(p); if (!e) CF.st.set(p, {on:true, t:CF.first ? now - 1e4 : now}); else if (!e.on){ const a = Math.max(0, 1 - (now - e.t)/2000); e.on = true; e.t = now - a*1000; } }
+  for (const [p, e] of CF.st){ if (e.on && !set.has(p)){ const a = Math.min(1, (now - e.t)/1000); e.on = false; e.t = now - (1 - a)*2000; }
+    e.a = e.on ? Math.min(1, (now - e.t)/1000) : 1 - (now - e.t)/2000; if (!e.on && e.a <= 0){ CF.st.delete(p); continue; } if (e.a < 0) e.a = 0; if (e.a < 1) run = true; }
+  CF.first = false; return run; }
+// the still flame: frame 0 of the phone's sprite, px css px high, its foot at (x, y)
+function cfStill(g, x, y, px, a){ g.globalAlpha = a; g.drawImage(cfFrames()[0], x - px/2, y - px, px, px); }
+// one burning city, desktop look
+function cfHigh(g, x, y, k, big, a, t, nt, WD){ const n = big ? 7 : 5, kk = k*(big ? 1.25 : 1), tg = cfTongue();
+  // smoke: a column of puffs rising and widening downwind, dark at the base and greying as they rise
+  const dx = WD.wx/(Math.hypot(WD.wx, WD.wy) || 1), sl = SMOKEL(), sd = CFSM();
+  for (let i = 0; i < n; i++){ const a0 = (t*0.3 + i/n) % 1, py = y - 6*kk - a0*88*kk, px = x + a0*26*kk*dx + Math.sin(i*2.1 + t*0.9)*3*kk, r = (7 + a0*18)*kk, al = a*0.9*(1 - a0)*(big ? 1 : 0.85)*Math.min(1, a0*6);
+    if (al < 0.01) continue; g.globalAlpha = al*0.7*(1 - a0*0.6); g.drawImage(sd, px - r*0.8, py - r*0.8, r*1.6, r*1.6); g.globalAlpha = Math.min(1, al*1.3*(1 - a0*0.5)); g.drawImage(puffSprite(i % 4, true), px - r, py - r, r*2, r*2);
+    g.globalAlpha = al*a0*0.9; g.drawImage(sl, px - r, py - r, r*2, r*2);
+    if (nt > 0.05 && a0 < 0.45){ g.globalCompositeOperation = 'lighter'; g.globalAlpha = al*nt*0.5*(1 - a0/0.45); g.drawImage(CFGLOW(), px - r*0.8, py - r*0.4, r*1.6, r*1.2); g.globalCompositeOperation = 'source-over'; } }
+  g.globalCompositeOperation = 'lighter';
+  const gr = 26*kk*(1 + 0.35*nt); g.globalAlpha = a*(0.42 + 0.33*nt)*(0.9 + 0.1*Math.sin(t*9.1)); g.drawImage(CFGLOW(), x - gr, y - gr*0.55, gr*2, gr*1.1);
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = a; const eb = cfEmber(), ew = (n*2.8 + 6)*kk; g.drawImage(eb, x - ew, y - ew*0.32, ew*2, ew*0.64);
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < n; i++){ const mid = 1 - Math.abs(i - (n - 1)/2)/((n - 1)/2 + 0.5), fx = x - (n - 1)*2.3*kk + i*4.6*kk, fl = 0.72 + 0.28*Math.sin(t*2*Math.PI*(6 + i*0.6) + i*1.7), h = (9 + 17*mid + (i % 2)*3)*kk*fl, w = (4.6 + 2.6*mid)*kk;
+    g.globalAlpha = a*0.95; g.save(); g.translate(fx, y); g.transform(1, 0, 0.16*Math.sin(t*3.1 + i*1.3) + 0.12*WD.ux, 1, 0, 0); g.drawImage(tg, -w, -h, w*2, h); g.restore(); }
+  g.globalCompositeOperation = 'source-over'; }
+// the ember bed under the desktop's tongues (drawn once)
+function cfEmber(){ if (CF.eb) return CF.eb; const c = document.createElement('canvas'); c.width = 64; c.height = 20; const g = c.getContext('2d'), eb = g.createRadialGradient(32, 10, 0, 32, 10, 32);
+  eb.addColorStop(0, 'rgba(255,160,60,.9)'); eb.addColorStop(0.5, 'rgba(170,40,10,.55)'); eb.addColorStop(1, 'rgba(60,10,4,0)'); g.setTransform(1, 0, 0, 0.3125, 0, 6.875); g.fillStyle = eb; g.beginPath(); g.arc(32, 10, 32, 0, Math.PI*2); g.fill(); return (CF.eb = c); }
+// one burning city, phone look: a frame of the 4-frame sprite and one puff
+function cfLow(g, x, y, k, big, a, t, nt, anim){ const kk = k*(big ? 1.2 : 1), S0 = 34*kk;
+  if (anim){ const a0 = (t/1.5) % 1, r = (9 + a0*14)*kk, py = y - 14*kk - a0*60*kk, px = x + a0*12*kk*Math.sign(windSync().wx || 1); const al = a*(1 - a0)*Math.min(1, a0*5); g.globalAlpha = al*0.6; g.drawImage(CFSM(), px - r*0.8, py - r*0.8, r*1.6, r*1.6); g.globalAlpha = al; g.drawImage(SMOKE(), px - r, py - r, r*2, r*2); }
+  if (nt > 0.05){ g.globalCompositeOperation = 'lighter'; g.globalAlpha = a*nt*0.5; const gr = 22*kk; g.drawImage(CFGLOW(), x - gr, y - gr*0.55, gr*2, gr*1.1); g.globalCompositeOperation = 'source-over'; }
+  g.globalAlpha = a; g.drawImage(cfFrames()[anim ? Math.floor(t*8) % 4 : 0], x - S0/2, y - S0*0.95, S0, S0); }
+// per frame, under the counters: every burning city on screen. lab: this frame's name boxes (index.html LPL), for the still flame beside a name
+function drawCityFire(now, vis, lab){ if (!PG.booted || !S || !S.mor) return; const t0 = performance.now();
+  const set = cfSet(), fading = cfFade(set, now); CF.n = CF.anim = 0; if (!CF.st.size) return;
+  const lv = fxLv(), red = PG.afxReduced(), hexPx = PG.view.s*HS0, far = hexPx < 7, still = !lv || red || far, kz = Math.max(0.7, Math.min(1.5, kzNow())), g = PG.ctx, WD = windSync(), list = [];
+  for (const [p, e] of CF.st){ if (!vis.has(p) && S.owner[p] !== PG.PLAYER) continue; const P = G.P[p], [x, y] = PG.toScreen(P.x, P.y); if (x < -80 || y < -40 || x > PG.cw + 80 || y > PG.ch + 140) continue;
+    list.push({p, x, y, a:e.a, d:Math.hypot(x - PG.cw/2, y - PG.ch/2)}); }
+  if (!list.length) return; CF.n = list.length; list.sort((A, B) => A.d - B.d);
+  g.save(); g.setTransform(PG.dpr, 0, 0, PG.dpr, 0, 0); const cap = still ? 0 : CF_MAX[lv];
+  for (let i = 0; i < list.length; i++){ const q = list[i], P = G.P[q.p], big = morShown(q.p) <= MOR.rebel25, k = kz*cfBand(q.p);
+    if (far){ const b = lab && lab.get(q.p), px = Math.max(11, Math.min(16, 12*PG.zx())); if (b) cfStill(g, b[0] - px*0.45, b[1] + (b[3] - b[1])*0.5 + px*0.5, px, q.a); else cfStill(g, q.x, q.y - 2, px, q.a); continue; }
+    const anim = i < cap, ph = cfPh(q.p), t = now/1000 + ph*10, nt = nightP(q.p);
+    if (anim && lv === 2) cfHigh(g, q.x, q.y + 2*k, k, big, q.a, t, nt, WD); else cfLow(g, q.x, q.y + 2*k, k, big, q.a, t, nt, anim);
+    if (anim) CF.anim++; }
+  g.restore();
+  if (CF.anim){ if (lv === 2) PG.animAmb(); else PG.fireTick(125); } else if (fading && !still) PG.fireTick(125); else if (fading) PG.animAmb();
+  const dt = performance.now() - t0; CF.last = dt; CF.ms = CF.ms ? CF.ms*0.9 + dt*0.1 : dt; }
 // crater decals: settled craters (past their 300 ms grow-in) are drawn once into CRD.cv, a canvas aligned with the layer (same margins, origin,
 // scale and pixel ratio), and laid over the map with one 'multiply' blit of the part that holds craters; only the grow-in is drawn live.
 // The canvas is redone when the layer moves or rescales, a crater is deepened or removed, or the game hour turns (the slow age fade steps
@@ -1138,7 +1225,7 @@ function tapCombat(a){ if (!a || a.air || !count(a)) return false; const A = ANI
    WARN, MARKS, the strike effects ...), so the loop stops drawing when nothing is active (Battery saver: no draws when static). Off-screen
    effects are not drawn (their clocks run on). Effects quality: SET.fx 'high' | 'low' | 'off' (fxLv); the default is High on a desktop, Low
    on a phone, and the device's reduce-motion setting counts as Low (no screen shake, fewer particles, no contrails). */
-const fxStats = () => ({part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
+const fxStats = () => ({cf:{n:CF.n, anim:CF.anim, ms:+CF.ms.toFixed(3), burning:CF.set.size}, part:PART.length, partFx:PCNT.f, partSmoke:PCNT.s, live:fxLive(), proj:PROJ.length, cq:CQ.length, warn:WARN.length, marks:MARKS.length, wfx:WFX.list.length, puffs:BSM.puffs.length, art:AFX.puff.length + AFX.boom.length, pool:[PFREE.length, PRFREE.length]});
 
 // a lost graphics context (index.html gfxReset): the canvases' pixels are gone, so the sprites and the crater canvas are made again
 const gfxReset = () => { for (const k in SPR) delete SPR[k]; AFX.mips.clear(); if (CRD.cv) CRD.cv.width = CRD.cv.height = 0; CRD.cv = null; CRD.key = ''; };
@@ -1160,6 +1247,8 @@ return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, m
   WFX,
   WRECKS,
   afxAmbient,
+  drawCityFire,
+  CF,
   afxCrater,
   afxMark,
   afxPuff,
