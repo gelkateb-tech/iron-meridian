@@ -6,9 +6,17 @@ is also saved to the repo, on the branch "shots" (never on master, never
 merged), one folder per day and job, JPG at most 1600 px wide; keep only the
 last 14 days and rewrite the branch when old ones are removed.
 
+Owner's second rule (2026-11-26): every message sent to the owner is also saved
+word for word on the same branch, in messages/<date>/<HH-MM>-<job>.md (one file
+per message, naming the picture folders it refers to). Picture folders hold
+pictures only. Same 14-day cleanup for both.
+
 Usage:
   python3 -I tools/push-shots.py <YYYY-MM-DD> <job> <file> [<file> ...]
       [--name <file>=<new-name>] [--no-push]
+  python3 -I tools/push-shots.py --msg <YYYY-MM-DD> <HH-MM> <job> <message.md>
+      [--pics shots/<date>/<job>/,...] [--no-push]
+Times are UTC.
 
 Files land at shots/<date>/<job>/<name>.jpg in the worktree WT (created as an
 orphan branch on first use). If any day folder is older than 14 days it is
@@ -31,15 +39,16 @@ MAXW = 1600
 KEEP_DAYS = 14
 TRAILER = ('Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n'
            'Claude-Session: https://claude.ai/code/session_01KVGBc2Umi6eiR6tSvLXXtJ')
-README = """# Screenshots for the owner
+README = """# Screenshots and messages for the owner
 
-This branch only holds the screenshots and sheets sent to the owner, so they can
-be reviewed from another chat. It is never merged into master.
+This branch only holds the screenshots, sheets and messages sent to the owner,
+so they can be reviewed from another chat. It is never merged into master.
 
-- One folder per day and job: shots/<date>/<job>/
-- JPG, at most 1600 px wide.
+- Pictures: shots/<date>/<job>/ (JPG, at most 1600 px wide, pictures only).
+- Messages: messages/<date>/<HH-MM>-<job>.md, word for word, one file per
+  message, ending with the picture folders it refers to. Times are UTC.
 - Only the last 14 days are kept; when older days are removed the branch is
-  rewritten (squashed), so old pictures leave the history.
+  rewritten (squashed), so old files leave the history.
 """
 
 
@@ -99,9 +108,71 @@ def push(force):
     raise SystemExit('push failed')
 
 
+def prune_and_commit(today, label, nopush):
+    pruned = []
+    for top in ('shots', 'messages'):
+        root = os.path.join(WT, top)
+        if not os.path.isdir(root):
+            continue
+        for d in sorted(os.listdir(root)):
+            try:
+                dd = datetime.date.fromisoformat(d)
+            except ValueError:
+                continue
+            if (today - dd).days >= KEEP_DAYS:
+                shutil.rmtree(os.path.join(root, d))
+                pruned.append(f'{top}/{d}')
+    git('add', '-A')
+    has_head = subprocess.run(['git', 'rev-parse', '-q', '--verify', 'HEAD'], cwd=WT,
+                              capture_output=True).returncode == 0
+    if pruned and has_head:
+        # rewrite: one fresh root commit holding only what is kept
+        tree = git('write-tree')
+        msg = f'Shots: last {KEEP_DAYS} days (removed {", ".join(pruned)})\n\n{TRAILER}'
+        c = subprocess.run(['git', 'commit-tree', tree], cwd=WT, input=msg, text=True,
+                           capture_output=True, check=True).stdout.strip()
+        git('reset', '-q', '--soft', c)
+    elif git('status', '--porcelain'):
+        git('commit', '-q', '-m', f'{label}\n\n{TRAILER}')
+    if not nopush:
+        push(force=bool(pruned and has_head))
+        if pruned:
+            git('reflog', 'expire', '--expire=now', '--all', check=False)
+            git('gc', '-q', '--prune=now', check=False)
+    if pruned:
+        print('removed (branch rewritten): ' + ', '.join(pruned))
+
+
+def main_msg(argv, nopush):
+    pics = []
+    if '--pics' in argv:
+        i = argv.index('--pics')
+        pics = [x.strip() for x in argv[i + 1].split(',') if x.strip()]
+        del argv[i:i + 2]
+    if len(argv) != 4 or not re.fullmatch(r'\d\d-\d\d', argv[1]):
+        raise SystemExit(__doc__)
+    day, hm, job, src = argv[0], argv[1], slug(argv[2]), argv[3]
+    today = datetime.date.fromisoformat(day)
+    ensure_wt()
+    text = open(src, encoding='utf-8').read().rstrip('\n') + '\n'
+    text += '\n---\nPictures: ' + (', '.join(f'`{p}`' for p in pics) if pics else 'none') + '\n'
+    dst = os.path.join(WT, 'messages', day, f'{hm}-{job}.md')
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    n = 2
+    while os.path.exists(dst):
+        dst = os.path.join(WT, 'messages', day, f'{hm}-{job}-{n}.md')
+        n += 1
+    with open(dst, 'w', encoding='utf-8') as f:
+        f.write(text)
+    prune_and_commit(today, f'Message {day} {hm}: {job}', nopush)
+    print('message: ' + os.path.relpath(dst, WT))
+
+
 def main(argv):
     nopush = '--no-push' in argv
     argv = [a for a in argv if a != '--no-push']
+    if argv and argv[0] == '--msg':
+        return main_msg(argv[1:], nopush)
     names = {}
     while '--name' in argv:
         i = argv.index('--name')
@@ -119,40 +190,10 @@ def main(argv):
         dst = os.path.join(WT, 'shots', day, job, slug(os.path.splitext(base)[0]) + '.jpg')
         save(f, dst)
         out.append(os.path.relpath(dst, WT))
-    # prune days older than KEEP_DAYS
-    pruned = []
-    root = os.path.join(WT, 'shots')
-    for d in sorted(os.listdir(root)):
-        try:
-            dd = datetime.date.fromisoformat(d)
-        except ValueError:
-            continue
-        if (today - dd).days >= KEEP_DAYS:
-            shutil.rmtree(os.path.join(root, d))
-            pruned.append(d)
-    git('add', '-A')
-    has_head = subprocess.run(['git', 'rev-parse', '-q', '--verify', 'HEAD'], cwd=WT,
-                              capture_output=True).returncode == 0
-    if pruned and has_head:
-        # rewrite: one fresh commit holding only what is kept
-        tree = git('write-tree')
-        msg = f'Shots: last {KEEP_DAYS} days (removed {", ".join(pruned)})\n\n{TRAILER}'
-        c = subprocess.run(['git', 'commit-tree', tree], cwd=WT, input=msg, text=True,
-                           capture_output=True, check=True).stdout.strip()
-        git('reset', '-q', '--soft', c)
-        git('reset', '-q', c)
-    elif git('status', '--porcelain'):
-        git('commit', '-q', '-m', f'Shots {day}: {job} ({len(out)})\n\n{TRAILER}')
-    if not nopush:
-        push(force=bool(pruned and has_head))
-        if pruned:
-            git('reflog', 'expire', '--expire=now', '--all', check=False)
-            git('gc', '-q', '--prune=now', check=False)
+    prune_and_commit(today, f'Shots {day}: {job} ({len(out)})', nopush)
     print(f'folder: shots/{day}/{job}/')
     for o in out:
         print('  ' + o)
-    if pruned:
-        print('removed days (branch rewritten): ' + ', '.join(pruned))
 
 
 if __name__ == '__main__':
