@@ -6803,7 +6803,7 @@ const BN_LOTR = {hq:{t:0, a:-Math.PI/2}, fac:{t:0, a:Math.PI}, fort:{t:0, a:0}, 
 // each lot's bit in a town's mask (the square round the point 1, the HQ's own lot 2; a neighbour's lots one bit)
 // the middle's buildings: the footprint density their lot first needs (among the blocks) and their turn from the town's mass direction; the
 // border's ribbon kept off every picture's box (world px)
-const BN_LOTDN = {fac:[0.35, 0.6], fort:[0.35, -0.6], rec:[0.3, 0], arms:[0.2, 1.2]}, BN_LOTBD = 2.5*KM_W;
+const BN_LOTDN = {fac:[0.6, 0.6], fort:[0.6, -0.6], rec:[0.55, 0], arms:[0.2, 1.2]}, BN_LOTBD = 2.5*KM_W;
 const BN_LOTB = k => k === 'hq' ? 2 : 1 << (2 + BN_LOTS.indexOf(k)), BN_LOTFC = 1, BN_LOTNB = 1 << 20, BN_LOTALL = 0x1fffff;
 // an empty lot's small park (its own bit): before its building stands or goes up a lot of the middle is only this, about a level I picture's
 // ground, the rest the town's blocks (look critic, polish 1: "empty lots cut big holes into towns"); the field and the quay none (the town's
