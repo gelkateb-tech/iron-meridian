@@ -300,6 +300,15 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## UNITS IN CITIES questions, 2026-11-26 (units-in-cities 398a749, sheets in shots/2026-11-26/units-in-cities/; my default in brackets)
+- UC1. Zoomed out (hex 12), an army just outside a city joins the city's counter; only its dot outside the ring shows it is outside. OK? (yes)
+- UC2. The outside army's dot gives way to borders, names and the city's counter, so at mid and play zoom it is often drawn on another side of the city than its real one. OK? (yes: the ring is what says in or out)
+- UC3. Szczecin at play zoom: should an outside army's counter stand beside the city's counter instead of 48-76 px out? (yes)
+- UC4. At the world view, should every city have a diamond, not only capitals and occupied cities? (no)
+- UC5. Should provinces without a city get a diamond on their centre? (no)
+- UC6. Zoomed right in, the city's name moves beside the ring while an army holds the city. Keep? (yes)
+- **Owner's answer, 2026-11-26 (verbatim):** "Correction to my last answers, UNITS IN CITIES, UC2: no, not your default. The dot is the army's true position (my position-dot rule) and must never move. When something is in the way, move the counter aside instead, with a thin line to its dot. Everything else in that block stands." Read as: UC2 = the dot never moves, the counter moves aside with a thin line to its dot; UC1, UC3, UC4, UC5, UC6 = my defaults (yes, yes, no, no, yes). Job UC-DOT.
+
 ## REBELS questions, 2026-11-26 (rebels-2 776769e, phone sheets sent; my default in brackets)
 - RB1. Is "a garrison fights rebels to the end and never retreats" the right reading of "rebels attack them, the city stays mine"? (yes)
 - RB2. Should poor computer nations keep a smaller cash reserve before annexing, so they annex too (Vietnam never does)? (yes: reserve = half the price instead of $150M)
