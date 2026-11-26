@@ -12,7 +12,7 @@ Pictures: `shots/2026-11-26/uc-dot/`
 - **One thing for you to judge: long lines at the closest zoom.** At hex 240 an army just outside the city has its pictures pushed out of the buildings, and its counter stays above those pictures. So the line from the dot to the counter can be long, up to about 250 px, and can cross the pictures (Poznań, Szczecin). The alternative is to put the counter by the dot instead of above the pictures. My suggestion is to keep it as it is: the line always leads to the real spot.
 - **Before it merges:** one earlier speed number (play-zoom panning about 5 ms per frame slower than master) was never re-measured. I'm measuring it properly against master now. If it's really slower, it gets fixed in this job's last allowed round. Then I merge, as you said, once you've seen these sheets.
 
-**City lots, A6/A7 round: done and READY.** These are the sheets for the smaller buildings and the city growing around them.
+**City lots, A6/A7 round: done and READY.** These are the sheets for the smaller buildings and the city growing around them. The Berlin sheet is very tall, so the chat shows a scaled-down copy; the full-size version is in the shots folder, or I can send it in a .zip.
 
 Pictures: `shots/2026-11-26/city-lots-a6a7/`
 
