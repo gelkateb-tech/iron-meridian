@@ -150,19 +150,34 @@ function treatyValue(me, ai, k){ const a = acceptOffer(ai, me, k), op = opinion(
   if (k === 'pass') return (a.ok ? -10 : op >= 0 ? -90 : -300) + 30;   // (right of way is mutual: it gives and receives it)
   if (k === 'ally') return a.ok ? 40 : null;
   return 0; }
-function dealValue(me, ai, D){ const firm = [];
+// D10, tightened (owner, 2026-11-26: "a computer nation refuses deals where it gets nothing back"; a token payment must not get round it).
+// What its opinion of you adds to a deal is capped by what it gets back: at most DEAL_OK + OP_SHARE x that value, so a friendly nation accepts
+// at most about 16% less than it gives (it says yes when back x 1.25 >= what it gives x 1.05). Each favour it did the same seat in the last
+// FAVOUR_H hours (a deal it signed that was below DEAL_OK on its own value: S.favours, written by dealApply) halves that cap, and from
+// FAVOUR_MAX favours on its opinion adds nothing: a deal fair on its own value still passes. A cold opinion counts against you in full, as before.
+const OP_SHARE = 0.25, FAVOUR_H = 72, FAVOUR_MAX = 2;
+const favourL = () => Array.isArray(S.favours) ? S.favours : [];   // (saves from before the ledger have none: no favours)
+const favourN = (ai, me) => favourL().reduce((c, f) => c + (f.ai === ai && f.me === me && S.hour - f.h < FAVOUR_H ? 1 : 0), 0);
+function opCredit(me, ai, back){ const c = opinion(ai, me)*1.2; if (c <= 0) return c;
+  const k = favourN(ai, me); return k >= FAVOUR_MAX ? 0 : Math.min(c, (DEAL_OK + OP_SHARE*back)/2**k); }
+// {v: its value to ai with its opinion, own: without it, back: what ai gets back ($M: money, goods, land it wants, treaties worth something), firm}
+function dealValue(me, ai, D){ const firm = []; let back = sideCash(D.give);
   let v = sideCash(D.give) - sideCash(D.get)*1.05;   // (as dealValueFor: what it gives counts 5% more)
-  for (const p of D.give.provs){ const w = terrWant(ai, p, me); if (w <= 0) firm.push({k:'prov', p, why:`${S.nations[ai].name} is not interested in ${provName(p)}`}); v += w; }
+  for (const p of D.give.provs){ const w = terrWant(ai, p, me); if (w <= 0) firm.push({k:'prov', p, why:`${S.nations[ai].name} is not interested in ${provName(p)}`}); else back += w; v += w; }
   for (const p of D.get.provs) firm.push({k:'own', p, why:`${S.nations[ai].name} never sells land`});
-  for (const k of D.give.treaty){ const t = treatyValue(me, ai, k); if (t == null) firm.push({k:'treaty', t:k, why:`no alliance: ${acceptOffer(ai, me, k).why}`}); else v += t; }
-  return {v:v + opinion(ai, me)*1.2, firm}; }
+  for (const k of D.give.treaty){ const t = treatyValue(me, ai, k); if (t == null) firm.push({k:'treaty', t:k, why:`no alliance: ${acceptOffer(ai, me, k).why}`}); else { v += t; if (t > 0) back += t; } }
+  return {v:v + opCredit(me, ai, back), own:v, back, firm}; }
+// a computer nation that gives something in a deal it would not sign on its own value has done seat me a favour: noted for FAVOUR_H hours
+// (older ones pruned). A gift to it is no favour
+function favourNote(me, ai, D){ if (!aiGives(me, ai, D) || dealValue(me, ai, D).own >= DEAL_OK) return;
+  S.favours = favourL().filter(f => S.hour - f.h < FAVOUR_H); S.favours.push({ai, me, h:S.hour}); }
 // D10 (owner, 2026-11-26): a computer nation gives nothing for nothing, whatever it thinks of you. True when, in deal D from seat me, computer
 // nation ai gives something (money, goods, its land, or a treaty that costs it) and gets nothing of value back (no money or goods, no land it
 // wants, no treaty worth something to it). Its own gifts and offers (coalition aid, the trades it proposes to you) do not come here.
-function dealOneWay(me, ai, D){ const tv = D.give.treaty.map(k => treatyValue(me, ai, k) || 0);
-  const gives = sideCash(D.get) > 0 || D.get.provs.length > 0 || tv.some(t => t < 0);
-  const gets = sideCash(D.give) > 0 || D.give.provs.some(p => terrWant(ai, p, me) > 0) || tv.some(t => t > 0);
-  return gives && !gets; }
+// (aiGives: it gives money, goods, its land, or signs a treaty that costs it)
+const aiGives = (me, ai, D) => sideCash(D.get) > 0 || D.get.provs.length > 0 || D.give.treaty.some(k => (treatyValue(me, ai, k) || 0) < 0);
+function dealOneWay(me, ai, D){ if (!aiGives(me, ai, D)) return false;
+  return !(sideCash(D.give) > 0 || D.give.provs.some(p => terrWant(ai, p, me) > 0) || D.give.treaty.some(k => (treatyValue(me, ai, k) || 0) > 0)); }
 const NOTHING_BACK = 'We give nothing for nothing';
 const dealSame = (A, B) => JSON.stringify(dealNorm(A)) === JSON.stringify(dealNorm(B));
 // computer nation ai's answer to seat me's deal D (round: 1 for a first offer, +1 for each counter on either side). Pure: decides, changes nothing.
@@ -194,13 +209,15 @@ function dealAnswer(me, ai, D0, round = 1){ const D = dealNorm(D0), A = S.nation
   if (round >= TERR.rounds) return no('Enough counter-offers: accept or decline', gap0);
   const P = mktP(), N = S.nations[me], lot = k => lotCash(RES_K, P[k]), emb = embargoed(me, ai);
   const mn = D.give.provs.length ? floorFor(me, ai, D.give.provs) : 0, keepFloor = dv => sideCash(D.get) - dv >= mn - 1e-9;
-  // a: it gives less: its goods, whole lots, the dearest lot first, then its money in $10M steps (never under the floor)
-  for (const k of DEAL_K.filter(k => k !== 'cash').sort((x, y) => P[y] - P[x])){ while (V < DEAL_OK && D.get[k] >= RES_K && keepFloor(lot(k))){ D.get[k] -= RES_K; V += lot(k)*1.05; changed = true; } }
-  while (V < DEAL_OK && D.get.cash > 0){ const s = Math.min(10, D.get.cash); if (!keepFloor(s)) break; D.get.cash -= s; V += s*1.05; changed = true; }
+  // a: it gives less: its goods, whole lots, the dearest lot first, then its money in $10M steps (never under the floor). V is worked out again
+  // after each step: what its opinion adds depends on what it gets back
+  const val = () => dealValue(me, ai, D).v;
+  for (const k of DEAL_K.filter(k => k !== 'cash').sort((x, y) => P[y] - P[x])){ while (V < DEAL_OK && D.get[k] >= RES_K && keepFloor(lot(k))){ D.get[k] -= RES_K; V = val(); changed = true; } }
+  while (V < DEAL_OK && D.get.cash > 0){ const s = Math.min(10, D.get.cash); if (!keepFloor(s)) break; D.get.cash -= s; V = val(); changed = true; }
   // b: you add money in $10M steps, up to what you have
-  if (!emb) while (V < DEAL_OK && D.give.cash + 1e-9 < Math.floor(N.cash)){ const s = Math.min(10, Math.floor(N.cash) - D.give.cash); D.give.cash += s; V += s; changed = true; }
+  if (!emb) while (V < DEAL_OK && D.give.cash + 1e-9 < Math.floor(N.cash)){ const s = Math.min(10, Math.floor(N.cash) - D.give.cash); D.give.cash += s; V = val(); changed = true; }
   // c: you add goods, whole lots, the good you hold the most value of first
-  if (!emb) for (const k of DEAL_K.filter(k => k !== 'cash').sort((x, y) => kFloor(N[y])*P[y] - kFloor(N[x])*P[x])){ while (V < DEAL_OK && D.give[k] + RES_K <= kFloor(N[k])){ D.give[k] += RES_K; V += lot(k); changed = true; } }
+  if (!emb) for (const k of DEAL_K.filter(k => k !== 'cash').sort((x, y) => kFloor(N[y])*P[y] - kFloor(N[x])*P[x])){ while (V < DEAL_OK && D.give[k] + RES_K <= kFloor(N[k])){ D.give[k] += RES_K; V = val(); changed = true; } }
   if (V < DEAL_OK) return no(`They want about $${fmt(Math.ceil((DEAL_OK - V)/10)*10)}M more`, Math.ceil((DEAL_OK - V)/10)*10);
   { const w = dealWhy(me, ai, D); if (w) return no(w, gap0); }
   return {act:'counter', why:`${drop.length ? drop.join('; ') + '. ' : ''}We would need about $${fmt(gap0)}M more in value`, D}; }
@@ -209,7 +226,9 @@ function dealIsLand(D){ const one = (sd, other) => sd.provs.length === 1 && !has
   return !D.give.treaty.length && (one(D.give, D.get) || one(D.get, D.give)); }
 // the deal itself between a (gives D.give) and b (gives D.get): money and goods, land (terrTransfer), treaties, goodwill, cards and dispatches
 function dealApply(a, b, D0){ const D = dealNorm(D0), why = dealWhy(a, b, D); if (why){ refuse(a, `Not possible: ${why}.`); refuse(b, `Not possible: ${why}.`); return false; }
-  const A = S.nations[a], B = S.nations[b];
+  const A = S.nations[a], B = S.nations[b], comp = n => !isSeat(n) && !isPerson(n);
+  // (a favour is judged on the deal as it stands, before anything moves: its value depends on who holds the land)
+  if (isSeat(a) && comp(b)) favourNote(a, b, D); else if (isSeat(b) && comp(a)) favourNote(b, a, dealFlip(D));
   for (const k of DEAL_K){ const d = (D.get[k] || 0) - (D.give[k] || 0); A[k] += d; B[k] -= d; }
   if (D.give.treaty.includes('peace')) applyDeal(a, b, 'peace');
   for (const [seller, buyer, gives, gets] of [[a, b, D.give, D.get], [b, a, D.get, D.give]]){ if (!gives.provs.length) continue;
