@@ -3,7 +3,7 @@
 // way off Hamburg's, one pinned exactly on Munich's point, a Polish army on Szczecin's point (seen by a scout of yours), one that walked through
 // Dresden's point to a spot beyond it (a.hrt), and an unidentified contact on Poznan's point. Checks, at play zoom:
 //  (H) heartOn agrees with the rules' atHeart for every force that stands on its point, and is false for the force that only walked through
-//  (D) the position dot of a force on a point is exactly the city's point; one off it is at least the marker's ring clear of it
+//  (D) the position dot of a force on a point is exactly the city's point; one off it is exactly where it stands (owner 2026-11-26: the dot never moves)
 //  (R) the ring: Berlin own, Szczecin war, Munich own, Poznan the unidentified contact; none at Hamburg or Dresden
 //  (T) the city line: Berlin "In the city: 1st Infantry Division (5 units)", Szczecin names the Polish army, Hamburg "nobody" (and "Nearby:"),
 //      Poznan "? Unidentified"; the phone city sheet shows the line after a tap on Berlin's name
@@ -28,8 +28,8 @@
 //      outside the ring; in at least 38 of the 40 cases at each mid zoom. And the other cities' names it would hide: master's names round it (fixtures/
 //      uc-mid-master.json, captured as for (A) with UC_MID_SAVE=1) dropped at most 1 per view. Also at play zoom (hex 30), where the play-zoom gaps from the city's counter come first: its own city's area in
 //      32 of 40 (Szczecin, on the coast and the border, has no such place: it is drawn as close in)
-//  (S) mid zoom, no holder: a lone army 2 to 15 km off Berlin's, Munich's or Poznan's point (N and E), hex 8, 12, 16 and 20: its dot at least the
-//      ring's radius + 2 px from the point (never inside the marker), no ring
+//  (S) mid zoom, no holder: a lone army 2 to 15 km off Berlin's, Munich's or Poznan's point (N and E), hex 8, 12, 16 and 20: its dot within 0.5 px of
+//      where it stands, no ring
 //  (B) Hamburg held at hex 12 (mid zoom, every city's name up): "Berlin" is drawn nearer Berlin's point than Hamburg's (a held ring never
 //      reads as Berlin's)
 //  (E) no console or page error
@@ -69,7 +69,7 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
         for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)){ bx = q.b; sat = true; }
         if (j && o && !o.pv) bx = j.bx; const cs = []; for (const Q of G.P) if (Q.cityName && !Q.sea){ const q = TS(Q); if (q[0] > -60 && q[0] < innerWidth + 60 && q[1] > -60 && q[1] < innerHeight + 60) cs.push([Q.id, q[0], q[1]]); }
         const cx = bx ? (bx[0] + bx[2])/2 : null, cy = bx ? (bx[1] + bx[3])/2 : null, ds = bx ? cs.map(z => [z[0], Math.hypot(z[1] - cx, z[2] - cy)]).sort((x, y) => x[1] - y[1]) : [];
-        res({joined:!!(j && o && !o.pv), sat, near:ds.length ? ds[0][0] : null, dOwn:bx ? +Math.hypot(TS(G.P[I.p])[0] - cx, TS(G.P[I.p])[1] - cy).toFixed(1) : null, dot:o ? [o.px, o.py] : null, pt:TS(G.P[I.p]), R:im.uc ? im.uc.ringR() : 0}); } catch (e) { res({exc:e.message}); } })); }), I);
+        res({joined:!!(j && o && !o.pv) || !!(o && o.pa === 0), sat, near:ds.length ? ds[0][0] : null, dOwn:bx ? +Math.hypot(TS(G.P[I.p])[0] - cx, TS(G.P[I.p])[1] - cy).toFixed(1) : null, dot:o ? [o.px, o.py] : null, pt:TS(G.P[I.p]), R:im.uc ? im.uc.ringR() : 0, tru:o ? (() => { const q = im.S.armies.find(a => a.id === I.b); return im.toScreen(q.pos[0], q.pos[1]); })() : null}); } catch (e) { res({exc:e.message}); } })); }), I);
       out.push({city, dn, hp, p:I.p, ...r, n:await namesNow(p)}); } }
   return out; }
 (async () => { const b = await chromium.launch({ args: ['--allow-file-access-from-files'] }), errors = [], fails = [], out = {};
@@ -108,12 +108,12 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
   const near = (q, P) => q && Math.abs(q[0] - P[1]) < 1e-9 && Math.abs(q[1] - P[2]) < 1e-9;
   let L = await look(ids.P.B); out.berlin = L; if (!near(L.dots.a, ids.P.B)) fail('D Berlin dot on the point', L.dots.a); if (!(L.marks[0] && L.marks[0].sides.join() === 'own')) fail('R Berlin ring', L.marks);
   // (M) a force of yours just off the point while another stands on it: never merged into the city's counter, its own dot clear of the ring
-  if (!L.dots.b2 || near(L.dots.b2, ids.P.B) || Math.hypot(L.dots.b2[0] - ids.P.B[1], L.dots.b2[1] - ids.P.B[2])*L.s < L.ringR + 2) fail('M Berlin: the force off the point has its own dot clear of the ring', L.dots.b2);
+  if (!L.dots.b2 || near(L.dots.b2, ids.P.B) || Math.hypot(L.dots.b2[0] - (ids.P.B[1] + 0.75), L.dots.b2[1] - (ids.P.B[2] + 0.7))*L.s > 0.5) fail('M Berlin: the force off the point has its dot exactly where it stands', L.dots.b2);
   { const C = await p.evaluate(I => { window.__uclOn = true; window.__im.redraw(); return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => { const q = (window.__ucl || []).find(c => c.ids.includes(I.a)); window.__uclOn = false; r(q ? q.ids.concat(q.ml) : null); }))); }, ids);
     if (!C || C.includes(ids.b2)) fail('M Berlin: the off-point force is not in the city stack', C); }
   L = await look(ids.P.Wa); if (L.marks.length) fail('R Warsaw (an army you cannot see) has no ring', L.marks);
   L = await look(ids.P.Hm); out.hamburg = L; if (L.marks.length) fail('R Hamburg has no ring', L.marks);
-  if (!L.dots.h || Math.hypot(L.dots.h[0] - ids.P.Hm[1], L.dots.h[1] - ids.P.Hm[2])*L.s < L.ringR + 2) fail('D Hamburg dot clear of the marker', {dot:L.dots.h, px:L.dots.h && Math.hypot(L.dots.h[0] - ids.P.Hm[1], L.dots.h[1] - ids.P.Hm[2])*L.s});
+  if (!L.dots.h || Math.hypot(L.dots.h[0] - (ids.P.Hm[1] + 0.3), L.dots.h[1] - (ids.P.Hm[2] + 0.2))*L.s > 0.5) fail('D Hamburg dot exactly where the force stands', {dot:L.dots.h});
   L = await look(ids.P.M); out.munich = L; if (!near(L.dots.m, ids.P.M)) fail('D Munich (pinned on the point) dot on the point', L.dots.m); if (!(L.marks[0] && L.marks[0].sides.join() === 'own')) fail('R Munich ring', L.marks);
   L = await look(ids.P.Z); out.szczecin = L; if (!near(L.dots.z, ids.P.Z)) fail('D Szczecin dot on the point', L.dots.z); if (!(L.marks[0] && L.marks[0].sides.join() === 'war')) fail('R Szczecin ring', L.marks);
   L = await look(ids.P.Dr); out.dresden = L; if (L.marks.length) fail('R Dresden (walked through) has no ring', L.marks);
@@ -150,20 +150,20 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
       const I = await p.evaluate(([side, off]) => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const by = n => G.P.find(P => P.cityName === n && !P.sea), pol = S.nations.findIndex(q => q.name === 'Poland');
         const C = by(side === 'own' ? 'Berlin' : 'Poznań'), o = side === 'own' ? 0 : pol, a = im.addArmy(o, C.id, side === 'own' ? {inf:4, tank:2} : {inf:3, tank:2}), b2 = im.addArmy(o, C.id, {inf:2}); b2.pos = [C.x + off[0], C.y + off[1]];
         if (side !== 'own'){ const sc = im.addArmy(0, C.id, {spec:1}); sc.pos = [C.x + 3, C.y + 3]; } try { visCache = null; } catch (e) {} return {a:a.id, b:b2.id, p:C.id, x:C.x, y:C.y}; }, [side, off]);
-      for (const hp of [12, 30, 60, 120, 240]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(hp >= 120 ? 1200 : 400);
+      for (const hp of [8, 12, 20, 30, 60, 120, 240]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(hp >= 120 ? 1200 : 400);
         const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false; const P = im.G.P[I.p], pt = im.toScreen(P.x, P.y);
           const h = L.find(c => c.ids.includes(I.a)), o = L.find(c => c.ids.includes(I.b)); let sb = null; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) sb = q.b;
           const bA = im.S.armies.find(a => a.id === I.b), rs = im.toScreen(bA.pos[0], bA.pos[1]), ob = sb || (o && o.bx);
           const jn = !o.pv && (h.ml || []).includes(I.b);   /* (mid zoom, no room by its dot in its city's area: its counter joined the city's, above the ring; its dot is its own) */
-          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, stk:!!sb, jn, tag:o.tag, real:rs, land:[im.uc.land(bA.at, o.px, o.py)].concat(jn ? [] : [im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)])} : null); })); }), I);
+          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, stk:!!sb, jn, tag:o.tag, real:rs, ldr:o.ldr, dl:o.dl, oc:[o.x, o.y], land:[im.uc.land(bA.at, o.px, o.py)].concat(jn ? [] : [im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)])} : null); })); }), I);
         const k = `${side} ${km} km ${dn} hex ${hp}`; out.dirs++; if (!m){ fail('X counters missing', k); continue; }
         const hOn = Math.hypot(m.hd[0] - m.pt[0], m.hd[1] - m.pt[1]), oPt = Math.hypot(m.od[0] - m.pt[0], m.od[1] - m.pt[1]), oHb = pd([m.hb[0], m.hb[1], m.hb[2], Math.max(m.hb[3], m.pt[1] - m.R)], m.od[0], m.od[1]);
         const row = Math.min(m.ob[3], m.hb[3]) > Math.max(m.ob[1], m.hb[1]), g = gap(m.ob, m.hb), need = m.tag ? 6 : row ? 15 : 6;
         const atReal = Math.hypot(m.od[0] - m.real[0], m.od[1] - m.real[1]) < 0.5;
-        if (hOn > 0.01 || (hp <= 20 ? oPt < m.R + 2.4 + 3 || oHb < 1 : (oPt < m.R + 9 || oHb < 8 || g < need - 0.6))) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), atReal, dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need});
-        if (m.land.some(z => !z.own)) fail('X off the point: dot and counter on its own land', {k, land:m.land});
-        const dB = Math.hypot(Math.max(m.ob[0] - m.od[0], 0, m.od[0] - m.ob[2]), Math.max(m.ob[1] - m.od[1], 0, m.od[1] - m.ob[3]));   // (its counter by its own dot, never across the ring from it)
-        if (hp > 20 && hp <= 60 && !m.stk && dB > 16) fail('X off the point: its counter beside its own dot', {k, dotToCounter:+dB.toFixed(1)}); } } }
+        if (hOn > 0.01 || !atReal || (hp > 20 && !m.jn && !m.stk && g < need - 0.6)) fail('X off the point: its dot exactly where it stands, the city force\'s on the point, the counters clear of each other', {k, hOn:+hOn.toFixed(2), atReal, counterGap:+g.toFixed(1), need});
+        if (!m.jn && !m.tag && !m.stk && Math.hypot(m.oc[0] - m.od[0], m.oc[1] - m.od[1]) > m.dl + 10 && !m.ldr) fail('X a counter away from its dot has a leader line', {k, off:+Math.hypot(m.oc[0] - m.od[0], m.oc[1] - m.od[1]).toFixed(1), dl:m.dl});
+        if (m.land.slice(1).some(z => !z.own)) fail('X off the point: its counter on its own land', {k, land:m.land});
+      } } }
   // (L) coastal and border cities: the force off the point is never drawn in the sea or across a border
   if (!process.env.UC_NO_DIRS){ out.land = 0; const KW = await p.evaluate(() => KM_W), D8 = {N:[0, -1], NE:[1, -1], E:[1, 0], SE:[1, 1], S:[0, 1], SW:[-1, 1], W:[-1, 0], NW:[-1, -1]};
     for (const [city, dn] of [['Szczecin', 'NW'], ['Hamburg', 'NW'], ['Hamburg', 'N'], ['Berlin', 'N'], ['Berlin', 'E'], ['Munich', 'SE'], ['Poznań', 'S']]) for (const km of [4, 15]){ const dv = D8[dn], l = Math.hypot(dv[0], dv[1]), off = [dv[0]/l*km*KW, dv[1]/l*km*KW];
@@ -175,7 +175,7 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
           const o = L.find(c => c.ids.includes(I.b)); let ob = o && o.bx; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) ob = q.b; const at = im.S.armies.find(a => a.id === I.b).at;
           const jn = o && !o.pv && L.some(c => c.hp != null && (c.ml || []).includes(I.b));   // (its counter joined the city's: only its dot is its own)
           res(o ? [im.uc.land(at, o.px, o.py)].concat(jn ? [] : [im.uc.land(at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)]) : null); })); }), I);
-        const k = `${city} ${km} km ${dn} hex ${hp}`; out.land++; if (!m){ fail('L counters missing', k); continue; } if (m.some(z => !z.own)) fail('L off the point: dot and counter on its own land', {k, land:m}); else if (hp >= 120 && m[0].g !== 'prov') fail('L close in: the dot in its own province', {k, land:m}); } } }
+        const k = `${city} ${km} km ${dn} hex ${hp}`; out.land++; if (!m){ fail('L counters missing', k); continue; } if (m.slice(1).some(z => !z.own)) fail('L off the point: its counter on its own land', {k, land:m}); } /* (its dot is where the force stands, whatever land that is) */ } }
   // (N) the city's own name stays where it is (owner: "City names stay where they are"): a second force 4 km off a held point (Berlin E, SE and S,
   //     Szczecin S, SE and SW, Poznan S, SE and E) at hex 30 and 12: the city's name is drawn on its own spot below the point (within 3 px of
   //     where the label pass first puts it: heartNames), over its own country's land; the off-point force's counter never covers that name and
@@ -191,19 +191,19 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
           const pt = im.toScreen(G.P[I.p].x, G.P[I.p].y), own = S.owner[I.p], labs = D.lab || [], lab = labs.find(q => q.t === I.n), e = im.uc.names(I.p, hp).own;
           const o = L.find(c => c.ids.includes(I.b)); let ob = o && o.bx; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) ob = q.b;
           let nb = 0, nt = 0; if (lab) for (let i = 0; i <= 8; i++) for (let j = 0; j <= 2; j++){ const q = im.provAt(lab.b[0] + (lab.b[2] - lab.b[0])*i/8, lab.b[1] + (lab.b[3] - lab.b[1])*j/2); nt++; if (q < 0 || G.P[q].sea || S.owner[q] !== own) nb++; }
-          res({lab:lab && lab.b, exp:e && [e[0] + pt[0], e[1] + pt[1], e[2] + pt[0], e[3] + pt[1]], bad:nt ? nb/nt : 1, ob, dot:o && [o.px, o.py], dotIn:o ? labs.filter(q => o.px > q.b[0] - 1 && o.px < q.b[2] + 1 && o.py > q.b[1] - 1 && o.py < q.b[3] + 1).map(q => q.t) : []}); })); }), [I, hp]);
+          res({faded:!!(o && o.pa === 0), lab:lab && lab.b, exp:e && [e[0] + pt[0], e[1] + pt[1], e[2] + pt[0], e[3] + pt[1]], bad:nt ? nb/nt : 1, ob, dot:o && [o.px, o.py], dotIn:o ? labs.filter(q => o.px > q.b[0] - 1 && o.px < q.b[2] + 1 && o.py > q.b[1] - 1 && o.py < q.b[3] + 1).map(q => q.t) : []}); })); }), [I, hp]);
         const k = `${city} 4 km ${dn} hex ${hp}`; out.names++; if (hp < 20 && !m.lab) continue;   // (mid zoom: a name with no free spot is left out, as on master)
         if (!m.lab || !m.exp){ fail('N the city name is drawn', {k, m}); continue; }
         const dx = (m.lab[0] + m.lab[2] - m.exp[0] - m.exp[2])/2, dy = (m.lab[1] + m.lab[3] - m.exp[1] - m.exp[3])/2;
         if (Math.hypot(dx, dy) > 3 && hp > 20) fail('N the city name stays on its own spot', {k, dx:+dx.toFixed(1), dy:+dy.toFixed(1)});
         if (m.bad > 0.25) fail('N the city name over its own land', {k, bad:+m.bad.toFixed(2)});
-        if (m.ob && m.lab[0] < m.ob[2] - 1 && m.lab[2] > m.ob[0] + 1 && m.lab[1] < m.ob[3] - 1 && m.lab[3] > m.ob[1] + 1) fail('N the off-point counter clear of the city name', {k, ob:m.ob, lab:m.lab});
-        if (hp > 20 && m.dotIn.length) fail('N the off-point dot in no name', {k, dotIn:m.dotIn}); } } }
+        if (m.ob && !m.faded && m.lab[0] < m.ob[2] - 1 && m.lab[2] > m.ob[0] + 1 && m.lab[1] < m.ob[3] - 1 && m.lab[3] > m.ob[1] + 1) fail('N the off-point counter clear of the city name', {k, ob:m.ob, lab:m.lab});
+      } } }
   // (M) mid zoom: a second army off a held point stands in its own city's area and hides no more than one other name a view; (S) a lone army's dot
   if (!process.env.UC_NO_MID){ const F = fs.existsSync(MID_FIX) ? JSON.parse(fs.readFileSync(MID_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')), V = await midAll(q); out.mid = {};
     for (const hp of MID_HEX){ const L = V.filter(v => v.hp === hp), own = L.filter(v => v.joined || v.near === v.p).length, R = {cases:L.length, ownArea:own, joined:L.filter(v => v.joined).length}; out.mid['hex ' + hp] = R;
       if (own < (hp <= 20 ? 38 : 32)) fail('M the second army\'s counter in its own city\'s area (38 of 40 at mid zoom, 32 at play zoom)', {hp, ...R, other:L.filter(v => !(v.joined || v.near === v.p)).map(v => v.city + ' ' + v.dn)});
-      for (const v of L){ const dd = v.dot ? Math.hypot(v.dot[0] - v.pt[0], v.dot[1] - v.pt[1]) : null; if (hp <= 20 && (dd == null || dd < v.R + 2)) fail('M its dot outside the ring', {k:`${v.city} ${v.dn} hex ${hp}`, dot:dd && +dd.toFixed(1), R:+v.R.toFixed(1)}); } }
+      for (const v of L){ if (!v.dot || !v.tru || Math.hypot(v.dot[0] - v.tru[0], v.dot[1] - v.tru[1]) > 0.5) fail('M its dot exactly where it stands', {k:`${v.city} ${v.dn} hex ${hp}`, dot:v.dot, tru:v.tru}); } }
     if (!F) fail('M master\'s names (fixtures/uc-mid-master.json)', 'missing'); else if (F.W !== W || F.H !== H) out.mid.names = 'skipped: master captured at ' + F.W + ' x ' + F.H;
     else { let mx = 0, tot = 0; for (let i = 0; i < F.views.length; i++){ const m = F.views[i], v = V[i], drawn = new Set(v.n.map(l => l.p)), dr = m.n.filter(p => p !== v.p && !drawn.has(p)); mx = Math.max(mx, dr.length); tot += dr.length;
         if (dr.length > 1) fail('M other names dropped against master: at most 1 a view', {k:`${m.city} ${m.dn} hex ${m.hp}`, dropped:dr.length}); } out.mid.names = {maxDroppedPerView:mx, total:tot}; }
@@ -214,8 +214,8 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
       for (const hp of [8, 12, 16, 20]){ await midView(q, city, hp);
         const r = await q.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, P = im.G.P[I.p], L = window.__ucl || []; window.__uclOn = false;
           const c = L.find(c => c.ids.includes(I.a)), pt = [P.x*im.view.s + im.view.x, P.y*im.view.s + im.view.y], mk = im.uc.marks().find(m => m.p === I.p);
-          res({d:c ? Math.hypot(c.px - pt[0], c.py - pt[1]) : null, R:im.uc.ringR(), ring:mk ? mk.sides.length : 0}); })); }), I);
-        out.solo++; if (r.d == null || r.d < r.R + 2 || r.ring) fail('S a lone army off the point: its dot outside the marker, no ring', {k:`${city} ${km} km ${dn} hex ${hp}`, d:r.d && +r.d.toFixed(1), R:+r.R.toFixed(1), ring:r.ring}); } }
+          const q = im.S.armies.find(a => a.id === I.a), tr = im.toScreen(q.pos[0], q.pos[1]); res({d:c ? Math.hypot(c.px - tr[0], c.py - tr[1]) : null, R:im.uc.ringR(), ring:mk ? mk.sides.length : 0}); })); }), I);
+        out.solo++; if (r.d == null || r.d > 0.5 || r.ring) fail('S a lone army off the point: its dot exactly where it stands, no ring', {k:`${city} ${km} km ${dn} hex ${hp}`, d:r.d && +r.d.toFixed(1), R:+r.R.toFixed(1), ring:r.ring}); } }
     errors.push(...q.errs); await q.context().close(); }
   // (A) the empty map: every city name master draws stays on master's spot (with its anchor), none added or dropped; (B) Hamburg held at hex 12
   if (!process.env.UC_NO_EMPTY){ const F = fs.existsSync(NAMES_FIX) ? JSON.parse(fs.readFileSync(NAMES_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')); out.empty = 0;
