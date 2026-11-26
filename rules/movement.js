@@ -536,7 +536,7 @@ function armyUpkeep(prevBattles){
     a.m = Math.max(0, Math.min(100, a.m));
     // broken morale: retreat to the nearest supplied own province, or surrender
     const limit = here && S.owner[a.at] === a.owner && G.P[a.at].city ? 15 : 25;
-    if (inBattle && moraleEff(a) < limit && !a.retreating){   // (a Bunker's garrison breaks later: moraleEff)
+    if (inBattle && moraleEff(a) < limit && !a.retreating && !risingHold(a)){   // (a Bunker's garrison breaks later: moraleEff; a garrison holding its city against a rising never breaks: risingHold)
       const seen = new Set([a.at]), q = [[a.at, 0]]; let dest = -1;
       for (let h = 0; h < q.length && dest < 0; h++){ const [u, du] = q[h]; if (du >= 6) continue;
         for (const v of G.P[u].nbs){ if (seen.has(v) || !canEnter(a.owner, v)) continue; seen.add(v);

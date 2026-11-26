@@ -148,8 +148,8 @@ function battleStep(hourly){
     if (owners.length < 2) continue;
     S.battles.push(p);
     if (!prevBattles.has(p)) for (const me of owners) if (isSeat(me)){
-      const foes = owners.filter(o => o !== me).map(nationName).join(', ');
-      if (S.owner[p] === me){ tell(me, `${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(me); }
+      const fo = owners.filter(o => o !== me), reb = fo.every(o => sides.get(o).every(a => a.rebel)), foes = fo.map(o => sides.get(o).every(a => a.rebel) ? 'Rebels' : nationName(o)).join(', ');
+      if (S.owner[p] === me){ if (!(reb && S.rbl && S.rbl.some(e => e.p === p && e.o === me))) tell(me, `${foes} attack${fo.length > 1 || reb ? '' : 's'} ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(me); }   // (a rising: its own dispatch, rebelRise, has said it)
       else tell(me, `Battle at ${G.P[p].name} against ${foes}.`, 'bad', p);
       cue(me, 'battle');
     }
@@ -182,8 +182,8 @@ function battleStep(hourly){
       for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot*(o === S.owner[p] ? 1 - 0.12*cmdF(a, 'shield') : 1)*digF(a)); cmdXP(a, (a._dealt0 || 0)*0.5); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
       if (hourly){ bs.hp.push(Math.round(sides.get(o).reduce((s0, a) => s0 + armyHP(a), 0))); if (bs.hp.length > 96) bs.hp.shift(); }   // (the history keeps one point per game hour)
     }
-    // morale: a force in a fight loses 1 a game hour and 40 × the share of its health lost, spread over the hour's battle steps (the break and retreat check is hourly: armyUpkeep)
-    for (const a of list){ if (a.owner < 0 || !count(a)) continue; const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m = Math.max(0, (a.m ?? 80) - 1/BATTLE_Q - 40*lost); }
+    // morale: a force in a fight loses 1 a game hour (not a garrison holding its city against a rising: risingHold) and 40 × the share of its health lost, spread over the hour's battle steps (the break and retreat check is hourly: armyUpkeep)
+    for (const a of list){ if (a.owner < 0 || !count(a) || risingHold(a)) continue; const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m = Math.max(0, (a.m ?? 80) - 1/BATTLE_Q - 40*lost); }
     IM.emit('fxBattle', p, owners, sides, list);
     const here = owners.filter(isSeat);   // the seats fighting here: their statistics and dispatches
     for (const me of here){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const D = desk(me), st0 = D.stats || (D.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }

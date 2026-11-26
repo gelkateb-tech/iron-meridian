@@ -151,6 +151,17 @@ const dresden = city(DE, 'Dresden').id, berlin = S.nations[DE].capital, warsaw =
   for (let h = 0; h < 24*4 && S.owner[q] === PL; h++) api.tick();
   ok(S.owner[q] === DE && lost === 'fought' && !S.cons[q] && S.nations[PL].cash <= cash0 - paid + 1e3, `one infantry loses to the rebels: the city goes back to Germany, the annexing and its $${paid}M are lost (${lost})`);
   ok(R.morOf(q) === 55 && S.armies.some(a => a.owner === DE && a.at === q && R.count(a) >= 2) && !S.armies.some(a => a.rebel && a.at === q), 'Germany gets it back liberated (55) with the rebels as its troops'); }
+// a garrison as large as the rebel band that has just fought for the city (battle morale 60) holds it: against rebels alone it loses no battle
+// morale and never breaks or retreats (RULES CRITIC 1: before, it broke at 15 and walked out, and the rebels took the city as 'fought')
+{ const r = G.P.filter(P => P.city && S.owner[P.id] === DE && P.id !== berlin && !S.battles.includes(P.id) && R.rebelBand(P.id) === 1)[0].id; take(r, PL); R.setMor(r, 20);
+  const n = R.rebelSize(r), g = R.addArmy(PL, r, {inf:n}); g.m = 60; g.still = S.hour - 24; R.setSkip(DE);
+  const said = []; R.IM.on('log', (nn, t) => { if (nn === PL) said.push(t); });
+  let broke = false, mMin = 100, fought = false; R.rebelRise(r, PL);
+  for (let h = 0; h < 24*8 && R.rebelsAt(r) && S.owner[r] === PL; h++){ api.tick(); if (S.battles.includes(r)) fought = true; if (R.count(g)){ mMin = Math.min(mMin, g.m); if (g.retreating || g.at !== r || g.path && g.path.length) broke = true; } }
+  ok(fought && S.owner[r] === PL && !R.rebelsAt(r) && !broke && mMin >= 60, `${n} tired infantry (morale 60) against ${n} rebels: they hold and crush them, never breaking (${JSON.stringify({owner:S.owner[r], broke, mMin, left:R.count(g)})})`);
+  const txt = said.join('\n');
+  ok(!/Independent attacks/.test(txt) && !/Rebels attack/.test(txt) && /Rebels rose up in/.test(txt), 'a rising is told once, as rebels, never as "Independent attacks"');
+  R.setMor(r, 70); }
 // an empty city: taken at once; a homeland city goes independent and the rebels stay as its garrison
 { const q = G.P.find(P => P.city && S.owner[P.id] === DE && P.id !== berlin && P.id !== dresden && !S.battles.includes(P.id)).id; take(q, PL); strip(q); R.setMor(q, 20); R.annexCity(PL, q);
   R.rebelRise(q, PL); ok(S.owner[q] === DE && !S.cons[q] && !(S.anx && S.anx[q] != null), 'an empty occupied city: taken at once, back to Germany; the annexing lost');
@@ -188,6 +199,10 @@ const dresden = city(DE, 'Dresden').id, berlin = S.nations[DE].capital, warsaw =
 // ---- 8. land by treaty, sale or gift arrives annexed (question 5); handed back homeland at 55 (question 3); Incite revolt (question 13)
 { const q = G.P.find(P => !P.sea && S.owner[P.id] === DE && P.id !== berlin && !P.city).id; S.owner[q] = PL; R.cede([q], PL); ok(R.occSt(q) === 'anx' && S.home[q] === DE, 'ceded by treaty: annexed, its home unchanged');
   const h = G.P.find(P => !P.sea && S.owner[P.id] === PL && S.home[P.id] === PL && !P.city && P.id !== q).id; S.owner[h] = DE; R.setMor(h, 80); S.owner[h] = PL; R.landGiven(h, PL); ok(R.occSt(h) === 'home' && R.morOf(h) === 55, 'its own homeland handed back: 55, always');
+  // an annexing under way when a treaty makes the city annexed: called off and refunded (RULES CRITIC minor 5)
+  { const c = G.P.find(P => P.city && S.owner[P.id] === DE && P.id !== berlin && !S.battles.includes(P.id) && P.id !== dresden).id; take(c, PL); R.addArmy(PL, c, {inf:6}); R.setMor(c, 50);
+    const N = S.nations[PL]; N.cash = 2000; N.mp = 500; R.annexCity(PL, c); const paid = 2000 - N.cash, mp0 = N.mp; R.cede([c], PL);
+    ok(paid > 0 && !S.cons[c] && N.cash === 2000 && N.mp === 500 && mp0 < 500 && R.occSt(c) === 'anx', `an annexing under way is refunded when a treaty annexes the city ($${paid}M back)`); }
   // Incite revolt: an occupied city only, -20 at once
   const p = dresden; R.setMor(p, 50); S.nations[DE].cash = 500; S.spies.push({id:9e6, owner:DE, op:null});
   ok(R.spyCheck(DE, warsaw, 'incite').ok === false && /occupied city/.test(R.spyCheck(DE, warsaw, 'incite').why), 'Incite revolt refused in a homeland city');
@@ -220,6 +235,12 @@ const dresden = city(DE, 'Dresden').id, berlin = S.nations[DE].capital, warsaw =
 { const N = S.nations[DE]; const pc = G.P.find(P => P.city && S.owner[P.id] === PL && P.id !== warsaw && !S.cons[P.id]).id; R.setRel(PL, DE, 'war'); strip(pc); R.capture(pc, DE); R.addArmy(DE, pc, {inf:4});
   N.cash = 100; N.mp = 100; R.aiAnnex(DE, N); ok(!S.cons[pc], 'the computer keeps $150M over the price: no annexing with $100M');
   N.cash = 1000; R.aiAnnex(DE, N); ok(S.cons[pc] && S.cons[pc].k === 'annex', 'with the money it annexes its occupied city');
+  { const cs = G.P.filter(P => P.city && S.owner[P.id] === PL && P.id !== warsaw && P.id !== pc && !S.cons[P.id] && !S.battles.includes(P.id)).sort((x, y) => R.popOf(y.id) - R.popOf(x.id));
+    const big = cs.find(P => R.rebelBand(P.id) >= 1), small = cs.slice().reverse().find(P => R.rebelBand(P.id) < R.rebelBand(big.id));
+    if (big && small){ for (const q of [big.id, small.id]){ strip(q); R.capture(q, DE); R.addArmy(DE, q, {inf:4}); }
+      N.cash = R.annexCost(small.id).cash + 150; N.mp = 1000; R.aiAnnex(DE, N);
+      ok(!S.cons[big.id] && S.cons[small.id] && S.cons[small.id].k === 'annex', `a city it cannot afford (${big.cityName}) does not stop it annexing a cheaper one (${small.cityName})`); R.setMor(big.id, 70); R.setMor(small.id, 70); }
+    else ok(false, 'no big and small Polish city found for the aiAnnex check'); }
   const mine = G.P.filter(P => P.city && S.owner[P.id] === DE).slice(0, 2).map(P => P.id); ok(!R.aiBrake(DE), 'no burning city: no brake');
   for (const p of mine) R.setMor(p, 33); ok(R.aiBrake(DE), 'two cities at 33%: no new offensive'); for (const p of mine) R.setMor(p, 70); }
 
@@ -238,7 +259,10 @@ const dresden = city(DE, 'Dresden').id, berlin = S.nations[DE].capital, warsaw =
   const rb = S2.armies.filter(a => a.rebel); ok(rb.every(a => G2.P[a.at].city), 'partisans in the countryside stood down');
   ok(rb.some(a => a.rbH === hour + 24), 'partisans in an empty city wait 24 hours once');
   ok(S2.log.some(e => /New rule: morale/.test(e.text)), 'the seat is told');
-  for (let h = 0; h < 24*3; h++) a2.tick(); ok(S2.hour === hour + 72, 'it plays 3 days');
+  ok(S2.rbG === hour + 24, 'no city rises in the first 24 hours after the conversion (S.rbG)');
+  { let early = 0; const hr = R2.IM.on('rising', () => { if (S2.hour < hour + 24) early++; }); const low = G2.P.filter(P => P.city && S2.owner[P.id] >= 0 && R2.morShown(P.id) <= 33).length;
+    for (let h = 0; h < 24; h++) a2.tick(); ok(early === 0, `no rising in the first 24 hours (${low} cities at 33% or less on load)`); }
+  for (let h = 0; h < 24*2; h++) a2.tick(); ok(S2.hour === hour + 72, 'it plays 3 days');
   ok(!S2.armies.some(a => a.rebel && a.rbH != null && S2.owner[a.at] === ger && R2.garrisonOf(a.at, ger) === 0), 'after the 24 hours an empty city held by rebels went over to them');
   // it saves and loads again unchanged
   const s1 = a2.saveJSON(); a2.restore(JSON.parse(s1)); const s2 = a2.saveJSON(), o1 = JSON.parse(s1), o2 = JSON.parse(s2), dk = Object.keys(o1).filter(k => k !== 'bt' && JSON.stringify(o1[k]) !== JSON.stringify(o2[k]));   // (S.bt, the battle charts, start afresh on a load)

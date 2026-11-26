@@ -226,6 +226,7 @@ function moraleMigrate(){ if (S.mv) return; S.mv = 1; const U = Array.isArray(S.
     if (!G.P[p].city){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } continue; }   // (the countryside no longer rebels: they stand down)
     (S.rbl || (S.rbl = [])).push({id:a.id, p, o});
     if (garrisonOf(p, o) === 0){ a.rbH = S.hour + 24; if (isSeat(o)) (wait.get(o) || wait.set(o, []).get(o)).push(p); } }
+  S.rbG = S.hour + 24;   // (no city rises in the first 24 hours: a converted city may sit at 33% or less, rules/economy.js rebelRolls)
   removeEmpty();
   delete S.unrest; delete S.integ; delete S.rcool; delete S.pcool;
   for (const me of seats()){ const D = desk(me), w = wait.get(me) || []; if (!Array.isArray(D.log)) continue;

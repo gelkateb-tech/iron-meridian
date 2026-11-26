@@ -140,12 +140,12 @@ function aiSpies(n){
    1. garrisons: every city it holds showing MOR.aiGar (38%) or less keeps at least as many of its ground units as the city's rebel band (3 to 6),
       and a city where rebels are fighting one more than the rebels: idle stacks there are set apart from the idle lists, and the nearest idle
       stacks within two days' march are sent in when that is not enough (aiGarrison)
-   2. annexing: Annex City in its occupied cities, the largest first, whenever its treasury holds the price plus MOR.aiCash and its manpower the
+   2. annexing: Annex City in its occupied cities, the largest it can afford first, whenever its treasury holds the price plus MOR.aiCash and its manpower the
       price plus MOR.aiMp (aiAnnex)
    3. retaking: a city lost to rebels is an ordinary target (aiTarget: it is its own lost land, or an enemy's or independent city)
    4. self-brake: no new offensive while MOR.aiBrake (2) or more of its cities show 33% or less (aiBrake) */
 function aiAnnex(n, N){ const cs = ownedBy(n).filter(p => G.P[p].city && occSt(p) === 'occ' && !S.cons[p]).sort((a, b) => popOf(b) - popOf(a) || a - b);
-  for (const p of cs){ const c = annexCost(p); if (N.cash < c.cash + MOR.aiCash || N.mp < c.mp + MOR.aiMp) break; annexCity(n, p); } }
+  for (const p of cs){ const c = annexCost(p); if (N.cash < c.cash + MOR.aiCash || N.mp < c.mp + MOR.aiMp) continue; annexCity(n, p); } }   // (one it cannot afford does not block a smaller, cheaper one)
 function aiBrake(n){ let k = 0; for (const p of ownedBy(n)) if (G.P[p].city && morShown(p) <= MOR.rebelAt && ++k >= MOR.aiBrake) return true; return false; }
 // habit 1: idleBy (province -> its idle stacks, aiTurn0) loses the stacks set apart or sent as garrisons; they are also kept in AIT.gar, so the
 // offensive launched from a staging province (aiOperate) leaves them where they are

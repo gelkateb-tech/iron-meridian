@@ -288,12 +288,19 @@ const rebelSize = p => REBEL_SIZE[rebelBand(p)];
 // nation o's ground units standing in province p (not marching, not in the air)
 function garrisonOf(p, o){ let s = 0; for (const a of byAt(p) || S.armies) if (a.owner === o && a.at === p && a.to === null && !a.fly && !a.air && !a.rebel) s += groundN(a); return s; }
 const rebelsAt = p => { for (const a of byAt(p) || S.armies) if (a.rebel && a.at === p && count(a) > 0) return a; return null; };
+// the holder's ground force a standing in its own city with a live rising (an S.rbl entry) whose only foes there are rebels: it holds the city (it
+// loses no battle morale and never breaks or retreats), so the fight is decided by strength, the holder dug in (+25%; owner's points 8 and 10)
+function risingHold(a){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.rebel || !S.rbl || !S.rbl.length) return false; const p = a.at;
+  if (S.owner[p] !== a.owner || !S.rbl.some(e => e.p === p && e.o === a.owner)) return false;
+  for (const b of byAt(p) || S.armies) if (b.at === p && b.to === null && !b.rebel && b.owner !== a.owner && count(b) > 0 && atWar(a.owner, b.owner)) return false;
+  return true; }
 // the chance of a rising at morale m (the whole number shown): 0 at 33, 50% at 25 (6.25 points a point), then 50% to 100% at 10 (question 1)
 const rebelChance = m => m > MOR.rebelAt ? 0 : m >= MOR.rebel25 ? 0.5*(MOR.rebelAt - m)/(MOR.rebelAt - MOR.rebel25) : m <= MOR.sure ? 1 : 0.5 + 0.5*(MOR.rebel25 - m)/(MOR.rebel25 - MOR.sure);
 // the chance tonight in city p of nation o: halved for each of o's ground units standing there (question 1)
 const rebelOdds = (p, o) => rebelChance(morShown(p))*Math.pow(0.5, garrisonOf(p, o));
-// the day change's rolls: every city held by a nation that shows 33% or less and has no rebels in it already, in province order, one die each
-function rebelRolls(){ for (let p = 0; p < G.P.length; p++){ const P = G.P[p], o = S.owner[p]; if (!P.city || !(o >= 0) || morShown(p) > MOR.rebelAt || rebelsAt(p)) continue;
+// the day change's rolls (none in the first 24 hours after an old save was converted: S.rbG): every city held by a nation that shows 33% or less and has no rebels in it already, in province order, one die each
+function rebelRolls(){ if (S.rbG != null){ if (S.hour < S.rbG) return; delete S.rbG; }   // (an old save just converted: no rising before a full day has passed, moraleMigrate)
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p], o = S.owner[p]; if (!P.city || !(o >= 0) || morShown(p) > MOR.rebelAt || rebelsAt(p)) continue;
     const ch = rebelOdds(p, o); if (ch > 0 && rng() < ch) rebelRise(p, o); }
   removeEmpty(); }
 // the holder's forces standing in p count as dug in against the rebels, however long they have stood there (the owner's +25% in a city)
@@ -341,7 +348,9 @@ function wingsFlee(p, O){ for (const w of S.armies){ if (!w.air || w.fly || w.ai
 function morCaptured(p, O){ if (S.anx) delete S.anx[p]; setMor(p, S.home[p] === O ? MOR.lib : MOR.occ); }
 // land received by a treaty, a sale or a gift (questions 3 and 5): the receiver's own homeland is handed back (liberated, 55); any other land arrives
 // annexed (its morale as it was)
-function landGiven(p, to){ if (S.occ) S.occ[p] = null; if (S.anx) delete S.anx[p]; if (S.home[p] === to) setMor(p, MOR.lib); else (S.anx || (S.anx = {}))[p] = to; }
+function landGiven(p, to){ if (S.occ) S.occ[p] = null; if (S.anx) delete S.anx[p];
+  { const c = S.cons[p]; if (c && c.k === 'annex'){ const N = S.nations[c.o]; S.cons[p] = null; if (N){ N.cash += c.cash || 0; N.mp += c.mp || 0; if (isSeat(c.o)) tell(c.o, `The annexing of ${placeNm(p)} changed hands by treaty or sale: the annexing under way there was called off and its $${c.cash}M and ${c.mp}k manpower refunded.`, 'info', p); } } }   // (an annexing under way is pointless now: refunded to whoever paid)
+  if (S.home[p] === to) setMor(p, MOR.lib); else (S.anx || (S.anx = {}))[p] = to; }
 /* ---- Annex City (point 8): a construction in the city's one slot (S.cons[p] = {k:'annex', o, h, h0, cash, mp}), ANNEX_COST by the city's size
    band, paid when it starts; any time, even while the city burns, rebels are in it or it is under attack. It ends with S.anx[p] = the holder, and the
    holder's occupied countryside provinces taken from the same country whose nearest city it is are annexed with it (question 4). A capture or a
