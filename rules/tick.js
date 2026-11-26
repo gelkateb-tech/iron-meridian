@@ -238,8 +238,8 @@ function battleStep(hourly){
     if (owners.length < 2) continue;
     S.battles.push(p);
     if (!prevBattles.has(p)) for (const me of owners) if (isSeat(me)){
-      const foes = owners.filter(o => o !== me).map(nationName).join(', ');
-      if (S.owner[p] === me){ tell(me, `${foes} attacks ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(me); }
+      const fo = owners.filter(o => o !== me), reb = fo.every(o => sides.get(o).every(a => a.rebel)), foes = fo.map(o => sides.get(o).every(a => a.rebel) ? 'Rebels' : nationName(o)).join(', ');
+      if (S.owner[p] === me){ if (!(reb && S.rbl && S.rbl.some(e => e.p === p && e.o === me))) tell(me, `${foes} attack${fo.length > 1 || reb ? '' : 's'} ${G.P[p].cityName || G.P[p].name}! Defend it.`, 'bad', p); alarm(me); }   // (a rising: its own dispatch, rebelRise, has said it)
       else tell(me, `Battle at ${G.P[p].cityName || G.P[p].name} against ${foes}.`, 'bad', p);
       cue(me, 'battle');
     }
@@ -272,8 +272,8 @@ function battleStep(hourly){
       for (const a of sides.get(o)){ const u0 = {...a.u}; hurt(a, d, f*(G.P[p].sea && ground(a) ? (escorted ? 0.75 : 1.5) : 1)/tot*(o === S.owner[p] ? 1 - 0.12*cmdF(a, 'shield') : 1)*digF(a)); cmdXP(a, (a._dealt0 || 0)*0.5); for (const t of UT) if (u0[t] > a.u[t]) bs.lost[t] = (bs.lost[t] || 0) + u0[t] - a.u[t]; }
       if (hourly){ bs.hp.push(Math.round(sides.get(o).reduce((s0, a) => s0 + armyHP(a), 0))); if (bs.hp.length > 96) bs.hp.shift(); }   // (the history keeps one point per game hour)
     }
-    // morale: a force in a fight loses 1 a game hour and 40 × the share of its health lost, spread over the hour's battle steps (the break and retreat check is hourly: armyUpkeep)
-    for (const a of list){ if (a.owner < 0 || !count(a)) continue; const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m = Math.max(0, (a.m ?? 80) - 1/BATTLE_Q - 40*lost); }
+    // morale: a force in a fight loses 1 a game hour (not a garrison holding its city against a rising: risingHold) and 40 × the share of its health lost, spread over the hour's battle steps (the break and retreat check is hourly: armyUpkeep)
+    for (const a of list){ if (a.owner < 0 || !count(a) || risingHold(a)) continue; const lost = a._h ? Math.max(0, (a._h - effHP(a))/a._h) : 0; a.m = Math.max(0, (a.m ?? 80) - 1/BATTLE_Q - 40*lost); }
     IM.emit('fxBattle', p, owners, sides, list);
     const here = owners.filter(isSeat);   // the seats fighting here: their statistics and dispatches
     for (const me of here){ const size = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0); const D = desk(me), st0 = D.stats || (D.stats = {}); if (size > (st0.bigBattle || 0)){ st0.bigBattle = size; st0.bigBattleAt = G.P[p].cityName || G.P[p].name; st0.bigBattleDay = dayOf(S.hour); } }
@@ -282,7 +282,7 @@ function battleStep(hourly){
     for (const a of list) if (count(a) === 0 && a.cmd != null) cmdLost(a);
     for (const a of list) if (count(a) === 0) for (const me of here){
       if (a.owner === me) tell(me, `${armyName(a)} was destroyed at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p);
-      else tell(me, `${armyLabel(a, me)} destroyed at ${G.P[p].name}.`, 'good', p);
+      else if (!(a.rebel && S.rbl && S.rbl.some(e => e.id === a.id && e.o === me))) tell(me, `${armyLabel(a, me)} destroyed at ${G.P[p].cityName || G.P[p].name}.`, 'good', p);   // (a rising crushed: rebelHour reports it once)
     }
   }
   removeEmpty();
@@ -348,13 +348,14 @@ function* dailyG(){
         : lowElec ? `At war with $${fmt(N0.cash)}M but only ${fmt(N0.elec)} electronics for aircraft, drones and air defence: buy more on the Market (T) or build an Arms Industry in an electronics city.`
         : `At war with $${fmt(N0.cash)}M unspent and ${idle.length} idle ${idle.length === 1 ? 'city' : 'cities'}: open Production (P) to queue defenders.`, 'bad', idle[0].id); } }
   for (const N of S.nations){ if (!N.alive) continue; const inc = income(N.id), was = N.short || {};
-    N.short = {};
+    N.short = {}; const SU = {}; let su = false;   // SU: the share of the day's need of each short resource left unmet (the morale target's shortage: rules/economy.js natMor)
     const cap = stockCap(N.id), capMp = stockCap(N.id, 'mp');   // (goods at RES_K; manpower in thousands)
-    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; } else N[R.k] = R.k === 'cash' ? v : Math.min(R.k === 'mp' ? capMp : cap, v); }
+    for (const R of RES){ const v = N[R.k] + inc.net[R.k]; if (v < 0){ N.short[R.k] = true; N[R.k] = 0; const need = inc.upkeep[R.k] || 0; SU[R.k] = need > 0 ? Math.round(Math.min(1, -v/need)*1000)/1000 : 1; su = true; } else N[R.k] = R.k === 'cash' ? v : Math.min(R.k === 'mp' ? capMp : cap, v); }
+    if (su) N.shortU = SU; else delete N.shortU;
     if (isSeat(N.id)){ const D = desk(N.id), st0 = D.stats || (D.stats = {}), mk = st0.made || (st0.made = {}); for (const R of RES) mk[R.k] = (mk[R.k] || 0) + Math.max(0, inc.gross[R.k]); }   // produced over the campaign (statistics)
     if (isSeat(N.id)){ for (const k of ['oil', 'iron', 'elec', 'cash']) if (N.short[k] && !was[k]) tell(N.id, SHORT_MSG[k], 'bad'); } }
   yield;
-  unrestDay();
+  moraleDay();   // (morale, casualties and rebels: rules/economy.js)
   recordStats();
   makePaper();
   checkEnd();

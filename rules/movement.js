@@ -548,7 +548,7 @@ function armyUpkeep(prevBattles){
     const limit = here && S.owner[a.at] === a.owner && G.P[a.at].city ? 15 : 25;
     // (a force marked retreating that stands still with no route, e.g. from a save made before routes were checked, is looked at again)
     if (inBattle && a.retreating && !(a.path && a.path.length)) a.retreating = false;
-    if (inBattle && moraleEff(a) < limit && !a.retreating){   // (a Bunker's garrison breaks later: moraleEff)
+    if (inBattle && moraleEff(a) < limit && !a.retreating && !risingHold(a)){   // (a Bunker's garrison breaks later: moraleEff; a garrison holding its city against a rising never breaks: risingHold)
       // the nearest supplied own province the force has a route to (a fleet: an own naval city by sea; troops in an enemy port do not board there)
       const seen = new Set([a.at]), q = [[a.at, 0]]; let dest = -1, rp = null;
       for (let h = 0; h < q.length && dest < 0; h++){ const [u, du] = q[h]; if (du >= 6) continue;

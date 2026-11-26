@@ -243,7 +243,7 @@ This also concerns the rebels branch (REB-2).
 - C: today's rule.
 
 **Until you answer.** A, both halves. The fix (auto-test/fixes 0156928, B3.10) stands the partisans down whenever the province is
-home land of its holder. A peace cede makes the ceded land the receiver's home land (cede() sets `S.home`), so it is covered too:
+home land of its holder. A peace cede makes the ceded land the receiver's home land (cede() sets `S.home`; on rebels-2 ceded land instead stays annexed with its old home country and its rebels lay down their arms, see RB5), so it is covered too:
 rebelhome.js peace on the branch keeps Tromsø with Finland (it went independent before). If you want partisans to keep fighting in land
 ceded at peace (B), that is one condition to undo for the cede path.
 
@@ -300,6 +300,22 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## Owner's answers, 2026-11-26 second set (verbatim)
+
+> Answers:
+> - REBELS: approved. RB1–RB5: your defaults, including the new wording of RB5. Merge it now.
+> - MISSILES M13: approved, with one change: give the gas zone a stronger sickly-green tint and a dashed hazard border like the radiation one; on green land it nearly disappears.
+> - UNITS IN CITIES: UC1 and UC3–UC6: your defaults; UC2 as I corrected. Merge once I've seen the dot fix sheets.
+> - CITY LOTS questions: 1. Park lots: yes. 2. Dim square with street lamps at night: yes. 3. Roads should curve round the HQ square and carry on, not stop at its edge.
+> - CITY LOTS next round (A6/A7): no visible lot outline (the faint octagons in the grass read as a slab). Pull the lots a bit closer to the city core so the town doesn't look scattered (the Airbase stays at the edge, the Naval Yard on the water). Keep the Airbase off the highway.
+
+So: RB1-RB5 = my defaults (RB5 in its new wording); REBELS merged. M13 = approved, with the gas zone changed: a stronger sickly-green tint and a dashed hazard border like the radiation zone (job MISSILES). UC1, UC3-UC6 = my defaults, UC2 as corrected; UNITS IN CITIES merges after the owner sees the UC-DOT sheets. City lots: 1 park lots yes; 2 night square with lamps yes; 3 roads curve round the HQ square and carry on (not stop at its edge). Next city lots round: no visible lot outline, lots a bit closer to the core (Airbase at the edge, Naval Yard on the water), Airbase off the highway (job CITY LOTS 3).
+
+## D10 tighten questions, 2026-11-26 (merged in v69; my default in brackets)
+- DT1. Is 20 days the right wait before a nation you left will ally with you again? (yes)
+- DT2. Counter-offers ask for extra money in $10M steps, so on a tiny deal a counter can ask several times the goods' worth (as before). Step small deals in $1M? (yes, small interface follow-up)
+- DT3. Show the "favours" reason in the trade screen's footer too, not only in the chat reply? (yes, small interface follow-up)
+
 ## UNITS IN CITIES questions, 2026-11-26 (units-in-cities 398a749, sheets in shots/2026-11-26/units-in-cities/; my default in brackets)
 - UC1. Zoomed out (hex 12), an army just outside a city joins the city's counter; only its dot outside the ring shows it is outside. OK? (yes)
 - UC2. The outside army's dot gives way to borders, names and the city's counter, so at mid and play zoom it is often drawn on another side of the city than its real one. OK? (yes: the ring is what says in or out)
@@ -314,7 +330,7 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 - RB2. Should poor computer nations keep a smaller cash reserve before annexing, so they annex too (Vietnam never does)? (yes: reserve = half the price instead of $150M)
 - RB3. Keep the extra "Mobilisation (homeland only)" row in the morale list (−5 per mobilisation level, homeland)? (yes)
 - RB4. Old saves: is a 24 h grace with no risings enough, or should converted cities also get a 34% floor? (24 h grace only)
-- RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes)
+- RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country, but rebels in it lay down their arms (Q27 A); gifted land arrives as the receiver's home land (Q28 B); land bought in a sale arrives annexed (not occupied) unless it was the buyer's own home land; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes) [updated 2026-11-26 after the REBELS refresh reconciled Q27/Q28]
 
 ## Owner's answers, 2026-11-26 (verbatim)
 
@@ -327,6 +343,8 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 > - Keep the rules from before: at most 2 polish rounds per job, Sonnet for interface follow-ups.
 
 So: R1-R17, M1-M12, M14, M15, D4-D9, D11-D13, K1-K8, U1-U4, E1-E8, F1-F6 and Q1-Q31 are answered with the defaults written above. D10 is answered "fix it" (job D10-FIX). M13 waits: the zone mockup was sent again on 2026-11-26.
+
+**Q1-Q31 defaults (job Q-DEFAULTS, branch q-defaults, 2026-11-26):** no Q default needs new code on master 32455e9. Already in force: Q1, Q9, Q10, Q11, Q12, Q14, Q16, Q18, Q23, Q25, Q26 (their fixes came with auto-test/fixes). Default "unchanged" or "nothing built": Q2, Q3, Q4, Q5, Q6, Q7, Q13, Q15, Q17, Q20, Q21, Q22, Q24, Q29, Q30, Q31. Handed to MISSILES: Q8 (keep the arrival re-check of rules/air.js: land damage only where the land is hostile or enemy forces stand; no abort, no refund) and Q19 (a captured silo's stock passes to the captor and may be fired). Handed to REBELS: Q27 (partisans stand down in land that is its holder's home land; since RB5 keeps a ceded province's old home country, rebels-2 must stand them down explicitly after a peace cede) and Q28 (a coalition gift gives home title, as now). The one build on this branch is the D10 tightening (D10 above).
 
 ## Questions from the owner notes of 2026-11-25
 
@@ -348,7 +366,7 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 - **D7. Pop-up notes on a phone while Diplomacy is open** cover the tabs for a few seconds. → Done (be33bed): below the tabs and sort bar, taps pass through.
 - **D8. Province details and price aids in the land picker** (value, floor, suggested price, locator map). → Kept.
 - **D9. Keep the Neighbours sort and the Border row on the nation page?** → Yes.
-- **D10. A computer nation that likes you keeps giving money for nothing** (already so before this work). → Unchanged for now; one option is that it refuses deals where it gets nothing. **Owner 2026-11-26: fix it. Done (merge-1126):** in rules/dealings.js dealAnswer, a computer nation declines any New Trade deal in which it gives money, goods, land or a treaty that costs it and gets nothing of value back (no money or goods, no land it wants, no treaty worth something to it), whatever its opinion, with the answer "We give nothing for nothing." and no counter-offer. The trade builder's footer reads "Will not: We give nothing for nothing". Deals where it gets something back are judged as before; its own gifts (coalition aid, its trade proposals) are unchanged. Test: .test/d10.js.
+- **D10. A computer nation that likes you keeps giving money for nothing** (already so before this work). → Unchanged for now; one option is that it refuses deals where it gets nothing. **Owner 2026-11-26: fix it. Done (merge-1126):** in rules/dealings.js dealAnswer, a computer nation declines any New Trade deal in which it gives money, goods, land or a treaty that costs it and gets nothing of value back (no money or goods, no land it wants, no treaty worth something to it), whatever its opinion, with the answer "We give nothing for nothing." and no counter-offer. The trade builder's footer reads "Will not: We give nothing for nothing". Deals where it gets something back are judged as before; its own gifts (coalition aid, its trade proposals) are unchanged. Test: .test/d10.js. **Tightened (q-defaults, 2026-11-26):** a token payment no longer gets round it (at opinion 80, $1M for $40M, $1M for $75M and "$30M + a non-aggression pact for nothing" were accepted, and $1M for $40M could be repeated). What its opinion adds is now capped at $10M + 25% of what it gets back, so a friendly nation accepts at most about 16% less value than it gives ($34M for $40M yes; $32M for $40M no, "wants about $10M more"). A favour is a deal in which it got back less than it gave at world prices (by more than $1M; S.favours). Each favour to the same player in the last 72 hours halves the 25% part, and from the second one its opinion adds $10M at most: a deal must then pay its way, i.e. cover its usual 5% margin ($34M, then $38M, then $42M for $40M; for $900M: $859M, $897M, $945M). Trades at world price are no favours, so a friend keeps trading with you at its price. When favours are what makes a deal dearer it says so ("We have done you 2 favours in the last 3 days: this one must pay its way"). It no longer makes counter-offers in which it gives nothing (or only your own money back): it keeps its side and asks you for more, or says what it wants ("Wants about $40M more" for $1M for $40M); the sum it names is the money that turns the deal into a yes. A counter-offer it made lapses if a favour is signed in between ("after your last deal with them this offer no longer stands"). Two loops the reviews found are closed: a nation you left an alliance with will not ally with you again for 20 days (an alliance plus its money could be signed and left every hour), and a signed deal adds its +4 opinion once a day per pair (ten $1M gifts bought +40 opinion). A cold opinion still counts in full against you. The footer comes from the same answer, so it says exactly what will happen. Test: .test/d10.js sections 5 and 7.
 - **D11. Invented leader names:** a few share a surname with a real minister (higher risk: Syria's Nabil Sabbagh, Yemen's Tawfiq al-Mikhlafi; lower: Japan's Tadokoro, Spain's Valcárcel, Norway's Haugland, Mali's Tangara). → Done (be33bed): Syria Rafiq Dabbouri, Yemen Jalal Samawati, Japan Itsuki Moriwaki, Spain Inés Montalbetti, Norway Sigrid Vollaneset, Mali Moussa Kébalou. Please skim them once.
 - **D12. The computer's own alliance check can wrongly say "coalition is full"** (already so before this work). → Unchanged, so computer-only games stay identical.
 - **D13. Known Army Size** compares the forces you have seen with their whole military, so Russia with one force seen reads "8 units, weaker military". → Done (be33bed): "8 units seen"; the comparison shows only when all their forces are known.

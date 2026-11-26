@@ -168,6 +168,7 @@ function armyKnown(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   const r = armyIdent(a, vis); if (M) M.set(a, r); return r; }
 function armyIdent(a, vis){ const me = vis.n, [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea;
   const p0 = a.fly ? (c => c >= 0 ? G.prov[c] : -1)(worldToCell(x, y)) : a.at;
+  if (a.rebel && !a.fly && a.to === null && S.owner[a.at] === me) return true;   // rebels in a province you hold: its people tell you who they are (rules/economy.js)
   if (vis.idp && p0 >= 0 && (vis.idp.has(p0) || (!a.fly && a.to !== null && vis.idp.has(a.to)))) return true;   // a recon reveal still running
   if (fightsMe(a, vis)) return true;   // fighting it
   if (sea && vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) return true;   // ships at sea: sonar, maritime patrol

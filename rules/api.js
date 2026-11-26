@@ -29,5 +29,8 @@ IM.api = {
   // a seat's dealings with an AI nation (first argument: the seat)
   say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk,
   // territory sales (rules/territory.js): a nation offers or answers; the value, the floor and what may be sold
-  terrOffer, terrAnswer, provValue, terrMin, terrFloor, terrWhyNot, capturedFrom
+  terrOffer, terrAnswer, provValue, terrMin, terrFloor, terrWhyNot, capturedFrom,
+  // occupation, morale and rebels (rules/economy.js): Annex City (the nation, the city) and why it may not now ('' when it may), its price; a
+  // province's morale factors (the city panel), its status, the rebel chance tonight; the routes a nation lost to war (rules/trade.js)
+  annexCity, annexWhy, annexCost, morFactors, occSt, rebelOdds, lostRoutesOf
 };

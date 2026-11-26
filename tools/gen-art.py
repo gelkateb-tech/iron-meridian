@@ -1191,15 +1191,17 @@ unit_def('inf', 'motorized infantry rifleman', 'man', 'soldier',
 # camera, size, light and framing. The owner asked for a small crossed-rifles flag to match the rebels badge, so the "no flags" line is
 # replaced for this set only by the one flag described; everything else in the style is unchanged. The export rifleman (look 1) is attached
 # for the camera, figure size and framing only, and as the look the rebels must clearly differ from.
-REB_DESC = ("Irregular fighters, clearly NOT a regular army: mixed civilian and military clothes that do not match one another (a worn "
-            "field jacket over a civilian shirt, a hooded sweatshirt, cargo trousers, plain work trousers, a quilted vest, sandals or worn "
-            "boots), cloth scarves and headwraps (one wears a headwrap wound round the head, one a scarf pulled up over the nose and mouth, one "
-            "a soft cap with a scarf at the neck), NO helmets, no matching uniform, no camouflage pattern, no body armour plates, loose canvas "
-            "chest rigs and ammunition bandoliers, a small cloth bag. Colours: tan, sand, khaki, dusty brown and faded olive, with one muted "
-            "dark-red or dark-blue scarf. Each carries a generic rifle of an older pattern with a curved magazine and a plain wooden-look stock "
+REB_DESC = ("Irregular fighters, clearly NOT a regular army, all three dressed in the same street-and-work style: "
+            "hooded sweatshirts and worn work jackets, padded or army-surplus vests, "
+            "an ammunition bandolier across the chest or loose canvas pouches on a belt, jeans or work trousers, worn lace-up boots. Two "
+            "of them wear a cloth bandana pulled up over the nose and mouth, one with his hood up; the third has a bare face and wears a "
+            "plain knitted beanie or a soft cap. NO headwraps, NO turbans, NO sandals, NO helmets, no matching uniform, no camouflage "
+            "pattern, no body armour plates. They must not look like clones: vary the colours a little between them, in muted browns, "
+            "greys, olive and faded blue (for example one brown hoodie, one grey work jacket over a faded blue hoodie, one olive padded "
+            "vest), worn and dusty. Each carries a generic rifle of an older pattern with a curved magazine and a plain wooden-look stock "
             "(an original generic design, not a copy of any real rifle line for line). One of them holds upright a small hand-held flag on a "
             "short thin pole: a plain grey cloth flag with two white rifles crossed in an X, muzzles up; the flag is small, about the size of "
-            "a fighter's head and shoulders, and it is the only emblem in the picture. Worn, dusty, practical, determined. No vehicle, no "
+            "a fighter's head and shoulders, and it is the only emblem in the picture. Practical, determined. No vehicle, no "
             "pickup truck, no mounted gun.")
 REB_TAIL = (" Original generic design made for this game. Apart from that one small crossed-rifles flag: no text, no letters, no numbers, "
             "no other flags, no stars, no national markings, no logos, no badges.")

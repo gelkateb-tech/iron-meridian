@@ -88,13 +88,14 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     return N;
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
-       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
+       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], mor:G.P.map(P => P.sea ? 0 : MOR.start), cas:{}, anx:{}, spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.ab = 1;   // made under the Army Base rule for infantry (see abMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
   S.bk = 1;   // made under the Bunker rule (levels 1-5; see bunkerMigrate)
+  S.mv = 1;   // made under the morale rule (owner points 8-11; see moraleMigrate)
   if (NAVAL_CITIES) S.nc = 1;   // made under the naval-cities rule (see restore: a save without it keeps routes given before the rule)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
@@ -102,7 +103,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   else for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
-    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
+    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, atPeaceMor(() => income(n.id).gross.cash))));   // (read at the peacetime morale: rules/economy.js morPeace)
     for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
@@ -119,8 +120,8 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S.own0 = S.owner.slice();
   for (const me of seats()) desk(me).sunOff = sunOffFor(me);   // display only: the seat's opening view over its capital is in daylight
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
-  INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
-  if (T){ tierCatchUp(mode); INCC.v = -1; }
+  INCC.v = -1; trS(); atPeaceMor(tradeGen); INCC.v = -1;   // (the opening trade routes are laid out by the economies at their settled morale, as the catch-up below)
+  if (T){ atPeaceMor(() => tierCatchUp(mode)); INCC.v = -1; }   // (the catch-up is set at the morale every province settles at in peace, not at the starting 70: rules/economy.js morPeace)
   bookOpen();   // the Market's first offers, on both sides where stocks allow (rules/economy.js)
   tellAll(me => `${S.nations[me].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   IM.emit('newGame');
@@ -209,6 +210,30 @@ function bunkerMigrate(){ if (S.bk) return; S.bk = 1; let mine = new Map();
     const o = S.owner[p]; if (l > 0 && isSeat(o)) mine.set(o, (mine.get(o) || 0) + 1); }
   delete S.bhp;
   for (const me of seats()){ const D = desk(me), k = mine.get(me) || 0; if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: Fortifications are now the Bunker, with five levels, hidden from other nations. Fortifications I, II and III became Bunker levels 1, 3 and 5${k ? ` (${k} of yours)` : ''}. A bunker protects its garrison (33% to 82% less damage), its morale, the people and the other buildings of its province, and costs $1.0M to $1.4M a day.`}); } }
+// saves from before the morale rule (no S.mv; owner points 8-11, docs/REBELS-PLAN.md 8): each land province's morale is what it was (100 - unrest -
+// war damage), so nothing the player sees jumps on load; civilian casualties start at 0 (the war damage is in that morale already). Land occupied
+// for 10 days or more (it gave full output already), integrated, or held with no date of occupation is annexed at no cost; land occupied for less
+// stays occupied. Partisans become rebels: in the countryside, which no longer rebels, and in land held by its home nation (question Q27, option A)
+// they stand down; in a city without the holder's troops they wait 24 hours once (a.rbH) before the city goes over, with a dispatch, so a load
+// never loses a city on the spot; with troops there they fight on.
+// Unrest, integration and the old cooldowns are dropped (S.occ stays: it dates the occupation). The opening calibration is not redone. Each seat is told once
+function moraleMigrate(){ if (S.mv) return; S.mv = 1; const U = Array.isArray(S.unrest) ? S.unrest : [], D0 = Array.isArray(S.dmg) ? S.dmg : [], I = S.integ || {};
+  S.mor = G.P.map((P, p) => P.sea ? 0 : Math.round(Math.max(0, Math.min(100, 100 - (+U[p] || 0) - (+D0[p] || 0)))*100)/100);
+  S.cas = {}; S.anx = {};
+  for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (G.P[p].sea || !(o >= 0) || S.home[p] === o) continue; const t = S.occ ? S.occ[p] : null;
+    if (t == null || S.hour - t >= 240 || (I[p + ':' + o] || 0) >= 10) S.anx[p] = o; }
+  const wait = new Map();
+  for (const a of S.armies){ if (!a.rebel || !count(a)) continue; const p = a.at, o = S.owner[p]; delete a.hold;
+    if (!(o >= 0)){ delete a.rebel; continue; }   // (independent land: they are its garrison)
+    if (!G.P[p].city || S.home[p] === o){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } continue; }   // (the countryside no longer rebels, and land back with its home nation has none (Q27 A): they stand down)
+    (S.rbl || (S.rbl = [])).push({id:a.id, p, o});
+    if (garrisonOf(p, o) === 0){ a.rbH = S.hour + 24; if (isSeat(o)) (wait.get(o) || wait.set(o, []).get(o)).push(p); } }
+  S.rbG = S.hour + 24;   // (no city rises in the first 24 hours: a converted city may sit at 33% or less, rules/economy.js rebelRolls)
+  removeEmpty();
+  delete S.unrest; delete S.integ; delete S.rcool; delete S.pcool;
+  for (const me of seats()){ const D = desk(me), w = wait.get(me) || []; if (!Array.isArray(D.log)) continue;
+    for (const p of w) D.log.unshift({h:S.hour, kind:'bad', p, text:`Rebels hold ${G.P[p].cityName || G.P[p].name} and you have no troops there: it goes over to them in 24 h unless troops arrive.`});
+    D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:'New rule: morale. Every province moves an eighth of the way to its morale target each day (homeland city 90, annexed city 75, occupied city 60, countryside 100, plus or minus distance, wars, enemy neighbours, shortages, casualties and more: see the city panel). Occupied land gives 25% of its output and cannot mobilize; build Annex City there for 50% and mobilization. A city at 33% morale or less can rise in revolt at the day change; each of your units there halves the chance. Land you held for 10 days or more has been annexed.'}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded.
@@ -259,7 +284,7 @@ function restore(data){
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
   if (!Array.isArray(S.own0) || S.own0.length !== S.owner.length) S.own0 = (Array.isArray(S.home) && S.home.length === S.owner.length ? S.home : S.owner).slice();   // very old saves: who held each province at the start, from its home owner (territory sales)
-  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
+  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
   for (const a of S.armies){ if (a.raid && a.raid.r != null && !routeById(a.raid.r)) delete a.raid; if (a.blk && !shipsOnly(a)) delete a.blk; }   // (saves from before these orders were dropped with their route or fleet: rules/trade.js trEnded, movement.js merge)
@@ -274,6 +299,7 @@ function restore(data){
   researchMigrate();
   rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
+  moraleMigrate();   // (after the other migrations)
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
   for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
   // saves from before NAVAL CITIES (S.nc unset): ships standing on land that is no naval city (they docked on any coast then) put out to sea: to the first sea zone next to
@@ -318,7 +344,7 @@ function resMigrate(){
   // Farms are gone: each level is refunded ($20M), a farm under construction is cancelled (refunded), a knocked-out one forgotten
   for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], N = o >= 0 ? S.nations[o] : null;
     if (b && b.farm){ if (N) N.cash += 20*b.farm; } if (b) delete b.farm;
-    const c = S.cons[p]; if (c && !BUILD[c.k] && !ECO_OLD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
+    const c = S.cons[p]; if (c && !consB(c.k) && !ECO_OLD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
     if (S.bdis && S.bdis[p] && typeof S.bdis[p] === 'object') delete S.bdis[p].farm; }
   // food listings: a sell offer's food is gone, a buy offer's money goes back to its owner
   if (Array.isArray(S.book)) S.book = S.book.filter(o => { if (MKT_K.includes(o.res)) return true; if (isBid(o) && S.nations[o.seller]) S.nations[o.seller].cash += o.qty/MKT_LOT*o.price; return false; });
@@ -352,13 +378,13 @@ function armyAdded(a){ const A = S.armies;
 const has = (n, id) => rLevel(n, id) > 0;
 const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', stealth:'Stealth Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', mar:'Marine Brigade', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
 const NAME_T = ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec', 'jam', ...(NAVAL_CITIES ? ['mar'] : [])];   // (a force's name: its dearest ground type)
-function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
+function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Rebels' : 'Garrison';
   let k = a.air ? (['heli', 'drone', 'swarm', 'sdrone', 'bomb', 'stealth', 'mpa', 'awacs', 'asf'].find(t => a.u[t]) || 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
   if (!k){ let best = 'inf', bv = -1; for (const t of NAME_T){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
 // a force as nation `me` names it: its own by name alone, another's with the nation in front
-const armyLabel = (a, me) => a.owner === me ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
+const armyLabel = (a, me) => a.owner === me ? armyName(a) : a.rebel ? 'Rebels' : `${nationName(a.owner)} ${armyName(a)}`;   // (rebels are just "Rebels", not "Independent Rebels")
 const STC = [];
 function st(o, t, k){
   if (o < 0) return UNITS[t][k] || 0;
@@ -427,7 +453,7 @@ function checkNation(n, by = NEUTRAL){
     const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
     // (the annexer's own home land among it comes back unoccupied, as on a capture)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
-      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.home[p] === by ? null : S.hour; if (S.unrest && S.home[p] === by) S.unrest[p] = 0; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
+      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.home[p] === by ? null : S.hour; morCaptured(p, by); } else { S.owner[p] = NEUTRAL; ownChanged(); if (S.anx) delete S.anx[p]; addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); geoChanged();
     tellAll(me => n === me ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, me => n === me ? 'bad' : by === me ? 'good' : 'info');

@@ -24,7 +24,7 @@ let SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f),
 const NAMES = ['tickHour', 'battleStep', 'rangedStep', 'prodHour', 'consHour', 'researchHour', 'diploHour', 'terrHour', 'reqHour', 'weatherHour', 'dropTick', 'linkHour', 'strandedHour', 'escortHour',
   'airTick', 'missileTick', 'spyHour', 'rebelHour', 'stanceHour', 'chaseHour', 'joinHour', 'computeSupply', 'computeBlockade', 'armyUpkeep', 'capture', 'diploDay', 'daily',
   'aiLinks', 'aiTrade', 'aiTurn', 'aiAir', 'aiMissiles', 'aiSpies', 'aiResearch', 'aiPickUnit', 'aiOperate', 'aiGuns', 'aiFleet', 'aiPlan', 'aiSplitToLimit',
-  'findPath', 'pathFor', 'removeEmpty', 'visibleSet', 'income0', 'tradeDay', 'convoyDay', 'marketDay', 'bookDay', 'terrDay', 'unrestDay', 'recordStats', 'checkEnd', 'tradeGen', 'trDetour', 'trAstar',
+  'findPath', 'pathFor', 'removeEmpty', 'visibleSet', 'income0', 'tradeDay', 'convoyDay', 'marketDay', 'bookDay', 'terrDay', 'moraleDay', 'recordStats', 'checkEnd', 'tradeGen', 'trDetour', 'trAstar',
   'threatNear', 'enemiesAt', 'stationaryAt', 'index', 'opinion', 'legArrive', 'splitPlan', 'merge', 'rangedGrid', 'rangedTargets', 'provPowers', 'enemyMix0', 'aiTarget', 'armiesAt', 'armiesOf', 'ownIndex',
   'aiTurn0', 'aiPlan', 'aiArmyCap', 'aiMains', 'aiSite', 'aiArmsPay', 'aiBookBuy', 'trade', 'build', 'recruit', 'blocDay', 'acceptOffer', 'commonEnemy', 'opinionParts', 'aiAway', 'borders'];
 const TIMED = [];

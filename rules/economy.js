@@ -5,7 +5,6 @@ const inGrace = o => o >= 0 && S.hour < graceFor(o);
 // may AI nation a not yet declare war on nation b? The classic world: b's own grace (three weeks for a small power). The nations world: 8 days
 // for everyone, 21 days when the attacker stands two or more tiers above its victim (S against B or C, A against C)
 const graceOn = (a, b) => S.nations[a].tier ? S.hour < (tierGap(S.nations[a].tier, S.nations[b].tier) >= 2 ? 24*21 : GRACE_H) : inGrace(b);
-const occFactor = p => S.occ && S.occ[p] != null ? Math.min(1, 0.25 + 0.75*(S.hour - S.occ[p])/240) : 1;
 let BLOCK = new Set();
 function computeBlockade(){ BLOCK = new Set(); const by = new Map(); for (const a of S.armies){ if (a.to !== null || !G.P[a.at].sea || !shipsN(a) || a.owner < 0) continue; for (const v of G.P[a.at].nbs){ const o = S.owner[v]; if (!G.P[v].sea && o >= 0 && atWar(a.owner, o)){ BLOCK.add(v); if (isSeat(o)){ const m = by.get(o) || by.set(o, new Map()).get(o); if (!m.has(v)) m.set(v, a.owner); } } } } tradeBlockade(); for (const me of seats()) blockNews(me, by.get(me) || new Map()); }
 // dispatch to seat `me` when enemy warships start (or stop) blockading its ports (by: port -> blockader); the seat's blk remembers what was
@@ -18,9 +17,11 @@ function blockNews(me, by){ if (!S.started) return; const D = desk(me), was = ne
   D.blk = now; }
 const popOf = p => (S.pop && S.pop[p] != null) ? S.pop[p] : G.P[p].pop0;
 const dmgOf = p => (S.dmg && S.dmg[p]) || 0;
-const moraleOf = p => Math.max(0, Math.min(100, 100 - unrestOf(p) - dmgOf(p)));
-// (war damage v: the province's morale falls by v, and its people by 0.12% a point; a Bunker spares the people its level's share, bunkerRed)
-function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012*(1 - bunkerRed(bunkerLv(p))))); }
+// (war damage v: the province's people fall by 0.12% a point (a Bunker spares the people its level's share, bunkerRed), and each point adds half a
+// point of civilian casualties there (S.cas, at most MOR.casMax; they lower its morale target and fade by a third a day: moraleDay). S.dmg keeps
+// the damage on record (it heals 2.5 a day); it no longer lowers morale itself (docs/REBELS-PLAN.md 2.5)
+function warDamage(p, v){ if (G.P[p].sea) return; S.dmg = S.dmg || G.P.map(() => 0); S.dmg[p] = Math.min(70, (S.dmg[p] || 0) + v); S.pop = S.pop || G.P.map(P => P.pop0); S.pop[p] = Math.max(0.02, S.pop[p]*(1 - v*0.0012*(1 - bunkerRed(bunkerLv(p)))));
+  const C = S.cas || (S.cas = {}); C[p] = Math.min(MOR.casMax, (C[p] || 0) + v*MOR.casK); }
 function provYield(p){ const P = G.P[p], f = occFactor(p)*(BLOCK.has(p) ? 0.75 : 1)*(0.45 + 0.55*moraleOf(p)/100)*(CONVOY_LOST.has(p) ? 0 : 1), b = bdisH(p) ? (o => { for (const k in S.bdis[p]) if (S.bdis[p][k] > S.hour) o[k] = 0; return o; })({...S.bld[p]}) : S.bld[p], pp = Math.pow(Math.max(0, popOf(p)), 0.75);
   // a city yields money, manpower and its ONE main resource (P.main; 'cash' when it has none): a money city 60% more money, the others ECO_Y units a day
   // times the city-size factor (0.8 for a town, 1.2 from about 16 million people); the Arms Industry adds 25% of it per level. The countryside keeps a
@@ -64,12 +65,12 @@ function income(n){ if (!keep()) return (INCC.v === tickVer && INCC.S === S && I
 function income0(n){
   const g = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}, u = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, mp:0}; let provs = 0;
   const N0 = S.nations[n], boost = N0.boost || 1, capHit = N0.capHit != null && S.hour - N0.capHit < 24*14 ? 0.6 : 1, bM = N0.boostM;   // boostM: the nations world's own catch-up for manpower
-  for (const p of ownedBy(n)){ const y = provYield(p); provs++;
+  for (const p of ownedBy(n)){ const y = provYield(p); provs += admW(p);   // (occupied land counts a quarter, annexed land a half: MOR.occAdm, MOR.anxAdm)
     const m = (S.home[p] === n ? boost : 1)*capHit;
     // (a catch-up below 1 holds money back in full and goods by its square root only: a big country keeps about the goods of the others)
     const mg = boost < 1 && S.home[p] === n ? Math.sqrt(boost)*capHit : m;
     for (const k in g) g[k] += y[k]*(k === 'cash' ? m : k === 'mp' ? (bM != null ? (S.home[p] === n ? bM : 1)*capHit : m) : mg); if (N0.capital === p){ const c = ECO_CAPITAL, rs = N0.reserve; for (const k in c) g[k] += c[k]*(rs && rs.includes(k) ? ECO_RESERVE : 1); } }   // the capital: state industry, labs and recycling (a nations-world reserve doubles a good its cities lack)
-  const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently
+  const eff = Math.max(0.6, Math.min(1.6, 80/(40 + provs)));   // administration: large empires run less efficiently (provs: homeland 1, annexed 0.5, occupied 0.25 a province)
   for (const k in g) g[k] *= eff;
   g.cash *= has(n, 'eco1') ? 1.2 : ECO_CASH_ALL; if (has(n, 'eco2')) g.mp *= 1.4; if (has(n, 'eco3')) g.oil *= 1.5;   // eco1-3: the old Economy research (now part of buildings); a nation that researched one keeps its bonus
   const mob = N0.mob || 0; if (mob){ g.mp *= 1 + 0.4*mob; g.cash *= 1 - 0.06*mob; }
@@ -327,40 +328,188 @@ function postOffer(n, k, qty, price, type = 'sell', priv = false){ const N = S.n
   if (type === 'sell'){ qty = Math.min(qty, kFloor(N[k])); if (qty <= 0) return 0; N[k] -= qty; }
   else { qty = Math.min(qty, lotsFor(N.cash, pr)); if (qty <= 0) return 0; N.cash -= lotCash(qty, pr); }
   (S.book || (S.book = [])).push({id:S.nid++, type, seller:n, res:k, qty, q0:qty, price:pr, exp:S.hour + 72, priv:priv ? blocIdOf(n) : null}); return qty; }
-/* ---------------- Occupation unrest ---------------- */
-const unrestOf = p => (S.unrest && S.unrest[p]) || 0;
-function unrestDay(){
-  S.unrest = S.unrest || G.P.map(() => 0);
-  // mobilisation strains the home front; long garrisons integrate conquests
-  for (const N of S.nations){ if (!N.alive || !N.mob) continue; for (const p of ownedBy(N.id)) if (S.home[p] === N.id) S.unrest[p] = Math.max(unrestOf(p) - 4, Math.min(15*N.mob, unrestOf(p) + 3*N.mob)); }
-  S.integ = S.integ || {};
-  for (let p = 0; p < G.P.length; p++){ if (G.P[p].sea) continue; const o = S.owner[p], home = S.home[p];
-    if (o < 0 || home === o){ if (!(o >= 0 && S.nations[o].mob)) S.unrest[p] = Math.max(0, unrestOf(p) - 4); continue; }
-    const garrison = S.armies.reduce((s0, a) => s0 + (a.owner === o && a.at === p && a.to === null && !a.fly ? groundN(a) : 0), 0);
-    const ik = p + ':' + o; S.integ[ik] = garrison >= 2 ? (S.integ[ik] || 0) + 1 : Math.max(0, (S.integ[ik] || 0) - 1);
-    if (S.integ[ik] >= 10){ S.unrest[p] = Math.min(unrestOf(p), 30); if (S.integ[ik] === 10) tell(o, `${G.P[p].cityName || G.P[p].name} is integrated: unrest there stays below 30%.`, 'good', p); continue; }
-    const homeAlive = home >= 0 && S.nations[home].alive, d = (homeAlive ? 5 : 3) + (G.P[p].city ? 2 : 0) - Math.min(9, garrison*1.5);
-    const before = unrestOf(p); S.unrest[p] = Math.max(0, Math.min(100, before + d));
-    if (isSeat(o) && before <= 50 && S.unrest[p] > 50) tell(o, `${G.P[p].cityName || G.P[p].name} is close to revolt (${Math.round(S.unrest[p])}% unrest): garrison 2+ units there or pacify it.`, 'bad', p);
-    if (S.unrest[p] > 60 && rng() < (S.unrest[p] - 60)/160 && !S.armies.some(a => a.rebel && a.at === p)){
-      const r = addArmy(NEUTRAL, p, {inf:2 + Math.floor(rng()*3) + (G.P[p].city ? 2 : 0)}); r.rebel = true; r.hold = 0; S.unrest[p] -= 20;
-      if (isSeat(o)) tell(o, `Partisans rose up in ${G.P[p].cityName || G.P[p].name}! Garrison or pacify occupied land to prevent revolts.`, 'bad', p);
-    } }
-}
+/* ---------------- Occupation, morale, annexing and rebels (owner points 8-11, 2026-11-25; docs/REBELS-PLAN.md; the numbers: MOR in rules/data.js) ----------------
+   Every land province has a morale (S.mor, by province), 70 at the start of a game. Once a day, at the day change after the day's output is paid
+   (moraleDay), it moves an eighth of the way toward its target: the base for what the province is to its holder (homeland city 90, annexed city 75,
+   occupied city 60, any countryside 100) plus the modifiers (morTarget; morFactors lists them for the city panel). Output follows morale as before
+   (provYield: 45% at 0, 100% at full) times the holder's status (occFactor: 100% homeland, 50% annexed, 25% occupied). An occupied city cannot
+   mobilize units (rules/production.js mobBlock). Annex City (annexCity, a construction in the city's one slot, priced by its size) turns it into an
+   annexed city, with the occupied countryside around it; a capture takes the status away. A city showing 33% or less burns and may rise in revolt
+   at the day change (rebelRolls: 0% at 33, 50% at 25, 100% at 10, halved for each of the holder's ground units there). The rebels fight any
+   troops in the city in an ordinary battle (the troops count as dug in: +25% in a city); an empty city, or one whose troops are gone, goes over to
+   them at once (rebelFlip: back to its own country, or independent). The countryside never rebels. */
+// morale of province p (stored to two decimals, so the plan's worked example holds: 25 toward 55 shows 29, 32, 35, 37, 40, 42) and the whole number
+// the player sees, which every threshold reads (33, 40, 100)
+const morOf = p => { const m = S.mor ? S.mor[p] : null; return m == null ? MOR.start : m; };
+const morShown = p => Math.round(morOf(p));
+const moraleOf = morOf;
+function setMor(p, v){ if (!S.mor) S.mor = G.P.map(P => P.sea ? 0 : MOR.start); S.mor[p] = Math.round(Math.max(0, Math.min(100, v))*100)/100; }
+const casOf = p => (S.cas && S.cas[p]) || 0;
+const placeNm = p => G.P[p].cityName || G.P[p].name;
+// the status of province p for its holder: 'home' (its homeland), 'anx' (annexed by it), 'occ' (occupied), 'free' (independent land, the sea)
+const occSt = p => { const o = S.owner[p]; if (!(o >= 0) || G.P[p].sea) return 'free'; if (S.home[p] === o) return 'home'; return S.anx && S.anx[p] === o ? 'anx' : 'occ'; };
+// the share of its output the holder gets, and the weight it has in the holder's administration factor (income0)
+const occFactor = p => { const s = occSt(p); return s === 'occ' ? MOR.occOut : s === 'anx' ? MOR.anxOut : 1; };
+const admW = p => { const s = occSt(p); return s === 'occ' ? MOR.occAdm : s === 'anx' ? MOR.anxAdm : 1; };
+// straight-line (great circle) distance in km between two provinces (question 2: the distance to the capital)
+let KMC = {G:null, lon:null};
+const lonP = p => { if (KMC.G !== G) KMC = {G, lon:G.P.map(P => ((((P.cc % W) + 0.5)/W*360 + WORLD.lon0) + 540) % 360 - 180)}; return KMC.lon[p]; };
+function gcKm(p, q){ if (p === q || !(q >= 0)) return 0; const r = Math.PI/180, la1 = G.P[p].lat*r, la2 = G.P[q].lat*r, dl = (lonP(q) - lonP(p))*r;
+  const h = Math.pow(Math.sin((la2 - la1)/2), 2) + Math.cos(la1)*Math.cos(la2)*Math.pow(Math.sin(dl/2), 2); return 2*6371*Math.asin(Math.min(1, Math.sqrt(h))); }
+const kmMod = km => -Math.min(MOR.kmMax, MOR.kmStep*Math.round(km/MOR.kmUnit));
+// rebels standing in one of nation n's cities (they count as one more war: question 9)
+function rebelWar(n){ for (const a of S.armies) if (a.rebel && a.to === null && S.owner[a.at] === n && count(a) > 0) return 1; return 0; }
+// what the same for every province of nation n: the wars, the shortage, the capital lost, the capital of the moment, Mobilisation.
+// peace: the peacetime figures (no war, no shortage), for the opening calibration (morPeace)
+function natMor(n, peace = false){ const N = S.nations[n], c0 = N.cap0 != null ? N.cap0 : N.capital, cap = S.owner[N.capital] === n ? N.capital : -1;
+  if (peace) return {peace, nw:0, reb:0, wars:0, sh:{}, short:0, capLost:0, c0, cap, mob:0};
+  let w = 0; for (const M of S.nations) if (M.alive && M.id !== n && atWar(n, M.id) && score(M.id) > 0) w++;   // (a nation with no land left, 0 VP, does not count)
+  const reb = rebelWar(n), sh = {}; let short = 0; const U = N.shortU; if (U) for (const k in U){ const v = Math.max(MOR.shortMin, Math.round(MOR.shortMax*U[k])); sh[k] = v; short += v; }
+  return {peace, nw:w, reb, wars:Math.min(MOR.warMax, MOR.war*(w + reb)), sh, short:Math.min(MOR.shortMax, short), capLost:S.owner[c0] !== n ? MOR.capLost : 0, c0, cap, mob:N.mob || 0}; }
+// enemy forces standing in province p (a nation at war with its holder o, or rebels; not marching, not aircraft): list, the forces standing there
+const foeHere = (p, o, list) => { for (const a of list || stationaryAt(p)) if (a.at === p && a.to === null && !a.air && !a.fly && count(a) > 0 && (a.rebel || (a.owner >= 0 && a.owner !== o && atWar(o, a.owner)))) return true; return false; };
+// the morale target of province p: I its holder's natMor, prev(v) a neighbour's morale as it stood before today's step, here: enemy forces in p.
+// rows (optional): every modifier, for the city panel ({k, v, ...}: base, dist, wars, foeNb, lowNb, hiNb, foeHere, short, cas, capLost, cap, bunker, mob)
+function morTarget(p, prev, I, rows = null, here = false){ const P = G.P[p], o = S.owner[p], st = occSt(p);
+  let t = !P.city ? MOR.rural : st === 'home' ? MOR.home : st === 'anx' ? MOR.anx : MOR.occT;
+  if (rows) rows.push({k:'base', v:t, st, city:!!P.city});
+  const add = (k, v, x) => { t += v; if (rows) rows.push(x ? Object.assign({k, v}, x) : {k, v}); };
+  const km = gcKm(p, I.cap); add('dist', kmMod(km), {km:Math.round(km), cap:I.cap});
+  add('wars', -I.wars, {n:I.nw, reb:I.reb});
+  let fn = 0, lc = 0, lr = 0, hc = 0, hr = 0;
+  for (const v of P.nbs){ const Q = G.P[v]; if (Q.sea) continue; const ov = S.owner[v];
+    if (ov === o){ const m = Math.round(prev(v)); if (m <= MOR.low){ if (Q.city) lc++; else lr++; } else if (m >= 100){ if (Q.city) hc++; else hr++; } }
+    else if (!I.peace && ov >= 0 && atWar(o, ov)) fn++; }   // (independent land is not a nation: question 6)
+  add('foeNb', -MOR.foeNb*fn, {n:fn});
+  add('lowNb', -(MOR.lowC*lc + MOR.lowR*lr), {c:lc, r:lr});
+  add('hiNb', MOR.hiC*hc + MOR.hiR*hr, {c:hc, r:hr});
+  add('foeHere', here ? -MOR.foeHere : 0);
+  add('short', -I.short, {sh:I.sh});
+  const cs = I.peace ? 0 : casOf(p); add('cas', -Math.round(cs), {cas:Math.round(cs*10)/10});
+  add('capLost', -I.capLost, {c0:I.c0});
+  add('cap', p === I.cap ? MOR.cap : 0);
+  const bl = bunkerLv(p); add('bunker', MOR.bunk[bl] || 0, {lv:bl});
+  add('mob', st === 'home' ? -MOR.mob*I.mob : 0, {lv:I.mob});
+  return Math.max(0, Math.min(100, t)); }
+// the city panel's morale factors list (any land province held by a nation): morale, target, the daily move, every modifier (rows), status, output
+// and, for a city, the rebel chance at the day change (before and after the troop rule)
+function morFactors(p){ const o = S.owner[p], P = G.P[p]; if (!P || P.sea || !(o >= 0)) return null;
+  const rows = [], T = morTarget(p, morOf, natMor(o), rows, foeHere(p, o)), m = morOf(p), sh = Math.round(m), g = P.city ? garrisonOf(p, o) : 0;
+  return {mor:m, shown:sh, target:T, step:Math.round((T - m)/MOR.rate*10)/10, rows, st:occSt(p), out:occFactor(p), link:0.45 + 0.55*m/100,
+    burning:!!P.city && sh <= MOR.rebelAt, chance0:P.city ? rebelChance(sh) : 0, chance:P.city ? rebelOdds(p, o) : 0, units:g, size:P.city ? rebelSize(p) : 0, rebels:!!rebelsAt(p)}; }
+// the morale every province would settle at in peace (no war, shortage or casualties): the daily step run `days` times from today's morale, on a
+// copy. The opening calibration of the catch-up multipliers reads incomes at these values, not at the starting 70 (docs/REBELS-PLAN.md 2.6)
+function morPeace(days = 120){ const L = G.P.length, m = S.mor ? S.mor.slice() : G.P.map(P => P.sea ? 0 : MOR.start), I = new Map(), info = o => I.get(o) || I.set(o, natMor(o, true)).get(o);
+  for (let d = 0; d < days; d++){ const prev = m.slice(), pv = v => prev[v];
+    for (let p = 0; p < L; p++){ const o = S.owner[p]; if (G.P[p].sea || !(o >= 0)) continue; const T = morTarget(p, pv, info(o)); m[p] = Math.round((prev[p] + (T - prev[p])/MOR.rate)*100)/100; } }
+  return m; }
+// fn() with every province at its peacetime morale (morPeace), the incomes worked out afresh before and after
+function atPeaceMor(fn){ const keep = S.mor; S.mor = morPeace(); INCC.v = -1; try { return fn(); } finally { S.mor = keep; INCC.v = -1; } }
+// the day change: each land province held by a nation moves an eighth of the way to its target; then the casualties fade, and the cities that
+// burn roll for rebels. A seat is told when one of its cities starts burning (once each time it falls to 33%)
+function moraleDay(){ if (!S.mor) S.mor = G.P.map(P => P.sea ? 0 : MOR.start);
+  const I = new Map(), info = o => I.get(o) || I.set(o, natMor(o)).get(o), prev = S.mor.slice(), pv = v => prev[v], by = index();
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p], o = S.owner[p]; if (P.sea || !(o >= 0)) continue;
+    const T = morTarget(p, pv, info(o), null, foeHere(p, o, by[p])); setMor(p, prev[p] + (T - prev[p])/MOR.rate);
+    if (P.city && isSeat(o) && Math.round(prev[p]) > MOR.rebelAt && morShown(p) <= MOR.rebelAt) tell(o, `${placeNm(p)} is burning: morale ${morShown(p)}%. If it falls further, rebels may rise at the day change (6% at 32%, 50% at 25%), halved for each of your units there. Station troops, or annex it.`, 'bad', p); }
+  if (S.cas) for (const k in S.cas){ const v = S.cas[k]*MOR.casFade; if (v < 0.05) delete S.cas[k]; else S.cas[k] = Math.round(v*1000)/1000; }
+  rebelRolls(); }
+// the size band of a city by its people (0 a town under 1.5 million, 1 a city, 2 a large city from 5 million, 3 a metropolis from 20 million):
+// the rebels' number and the price of Annex City
+const rebelBand = p => { const pp = popOf(p); return pp >= 20 ? 3 : pp >= 5 ? 2 : pp >= 1.5 ? 1 : 0; };
+const rebelSize = p => REBEL_SIZE[rebelBand(p)];
+// nation o's ground units standing in province p (not marching, not in the air)
+function garrisonOf(p, o){ let s = 0; for (const a of byAt(p) || S.armies) if (a.owner === o && a.at === p && a.to === null && !a.fly && !a.air && !a.rebel) s += groundN(a); return s; }
+const rebelsAt = p => { for (const a of byAt(p) || S.armies) if (a.rebel && a.at === p && count(a) > 0) return a; return null; };
+// the holder's ground force a standing in its own city with a live rising (an S.rbl entry) whose only foes there are rebels: it holds the city (it
+// loses no battle morale and never breaks or retreats), so the fight is decided by strength, the holder dug in (+25%; owner's points 8 and 10)
+function risingHold(a){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.rebel || !S.rbl || !S.rbl.length) return false; const p = a.at;
+  if (S.owner[p] !== a.owner || !S.rbl.some(e => e.p === p && e.o === a.owner)) return false;
+  for (const b of byAt(p) || S.armies) if (b.at === p && b.to === null && !b.rebel && b.owner !== a.owner && count(b) > 0 && atWar(a.owner, b.owner)) return false;
+  return true; }
+// the chance of a rising at morale m (the whole number shown): 0 at 33, 50% at 25 (6.25 points a point), then 50% to 100% at 10 (question 1)
+const rebelChance = m => m > MOR.rebelAt ? 0 : m >= MOR.rebel25 ? 0.5*(MOR.rebelAt - m)/(MOR.rebelAt - MOR.rebel25) : m <= MOR.sure ? 1 : 0.5 + 0.5*(MOR.rebel25 - m)/(MOR.rebel25 - MOR.sure);
+// the chance tonight in city p of nation o: halved for each of o's ground units standing there (question 1)
+const rebelOdds = (p, o) => rebelChance(morShown(p))*Math.pow(0.5, garrisonOf(p, o));
+// the day change's rolls (none in the first 24 hours after an old save was converted: S.rbG): every city held by a nation that shows 33% or less and has no rebels in it already, in province order, one die each
+function rebelRolls(){ if (S.rbG != null){ if (S.hour < S.rbG) return; delete S.rbG; }   // (an old save just converted: no rising before a full day has passed, moraleMigrate)
+  for (let p = 0; p < G.P.length; p++){ const P = G.P[p], o = S.owner[p]; if (!P.city || !(o >= 0) || morShown(p) > MOR.rebelAt || rebelsAt(p)) continue;
+    const ch = rebelOdds(p, o); if (ch > 0 && rng() < ch) rebelRise(p, o); }
+  removeEmpty(); }
+// the holder's forces standing in p count as dug in against the rebels, however long they have stood there (the owner's +25% in a city)
+function rebelDig(p, o){ for (const a of byAt(p) || S.armies) if (a.owner === o && a.at === p && a.to === null && !a.air && !a.fly && (a.still == null || S.hour - a.still < DIG_H)) a.still = S.hour - DIG_H; }
+// rebels rise in city p of nation o: they fight its troops there, or take the city at once when it has none
+function rebelRise(p, o){ const n = rebelSize(p), g = garrisonOf(p, o), nm = placeNm(p); IM.emit('rising', p, o, n, g);
+  if (!g){ rebelFlip(p, o, n, 'empty'); return null; }
+  const r = addArmy(NEUTRAL, p, {inf:n}); r.rebel = true; (S.rbl || (S.rbl = [])).push({id:r.id, p, o}); rebelDig(p, o);
+  if (isSeat(o)) tell(o, `Rebels rose up in ${nm} (${n} units)! Your ${g} unit${g > 1 ? 's' : ''} there ${g > 1 ? 'are' : 'is'} fighting them.`, 'bad', p);
+  const h = S.home[p]; if (h >= 0 && h !== o && isSeat(h)) tell(h, `Rebels rose up against ${nationName(o)} in ${nm}, a city of yours it holds.`, 'info', p);
+  return r; }
+// city p of nation o goes over to the rebels (n of them): back to its own country (S.home) if that still exists and is not o (the rebels become
+// its troops, at least 2 infantry; its morale is that of land liberated), otherwise independent (the rebels stay as its garrison). As on a
+// capture: the production queue and any construction are lost (an annexing too, with its cost), the Bunker loses a level, air wings escape
+function rebelFlip(p, o, n, how){ const nm = placeNm(p), home = S.home[p], to = home >= 0 && home !== o && S.nations[home] && S.nations[home].alive ? home : NEUTRAL, c = S.cons[p];
+  S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, (S.bld[p].fort || 0) - 1); bunkerFull(p);
+  if (S.occ) S.occ[p] = null; if (S.anx) delete S.anx[p]; if (to >= 0) setMor(p, MOR.lib);
+  let left = false; for (const a of S.armies) if (a.rebel && a.at === p && count(a) > 0){ if (to >= 0){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } } else { delete a.rebel; left = true; } }
+  if (to >= 0) addArmy(to, p, {inf:Math.max(2, n)}); else if (!left) addArmy(NEUTRAL, p, {inf:n});
+  wingsFlee(p, to); geoChanged(); IM.emit('rebelFlip', p, o, to, how);
+  if (isSeat(o)){ bump(o, 'lost'); tell(o, how === 'fought' ? `The rebels destroyed your garrison and took ${nm}.${to >= 0 ? ` It has gone back to ${S.nations[to].name}.` : ' It is independent now.'} Retake it with an ordinary attack.`
+    : `Rebels rose up in ${nm} (${n} units) and took the empty city. ${to >= 0 ? `It has gone back to ${S.nations[to].name}.` : 'It is independent now.'} Retake it with an ordinary attack.`, 'bad', p);
+    if (c && c.k === 'annex') tell(o, `The annexing of ${nm} was lost with the city.`, 'bad', p); }
+  if (isSeat(to)) tell(to, `Rebels liberated ${nm}: it is yours again.`, 'good', p);
+  checkNation(o); }
+// every hour: a rising whose rebels are gone was crushed; rebels standing in a city whose holder has no ground unit there any more take it at once
+// (an old save's partisans once wait until a.rbH: moraleMigrate); the holder's troops there keep counting as dug in. Rebels in land that is home
+// land of its holder again (given or sold back, retaken, a fallen nation's land annexed by it) lay down their arms (question Q27, option A); a
+// rising of a homeland city against its own holder (an S.rbl entry for that holder) goes on
 function rebelHour(){
-  // partisans holding a province alone for a day hand it back to its original nation (or independence)
-  for (const a of S.armies){ if (!a.rebel || !count(a) || a.to !== null) continue; const p = a.at;
-    // home land of its holder again (sold or given back, ceded at peace, annexed): the partisans stand down, as unrestDay raises none there
-    if (S.owner[p] >= 0 && S.owner[p] === S.home[p]){ for (const t of UT) a.u[t] = 0; a.hold = 0; if (isSeat(S.owner[p])) tell(S.owner[p], `The partisans in ${G.P[p].cityName || G.P[p].name} lay down their arms: it is home land again.`, 'info', p); continue; }
-    if (S.armies.some(b => b !== a && b.at === p && b.to === null && !b.fly && b.owner === S.owner[p] && count(b))){ a.hold = 0; continue; }
-    a.hold = (a.hold || 0) + 1; if (a.hold < 24) continue;   // (|| 0: older saves carry no count, or NaN saved as null)
-    const prev = S.owner[p], home = S.home[p], to = home >= 0 && S.nations[home].alive && home !== prev ? home : NEUTRAL;
-    S.owner[p] = to; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.unrest[p] = 10; geoChanged(); for (const t of UT) a.u[t] = 0;
-    if (S.occ && to >= 0 && to === home) S.occ[p] = null;   // (back with its home nation: no longer occupied, as capture and cede do)
-    if (to >= 0) addArmy(to, p, {inf:2});
-    if (isSeat(prev)) tell(prev, `${G.P[p].cityName || G.P[p].name} revolted and ${to >= 0 ? 'rejoined ' + S.nations[to].name : 'declared independence'}.`, 'bad', p);
-    if (isSeat(to)) tell(to, `Partisans liberated ${G.P[p].cityName || G.P[p].name} for you!`, 'good', p);
-    if (prev >= 0) checkNation(prev);
-  }
-  removeEmpty();
-}
+  if (S.rbl && S.rbl.length) S.rbl = S.rbl.filter(e => { if (S.owner[e.p] !== e.o) return false; const a = armyById(e.id); if (a && a.rebel && count(a) > 0) return true;
+    IM.emit('rebelsCrushed', e.p, e.o); if (isSeat(e.o)) tell(e.o, `Your troops crushed the rebels in ${placeNm(e.p)}.`, 'good', e.p); return false; });
+  const flip = [];
+  for (const a of S.armies){ if (!a.rebel || a.to !== null || !count(a)) continue; const p = a.at, o = S.owner[p];
+    if (!(o >= 0)){ delete a.rebel; continue; }   // (independent land already: they are its garrison)
+    if (S.home[p] === o && !(S.rbl && S.rbl.some(e => e.id === a.id && e.o === o))){ rebelsDisband(p, 'home'); continue; }
+    if (garrisonOf(p, o) > 0){ rebelDig(p, o); continue; }
+    if (a.rbH != null && S.hour < a.rbH) continue;
+    flip.push(a); }
+  for (const a of flip){ const p = a.at, o = S.owner[p]; if (!(o >= 0) || !a.rebel || !count(a)) continue; rebelFlip(p, o, count(a), S.rbl && S.rbl.some(e => e.id === a.id) ? 'fought' : 'empty'); }
+  removeEmpty(); }
+// the rebels in province p lay down their arms (question Q27, option A): it is home land of its holder again (why 'home'), or a peace treaty
+// ceded it to its holder (why 'peace': the peace settles it). Their rising, if any, ends with no battle and no capture; the holder is told
+function rebelsDisband(p, why){ let k = 0; for (const a of S.armies) if (a.rebel && a.at === p && count(a) > 0){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } k++; }
+  if (S.rbl) S.rbl = S.rbl.filter(e => e.p !== p);
+  const o = S.owner[p]; if (k && isSeat(o)) tell(o, `The rebels in ${placeNm(p)} lay down their arms: ${why === 'peace' ? 'the peace treaty settles it' : 'it is home land again'}.`, 'info', p);
+  return k; }
+// air wings based in a province that changed hands escape to their nation's nearest airbase, or are destroyed on the ground (a capture, a revolt)
+function wingsFlee(p, O){ for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p);
+    if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${placeNm(p)} to ${placeNm(nb)}.`, 'info', nb); }
+    else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${placeNm(p)}.`, 'bad', p); } } }
+// a province changes hands by force (a capture, the land of a fallen nation passed on): its holder's homeland taken back is liberated (55), any
+// other land is occupied (25); an annexed status goes with the old holder
+function morCaptured(p, O){ if (S.anx) delete S.anx[p]; setMor(p, S.home[p] === O ? MOR.lib : MOR.occ); }
+// land received by a treaty, a sale or a gift (questions 3 and 5): the receiver's own homeland is handed back (liberated, 55); any other land arrives
+// annexed (its morale as it was). A coalition gift makes the land the receiver's homeland first (question Q28, option B: rules/diplomacy.js
+// sendGift), so it arrives liberated. Rebels in land handed to its home nation lay down their arms at once (question Q27: rebelsDisband)
+function landGiven(p, to){ if (S.occ) S.occ[p] = null; if (S.anx) delete S.anx[p];
+  { const c = S.cons[p]; if (c && c.k === 'annex'){ const N = S.nations[c.o]; S.cons[p] = null; if (N){ N.cash += c.cash || 0; N.mp += c.mp || 0; if (isSeat(c.o)) tell(c.o, `The annexing of ${placeNm(p)} changed hands by treaty or sale: the annexing under way there was called off and its $${c.cash}M and ${c.mp}k manpower refunded.`, 'info', p); } } }   // (an annexing under way is pointless now: refunded to whoever paid)
+  if (S.home[p] === to){ setMor(p, MOR.lib); if (S.owner[p] === to) rebelsDisband(p, 'home'); } else (S.anx || (S.anx = {}))[p] = to; }
+/* ---- Annex City (point 8): a construction in the city's one slot (S.cons[p] = {k:'annex', o, h, h0, cash, mp}), ANNEX_COST by the city's size
+   band, paid when it starts; any time, even while the city burns, rebels are in it or it is under attack. It ends with S.anx[p] = the holder, and the
+   holder's occupied countryside provinces taken from the same country whose nearest city it is are annexed with it (question 4). A capture or a
+   revolt loses it with its cost (S.cons is cleared). */
+const annexCost = p => { const c = ANNEX_COST[rebelBand(p)]; return {cash:c.cash, mp:c.mp, days:c.days, h:c.days*24}; };
+// why nation n may not annex city p now ('' when it may): the page's button and the computer, one checked order
+function annexWhy(n, p){ const P = G.P[p]; if (!P || P.sea || S.owner[p] !== n) return 'not your city'; if (!P.city) return 'only a city can be annexed';
+  const st = occSt(p); if (st === 'home') return 'it is part of your homeland'; if (st === 'anx') return 'it is annexed already';
+  const c = S.cons[p]; if (c) return c.k === 'annex' ? 'it is being annexed' : `the city is building ${artA(consB(c.k).name)}`;
+  const k = annexCost(p), N = S.nations[n]; if (N.cash < k.cash) return `needs $${k.cash}M`; if (N.mp < k.mp) return `needs ${k.mp}k manpower`; return ''; }
+function annexCity(n, p){ if (annexWhy(n, p)) return false; const k = annexCost(p), N = S.nations[n]; N.cash -= k.cash; N.mp -= k.mp;
+  S.cons[p] = {k:'annex', lvl:1, o:n, h:k.h, h0:k.h, cash:k.cash, mp:k.mp}; IM.emit('annexStart', p, n);
+  if (isSeat(n)) tell(n, `Annexing ${placeNm(p)}: done in ${k.days} days.`, 'info', p); return true; }
+// the city nearest to province q (straight line on the map)
+function nearestCity(q){ const Q = G.P[q]; let best = -1, bd = Infinity; for (const P of G.P){ if (!P.city) continue; const d = kmBetween(P.x, P.y, Q.x, Q.y); if (d < bd){ bd = d; best = P.id; } } return best; }
+function annexDone(p){ const n = S.owner[p], A = S.anx || (S.anx = {}); S.cons[p] = null; A[p] = n; let k = 0;
+  for (const q of ownedBy(n)) if (!G.P[q].city && occSt(q) === 'occ' && S.home[q] === S.home[p] && nearestCity(q) === p){ A[q] = n; k++; }
+  INCC.v = -1; IM.emit('annexed', p, n, k);
+  if (isSeat(n)) tell(n, `${placeNm(p)} is annexed: 50% output, units can be mobilized there${k ? `, and ${k} countryside province${k > 1 ? 's' : ''} around it ${k > 1 ? 'are' : 'is'} annexed with it` : ''}.`, 'good', p); }
