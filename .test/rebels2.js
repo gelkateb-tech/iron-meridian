@@ -10,7 +10,7 @@
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..')), QUICK = process.argv.includes('--quick');
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
-const NAMES = 'IM, nearestCity, MOR, ANNEX_COST, REBEL_SIZE, morOf, morShown, setMor, occSt, occFactor, admW, gcKm, natMor, morTarget, morFactors, moraleDay, rebelChance, rebelOdds, rebelRolls, rebelRise, rebelFlip, rebelHour, rebelSize, rebelBand, garrisonOf, rebelsAt, annexCost, annexWhy, annexCity, consHour, mobBlock, canMobilize, capture, addArmy, setRel, atWar, provYield, income, income0, warDamage, casOf, landGiven, cede, sendGift, terrTransfer, spyHour, spyCheck, trS, tradeGen, tradeIncome, trShock, trLost, holdsOcc, lostRoutesOf, removeEmpty, armyById, count, popOf, ownedBy, dugIn, digF, DIG_CITY, aiAnnex, aiBrake, NEUTRAL, bunkerLv, knockOut, score, checkNation, INCC';
+const NAMES = 'IM, mkt, nearestCity, MOR, ANNEX_COST, REBEL_SIZE, morOf, morShown, setMor, occSt, occFactor, admW, gcKm, natMor, morTarget, morFactors, moraleDay, rebelChance, rebelOdds, rebelRolls, rebelRise, rebelFlip, rebelHour, rebelSize, rebelBand, garrisonOf, rebelsAt, annexCost, annexWhy, annexCity, consHour, mobBlock, canMobilize, capture, addArmy, setRel, atWar, provYield, income, income0, warDamage, casOf, landGiven, cede, sendGift, terrTransfer, spyHour, spyCheck, trS, tradeGen, tradeIncome, trShock, trLost, holdsOcc, lostRoutesOf, removeEmpty, armyById, count, popOf, ownedBy, dugIn, digF, DIG_CITY, aiAnnex, aiBrake, NEUTRAL, bunkerLv, knockOut, score, checkNation, INCC';
 const SKIP = "let SKIP_AI = -1; for (const nm of ['aiTurn', 'aiAir', 'aiMissiles', 'aiSpies', 'aiCapBase']) eval(nm + ' = (f => function(n){ if (n === SKIP_AI) return; return f.apply(this, arguments); })(' + nm + ')');";
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + '\n' + SKIP + '\nreturn {' + NAMES + ', setSkip:v => { SKIP_AI = v; }, get S(){ return S; }, get G(){ return G; }};';
 const errors = []; let checks = 0; const ok = (c, msg) => { checks++; if (!c) errors.push(msg); };
@@ -211,7 +211,9 @@ const dresden = city(DE, 'Dresden').id, berlin = S.nations[DE].capital, warsaw =
   ok(R.morOf(p) === 30, `Incite revolt: -20 at once (50 -> ${R.morOf(p)})`); S.spies = S.spies.filter(a => a.owner !== DE); }
 
 // ---- 9. trade (point 11, option C): the slot of a route lost to war stays empty; the 25% shock while a partner's city is held unannexed
-{ const T = R.trS(); T.lost = {}; R.setRel(PL, DE, 'peace'); R.setRel(PL, FR, 'peace'); R.tradeGen(); const key = Math.min(PL, DE) + ':' + Math.max(PL, DE);
+{ const T = R.trS(); T.lost = {}; R.setRel(PL, DE, 'peace'); R.setRel(PL, FR, 'peace');
+  { const E = R.mkt().emb; delete E[PL + '>' + DE]; delete E[DE + '>' + PL]; }   // (an embargo the computer laid during the earlier wars would shut the route: not this check's subject)
+  R.tradeGen(); const key = Math.min(PL, DE) + ':' + Math.max(PL, DE);
   if (!T.routes.some(r => r.key === key)){ T.want[key] = 'land'; R.tradeGen(); }
   ok(T.routes.some(r => r.key === key), 'Poland and Germany trade');
   for (const p of R.ownedBy(PL)) if (S.home[p] === DE){ delete S.anx[p]; }
