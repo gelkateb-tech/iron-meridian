@@ -81,7 +81,8 @@ const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
 function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
 const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)*(n >= 0 ? rTrainF(n, t) : 1)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
-function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && navalCity(p))); }
+// (the Missile Silo needs Conventional Warhead, msl2: owner point 12. A silo an old save built with Cruise Missiles only stays and works)
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl2')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && navalCity(p))); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
 const canRecruit = (n, p, t) => !canMobilize(n, p, t) && !queueFull(n, p) && canAfford(n, t);
 function recruit(n, p, t){
@@ -116,18 +117,49 @@ function spawn(n, p, t){
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp*k)/(h0 + UNITS[t].hp*k) : 80;
   a.u[t] += k;
 }
-/* ---------------- Strategic missiles ---------------- */
-const mstock = p => (S.mstock || (S.mstock = {}))[p] || (S.mstock[p] = {cm:0, bm:0});
+/* ---------------- Strategic missiles ----------------
+   Where missiles are built and stored (owner point 12, docs/MISSILES.md 5 and 8): a Missile Silo builds and stores every kind its level allows
+   (MISSILES[k].silo: ballistic and chemical from level I, tactical nuclear from level II); Cruise Missiles need no silo: any city of yours with an
+   Army Base, Airbase or Naval Yard (any level) builds them too, at most MSL_CITY stored plus queued in a city without a silo. Chemical and nuclear
+   missiles have stock limits per silo and per nation, stored plus queued (MSL_WMD). A stock is kept per province (S.mstock[p] = {cm, bm, chem,
+   nuc}; an old save's {cm, bm} gets chem and nuc at 0 when first read). A chemical or nuclear stock belongs to the nation that built it (wo): when
+   the city changes hands it is destroyed (M8: the hourly wmdSweep, rules/air.js); cruise and ballistic stocks pass to the new holder (Q19) */
+const MSL_HOSTS = ['fac', 'air', 'yard'], MSL_CITY = 2;
+const mstock = p => { const M = S.mstock || (S.mstock = {}); let m = M[p]; if (!m) m = M[p] = {cm:0, bm:0, chem:0, nuc:0}; else if (m.chem == null){ m.chem = 0; m.nuc = 0; } return m; };
 const mslCost = M0 => ({cash:M0.cost, oil:M0.oil, metal:M0.metal, iron:M0.iron, elec:M0.elec, rare:M0.rare});
-function canBuildMissile(n, p, k){ const M0 = MISSILES[k], N = S.nations[n]; return S.owner[p] === n && S.bld[p].silo > 0 && has(n, M0.tech) && hasC(N, mslCost(M0)); }
+const mslHost = p => MSL_HOSTS.some(k => (S.bld[p][k] || 0) > 0);   // an Army Base, Airbase or Naval Yard: cruise missiles without a silo
+// city p can build and hold missile k: a silo of the missile's level, or (cruise missiles) a host city
+const mslSite = (p, k) => { const sl = S.bld[p].silo || 0, M0 = MISSILES[k]; return !!M0 && (sl > 0 ? sl >= Math.max(1, M0.silo) : !M0.silo && mslHost(p)); };
+// the launchers and the missile line of city p are out: its silo knocked out (a silo city), or every one of its Army Base, Airbase and Naval Yard (a city without a silo)
+const mslDown = p => (S.bld[p].silo || 0) > 0 ? bdis(p, 'silo') : MSL_HOSTS.every(k => !(S.bld[p][k] > 0) || bdis(p, k));
+const mslQueued = (p, k) => S.queue[p].reduce((c, it) => c + (it.msl && it.t === k ? 1 : 0), 0);
+// missiles of kind k held at p: stored plus queued (a chemical or nuclear stock only while it is its builder's, wo)
+const mslStored = (p, k) => { const m = S.mstock && S.mstock[p], v = (m && m[k]) || 0; return v > 0 && MSL_WMD[k] && m.wo !== S.owner[p] ? 0 : v; };
+const mslHeld = (p, k) => mslStored(p, k) + mslQueued(p, k);
+const mslNation = (n, k) => ownedBy(n).reduce((c, p) => c + mslHeld(p, k), 0);
+// why nation n cannot start missile k in city p, resources aside ('' when it can)
+function mslWhy(n, p, k){ const M0 = MISSILES[k], W = MSL_WMD[k]; if (!M0) return 'Unknown missile';
+  if (S.owner[p] !== n) return 'Not your city';
+  if (!has(n, M0.tech)) return `Research required: ${RN[M0.tech].name}`;
+  const sl = S.bld[p].silo || 0;
+  if (M0.silo > 1 && sl < M0.silo) return `Needs a Missile Silo ${ROMAN[M0.silo]}`;
+  if (M0.silo === 1 && !sl) return 'Needs a Missile Silo';
+  if (!sl && !mslHost(p)) return 'Needs an Army Base, Airbase, Naval Yard or Missile Silo';
+  if (!sl && mslHeld(p, k) >= MSL_CITY) return `At most ${MSL_CITY} ${M0.name}s in a city without a silo (stored and building)`;
+  if (W && mslHeld(p, k) >= W.perSilo) return `At most ${W.perSilo} ${M0.name}${W.perSilo > 1 ? 's' : ''} per silo (stored and building)`;
+  if (W && mslNation(n, k) >= W.perNation) return `At most ${W.perNation} ${M0.name}s in all (stored and building)`;
+  return ''; }
+function canBuildMissile(n, p, k){ const M0 = MISSILES[k]; return !!M0 && !mslWhy(n, p, k) && hasC(S.nations[n], mslCost(M0)); }
 function buildMissile(n, p, k){ if (!canBuildMissile(n, p, k)) return false; const M0 = MISSILES[k], N = S.nations[n]; payC(N, mslCost(M0)); const h = mslH(p, k); S.queue[p].push({t:k, h, h0:h, msl:true}); return true; }
+// a missile finished in city p: into its stock (a chemical or nuclear one marks the stock as its builder's)
+function mslDone(p, k){ const m = mstock(p); if (MSL_WMD[k]){ if (m.wo !== S.owner[p]){ m.chem = 0; m.nuc = 0; } m.wo = S.owner[p]; } m[k]++; }
 // the hour steps of production, construction, unit upgrades and research (one province / nation each; tick() runs them every game hour)
 function prodHour(p){ const q = S.queue[p];
     if (S.owner[p] < 0){ q.length = 0; return; }
-    { const it0 = q[0]; if (it0.msl ? bdis(p, 'silo') : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits
+    { const it0 = q[0]; if (it0.msl ? mslDown(p) : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits (missiles: the silo, or a city's every launcher)
     const lines = 1 + S.bld[p].fac;            // each Army Base level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
-    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
+    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mslDone(p, it.t); if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
       const o = S.owner[p]; if (isSeat(o)){ fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p); } } }   // (Repeat production: repeatHour)
 // Repeat production (a seat's per-city order, desk(n).repeat: city -> unit type): every hour, after the production step, a ticked city of n with an

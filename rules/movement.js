@@ -245,7 +245,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = n
 // coast); 'land', the boarding rule only
 const amphib = a => NAVAL_CITIES && (a.u.mar || 0) > 0 && a.u.mar === groundN(a);
 const landOk = (a, v) => !NAVAL_CITIES || navalCity(v) || amphib(a);
-const pathFor = (a, from, to, anyCoast = false) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
+const pathFor = (a, from, to, anyCoast = false, avoid = null) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (avoid !== null && v !== to && avoid.has(v)) return false; if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
     let r = ce[o]; if (r === undefined) r = ce[o] = atWar(n, o) || friendly(n, o); return r; }, ok = v => enter(v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
   const mt = pathMT(a);
   if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner, null, null, null, true);   // ships sail over water only: a port is where a route ends, never a way through land (nor a leg from one port to the next)
@@ -539,7 +539,7 @@ function armyUpkeep(prevBattles){
     const N = S.nations[a.owner], here = a.to === null, inBattle = here && S.battles.includes(a.at);
     if (inBattle){ /* morale falls in battleStep, every 15 minutes: no healing, no rest here */ }
     else if (a.air || supplied(a) || cmdF(a, 'supply')){ const r = healPerDay(a);   // (healPerDay, rules/combat.js: slow in the field, faster in an own city; the hook for a future Hospital)
-      healW(a, r);
+      if (!hazHeal(a)) healW(a, r);   // (no healing in a gas or radiation zone: rules/air.js)
       a.m += 2; if (here && prevBattles.has(a.at)) a.m += 10; }
     else { for (const t of UT){ if (!a.u[t]) continue; a.w[t] += a.u[t]*UNITS[t].hp*0.04/24; while (a.w[t] >= UNITS[t].hp && a.u[t] > 0){ a.w[t] -= UNITS[t].hp; a.u[t]--; } if (!a.u[t]) a.w[t] = 0; }
       if (a.m > 30) a.m = Math.max(30, a.m - 1); }

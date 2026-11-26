@@ -340,12 +340,12 @@ function rangedStep(hourly){ let grid = null, gone = false, IW = null;
     let base = 0; const fired = [];   // (fired: the unit types that fired, for the client's effects only)
     for (const [t, n] of rangedOf(a)){ const hit = G0.filter(e => e.ts.includes(t)); if (!hit.length) continue; fired.push(t);
       const tot = hit.reduce((s0, e) => s0 + armyHP(e.b), 0) || 1;
-      const b0 = n*st(a.owner, t, 'atk')*K*RANGED_F/BATTLE_Q*mf*(RANGE_HIT[t] === 'land' ? cG : 1)*(t === 'crui' && land && has(a.owner, 'crui_rng') ? 1.3 : 1)*(0.8 + rng()*0.4)*cov*se[DOM_T[t]];
+      const b0 = n*st(a.owner, t, 'atk')*K*RANGED_F/BATTLE_Q*mf*(RANGE_HIT[t] === 'land' ? cG : 1)*(t === 'crui' && land && has(a.owner, 'crui_rng') ? 1.3 : 1)*(0.8 + rng()*0.4)*cov*se[DOM_T[t]]*hazFight(a.at);
       base += b0;
       for (const e of hit){ let d = av.get(e); if (!d) av.set(e, d = {soft:0, armored:0, air:0, naval:0}); for (const k of CLASSES) d[k] += b0*multO(a.owner, t, k)/tot; } }
     if (!base) continue;
     for (const [e, d] of av){ const b = e.b, h0 = effHP(b), u0 = count(b);
-      hurt(b, d, (land ? bunkerF(b, best) : 1)*digF(b));
+      hurt(b, d, (land ? bunkerF(b, best) : 1)*digF(b)/hazFight(b.at));
       const lost = Math.max(0, h0 - effHP(b)), k = a.id + ':' + b.id, R = RANGED_SHOWN.get(k); if (R) R.lost += lost; else RANGED_SHOWN.set(k, {a, b, p:b.at, lost, x:e.x, y:e.y});
       if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
     cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);

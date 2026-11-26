@@ -22,6 +22,7 @@ function* tickHourG(){
   diploHour(); terrHour(); reqHour(); weatherHour(); dropTick(); linkHour(); if (S.hour % 6 === 0) strandedHour(); if (S.hour % 3 === 0) escortHour();
   airTick();
   missileTick();
+  hazHour();   // gas and radiation zones, chemical and nuclear stocks of lost cities (rules/air.js)
   spyHour();
   bunkerHour();   // (damaged bunkers mend)
   rebelHour();
@@ -120,7 +121,7 @@ function* tickHourG(){
   if (S.hour % 24 === 0){ yield* diploDayG(); yield; yield* dailyG(); yield; }
   // the AI plays every nation that is not a seat (in the nations world a nation far from the fighting plans every other turn: aiAway; on the turn it
   // skips it still starts an Army Base in a capital that has none, aiCapBase)
-  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); else aiCapBase(n, S.nations[n]); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); yield; }
+  for (let n = 0; n < S.nations.length; n++) if (!isSeat(n) && (S.hour + n) % 4 === 0){ if ((S.hour + n) % 24 === 0) aiLinks(n); if ((S.hour + n) % 12 === 0) aiTrade(n); if (!((S.hour + n) % 8 === 4 && aiAway(n))) aiTurn(n); else aiCapBase(n, S.nations[n]); if (S.haz) aiHazRoutes(n); aiAir(n); if ((S.hour + n) % 12 === 0) aiMissiles(n); if ((S.hour + n) % 24 === 0) aiSpies(n); yield; }
   IM.emit('hour');
   visCache = null;
 }
@@ -246,13 +247,14 @@ function battleStep(hourly){
     const hp = new Map(owners.map(o => [o, sides.get(o).reduce((s, a) => s + armyHP(a), 0)]));
     const dmg = new Map(owners.map(o => [o, {soft:0, armored:0, air:0, naval:0}]));
     const B = (S.bt || (S.bt = {}))[p] || (S.bt[p] = {h0:S.hour, s:{}}); warDamage(p, 0.5);
+    const hz = hazFight(p);   // (a gas or radiation zone: every force here attacks and defends at x0.8 / x0.9, rules/air.js)
     for (const o of owners){
       const av = {soft:0, armored:0, air:0, naval:0}, r0 = K*BATTLE_DMG*(0.8 + rng()*0.4);
       const nU = sides.get(o).reduce((s0, a) => s0 + count(a), 0), dirs = dirsOf(sides.get(o), p, o), F = sideFront(p, dirs);
       const r = r0*frontScale(nU, F)*flankF(dirs);
       const bs = B.s[o] || (B.s[o] = {peak:0, lost:{}, dirs:0, hp:[]}); bs.peak = Math.max(bs.peak, nU); bs.dirs = Math.max(bs.dirs, dirs); bs.dcur = dirs; bs.F = F; bs.n = nU;
       const sznA = o !== S.owner[p] && season(p) ? SEASON_FX[season(p)].atk : 1;
-      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? rLandF(o) : 1)*sznA, riv = o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? RIVER_ATK : 1;   // (riv: attacking across a river; an IFV with the Amphibious Kit is exempt)
+      for (const a of sides.get(o)){ const m = (a.landed != null && S.hour - a.landed < 24 ? rLandF(o) : 1)*sznA*hz, riv = o !== S.owner[p] && a.from != null && G.P[p].river.has(a.from) ? RIVER_ATK : 1;   // (riv: attacking across a river; an IFV with the Amphibious Kit is exempt)
         const mf = moraleF(a), se = stackEffs(a);   // se: stack efficiency per domain (over the stack limit the force's units deal less)
         const TFo = G.P[p].sea ? null : tuf(G.P[p].terrain || 'plains', o !== S.owner[p], !arctic(o));
         const cB = o !== S.owner[p] ? 1 + 0.1*cmdF(a, 'blitz') : 1, cG = 1 + 0.2*cmdF(a, 'gunner');
@@ -265,7 +267,7 @@ function battleStep(hourly){
       let f = 1;
       if (o === S.owner[p]){ f /= 1.25; f *= 1 - bunkerRed(bunkerLv(p)); const dd = docOf(o); if (dd && dd.home && S.home[p] === o) f *= dd.home; }
       if (!G.P[p].sea && (o === S.owner[p] || (S.owner[p] < 0 && o < 0))) f /= terr(p).def;
-      f *= rHospF(o);
+      f *= rHospF(o)/hz;
       const d = dmg.get(o), tot = hp.get(o);
       const escorted = G.P[p].sea && sides.get(o).some(b => shipsN(b) > 0);
       const bs = B.s[o];

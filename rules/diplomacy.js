@@ -41,6 +41,8 @@ function opinionParts(a, b){
   if (commonEnemy(a, b)) parts.push(['Common enemy', 20]);
   if (r !== 'ally' && S.blocReg && Object.values(S.blocReg).some(R => R.members && R.members.includes(a) && R.members.includes(b))) parts.push(['Same coalition', 10]);
   const N = S.nations[b]; if (N.breaker != null && S.hour - N.breaker < 50*24) parts.push(['Treaty breaker', -Math.round(25*(1 - (S.hour - N.breaker)/(50*24)))]);
+  // chemical and nuclear weapons used (owner point 12, docs/MISSILES.md 9): every nation, the victim too, holds it against the user, fading to 0
+  if (N.wmdT) for (const k in MSL_WMD){ const h = N.wmdT[k], M = MSL_WMD[k].mark; if (h != null && S.hour - h < M.days*24) parts.push([M.name, Math.round(M.v*(1 - (S.hour - h)/(M.days*24)))]); }
   if (score(b) > 1.5*score(a) && score(b) > 40) parts.push(['Fears its power', -15]);
   return parts;
 }
@@ -163,6 +165,7 @@ function acceptOffer(ai, from, kind){
   const op = opinion(ai, from), wars = warsOf(ai);
   if (kind === 'peace'){
     if (!atWar(ai, from)) return {ok:false, why:'not at war'};
+    if (nucShunned(from)) return {ok:false, why:'nobody talks peace with a nation that has just used nuclear weapons'};   // (3 days after its launch: rules/air.js)
     const age = (S.hour - rel(ai, from).since)/24, lost = G.P.filter(P => S.home[P.id] === ai && S.owner[P.id] === from).length;
     if (natPower(ai) < 0.8*natPower(from)) return {ok:true, why:'they are outmatched'};
     if (lost >= 3) return {ok:true, why:'they have lost land'};

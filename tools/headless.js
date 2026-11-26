@@ -26,7 +26,7 @@
 //                             flagged; exit 1 if one is not.  --nomutants: the state faults only
 //   --scenarios               scripted mechanic checks on the real api (research, mobilizing, embark/disembark and their timers, movement over
 //                             land and sea, convoys and blockades, diplomacy), then the --scenarios modes of tools/stack-duel.js (combat, ranged),
-//                             tools/eco-check.js (economy, trade) and tools/rebels-check.js (occupation, morale, rebels). Each order is also checked for "an action
+//                             tools/eco-check.js (economy, trade), tools/rebels-check.js (occupation, morale, rebels) and tools/missiles-check.js (missiles). Each order is also checked for "an action
 //                             that does nothing" (accepted, no state change, no reason) and for refusals that give no reason
 // e.g. node tools/headless.js --games 5 --days 60 --invariants --stats --provoke 3 --jobs 3 --json /tmp/r.json
 'use strict';
@@ -709,7 +709,7 @@ function scenarios(){ const {res, note, s} = mechanics();
   for (const e of odd) console.log(`  ${e.kind}: ${e.label} -> returned ${e.r}${e.err ? ' ' + e.err : ''}`);
   const bad = res.filter(r => r.ok === false).length;
   // the scenario modes of the other tools (combat and ranged, economy and trade, occupation)
-  let other = 0; for (const t of ['stack-duel.js', 'eco-check.js', 'rebels-check.js']){ const cp = require('child_process'); const r = cp.spawnSync(process.execPath, [path.join(__dirname, t), '--scenarios'], {encoding:'utf8', maxBuffer:1 << 26});
+  let other = 0; for (const t of ['stack-duel.js', 'eco-check.js', 'rebels-check.js', 'missiles-check.js']){ const cp = require('child_process'); const r = cp.spawnSync(process.execPath, [path.join(__dirname, t), '--scenarios'], {encoding:'utf8', maxBuffer:1 << 26});
     console.log(`\n== node tools/${t} --scenarios (exit ${r.status})`); console.log((r.stdout || '').trim()); if (r.stderr) console.log(r.stderr.trim().split('\n').slice(0, 8).join('\n')); if (r.status) other++; }
   console.log(`\nSCENARIOS ${bad || other ? 'FAILED' : 'OK'}: ${res.filter(r => r.ok === true).length} of ${res.length} mechanic checks passed here, ${res.filter(r => r.ok === 'warn').length} with a warning (no reason given), ${bad} failed${other ? `; ${other} other tool(s) failed` : ''}`);
   process.exit(bad || other ? 1 : 0); }
