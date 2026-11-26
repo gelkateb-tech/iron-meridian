@@ -8270,11 +8270,11 @@ function heartSpot(c, d, u, Rm, hexPx, hb, taken){ const rv = [u[0]*d, u[1]*d];
   const play = () => ({dot:memo(k0 + '|' + Rm.toFixed(2), () => heartSpot0(c, d, u, Rm, hexPx, hb, taken)) || rv, ctr:null});
   const mix = (a, b, t) => ({dot:[a.dot[0] + (b.dot[0] - a.dot[0])*t, a.dot[1] + (b.dot[1] - a.dot[1])*t], ctr:a.ctr && b.ctr ? [a.ctr[0] + (b.ctr[0] - a.ctr[0])*t, a.ctr[1] + (b.ctr[1] - a.ctr[1])*t] : t < 0.5 ? a.ctr : b.ctr});
   let r; if (hexPx <= HEART_Z0) r = mid(false); else if (hexPx >= HEART_ZP1) r = play();
-  else { let B = mid(1); if (!B.ctr || B.cc >= HEART_NEARC) B = mid(2); if (!B.ctr || B.cc >= HEART_NEARC) B = play();   // (no place by its dot in its own city's area: a little nearer the city's counter (2), else as close in)
+  else { let B = mid(1); if (!B.ctr || B.near) B = mid(2); if (!B.ctr || B.near) B = play();   // (no place by its dot in its own city's area: its dot may also stand beside the city's counter (2), else as close in)
     r = hexPx < HEART_ZE ? mix(mid(false), B, smooth01((hexPx - HEART_Z0)/(HEART_ZE - HEART_Z0))) : hexPx > HEART_ZP0 ? mix(B, play(), smooth01((hexPx - HEART_ZP0)/(HEART_ZP1 - HEART_ZP0))) : B; }
   if (r.ctr){ c.hmid = r; if (!r.fold){ const D = plateDims(c.n, 1, clQuiet(c), false); let L = HEARTF.mc.get(c.at); if (!L) HEARTF.mc.set(c.at, L = []); L.push([r.ctr[0] - D.w/2, r.ctr[1] - D.h/2, r.ctr[0] + D.w/2, r.ctr[1] + D.h/2]); } }   // (mc: the counters placed off this point this frame, for the next force's)
   if (taken) taken.push(r.dot); return r.dot; }
-const HEART_NEARC = 400;   // (heartMid: a counter cost from which it stands nearer another city's point than its own)
+const HEART_NEARC = 400;   // (heartMid: what a counter nearer another city's point than its own costs, and more the nearer)
 // MID ZOOM (hex up to HEART_Z0): a force off a city's point, the city held or not, has its dot just outside the ring (or the empty marker), along
 // its real bearing where it can (a few km are a pixel or less here: the push is display only), and its counter right by its dot: never on the
 // ring, its own dot or its city's own name, its middle on its own land and nearer its own city's point than any other city's (so it never reads
@@ -8291,16 +8291,16 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
   for (let r = 14; r <= 30; r += 4) for (let i = 0; i < 16; i++){ const t = i*Math.PI/8; OFF.push([Math.cos(t)*r, Math.sin(t)*r, 1]); }
   const ON = [], Pp = G.P[p]; for (const [q, r] of NMLAST){ if (q === p) continue; const ox = (G.P[q].x - Pp.x)*view.s, oy = (G.P[q].y - Pp.y)*view.s; if (Math.abs(ox) < 120 && Math.abs(oy) < 120) ON.push([r[0] + ox, r[1] + oy, r[2] + ox, r[3] + oy]); }   // (ON: the other names as drawn last frame)
   const MC = HEARTF.mc.get(p) || [];
-  // the best counter for a dot at (vx, vy): its cost (Infinity: none) and centre (a cost of NEAR or more: nearer another city's point)
-  const NEAR = HEART_NEARC, ctr = (vx, vy, lim) => { let bc = lim, best = null;
+  // the best counter for a dot at (vx, vy): its cost (Infinity: none), centre and whether it stands nearer another city's point than its own
+  const NEAR = HEART_NEARC, ctr = (vx, vy, lim) => { let bc = lim, best = null, bn = false;
     for (const [ox, oy, k] of OFF){ const x = vx + ox, y = vy + oy, c0 = 2*Math.hypot(ox, oy + lift) + 0.5*Math.hypot(x, y) + (oy > 0 ? 6 : 0) + k*4; if (c0 >= bc) continue;
       const b = [x - w2, y - h2, x + w2, y + h2], pb = heartPB(x, y, n, q); if (boxPt(b, 0, 0) < rc || boxPt(b, vx, vy) < dR + 0.5 || (NM.own && boxGap(pb, NM.own) < 1)) continue;   // (never on the ring or the marker, its own dot or its city's name)
-      if (st && hb && boxGap(pb, hb) < (st === 2 ? 3 : Math.min(pb[3], hb[3]) > Math.max(pb[1], hb[1]) ? HEART_ROW : HEART_GAP)) continue;   // (st 2: where the city has no other room, a narrower gap, beside it too)
+      if (st && hb && boxGap(pb, hb) < (Math.min(pb[3], hb[3]) > Math.max(pb[1], hb[1]) ? HEART_ROW : HEART_GAP)) continue;   // (play zoom: a clear gap from the city's counter, wider beside it; st 2, where the city has no other room: its dot may go above the ring's sides too)
       let cost = c0; if (HC){ const ow = Math.min(b[2], HC[2]) - Math.max(b[0], HC[0]), oh = Math.min(b[3], HC[3]) - Math.max(b[1], HC[1]); if (ow > 0 && oh > 0){ const fo = ow*oh/((b[2] - b[0])*(b[3] - b[1])); if (fo > FO) continue; cost += 12 + 200*fo; } }   // (over the city force's counter only a little: their bodies, without the marks)
       const e = nearer(x, y, 2); if (e > 0) cost += NEAR + 20*e; if (cost >= bc) continue;
       for (const nb of NM.near) if (boxGap(pb, nb) < 0) cost += 150; for (const nb of ON) if (boxGap(pb, nb) < 0) cost += 150; for (const z of MC) if (boxGap(b, z) < 2) cost += 300;   // (off the counters of the forces placed off this point before it) for (const m of MK) if (boxPt(pb, m[0], m[1]) < 2) cost += 40; if (cost >= bc) continue;
-      const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; cost += g === 1.5 ? 40 : 15*g; if (cost < bc){ bc = cost; best = [x, y]; } }
-    return [bc, best]; };
+      const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; cost += g === 1.5 ? 40 : 15*g; if (cost < bc){ bc = cost; best = [x, y]; bn = e > 0; } }
+    return [bc, best, bn]; };
   const run = cf => { let best = null, bc = Infinity;
     for (let j = 0; j <= 18; j++) for (const s of j && j < 18 ? [sg, -sg] : [j ? sg : 0]){ const th = th0 + s*j*Math.PI/18, cu = Math.cos(th), su = Math.sin(th);
       for (let D1 = D0, i = 0; i < 4; i++, D1 += 2.5){ const c0 = j*10 + (D1 - D0)*5; if (c0 >= bc) break; const vx = cu*D1, vy = su*D1;
@@ -8309,11 +8309,11 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
         const real = !j && D1 === d, g = real ? 0 : heartGnd(p, vx, vy); if (g === 2) continue;
         let cost = c0 + 15*g + (NM.near.some(b => boxPt(b, vx, vy) < dR) ? 40 : 0) + (ON.some(b => boxPt(b, vx, vy) < dR + 1) ? 120 : 0) + (nearer(vx, vy, 0) > 0 ? 30 : 0); if (cost >= bc) continue;   // (ON: off the other names as drawn last frame where it can)
         if (!cf){ bc = cost; best = {dot:[vx, vy], ctr:null, cc:0}; continue; }
-        const [cc, cp] = ctr(vx, vy, bc - cost); if (!cp) continue; cost += cc; if (cost < bc){ bc = cost; best = {dot:[vx, vy], ctr:cp, cc, real}; } } }
+        const [cc, cp, cn] = ctr(vx, vy, bc - cost); if (!cp) continue; cost += cc; if (cost < bc){ bc = cost; best = {dot:[vx, vy], ctr:cp, cc, near:cn, real}; } } }
     return best; };
   let best = run(true);
   if (best && best.real && (!hb || st)) return {dot:best.dot, ctr:null, cc:0};   // (one already standing clear of the marker where it is keeps the counter it has anywhere, above its dot: heartBadge)
-  if (fold && HC && (!best || best.cc >= NEAR)){ const b0 = run(false); if (b0) best = {dot:b0.dot, ctr:[(HC[0] + HC[2])/2, (HC[1] + HC[3])/2], fold:true}; }   // (no room by its dot in its own city's area: it joins the city's counter)
+  if (fold && HC && (!best || best.near)){ const b0 = run(false); if (b0) best = {dot:b0.dot, ctr:[(HC[0] + HC[2])/2, (HC[1] + HC[3])/2], fold:true}; }   // (no room by its dot in its own city's area: it joins the city's counter)
   return best; }
 // (its dot and its counter stay on its own province's land, else its own country's: never in the sea or across a border. Nothing found: null,
 // where it stands)

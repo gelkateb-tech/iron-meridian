@@ -25,8 +25,9 @@
 //  (M) mid zoom (hex 12 and 20), a holder on the point and a second army of its side 4 km off it in 8 directions, at Berlin, Szczecin, Poznan, Munich
 //      and Hamburg: the second army's counter stands in its own city's area: its middle nearer its own city's point than any other city's, or (where the
 //      city has no room for a second counter: out at hex 12 its own ground is narrower than two counters) joined to the city's counter, its dot still
-//      outside the ring; in at least 38 of the 40 cases at each zoom. And the other cities' names it would hide: master's names round it (fixtures/
-//      uc-mid-master.json, captured as for (A) with UC_MID_SAVE=1) dropped at most 1 per view. Also at play zoom (hex 30): its own city's area in 38 of 40
+//      outside the ring; in at least 38 of the 40 cases at each mid zoom. And the other cities' names it would hide: master's names round it (fixtures/
+//      uc-mid-master.json, captured as for (A) with UC_MID_SAVE=1) dropped at most 1 per view. Also at play zoom (hex 30), where the play-zoom gaps from the city's counter come first: its own city's area in
+//      32 of 40 (Szczecin, on the coast and the border, has no such place: it is drawn as close in)
 //  (S) mid zoom, no holder: a lone army 2 to 15 km off Berlin's, Munich's or Poznan's point (N and E), hex 8, 12, 16 and 20: its dot at least the
 //      ring's radius + 2 px from the point (never inside the marker), no ring
 //  (B) Hamburg held at hex 12 (mid zoom, every city's name up): "Berlin" is drawn nearer Berlin's point than Hamburg's (a held ring never
@@ -201,7 +202,7 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
   // (M) mid zoom: a second army off a held point stands in its own city's area and hides no more than one other name a view; (S) a lone army's dot
   if (!process.env.UC_NO_MID){ const F = fs.existsSync(MID_FIX) ? JSON.parse(fs.readFileSync(MID_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')), V = await midAll(q); out.mid = {};
     for (const hp of MID_HEX){ const L = V.filter(v => v.hp === hp), own = L.filter(v => v.joined || v.near === v.p).length, R = {cases:L.length, ownArea:own, joined:L.filter(v => v.joined).length}; out.mid['hex ' + hp] = R;
-      if (own < 38) fail('M the second army\'s counter in its own city\'s area (38 of 40)', {hp, ...R, other:L.filter(v => !(v.joined || v.near === v.p)).map(v => v.city + ' ' + v.dn)});
+      if (own < (hp <= 20 ? 38 : 32)) fail('M the second army\'s counter in its own city\'s area (38 of 40 at mid zoom, 32 at play zoom)', {hp, ...R, other:L.filter(v => !(v.joined || v.near === v.p)).map(v => v.city + ' ' + v.dn)});
       for (const v of L){ const dd = v.dot ? Math.hypot(v.dot[0] - v.pt[0], v.dot[1] - v.pt[1]) : null; if (hp <= 20 && (dd == null || dd < v.R + 2)) fail('M its dot outside the ring', {k:`${v.city} ${v.dn} hex ${hp}`, dot:dd && +dd.toFixed(1), R:+v.R.toFixed(1)}); } }
     if (!F) fail('M master\'s names (fixtures/uc-mid-master.json)', 'missing'); else if (F.W !== W || F.H !== H) out.mid.names = 'skipped: master captured at ' + F.W + ' x ' + F.H;
     else { let mx = 0, tot = 0; for (let i = 0; i < F.views.length; i++){ const m = F.views[i], v = V[i], drawn = new Set(v.n.map(l => l.p)), dr = m.n.filter(p => p !== v.p && !drawn.has(p)); mx = Math.max(mx, dr.length); tot += dr.length;
