@@ -10,11 +10,11 @@
 //  (C) close in, the force on Berlin's point has its tag just above the ring and its pictures nearer it than the force off the point (tag farther too)
 //  (X) a force off a held point in each of 8 directions, 4 and 15 km out, yours and an enemy's, at hex 12 to 240: clearly outside, its dot and
 //      its counter clear of the city's counter (see below; UC_NO_DIRS=1 skips it)
-//      Up to hex 20 (mid zoom, the world view) the force off the point is drawn where it stands (a few km: under the city force's own dot, which
-//      hides it); from hex 28 out to its spot. Everywhere its dot and its counter's middle stay on its own country's land, never the sea
+//      Up to hex 20 (mid zoom, the world view) its dot is just outside the ring (never inside it, never under the city's counter: see (M));
+//      from there out its dot and counter keep the play-zoom gaps. Everywhere its dot and its counter's middle stay on its own country's land, never the sea
 //      At play zoom its counter (when not stacked with another) stands by its own dot (within 16 px), never across the ring from it
 //  (L) the same at coastal and border cities (Szczecin NW, Hamburg NW and N, Berlin N and E, Munich SE, Poznan S), 4 and 15 km out, at hex 12, 30,
-//      60 and 240: the dot and the counter's middle over its own country's land (tmGround, and the drawn border: provAt), never the sea; close in
+//      60 and 240: the dot and the counter's middle (unless it joined the city's counter: see (M)) over its own country's land (tmGround, and the drawn border: provAt), never the sea; close in
 //      (hex 240, where a province is large on screen) the dot in its own province
 //  (N) the city's own name stays on its own spot over its own land while a force stands 4 km off its point (Berlin, Szczecin, Poznan; hex 30; at
 //      hex 12, where the stacks may take it as on master, a name drawn is over its own land and never under the off-point force's counter)
@@ -22,11 +22,19 @@
 //      point on screen) is drawn within 3 px of master's spot, with its naval anchor where master has one; none added, none dropped. Master's
 //      places are in .test/fixtures/uc-names-master.json, captured from origin/master's page (440 x 956): to refresh it, build master's page and
 //      run UC_NAMES_SAVE=1 UC_PAGE=<master>/.test/page.html node .test/units-in-cities.js. The markers give way to the names, never the reverse
+//  (M) mid zoom (hex 12 and 20), a holder on the point and a second army of its side 4 km off it in 8 directions, at Berlin, Szczecin, Poznan, Munich
+//      and Hamburg: the second army's counter stands in its own city's area: its middle nearer its own city's point than any other city's, or (where the
+//      city has no room for a second counter: out at hex 12 its own ground is narrower than two counters) joined to the city's counter, its dot still
+//      outside the ring; in at least 38 of the 40 cases at each zoom. And the other cities' names it would hide: master's names round it (fixtures/
+//      uc-mid-master.json, captured as for (A) with UC_MID_SAVE=1) dropped at most 1 per view. Also at play zoom (hex 30): its own city's area in 38 of 40
+//  (S) mid zoom, no holder: a lone army 2 to 15 km off Berlin's, Munich's or Poznan's point (N and E), hex 8, 12, 16 and 20: its dot at least the
+//      ring's radius + 2 px from the point (never inside the marker), no ring
 //  (B) Hamburg held at hex 12 (mid zoom, every city's name up): "Berlin" is drawn nearer Berlin's point than Hamburg's (a held ring never
 //      reads as Berlin's)
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const W = +(process.argv[2] || 440), H = +(process.argv[3] || 956), DPR = +(process.argv[4] || 2), PHONE = W <= 820;
+const MID_FIX = path.join(__dirname, 'fixtures', 'uc-mid-master.json'), MID_CITIES = ['Berlin', 'Szczecin', 'Poznań', 'Munich', 'Hamburg'], MID_HEX = [12, 20, 30], D8 = {N:[0, -1], NE:[1, -1], E:[1, 0], SE:[1, 1], S:[0, 1], SW:[-1, 1], W:[-1, 0], NW:[-1, -1]};
 const NAMES_FIX = path.join(__dirname, 'fixtures', 'uc-names-master.json'), NAMES_AT = ['Berlin', 'Paris', 'Warsaw'], NAMES_HEX = [8, 12, 16, 20, 25, 30];
 // (A) and (B): a game of its own (Germany, the clock paused at noon, every force removed; Math.random seeded so master and branch draw alike)
 async function namesOpen(b, page){ const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, isMobile: PHONE, hasTouch: PHONE }), p = await ctx.newPage(); p.errs = [];
@@ -46,7 +54,26 @@ async function namesView(p, city, hp, dx = 0){ await p.evaluate(([city, hp, dx])
 const namesNow = p => p.evaluate(() => new Promise(res => { window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, G = im.G, r = document.getElementById('map').getBoundingClientRect(), nc = new Map(im.nc.hits().map(h => [h[4], h.slice(0, 4)]));
   res(im.nc.names().map(c => { const Q = G.P[c.p], x = Q.x*im.view.s + im.view.x, y = Q.y*im.view.s + im.view.y; return {p:c.p, t:Q.cityName || Q.name, b:c.b.map(v => +v.toFixed(1)), nc:nc.get(c.p) || null, in:x >= 20 && x <= r.width - 20 && y >= 120 && y <= r.height - 120 ? 1 : 0}; })); })); }));
 async function namesAll(p){ const out = []; for (const at of NAMES_AT) for (const hp of NAMES_HEX){ await namesView(p, at, hp); out.push({at, hp, n:await namesNow(p)}); } return out; }
+// (M): the scene (a holder and a second army 4 km off, of the city's holder's side; Poland's seen), then per zoom the names drawn and where the
+// second army's counter stands (its own, or the city counter it joined)
+const midView = async (p, city, hp) => { await p.evaluate(([city, hp]) => { const im = window.__im, Q = im.G.P.find(q => q.cityName === city && !q.sea), r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12;
+  v.s = s; v.x = r.width/2 - Q.x*s; v.y = r.height/2 - Q.y*s; im.redraw(); }, [city, hp]); await p.waitForTimeout(350); };   // (names and counters only: no wait for the city pictures)
+async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
+  for (const city of MID_CITIES) for (const [dn, dv] of Object.entries(D8)){ const l = Math.hypot(dv[0], dv[1]), off = [dv[0]/l*4*KW, dv[1]/l*4*KW];
+    const I = await p.evaluate(([city, off]) => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const C = G.P.find(P => P.cityName === city && !P.sea), o = S.owner[C.id];
+      const a = im.addArmy(o, C.id, {inf:4, tank:2}), b2 = im.addArmy(o, C.id, {inf:2}); b2.pos = [C.x + off[0], C.y + off[1]]; try { DEV.reveal = true; } catch (e) {} try { visCache = null; } catch (e) {} return {a:a.id, b:b2.id, p:C.id}; }, [city, off]);
+    for (const hp of MID_HEX){ await midView(p, city, hp);
+      const r = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { try { const im = window.__im, G = im.G, L = window.__ucl || []; window.__uclOn = false;
+        const TS = Q => [Q.x*im.view.s + im.view.x, Q.y*im.view.s + im.view.y], o = L.find(c => c.ids.includes(I.b)), j = L.find(c => c.hp != null && (c.ml || []).includes(I.b)); let bx = o ? o.bx : null, sat = false;
+        for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)){ bx = q.b; sat = true; }
+        if (j && o && !o.pv) bx = j.bx; const cs = []; for (const Q of G.P) if (Q.cityName && !Q.sea){ const q = TS(Q); if (q[0] > -60 && q[0] < innerWidth + 60 && q[1] > -60 && q[1] < innerHeight + 60) cs.push([Q.id, q[0], q[1]]); }
+        const cx = bx ? (bx[0] + bx[2])/2 : null, cy = bx ? (bx[1] + bx[3])/2 : null, ds = bx ? cs.map(z => [z[0], Math.hypot(z[1] - cx, z[2] - cy)]).sort((x, y) => x[1] - y[1]) : [];
+        res({joined:!!(j && o && !o.pv), sat, near:ds.length ? ds[0][0] : null, dOwn:bx ? +Math.hypot(TS(G.P[I.p])[0] - cx, TS(G.P[I.p])[1] - cy).toFixed(1) : null, dot:o ? [o.px, o.py] : null, pt:TS(G.P[I.p]), R:im.uc ? im.uc.ringR() : 0}); } catch (e) { res({exc:e.message}); } })); }), I);
+      out.push({city, dn, hp, p:I.p, ...r, n:await namesNow(p)}); } }
+  return out; }
 (async () => { const b = await chromium.launch({ args: ['--allow-file-access-from-files'] }), errors = [], fails = [], out = {};
+  if (process.env.UC_MID_SAVE){ const p = await namesOpen(b, process.env.UC_PAGE || path.join(__dirname, 'page.html')), N = await midAll(p);
+    fs.writeFileSync(MID_FIX, JSON.stringify({W, H, from:process.env.UC_PAGE || 'page.html', views:N.map(v => ({city:v.city, dn:v.dn, hp:v.hp, n:v.n.filter(l => l.in).map(l => l.p)}))})); console.log('saved', MID_FIX, N.length, p.errs.slice(0, 3)); await b.close(); return; }
   if (process.env.UC_NAMES_SAVE){ const p = await namesOpen(b, process.env.UC_PAGE || path.join(__dirname, 'page.html')), N = await namesAll(p);
     fs.writeFileSync(NAMES_FIX, JSON.stringify({W, H, from:process.env.UC_PAGE || 'page.html', views:N})); console.log('saved', NAMES_FIX, N.map(v => v.n.length).join(' '), p.errs.slice(0, 3)); await b.close(); return; }
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, isMobile: PHONE, hasTouch: PHONE }); const p = await ctx.newPage();
@@ -126,12 +153,13 @@ async function namesAll(p){ const out = []; for (const at of NAMES_AT) for (cons
         const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false; const P = im.G.P[I.p], pt = im.toScreen(P.x, P.y);
           const h = L.find(c => c.ids.includes(I.a)), o = L.find(c => c.ids.includes(I.b)); let sb = null; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) sb = q.b;
           const bA = im.S.armies.find(a => a.id === I.b), rs = im.toScreen(bA.pos[0], bA.pos[1]), ob = sb || (o && o.bx);
-          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, stk:!!sb, tag:o.tag, real:rs, land:[im.uc.land(bA.at, o.px, o.py), im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)]} : null); })); }), I);
+          const jn = !o.pv && (h.ml || []).includes(I.b);   /* (mid zoom, no room by its dot in its city's area: its counter joined the city's, above the ring; its dot is its own) */
+          res(h && o ? {pt, R:im.uc.ringR(), hd:[h.px, h.py], hb:h.bx, od:[o.px, o.py], ob, stk:!!sb, jn, tag:o.tag, real:rs, land:[im.uc.land(bA.at, o.px, o.py)].concat(jn ? [] : [im.uc.land(bA.at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)])} : null); })); }), I);
         const k = `${side} ${km} km ${dn} hex ${hp}`; out.dirs++; if (!m){ fail('X counters missing', k); continue; }
         const hOn = Math.hypot(m.hd[0] - m.pt[0], m.hd[1] - m.pt[1]), oPt = Math.hypot(m.od[0] - m.pt[0], m.od[1] - m.pt[1]), oHb = pd([m.hb[0], m.hb[1], m.hb[2], Math.max(m.hb[3], m.pt[1] - m.R)], m.od[0], m.od[1]);
         const row = Math.min(m.ob[3], m.hb[3]) > Math.max(m.ob[1], m.hb[1]), g = gap(m.ob, m.hb), need = m.tag ? 6 : row ? 15 : 6;
         const atReal = Math.hypot(m.od[0] - m.real[0], m.od[1] - m.real[1]) < 0.5;
-        if (hOn > 0.01 || (hp <= 20 ? !atReal : (oPt < m.R + 9 || oHb < 8)) || g < need - 0.6) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), atReal, dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need});
+        if (hOn > 0.01 || (hp <= 20 ? oPt < m.R + 2.4 + 3 || oHb < 1 : (oPt < m.R + 9 || oHb < 8 || g < need - 0.6))) fail('X off the point, clearly outside', {k, hOn:+hOn.toFixed(2), oPt:+oPt.toFixed(1), atReal, dotToCityCounter:+oHb.toFixed(1), counterGap:+g.toFixed(1), need});
         if (m.land.some(z => !z.own)) fail('X off the point: dot and counter on its own land', {k, land:m.land});
         const dB = Math.hypot(Math.max(m.ob[0] - m.od[0], 0, m.od[0] - m.ob[2]), Math.max(m.ob[1] - m.od[1], 0, m.od[1] - m.ob[3]));   // (its counter by its own dot, never across the ring from it)
         if (hp > 20 && hp <= 60 && !m.stk && dB > 16) fail('X off the point: its counter beside its own dot', {k, dotToCounter:+dB.toFixed(1)}); } } }
@@ -144,7 +172,8 @@ async function namesAll(p){ const out = []; for (const at of NAMES_AT) for (cons
       for (const hp of [12, 30, 60, 240]){ await p.evaluate(([x, y, hp]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - x*s; v.y = r.height/2 - y*s; im.redraw(); }, [I.x, I.y, hp]); await p.waitForTimeout(hp >= 120 ? 1200 : 400);
         const m = await p.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, L = window.__ucl || []; window.__uclOn = false;
           const o = L.find(c => c.ids.includes(I.b)); let ob = o && o.bx; for (const c of L) for (const q of c.sb || []) if (q.ids.includes(I.b)) ob = q.b; const at = im.S.armies.find(a => a.id === I.b).at;
-          res(o ? [im.uc.land(at, o.px, o.py), im.uc.land(at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)] : null); })); }), I);
+          const jn = o && !o.pv && L.some(c => c.hp != null && (c.ml || []).includes(I.b));   // (its counter joined the city's: only its dot is its own)
+          res(o ? [im.uc.land(at, o.px, o.py)].concat(jn ? [] : [im.uc.land(at, (ob[0] + ob[2])/2, (ob[1] + ob[3])/2)]) : null); })); }), I);
         const k = `${city} ${km} km ${dn} hex ${hp}`; out.land++; if (!m){ fail('L counters missing', k); continue; } if (m.some(z => !z.own)) fail('L off the point: dot and counter on its own land', {k, land:m}); else if (hp >= 120 && m[0].g !== 'prov') fail('L close in: the dot in its own province', {k, land:m}); } } }
   // (N) the city's own name stays where it is (owner: "City names stay where they are"): a second force 4 km off a held point (Berlin E, SE and S,
   //     Szczecin S, SE and SW, Poznan S, SE and E) at hex 30 and 12: the city's name is drawn on its own spot below the point (within 3 px of
@@ -169,6 +198,24 @@ async function namesAll(p){ const out = []; for (const at of NAMES_AT) for (cons
         if (m.bad > 0.25) fail('N the city name over its own land', {k, bad:+m.bad.toFixed(2)});
         if (m.ob && m.lab[0] < m.ob[2] - 1 && m.lab[2] > m.ob[0] + 1 && m.lab[1] < m.ob[3] - 1 && m.lab[3] > m.ob[1] + 1) fail('N the off-point counter clear of the city name', {k, ob:m.ob, lab:m.lab});
         if (hp > 20 && m.dotIn.length) fail('N the off-point dot in no name', {k, dotIn:m.dotIn}); } } }
+  // (M) mid zoom: a second army off a held point stands in its own city's area and hides no more than one other name a view; (S) a lone army's dot
+  if (!process.env.UC_NO_MID){ const F = fs.existsSync(MID_FIX) ? JSON.parse(fs.readFileSync(MID_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')), V = await midAll(q); out.mid = {};
+    for (const hp of MID_HEX){ const L = V.filter(v => v.hp === hp), own = L.filter(v => v.joined || v.near === v.p).length, R = {cases:L.length, ownArea:own, joined:L.filter(v => v.joined).length}; out.mid['hex ' + hp] = R;
+      if (own < 38) fail('M the second army\'s counter in its own city\'s area (38 of 40)', {hp, ...R, other:L.filter(v => !(v.joined || v.near === v.p)).map(v => v.city + ' ' + v.dn)});
+      for (const v of L){ const dd = v.dot ? Math.hypot(v.dot[0] - v.pt[0], v.dot[1] - v.pt[1]) : null; if (hp <= 20 && (dd == null || dd < v.R + 2)) fail('M its dot outside the ring', {k:`${v.city} ${v.dn} hex ${hp}`, dot:dd && +dd.toFixed(1), R:+v.R.toFixed(1)}); } }
+    if (!F) fail('M master\'s names (fixtures/uc-mid-master.json)', 'missing'); else if (F.W !== W || F.H !== H) out.mid.names = 'skipped: master captured at ' + F.W + ' x ' + F.H;
+    else { let mx = 0, tot = 0; for (let i = 0; i < F.views.length; i++){ const m = F.views[i], v = V[i], drawn = new Set(v.n.map(l => l.p)), dr = m.n.filter(p => p !== v.p && !drawn.has(p)); mx = Math.max(mx, dr.length); tot += dr.length;
+        if (dr.length > 1) fail('M other names dropped against master: at most 1 a view', {k:`${m.city} ${m.dn} hex ${m.hp}`, dropped:dr.length}); } out.mid.names = {maxDroppedPerView:mx, total:tot}; }
+    out.solo = 0; const KW = await q.evaluate(() => KM_W);
+    for (const city of ['Berlin', 'Munich', 'Poznań']) for (const km of [2, 4, 8, 15]) for (const dn of ['N', 'E']){ const dv = D8[dn];
+      const I = await q.evaluate(([city, off]) => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.ncnt = {}; S.battles.length = 0; const C = G.P.find(P => P.cityName === city && !P.sea);
+        const a = im.addArmy(S.owner[C.id], C.id, {tank:2}); a.pos = [C.x + off[0], C.y + off[1]]; try { DEV.reveal = true; } catch (e) {} try { visCache = null; } catch (e) {} return {a:a.id, p:C.id}; }, [city, [dv[0]*km*KW, dv[1]*km*KW]]);
+      for (const hp of [8, 12, 16, 20]){ await midView(q, city, hp);
+        const r = await q.evaluate(I => new Promise(res => { window.__uclOn = true; window.__im.redraw(); requestAnimationFrame(() => requestAnimationFrame(() => { const im = window.__im, P = im.G.P[I.p], L = window.__ucl || []; window.__uclOn = false;
+          const c = L.find(c => c.ids.includes(I.a)), pt = [P.x*im.view.s + im.view.x, P.y*im.view.s + im.view.y], mk = im.uc.marks().find(m => m.p === I.p);
+          res({d:c ? Math.hypot(c.px - pt[0], c.py - pt[1]) : null, R:im.uc.ringR(), ring:mk ? mk.sides.length : 0}); })); }), I);
+        out.solo++; if (r.d == null || r.d < r.R + 2 || r.ring) fail('S a lone army off the point: its dot outside the marker, no ring', {k:`${city} ${km} km ${dn} hex ${hp}`, d:r.d && +r.d.toFixed(1), R:+r.R.toFixed(1), ring:r.ring}); } }
+    errors.push(...q.errs); await q.context().close(); }
   // (A) the empty map: every city name master draws stays on master's spot (with its anchor), none added or dropped; (B) Hamburg held at hex 12
   if (!process.env.UC_NO_EMPTY){ const F = fs.existsSync(NAMES_FIX) ? JSON.parse(fs.readFileSync(NAMES_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')); out.empty = 0;
     if (!F) fail('A master\'s name places (fixtures/uc-names-master.json)', 'missing');
@@ -188,5 +235,5 @@ async function namesAll(p){ const out = []; for (const at of NAMES_AT) for (cons
     if (!h.berlin || !(h.berlin.own < h.berlin.hamburg)) fail('B Hamburg held: "Berlin" nearer Berlin\'s point than Hamburg\'s', h.berlin);
     errors.push(...q.errs); await q.context().close(); }
   if (errors.length) fail('E errors', errors.slice(0, 5));
-  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land, names:out.names, empty:out.empty, heldHamburg:out.heldHamburg}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
+  console.log(JSON.stringify({fails, lines:out.lines, sheet:out.sheet, heart:out.heart, close:out.close, dirs:out.dirs, land:out.land, mid:out.mid, solo:out.solo, names:out.names, empty:out.empty, heldHamburg:out.heldHamburg}, null, 1)); console.log(fails.length ? 'FAIL' : 'PASS');
   await b.close(); process.exit(fails.length ? 1 : 0); })();
