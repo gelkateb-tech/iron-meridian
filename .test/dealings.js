@@ -18,7 +18,7 @@ const toasts = []; R.IM.on('toast', (n, why) => toasts.push(n + ':' + why));
 api.newGame(4242, 0, [0, 5]); let S = api.S; const G = api.G; S.started = true;
 const US = 0, CA = 1, DE = 5, nm = p => G.P[p].cityName || G.P[p].name;
 const side = (o = {}) => ({...R.emptySide(), ...o}), deal = (give = {}, get = {}, treaty = []) => ({give:side(give), get:side(get), treaty});
-const take = (p, to) => { S.owner[p] = to; S.occ[p] = S.hour; S.unrest[p] = G.P[p].city ? 30 : 15; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; };
+const take = (p, to) => { S.owner[p] = to; S.occ[p] = S.hour; S.mor[p] = 25; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; };
 
 // 1. leaders: every nation of both worlds has an invented one; nothing from the reference screenshots in the source
 { const all = [...R.NATIONS.nations.map(n => n.name), ...R.WORLD_POWERS.map(p => p.name)], miss = all.filter(n => !R.LEADERS[n]);

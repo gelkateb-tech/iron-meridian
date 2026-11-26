@@ -13,7 +13,7 @@ async function run(b, name, vp, dpr){
     const border = G.P.filter(P => !P.sea && S.owner[P.id] === fr && !isCapital(P.id) && P.nbs.some(v => S.owner[v] === 0)).map(P => P.id), seen = new Set(border), q = [...border]; let city = -1;
     for (let i = 0; i < q.length && city < 0; i++){ if (G.P[q[i]].city && !isCapital(q[i])){ city = q[i]; break; } for (const v of G.P[q[i]].nbs) if (!seen.has(v) && S.owner[v] === fr){ seen.add(v); q.push(v); } }
     const P0 = [city, ...border.filter(x => x !== city).slice(0, 2)].map(x => G.P[x]);
-    for (const P of P0){ S.owner[P.id] = 0; S.occ[P.id] = S.hour - 30; S.unrest[P.id] = 20; } S.bld[P0[0].id].arms = 2; S.nations[0].cash = 1500; S.nations[fr].cash = 2600; geoChanged();
+    for (const P of P0){ S.owner[P.id] = 0; S.occ[P.id] = S.hour - 30; S.mor[P.id] = 50; } S.bld[P0[0].id].arms = 2; S.nations[0].cash = 1500; S.nations[fr].cash = 2600; geoChanged();
     return { fr, ps: P0.map(P => P.id), city: P0[0].id, name: G.P[P0[0].id].cityName || G.P[P0[0].id].name }; });
   await p.keyboard.press('d'); await p.waitForTimeout(250);
   await p.click(`#sheet [data-act="dp-nat"][data-id="${ids.fr}"]`); await p.waitForTimeout(200);

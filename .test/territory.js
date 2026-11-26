@@ -14,8 +14,8 @@ const errors = [], ok = (c, msg) => { if (!c) errors.push(msg); }, R = new Funct
 const toasts = []; R.IM.on('toast', (n, why) => toasts.push(n + ':' + why));
 api.newGame(4242, 0, [0, 5]); const S = api.S, G = api.G; S.started = true;
 const US = 0, CA = 1, BR = 2, DE = 5, AU = 14, nm = p => G.P[p].cityName || G.P[p].name;
-// 'capture' a province of nation `from` for nation `to` (as rules/combat.js capture leaves it: owner, occupation, unrest)
-const take = (p, to) => { S.owner[p] = to; S.occ[p] = S.hour; S.unrest[p] = G.P[p].city ? 30 : 15; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; };
+// 'capture' a province of nation `from` for nation `to` (as rules/combat.js capture leaves it: owner, occupation, morale 25)
+const take = (p, to) => { S.owner[p] = to; S.occ[p] = S.hour; S.mor[p] = 25; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; };
 // Canadian provinces on the US border: two cities and a countryside province, none a capital
 const caBorder = G.P.filter(P => !P.sea && S.owner[P.id] === CA && !R.isCapital(P.id) && P.nbs.some(v => S.owner[v] === US));
 const cCity = caBorder.filter(P => P.city).map(P => P.id), cLand = caBorder.filter(P => !P.city).map(P => P.id);
@@ -83,7 +83,7 @@ S.hour += 71; ok(/resold in 1 h/.test(R.terrWhyNot(DE, p1) || ''), '71 h later s
 S.hour += 1; ok(R.terrWhyNot(DE, p1) === null, '72 h later it may be resold (captured land for Germany too)');
 ok(S.terr.log.length === 1 && S.terr.log[0].seller === US && S.terr.log[0].buyer === DE && S.terr.log[0].price === price, 'history log');
 ok(R.desk(US).log.some(e => /You sold/.test(e.text)) && R.desk(DE).log.some(e => /You bought/.test(e.text)), 'both seats get a dispatch');
-ok(S.home[p1] === CA && S.occ[p1] != null, 'occupied land stays occupied land for the buyer');
+ok(S.home[p1] === CA && S.anx[p1] === DE, 'land bought arrives annexed for the buyer (owner question 5; its home stays Canada)');
 // decline and withdraw
 r = R.terrOffer(US, DE, q2, R.provValue(q2)); ok(r.ok, 'second offer'); ok(R.terrAnswer(DE, r.o.id, 'decline').ok && !S.terr.offers.length, 'declined');
 r = R.terrOffer(US, DE, q2, R.provValue(q2)); ok(R.terrAnswer(US, r.o.id, 'withdraw').ok && !S.terr.offers.length, 'withdrawn');
@@ -100,7 +100,7 @@ S.nations[CA].cash = 3000; S.mem[CA] = {}; S.mem[CA][US] = 0;
 const w2 = R.terrWant(CA, p2, US), vp2 = R.provValue(p2); ok(w2 >= vp2*1.2, `Canada wants its own city back: up to $${w2}M for $${vp2}M`);
 ok(R.terrWant(AU, p2, US) === 0, 'a far-away power is not interested');
 r = R.terrOffer(US, CA, p2, vp2); ok(r.ok && r.done && S.owner[p2] === CA, 'Canada buys its city back at the value');
-ok(S.home[p2] === CA && S.occ[p2] == null && S.unrest[p2] <= 5, 'back home: no occupation, unrest low');
+ok(S.home[p2] === CA && S.occ[p2] == null && S.mor[p2] === 55 && S.anx[p2] == null, 'back home: its homeland, handed back at morale 55');
 ok(R.terrWhyNot(CA, p2) !== null, 'and it is home land again for Canada');
 // too dear: it counters at what it would pay, then declines a second higher ask
 r = R.terrOffer(US, CA, q1, R.provValue(q1)*5); ok(!r.ok && r.countered && r.price <= R.terrWant(CA, q1, US) && r.o.from === CA && r.o.to === US, 'too dear: a counter-offer: ' + JSON.stringify(r.price));
