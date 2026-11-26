@@ -300,6 +300,13 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## REBELS questions, 2026-11-26 (rebels-2 776769e, phone sheets sent; my default in brackets)
+- RB1. Is "a garrison fights rebels to the end and never retreats" the right reading of "rebels attack them, the city stays mine"? (yes)
+- RB2. Should poor computer nations keep a smaller cash reserve before annexing, so they annex too (Vietnam never does)? (yes: reserve = half the price instead of $150M)
+- RB3. Keep the extra "Mobilisation (homeland only)" row in the morale list (−5 per mobilisation level, homeland)? (yes)
+- RB4. Old saves: is a 24 h grace with no risings enough, or should converted cities also get a 34% floor? (24 h grace only)
+- RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes)
+
 ## Owner's answers, 2026-11-26 (verbatim)
 
 > Answers:
