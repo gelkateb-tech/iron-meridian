@@ -6699,7 +6699,10 @@ function* bnShoreG(p, e, av, wide){ if (BNL_G !== G) bnReset(); if (!e) e = bnIt
   else if ((B = yield* shore(BN_YFAR, own, 1.5))) E = onShore(B);   // (a coarser grid that far out)
   else if ((B = yield* shore(BN_YMAX, mine, 0.75, 0)) || (B = yield* shore(BN_YMAX, own, 1.5, 0))) E = onShore(B);   // (no shore with the piers over the water: the nearest dry one, a dock basin under its piers)
   else { E = bnRivPort(p, e, s, F, mine, false, BN_RIVFAR, avo); if (!E && wide){ yield; E = bnRivPort(p, e, s, F, mine, false, BN_RIVFAR*2.2, avo, true); }   // (wide: a building lot's yard looks further for a river quay on any river: Berlin on the Spree)
-   
+    // (wide, where the nearest river's quays all reach what it keeps off (the border's ribbon: the Oder is the German-Polish border) or there is
+    // none: the sea within the town's square on its own country's shore, then a quay on any river within it; never a dock basin cut into dry land
+    // in the middle of town where real water is within reach (recheck 1: Berlin's yard in its centre with no water near, now on the Elbe))
+    if (!E && wide){ yield; const Ew = Math.min(BN_YFAR, 0.97*cityR(p).E); if ((B = yield* shore(Ew, mine, 1.5))) E = onShore(B); else { yield; E = bnRivPort(p, e, s, F, mine, false, Ew, avo, true, true); } }
     if (!E){ const sd = seaAt(P.x, P.y); E = {dx:0, dy:0, mir:!!sd && sd[0] < -0.05, sea:sd, r:99, d:0, far:true}; } }
   BNSH.set(key, E); return E; }
 function bnShore(p, e, av, wide){ const it = bnShoreG(p, e, av, wide); let r; while (!(r = it.next()).done); return r.value; }   // (at once; cityLotsGen takes it a few ms at a time)
@@ -6708,7 +6711,7 @@ function bnShore(p, e, av, wide){ const it = bnShoreG(p, e, av, wide); let r; wh
 // (and, less, whose waterfront) is nearest the city, its land half dry (off the sea and off the river: BN_RIVW) and on its own country's ground, wins, its
 // sheds on the city's bank if it can (the pictures' piers point down the map: a river north of its city has the sheds on its far bank).
 // null: no such river within at world px
-function bnRivPort(p, e, s, F, mine, toSea, at, avo, any){ const R = bnRivers(), P = G.P[p], M = BNMETA[e.nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, segs = [];
+function bnRivPort(p, e, s, F, mine, toSea, at, avo, any, all){ const R = bnRivers(), P = G.P[p], M = BNMETA[e.nm] || {w:1, h:0.8, ax:0.5, ay:0.6}, Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, segs = [];
   for (let j = Math.floor((P.y - at)/R.C); j <= Math.floor((P.y + at)/R.C); j++) for (let i = Math.floor((P.x - at)/R.C); i <= Math.floor((P.x + at)/R.C); i++) for (const g of R.M.get(i + ':' + j) || []){
     if ((g[4] > 6 && !any) || toSea && !R.sea[g[5]]) continue; const vx = g[2] - g[0], vy = g[3] - g[1], l2 = vx*vx + vy*vy; if (l2 < 1e-6) continue;
     const u = Math.max(0, Math.min(1, ((P.x - g[0])*vx + (P.y - g[1])*vy)/l2)), dq = Math.hypot(P.x - g[0] - vx*u, P.y - g[1] - vy*u); if (dq <= at) segs.push([g, dq]); }
@@ -6718,7 +6721,7 @@ function bnRivPort(p, e, s, F, mine, toSea, at, avo, any){ const R = bnRivers(),
   const onRiv = (x, y) => bnRivDist(x, y, BN_RIVW) < BN_RIVW;
   const nb = bnNameBox(p), nA = nb ? (nb[2] - nb[0])*(nb[3] - nb[1]) : 0, onName = (ax, ay, mir) => { if (!nb) return 0; const q = bnBox(e.nm, mir), gx = ax - P.x, gy = ay - P.y;   // (over the city's name: only where no other bank is near)
     return Math.max(0, Math.min(gx + q[2]*s, nb[2]) - Math.max(gx + q[0]*s, nb[0]))*Math.max(0, Math.min(gy + q[3]*s, nb[3]) - Math.max(gy + q[1]*s, nb[1])) > 0.15*nA ? 60 : 0; };
-  for (const [g, dq] of segs){ if (dq > d0 + 2.5) continue; const vx = g[2] - g[0], vy = g[3] - g[1];
+  for (const [g, dq] of segs){ if (dq > d0 + 2.5 && !all) continue; const vx = g[2] - g[0], vy = g[3] - g[1];   // (all: every river within at, not only the nearest's stretch)
     for (const t of [0, 0.25, 0.5, 0.75, 1]){ const qx = g[0] + vx*t, qy = g[1] + vy*t, side = Math.sign(vx*(P.y - qy) - vy*(P.x - qx)), dQ = Math.hypot(qx - P.x, qy - P.y); if (B && 0.5*dQ >= B.sc) continue;
       for (const mir of [false, true]){ const o = off(pc, mir), ax = qx - o[0], ay = qy - o[1], d = Math.hypot(ax - P.x, ay - P.y); if (B && 0.5*dQ + d >= B.sc) continue; if (!mine(ax, ay) || (avo && avo(ax - P.x, ay - P.y, s, mir))) continue;
         const lw = Math.max(bnWet(e.nm, F.land, ax, ay, s, mir), bnWet(e.nm, F.land, ax, ay, s*0.72, mir)); if (lw > 0.5) continue;
@@ -7154,7 +7157,7 @@ function bnFrontMake(I, q, nm, M, mir, wx0, wy0, Ww, Hw, pkW, N, ki, kf){ const 
   const bx0 = (wx0 - I.x)*K, by0 = (wy0 - I.y)*K, bx1 = bx0 + Ww*K, by1 = by0 + Hw*K, kA = (q.wy - I.y)*K - C3_LEAN*(q.wx - I.x)*K;   // (kA: the picture's depth, its anchor's)
   const lod = pkc >= C3_LOD, far = pkc < C3_MASS, inB = bb => bb[0] < bx1 && bb[2] > bx0 && bb[1] < by1 && bb[3] > by0, B = [], om = P.LT && P.LT.length && cityLotOn(pk) ? cityLotMask(I) : 0, mine = q.lot ? q.lot.bit | (BN_LOTCK[q.lot.k] ? BN_LOTC(q.lot.k) : 0) : 0; if (!P.LT && cityLotOn(pk)) return undefined;   // (the lots not in the plan yet: its canvas close in still to make; asked again)
   const GW = om && P.GR ? cityGrowFor(P, (CGRW.get(I.p) || '').split('|')[0]) : null;
-  c3Pick(P, om, far, lod, inB, (b, lt) => { if (b.k > kA && inB(b.bb) && !(lt & mine)) B.push(b); }, GW && GW.H);   // (the buildings the tier shows, as cityPlanDraw picks them; where the lot is not open, far out, those on it stand under the picture)
+  const hq = q.e && q.e.k === 'hq'; c3Pick(P, om, far, lod, inB, (b, lt) => { if ((b.k > kA || (hq && b.hf)) && inB(b.bb) && !(lt & mine)) B.push(b); }, GW && GW.H);   // (hf: before the HQ's facade by its footprint, cityLotTag)   // (the buildings the tier shows, as cityPlanDraw picks them; where the lot is not open, far out, those on it stand under the picture)
   if (GW) for (const b of GW.B) if (b.k > kA && inB(b.bb)) B.push(b);   // (and the town's growth round what is built, as its canvas shows it)
   // the trees in front (open item 5): the canvas's own (tIn as cityPlanDraw's), their crowns over the picture, nearer the eye than its anchor
   const tA = t => (t[3] === 0 || pkc >= t[4]) && t[0] + t[2] > bx0 && t[0] - t[2] < bx1 && t[1] + t[2] > by0 && t[1] - t[2] < by1 && t[1] - C3_LEAN*t[0] > kA;
@@ -7641,7 +7644,7 @@ function c3Lots(b, Pl){ if (b.L) return b.L; const sp = b.sp, q = b.q, L = [];
     const lq = c3Sub(q, s0, t0, s1, t1), cx = (lq[0] + lq[4])/2, cy = (lq[1] + lq[5])/2;
     const h = Math.min(b.hm*(1 - sp.hv*r1), c3Cap(cx, cy, true));
     let t = b.t === 3 ? 3 : sp.pt > 0 && r2 < sp.pt ? 1 : b.t === 2 ? 2 : 0; if (sp.k === 'p' && r4 < 0.018 && Math.min(Ll/nl, Ls/ns) > 2.6) t = 4;   // (now and then a small domed mosque among the courtyard houses)
-    L.push(c3Geo({q:lq, z0:b.z0, h:Math.max(0.8, h), c:r3 < 0.6 ? b.c : (b.c + 1 + ((r4*5) | 0)) % 6, t, lv:1, tn:(r4*5) | 0, sd:(b.sd*31 + n*7919) | 0, nl:b.nl, cy:sp.k === 'p' && r3 < 0.5 && Math.min(Ll/nl, Ls/ns) > 2.4, pz:b.pz})); }
+    L.push(c3Geo({q:lq, z0:b.z0, h:Math.max(0.8, h), c:r3 < 0.6 ? b.c : (b.c + 1 + ((r4*5) | 0)) % 6, t, lv:1, tn:(r4*5) | 0, sd:(b.sd*31 + n*7919) | 0, nl:b.nl, cy:sp.k === 'p' && r3 < 0.5 && Math.min(Ll/nl, Ls/ns) > 2.4, pz:b.pz, hf:b.hf})); }
   L.sort((a, b2) => a.k - b2.k); return (b.L = L); }
 function* cityPlanGen(I){ if (I.plan) return I.plan; if (!I.aM) return null;
   const P0 = G.P[I.p], sty = I.sty = cityStyle(P0), Y0 = C3_STY[sty], M = I.M, Ek = I.E/KM_W, rk = I.r/KM_W, cap = !!P0.capFlag, pop = Math.max(0.05, P0.pop0 || 0.3);
@@ -7868,7 +7871,9 @@ const cityHqOpen = p => !!G.P[p].capFlag || bnHqAt(p) >= 0;   // the HQ's own lo
 const cityLotUp = (q, k) => { if (k === 'hq') return cityHqOpen(q); const B = bldSeen(q, PLAYER), c = S.owner[q] >= 0 ? consSeen(q, PLAYER) : null; return !!BN_ART[k] && (Math.min(B[k] || 0, BUILD[k].max) > 0 || !!(c && c.k === k)); };
 // a town's open neighbour lots as a string (its canvases' signature holds it: cityCanSig)
 const cityNbSig = I => { const L = I.plan && I.plan.LT; if (!L || !S) return ''; let s = ''; for (const l of L) if (l.nq >= 0 && (l.bit & BN_LOTNP) && G.P[l.nq] && cityLotUp(l.nq, l.k)) s += l.nq + l.k; return s; };
-const cityCanSig = p => { const I = CINFO.get(p); return cityGrowSig(p) + '|' + (I ? cityNbSig(I) : ''); };
+// (null: the town's info or plan let go meanwhile (CINFO keeps 80): its neighbours' part unknown, so no change seen; a town whose info came and
+// went had its canvases dropped and made again over and over, never settling: recheck 1, Kolkata among the Bengal delta's towns)
+const cityCanSig = p => { const I = CINFO.get(p); return I && I.plan && I.plan.LT ? cityGrowSig(p) + '|' + cityNbSig(I) : null; };
 function cityLotMask(I){ const p = I.p; let m = ((cityHqOpen(p) ? BN_LOTALL : BN_LOTALL & ~BN_LOTB('hq')) & ~BN_LOTCR & ~BN_LOTNB) | BN_LOTNA; if (!S) return m;
   const L = I.plan && I.plan.LT; if (L) for (const l of L) if (l.nq >= 0 && (l.bit & BN_LOTNP) && G.P[l.nq] && cityLotUp(l.nq, l.k)) m |= l.bit & BN_LOTNP;
   const B = bldSeen(p, PLAYER), c = S.owner[p] >= 0 ? consSeen(p, PLAYER) : null;
@@ -7898,15 +7903,27 @@ function cityLotTag(I, P, LT){ const F = BN_LOTF/KM_W, m = 0.3, L = LT.map(l => 
   const capped = (b, q) => { const c = clone(b, q, 1), f = capF(c); return f < 1 ? clone(b, q, f) : c; };
   const split = (q, d, mk) => { if (!(mask(q) & mk)) return [q]; if (d >= 2) return []; const lg = Math.hypot(q[2] - q[0], q[3] - q[1]) >= Math.hypot(q[6] - q[0], q[7] - q[1]);
     return (lg ? [[0, 0, 0.48, 1], [0.52, 0, 1, 1]] : [[0, 0, 1, 0.48], [0, 0.52, 1, 1]]).flatMap(h => split(c3Sub(q, ...h), d + 1, mk)); };
-  P.loF = (b, mk) => split(b.q, 0, mk).map(q => capped(b, q));   // (a block's parts off the lots mk: c3Pick, for a mask that opens only some of its lots, as an empty lot's park)
+  P.loF = (b, mk) => split(b.q, 0, mk).map(q => cappedH(b, q));   // (a block's parts off the lots mk: c3Pick, for a mask that opens only some of its lots, as an empty lot's park)
   // (an HQ standing: a building in front of its anchor whose silhouette reaches over its picture's box no taller than a third of the picture,
   // b.oh: no tower before its facade or under its flags; look critic, polish 1)
-  const HQ = LT.find(l => l.k === 'hq' && l.bit === BN_LOTB('hq') && l.bx), hB = HQ && HQ.bx, hK = HQ ? HQ.y - C3_LEAN*HQ.x : 0, hMax = hB ? 0.34*(hB[3] - hB[1]) : 0, hPg = hB ? [hB[0], hB[1], hB[2], hB[1], hB[2], hB[3], hB[0], hB[3]] : null;
-  const hqF = b => { if (!hB || b.k <= hK || b.z0 + b.h <= hMax) return 1; const q = b.q, H0 = b.z0 + b.h, tx = C3_LEAN*H0, pts = []; for (let k = 0; k < 4; k++) pts.push([q[2*k], q[2*k + 1]], [q[2*k] + tx, q[2*k + 1] - H0]);
-    const bx = c3Box(pts.flat()); if (bx[0] >= hB[2] || bx[2] <= hB[0] || bx[1] >= hB[3] || bx[3] <= hB[1] || !c3PolyOv(c3Hull(pts).flat(), hPg)) return 1; return hMax/H0; };
-  for (const b of P.B){ b.lt = mask(b.q);
-    if (b.lt){ if (b.lv === 0) b.lo = split(b.q, 0, b.lt).map(q => capped(b, q)); }
-    else { const f = capF(b); if (f < 1) b.oc = clone(b, b.q, f); const fh = hqF(b); if (fh < 1) b.oh = clone(b, b.q, Math.min(f, fh)); } }
+  const HQ = LT.find(l => l.k === 'hq' && l.bit === BN_LOTB('hq') && l.bx), hB = HQ && HQ.bx, hQ = HQ && HQ.q, hK = HQ ? HQ.y - C3_LEAN*HQ.x : 0, hMax = hB ? 0.34*(hB[3] - hB[1]) : 0, hPg = hB ? [hB[0], hB[1], hB[2], hB[1], hB[2], hB[3], hB[0], hB[3]] : null;
+  // (b.hf: in front of the HQ by its footprint, below its lot's front edge within the lot's width, though its depth key puts it behind: the
+  // picture's ground is an iso diamond, its anchor's key true only at the anchor; capped as one in front and drawn over the picture (bnFront);
+  // recheck 1: Berlin's two towers right of the facade, under the flags)
+  const hqFr = b => { if (!hQ || b.k > hK) return false; const q = b.q; let x0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (let k = 0; k < 8; k += 2){ x0 = Math.min(x0, q[k]); x1 = Math.max(x1, q[k]); y1 = Math.max(y1, q[k + 1]); } return y1 > hQ[3] - 0.3 && x1 > hQ[0] && x0 < hQ[2]; };
+  // (hC: the height allowed; on the square before the facade, a strip a third of the picture deep below the lot's front edge within its width,
+  // low (an eighth of the picture), rising to the third at the strip's far side: the HQ on an open square, never a tower before it; recheck 1)
+  const hD = 0.3*(hB ? hB[3] - hB[1] : 0), hLo = 0.12*(hB ? hB[3] - hB[1] : 0);
+  const hC = b => { const q = b.q; let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (let k = 0; k < 8; k += 2){ x0 = Math.min(x0, q[k]); x1 = Math.max(x1, q[k]); y0 = Math.min(y0, q[k + 1]); y1 = Math.max(y1, q[k + 1]); }
+    if (x1 <= hQ[0] || x0 >= hQ[2] || y1 <= hQ[3] - 0.3 || y0 >= hQ[3] + hD) return hMax; return hLo + (hMax - hLo)*Math.max(0, Math.min(1, (y0 - hQ[3])/hD)); };
+  const hqF = b => { if (!hB || (b.k <= hK && !b.hf)) return 1; const cp = hC(b); if (b.z0 + b.h <= cp) return 1; const q = b.q, H0 = b.z0 + b.h, tx = C3_LEAN*H0, pts = []; for (let k = 0; k < 4; k++) pts.push([q[2*k], q[2*k + 1]], [q[2*k] + tx, q[2*k + 1] - H0]);
+    const bx = c3Box(pts.flat()); if (bx[0] >= hB[2] || bx[2] <= hB[0] || bx[1] >= hB[3] || bx[3] <= hB[1] || !c3PolyOv(c3Hull(pts).flat(), hPg)) return 1; return cp/H0; };
+  // (a block's parts off its lots, the same: a part before the HQ no taller than a third of it; recheck 1: Berlin's two towers before the
+  // facade were the parts of a block the HQ's lot cut, which the cap above never saw)
+  const cappedH = (b, q) => { const c = capped(b, q); c.hf = hqFr(c) ? 1 : 0; const f = hqF(c); if (f >= 1) return c; const o = clone(b, q, Math.max(0.05, Math.min(c.h/b.h, ((c.z0 + c.h)*f - b.z0)/b.h))); o.hf = c.hf; return o; };
+  for (const b of P.B){ b.lt = mask(b.q); b.hf = 0;
+    if (b.lt){ if (b.lv === 0) b.lo = split(b.q, 0, b.lt).map(q => cappedH(b, q)); }
+    else { if (hqFr(b)) b.hf = 1; const f = capF(b); if (f < 1) b.oc = clone(b, b.q, f); const fh = hqF(b); if (fh < 1) b.oh = clone(b, b.q, Math.min(f, fh)); } }
   P.Tm = new Uint32Array(P.T.length); P.T.forEach((t, i) => { const r = t[2]*0.6; P.Tm[i] = mask([t[0] - r, t[1] - r, t[0] + r, t[1] - r, t[0] + r, t[1] + r, t[0] - r, t[1] + r]); });
   P.PKm = P.PK.map(k => mask(k.q)); P.PLm = P.PL.map(q => mask(q)); }
 // the buildings a canvas shows (as the town's tier picks them: far out each block's parts massed, close in their separate buildings) with the
@@ -7976,7 +7993,7 @@ function lotWays(P, I, ST, av){ const pts = [], Ek = I ? I.E/KM_W : 1e9, M = I &
 const CGRW = new Map(); let CGRW_T = 0;
 const cityGrowSig = p => { if (!S) return ''; const B = bldSeen(p, PLAYER), c = S.owner[p] >= 0 ? consSeen(p, PLAYER) : null; let sg = ''; for (const k of BN_K){ const lv = Math.min(B[k] || 0, BUILD[k].max); if (lv > 0 && BN_ART[k]) sg += (sg ? ',' : '') + k + lv; }
   if (c && BN_ART[c.k] && !(B[c.k] > 0)) sg += (sg ? ',' : '') + c.k + '0'; return sg; };   // (a building going up: its whole lot open for its site, "k0", no growth yet)
-function cityGrowWatch(now){ if (now - CGRW_T < 400 || !S || !CGRW.size) return; CGRW_T = now; for (const [p, sg] of [...CGRW]) if (!G.P[p] || cityCanSig(p) !== sg){ CGRW.delete(p); cityLotReset(p); } }
+function cityGrowWatch(now){ if (now - CGRW_T < 400 || !S || !CGRW.size) return; CGRW_T = now; for (const [p, sg] of [...CGRW]){ const c = G.P[p] ? cityCanSig(p) : ''; if (c !== null && c !== sg){ CGRW.delete(p); cityLotReset(p); } } }
 function* cityGrowPrep(I, P){ if (P.GR) return P.GR; const Ek = I.E/KM_W, GR = [], own = P.LT.filter(l => !(l.bit & BN_LOTNB) && l.st !== 'fc' && l.k !== 'hq' && !l.cr), hk = C3_STY[P.sty].hw, Y = C3_STY[P.sty];
   if (!own.length){ P.GR = GR; return GR; }
   const h = (a, b, c) => c3H(I.p*31 + a, b, c), pts = lotWays(P, I, P.ST, P.av), RA = P.gra || (P.gra = cityLotRaster(G.P[I.p], I.E)), K = KM_W;
