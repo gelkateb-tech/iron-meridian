@@ -2739,6 +2739,166 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
   body.side-army #ctx .ab-nm h2{font-size:17px}
   body.side-army #ctx .dia{width:54px; height:60px}
 }
+/* ===================== Market: STOCK MARKET (the order book) =====================
+   The banner (a navy chart drawn in code, MK_BAN), a row of goods tabs, then the view: the slim price chart, your stock, BUY and SELL (the 3 best
+   offers a side) with flag chips; Create Offer; Order Book. All DOM and SVG, box-shadows only (no filters), so it stays cheap on an ordinary phone. */
+.sheet > .rhead.mk-ban:first-child{flex:none; height:64px; margin:-24px -26px 0; padding:0 64px 0 18px; overflow:hidden; align-items:center; flex-wrap:nowrap;
+  background:linear-gradient(180deg, #1d3550 0%, #15283f 55%, #0f1e33 100%); box-shadow:inset 0 -1px 0 rgba(0,0,0,.6), 0 1px 0 rgba(79,208,222,.28), 0 8px 12px -8px rgba(0,0,0,.65)}
+.mk-ban .mk-bg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+.mk-ban .mk-bt{position:relative; display:flex; flex-direction:column; gap:3px; min-width:0}
+.sheet > .rhead.mk-ban:first-child h1{color:#fff; font-size:23px; font-weight:800; letter-spacing:.04em; line-height:1; text-shadow:0 2px 6px rgba(0,0,0,.55); white-space:nowrap}
+.mk-ban .mk-sub{display:flex; align-items:center; gap:8px; white-space:nowrap}
+.sheet > .rhead.mk-ban:first-child .eyebrow{color:#a9c6d3!important; text-shadow:none; font-size:10.5px; letter-spacing:.14em; margin:0}
+.sheet > .rhead.mk-ban:first-child .eyebrow .itip{background:#36576a; color:#dff3f8}
+.sheet > .rhead.mk-ban:first-child .chip{padding:2px 7px; gap:4px; font-size:12px; background:rgba(6,14,24,.6); box-shadow:inset 0 0 0 1px rgba(143,200,220,.3)}
+.sheet > .rhead.mk-ban:first-child .chip .ri{height:13px; width:auto}
+.sheet > .rhead.mk-ban > .mx{right:14px}
+/* the goods tabs */
+.mk-tabs{flex:none; position:sticky; top:40px; z-index:3; display:grid; grid-template-columns:repeat(5, 1fr); margin:-14px -26px 0; background:#24343b; box-shadow:0 1px 0 rgba(0,0,0,.55), 0 6px 10px -6px rgba(0,0,0,.6)}
+.mk-tab{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:62px; padding:3px 2px 2px; border:0; border-left:1px solid rgba(0,0,0,.35); border-radius:0; background:transparent; color:#b9c9cf; cursor:pointer; font:700 10px/1 var(--body); letter-spacing:.08em; text-transform:uppercase}
+.mk-tab:first-child{border-left:0} .mk-tab .ri{height:26px; width:auto; filter:none} .mk-tab .fn{display:none}
+.mk-tab .tl{display:flex; flex-direction:column; align-items:center; gap:3px} .mk-tab .tp{font:600 10.5px/1 var(--body); letter-spacing:0; text-transform:none; color:#c9d4d8; font-variant-numeric:tabular-nums} .mk-tab .tp.up{color:#8fe07c} .mk-tab .tp.dn{color:#ff8f84} .mk-tab.on .tp{color:#fff}
+.mk-tab:hover{background:rgba(255,255,255,.05)}
+.mk-tab.on{background:linear-gradient(180deg, #57737f, #4a6470); color:#fff; box-shadow:inset 0 3px 0 #4fd0de}
+.mk-tab:focus-visible{outline:2px solid #8ff0f8; outline-offset:-3px}
+.mk-body{flex:none; display:flex; flex-direction:column; gap:10px} .mk-body.v-top{margin-top:-14px}
+/* the chart strip, folded and unfolded */
+.mk-chart{display:block; width:auto; margin:0 -26px; padding:7px 14px 6px; border:0; border-radius:0; background:linear-gradient(180deg, #1b2a31, #22323a); box-shadow:inset 0 -1px 0 rgba(0,0,0,.4); color:inherit; text-align:left; cursor:pointer; touch-action:pan-y; font:inherit}
+.mk-chh{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:12.5px; color:#b6c6cc} .mk-chh b{color:#fff; font-size:14px; font-variant-numeric:tabular-nums}
+.mk-chh .up{color:#7ee06a} .mk-chh .dn{color:#ff7a6e} .mk-chh .fl{color:var(--muted)}
+.mk-cv{position:relative; display:block; height:40px; margin-top:4px}
+.mk-cv svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.mk-cv .l{stroke-width:1.8; vector-effect:non-scaling-stroke; stroke-linejoin:round}
+.mk-cv .b{stroke:rgba(255,255,255,.28); stroke-width:1; stroke-dasharray:4 4; vector-effect:non-scaling-stroke}
+.mk-cv .g{stroke:rgba(255,255,255,.08); stroke-width:1; vector-effect:non-scaling-stroke}
+.mk-dot{position:absolute; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:var(--c); box-shadow:0 0 0 2px rgba(0,0,0,.45), 0 0 6px var(--c)}
+.mk-chart.big .mk-cv{height:200px; margin:8px 0 16px 34px}
+.mk-cv .yl{position:absolute; left:-36px; width:32px; margin-top:-7px; font-size:10px; text-align:right; color:#8fa3aa; font-variant-numeric:tabular-nums}
+.mk-cv .xl{position:absolute; bottom:-16px; font-size:10px; color:#8fa3aa; white-space:nowrap}
+.mk-c1{position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); padding:1px 8px; border-radius:2px; background:#1f2e35; font-size:11px; line-height:14px; color:#9fb1b7; white-space:nowrap; pointer-events:none}
+.mk-leg{display:flex; gap:12px; margin-top:3px; font-size:11px; color:#9fb1b7} .mk-leg i{display:inline-block; width:12px; height:3px; margin-right:5px; vertical-align:3px; border-radius:2px} .mk-leg .ask{background:#7ee06a} .mk-leg .bid{background:#e8b923} .mk-leg .base{height:0; border-top:1px dashed rgba(255,255,255,.55); border-radius:0}
+.mk-mk{position:absolute; right:-6px; width:12px; height:3px; margin-top:-1.5px; border-radius:2px} .mk-mk.ask{background:#7ee06a} .mk-mk.bid{background:#e8b923}
+.mk-ro{position:absolute; top:-4px; padding:2px 6px; border-radius:2px; background:rgba(6,14,24,.85); color:#fff; font-size:11px; white-space:nowrap; opacity:0; pointer-events:none} .mk-ro.on{opacity:1}
+.mk-cur{position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px rgba(0,0,0,.5); opacity:0; pointer-events:none} .mk-cur.on{opacity:1}
+/* your stock */
+.mk-stock{position:relative; display:flex; align-items:center; gap:8px; padding:0 0 6px; font-size:13px; color:#c9d4d8}
+.mk-stock .ri{height:22px; width:auto} .mk-stock .mk-sl{flex:1; min-width:0} .mk-stock b{color:#fff; font-variant-numeric:tabular-nums}
+.mk-stock .mk-net{font-weight:600; font-variant-numeric:tabular-nums} .mk-stock .pos{color:#7ee06a} .mk-stock .neg{color:#ff7a6e}
+.mk-fill{position:absolute; left:0; right:0; bottom:0; height:3px; border-radius:2px; background:rgba(255,255,255,.1)} .mk-fill::after{content:""; position:absolute; inset:0 auto 0 0; width:var(--f); border-radius:inherit; background:#4fd0de}
+.mk-note{font-size:12px; color:#e8c67a; margin-top:-4px}
+.mk-embs{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; padding:6px 10px; border-radius:2px; background:rgba(208,71,60,.18); box-shadow:inset 3px 0 0 #d0473c; font-size:12.5px; color:#ffd2cc}
+/* BUY and SELL */
+.mk-cols{display:flex; flex-direction:column; gap:12px; margin:0 -26px}
+.mk-sec{display:flex; flex-direction:column}
+.mk-sh{display:flex; align-items:baseline; gap:8px; padding:6px 14px 5px; background:rgba(255,255,255,.05); border-bottom:1px solid rgba(143,163,170,.35); font:800 13px/1.2 var(--body); letter-spacing:.06em; text-transform:uppercase; color:#e6eef0}
+.mk-sh .mk-cnt{font-weight:600; font-size:11px; letter-spacing:.02em; color:var(--muted); text-transform:none} .mk-sh .mk-ph{margin-left:auto; font-size:11px; letter-spacing:.06em; color:#cfdade} .mk-sh .mk-ph small{font-weight:500; text-transform:none; color:var(--muted); letter-spacing:0}
+.mk-row{display:grid; grid-template-columns:30px 30px minmax(0, 1fr) auto 58px; align-items:center; gap:8px; min-height:56px; padding:4px 10px 4px 14px; border-bottom:1px solid rgba(0,0,0,.35); background:linear-gradient(180deg, rgba(36,52,59,.9), rgba(31,45,51,.9)); box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.mk-row.rk{grid-template-columns:24px 30px 30px minmax(0, 1fr) auto 58px; padding-left:8px}
+.mk-row.enemy{box-shadow:inset 3px 0 0 #d0473c, inset 0 1px 0 rgba(255,255,255,.04); background:linear-gradient(180deg, rgba(74,36,36,.55), rgba(48,32,34,.6))}
+.mk-row.mk-embr{opacity:.55} .mk-row.mine{box-shadow:inset 3px 0 0 #62b34a} .mk-row.open{background:linear-gradient(180deg, #31474f, #2a3e45)}
+.mk-rk{font:700 11px/1 var(--body); color:var(--muted); font-variant-numeric:tabular-nums}
+.mk-ic{display:flex; justify-content:center} .mk-ic .ri{height:28px; width:auto}
+.mk-amt{display:flex; flex-direction:column; gap:2px; min-width:0} .mk-amt b{font:600 17px/1.1 var(--body); font-variant-numeric:tabular-nums}
+.mk-amt.pos b{color:#7ee06a} .mk-amt.neg b{color:#ff7a6e}
+.mk-amt small{font-size:11px; color:#9fb1b7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .mk-amt .etag, .mk-amt .ptag{margin:0; padding:0 4px; font:700 9px/1.45 var(--body); letter-spacing:.04em; vertical-align:1px}
+.mk-pr{display:flex; flex-direction:column; align-items:center; gap:1px; min-width:52px} .mk-pr .ri{height:16px; width:auto} .mk-pr b{font:700 16px/1 var(--body); color:#fff; font-variant-numeric:tabular-nums}
+.mk-go{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; width:56px; height:46px; padding:0; border:1px solid rgba(0,0,0,.45); border-radius:3px; cursor:pointer; font:800 10px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 2px 3px rgba(0,0,0,.4)}
+.mk-go .mk-gl{width:24px; height:24px}
+.mk-go.buy{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.mk-go.sell{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005}
+.mk-go:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 1px rgba(255,255,255,.25), 0 2px 3px rgba(0,0,0,.4)} .mk-go:active{transform:translateY(1px)}
+.mk-go[aria-expanded="true"]{box-shadow:inset 0 2px 4px rgba(0,0,0,.35), 0 0 0 2px rgba(255,255,255,.55)}
+.mk-x{justify-self:center; padding:6px 9px; border:1px solid rgba(255,140,130,.5); border-radius:3px; background:rgba(208,71,60,.18); color:#ffd2cc; cursor:pointer; font:700 11.5px/1 var(--body)}
+.mk-emb-t{justify-self:center; padding:3px 6px; border-radius:2px; background:rgba(208,71,60,.25); color:#ffb4ab; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em}
+.mk-empty{margin:0; padding:10px 14px; font-size:12.5px; color:#b6c6cc; max-width:none}
+.mk-own{padding:6px 14px; font-size:12px; color:#c9d4d8; background:rgba(98,179,74,.1); box-shadow:inset 3px 0 0 #62b34a}
+.mk-link{padding:0; border:0; background:none; color:#8ff0f8; font:600 inherit; font-size:inherit; text-decoration:underline; text-underline-offset:2px; cursor:pointer}
+/* the quantity panel */
+.mk-pan{display:flex; flex-direction:column; gap:8px; padding:10px 14px 12px; background:#2a3e45; border-bottom:1px solid rgba(0,0,0,.45); box-shadow:inset 0 -2px 0 var(--pc, #5fbf4a)} .mk-pan.sell{--pc:#e8b923}
+.mk-pt{font-size:13px; color:#dfe8eb} .mk-pt .flg{vertical-align:-2px}
+.mk-qr{display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.mk-chips{display:flex; flex-wrap:wrap; gap:6px}
+.mk-chip{min-height:34px; padding:0 11px; border:1px solid rgba(143,163,170,.5); border-radius:3px; background:rgba(255,255,255,.06); color:#e6eef0; cursor:pointer; font:700 12.5px/1 var(--body)}
+.mk-chip.on{background:rgba(79,208,222,.22); border-color:#4fd0de; color:#fff} .mk-chip:disabled{opacity:.4; cursor:default}
+.mk-step{display:inline-flex; align-items:stretch; height:36px; border:1px solid rgba(143,163,170,.5); border-radius:3px; overflow:hidden}
+.mk-step button{width:36px; border:0; background:rgba(255,255,255,.08); color:#fff; cursor:pointer; font:700 18px/1 var(--body)}
+.mk-step input{width:92px; min-width:0; border:0; border-radius:0; text-align:center; background:#15232a; color:#fff; font:600 14px var(--body); font-variant-numeric:tabular-nums; -moz-appearance:textfield}
+.mk-step input::-webkit-inner-spin-button, .mk-step input::-webkit-outer-spin-button{-webkit-appearance:none; margin:0}
+.mk-cost{font-size:12.5px; color:#c9d4d8; line-height:1.45} .mk-cost b{color:#fff} .mk-why{color:#e8c67a}
+.mk-warn{padding:5px 8px; border-radius:2px; background:rgba(208,71,60,.2); box-shadow:inset 3px 0 0 #d0473c; color:#ffd2cc; font-size:12.5px}
+.mk-pa{display:flex; align-items:center; gap:14px}
+.mk-ok{min-height:40px; padding:0 16px; font-weight:800; border:1px solid rgba(0,0,0,.45)} .mk-ok.buy{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff} .mk-ok.sell{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005}
+.mk-ok:disabled{opacity:.45}
+/* the bottom buttons */
+.sheet.mid > .row.mk-foot:last-child{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.mk-fb{display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 10px; border:1px solid rgba(143,244,251,.55); border-radius:3px; color:#fff; font:800 14px/1 var(--display, var(--body)); letter-spacing:.06em; text-transform:uppercase;
+  background:linear-gradient(180deg, #2fa7b8 0%, #1d7f8f 55%, #186b79 100%); box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 2px 4px rgba(0,0,0,.45); text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.mk-fb .mk-gl{width:22px; height:22px; flex:none} .mk-fb.on{background:linear-gradient(180deg, #186b79, #1d7f8f); box-shadow:inset 0 2px 5px rgba(0,0,0,.45), 0 0 0 1px rgba(143,244,251,.6)}
+.mk-n{min-width:20px; padding:2px 5px; border-radius:9px; background:rgba(6,14,24,.55); font:700 11px/1.2 var(--body); letter-spacing:0}
+/* Create Offer and Order Book */
+.mk-back{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px}
+.mk-sw{display:inline-flex; border:1px solid rgba(143,163,170,.5); border-radius:3px; overflow:hidden}
+.mk-sw button{min-height:32px; padding:0 10px; border:0; background:transparent; color:#c9d4d8; cursor:pointer; font:700 12px var(--body)} .mk-sw button[aria-pressed="true"]{background:#4a6470; color:#fff}
+.mk-form{display:flex; flex-direction:column; gap:12px}
+.mk-seg{display:grid; grid-template-columns:1fr 1fr; padding:0; border:1px solid rgba(0,0,0,.45); border-radius:3px; overflow:hidden}
+.mk-seg button{margin:0; border-radius:0; display:flex; align-items:center; justify-content:center; gap:6px; min-height:42px; border:0; background:#2a3a41; color:#c9d4d8; cursor:pointer; font:800 13px var(--body); letter-spacing:.05em; text-transform:uppercase} .mk-seg .mk-gl{width:20px; height:20px}
+.mk-seg button.sell.on{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005} .mk-seg button.buy.on{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff}
+.mk-fl{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px} .mk-fl > span:first-child{flex:0 0 100%; font:700 11px var(--body); letter-spacing:.1em; text-transform:uppercase; color:#9fb1b7} .mk-fl > span:first-child small{text-transform:none; letter-spacing:0; font-weight:500}
+.mk-fl select{min-height:36px} .mk-fl{align-content:flex-start}
+#bk-type.mk-seg{padding:0; background:transparent; border:1px solid rgba(0,0,0,.45); border-radius:3px} .mk-step #bk-qty, .mk-step #bk-price{padding:0; border:0; border-radius:0; background:#15232a; font:600 14px var(--body)}   /* (over the older offer form's id rules) */
+.mk-prev{padding:8px 10px; border-radius:2px; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px rgba(143,163,170,.25); font-size:12.5px; line-height:1.5; color:#c9d4d8} .mk-prev b{color:#fff}
+.mk-cross{display:block; margin-top:6px; padding:5px 8px; border-radius:2px; background:rgba(232,185,35,.15); box-shadow:inset 3px 0 0 #e8b923; color:#f3dd9a}
+.mk-post{display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-weight:800; border:1px solid rgba(0,0,0,.45)} .mk-post .mk-gl{width:18px; height:18px}
+.mk-post.sell{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005} .mk-post.buy{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff}
+.mk-bh{margin:4px -26px 0; padding:6px 14px 5px; background:rgba(255,255,255,.05); border-bottom:1px solid rgba(143,163,170,.35); font:800 12.5px/1.2 var(--body); letter-spacing:.07em; text-transform:uppercase; color:#e6eef0}
+.mk-bh small{font-weight:500; letter-spacing:0; text-transform:none; color:var(--muted); margin-left:4px}
+.mk-body.v-book > .mk-row, .mk-body.v-book > .mk-pan, .mk-body.v-book > .mk-my{margin:0 -26px} .mk-body.v-book{gap:0} .mk-body.v-book > .mk-back{margin-bottom:10px} .mk-body.v-book > .mk-more{align-self:flex-start; margin:8px 0}
+.mk-body.v-book > .mk-empty{padding-left:0}
+.mk-my{display:grid; grid-template-columns:28px minmax(0, 1fr) auto; align-items:center; gap:8px; min-height:52px; padding:4px 14px; border-bottom:1px solid rgba(0,0,0,.35); background:rgba(98,179,74,.07)}
+.mk-myt{display:flex; flex-direction:column; gap:2px; min-width:0} .mk-myt b{font-size:13.5px} .mk-myt b.sell{color:#f0c94a} .mk-myt b.buy{color:#7ee06a} .mk-myt small{font-size:11.5px; color:#9fb1b7} .mk-myt small b{font-size:11.5px; color:#fff}
+/* flag chips, in the unit badges' style: the real flag 4:3, a fabric sheen (a diagonal sweep, a vertical fall-off, faint folds), a thin dark edge, a soft
+   shadow, and a 2 px bar of the side's colour joined under it (yours green, allies blue, at war red; none for the others); the tap area is 44 px or more */
+.fchip{position:relative; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:0; width:max-content; justify-self:center; padding:0; border:0; background:none; cursor:pointer; line-height:0; vertical-align:middle}
+.fchip::before{content:""; position:absolute; inset:-12px -8px}
+span.fchip{cursor:default} span.fchip::before{display:none}
+.fchip .flg.fc{margin:0; border-radius:2px; box-shadow:0 0 0 1px rgba(8,12,10,.9), 0 1.8px 3.6px rgba(0,0,0,.55)}
+.fchip .flg.fc::after{border-radius:inherit; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+  background:linear-gradient(90deg, rgba(255,255,255,.07) 0, rgba(0,0,0,.06) 16.7%, rgba(255,255,255,.07) 33.3%, rgba(0,0,0,.06) 50%, rgba(255,255,255,.07) 66.7%, rgba(0,0,0,.06) 83.3%, rgba(255,255,255,.07) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.1) 0, rgba(255,255,255,0) 50%, rgba(0,0,0,.16) 100%),
+    linear-gradient(135deg, rgba(255,255,255,.2) 0, rgba(255,255,255,.04) 35%, rgba(255,255,255,0) 60%, rgba(0,0,0,.14) 100%)}
+.fchip::after{content:""; display:block; width:100%; height:2px; margin-top:0; border-radius:0 0 1px 1px; background:var(--sc, transparent); box-shadow:0 1px 1px rgba(0,0,0,.45)}
+.fchip:not([style*="--sc"])::after{box-shadow:none}
+.fchip:hover .flg.fc{box-shadow:0 0 0 1px rgba(8,12,10,.9), 0 0 0 2.5px rgba(255,255,255,.35), 0 1.8px 3.6px rgba(0,0,0,.55)}
+.fchip:focus-visible{outline:2px solid #8ff0f8; outline-offset:3px; border-radius:2px}
+.mk-embs .fchip{vertical-align:-3px}
+/* All goods in the Order Book: a heading per good (it opens that good's list); the Market button on a nation window opened from a flag */
+.mk-gh{display:flex; align-items:center; gap:8px; width:auto; min-height:44px; margin:0 -26px; padding:4px 14px; border:0; border-bottom:1px solid rgba(0,0,0,.35); border-radius:0; background:rgba(79,208,222,.08); color:#e6eef0; cursor:pointer; font:700 13px var(--body); text-align:left}
+.mk-gh .ri{height:20px; width:auto} .mk-gh small{font-weight:500; color:var(--muted)} .mk-gh .mk-gha{margin-left:auto; color:#8ff0f8; font-size:12px} .mk-gh:hover{background:rgba(79,208,222,.14)}
+.mk-ret{display:inline-flex; align-items:center; gap:4px; min-height:44px; margin-right:8px; padding:0 12px 0 6px; flex:none; order:-1} .mk-ret svg{width:18px; height:18px}
+.rs-back.mk-ret{width:auto; height:auto; min-height:40px; margin-right:0; padding:0 12px 0 8px; font-weight:700; letter-spacing:.02em} .rs-back.mk-ret svg{width:20px; height:20px}
+/* a phone, or any touch screen: every control the Market adds is at least 44 px to the finger (an inline link gets an invisible margin around it) */
+@media (max-width: 699px), (pointer: coarse){
+  .mk-x{min-height:44px; min-width:66px; padding:0 12px; font-size:12.5px}
+  .mk-sw button{min-height:44px; padding:0 14px}
+  .mk-chip{min-height:44px; padding:0 14px}
+  .mk-step{height:46px} .mk-step button{width:44px} .mk-step input{width:96px}
+  .mk-seg button, .mk-ok{min-height:44px}
+  .mk-fl select{min-height:44px}
+  .mk-back > .mk-link{display:inline-flex; align-items:center; min-height:44px}
+  .mk-link{position:relative} .mk-link::after{content:""; position:absolute; inset:-15px -6px}
+  .mk-back > .mk-link::after{display:none}
+  .fchip::before{inset:-14px -13px}
+}
+/* desktop: a taller banner, full names on the tabs, BUY and SELL side by side */
+@media (min-width: 700px){
+  .sheet > .rhead.mk-ban:first-child{height:76px; padding-left:26px} .sheet > .rhead.mk-ban:first-child h1{font-size:28px}
+  .mk-tabs{top:52px} .mk-tab{flex-direction:row; gap:8px; height:56px; font-size:12px; letter-spacing:.05em} .mk-tab .ab{display:none} .mk-tab .fn{display:inline} .mk-tab .tl{align-items:flex-start} .mk-tab .ri{height:30px}
+  .mk-cv{height:48px} .mk-chart.big .mk-cv{height:280px}
+  .mk-row{min-height:48px; padding-left:16px} .mk-go{height:40px}
+  .mk-cols{display:grid; grid-template-columns:1fr 1fr; gap:0 1px; background:rgba(0,0,0,.35)} .mk-cols .mk-sec{background:#2b3c43}
+  .mk-form{display:grid; grid-template-columns:1fr 1fr; gap:14px 18px} .mk-form > .mk-seg, .mk-form > .mk-prev, .mk-form > .mk-post, .mk-form > .small{grid-column:1 / -1}
+}
 </style>
 
 <div id="app">
@@ -5412,43 +5572,166 @@ function escortPick(r){ let best = null, bd = 1e9; const mid = G.P[r.path[Math.f
 function tradeTip(k){ const rs = routesOf(PLAYER); if (!rs.length) return ''; let s = 0; const lines = [];
   for (const r of rs){ const v = trSide(r, PLAYER); if (!v) continue; const q = k === 'cash' ? v.cash*r.f : v.k === k ? v.q*r.f : 0; if (!q && !(k === 'cash' && r.f < 1)) continue; s += q; lines.push(`  · ${trName(r, PLAYER)} ${q ? '+' + (k === 'cash' ? '$' + fmt1(q) + 'M' : fmt(q)) : '0'}${r.f < 1 ? ' (' + (r.why === 'sunk' ? 'convoy sunk' : r.why === 'contested' ? 'contested' : 'blockaded') + ')' : ''}`); }
   if (!lines.length) return ''; return `&#10;Trade routes +${k === 'cash' ? '$' + fmt1(s) + 'M' : fmt(s)}/day&#10;${lines.slice(0, 8).join('&#10;')}`; }
-const spark = (h, w = 120, ht = 28, col = 'var(--accent)') => { if (h.length < 2) return `<svg width="${w}" height="${ht}"></svg>`; const mn = Math.min(...h), mx = Math.max(...h), r = mx - mn || 1;
-  return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}" aria-hidden="true"><polyline fill="none" stroke="${col}" stroke-width="1.6" points="${h.map((v, i) => `${(i/(h.length - 1)*(w - 2) + 1).toFixed(1)},${(ht - 2 - (v - mn)/r*(ht - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
-function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.seller], enemy = o.seller !== PLAYER && atWar(PLAYER, o.seller), mine = o.seller === PLAYER, emb = !mine && embargoed(o.seller, PLAYER), R = RES.find(r => r.k === o.res);
-    const tip = enemy ? `This offer is made by an enemy: ${N.name}. ${bid ? 'Selling to them supplies their war.' : 'Buying from them funds their war.'}` : emb ? `${mkt().emb[o.seller + '>' + PLAYER] ? N.name + ' has an embargo on you' : 'You have an embargo on ' + N.name} and no deals are made.` : `${bid ? 'Buy offer' : 'Sell offer'} by ${N.name}`;
-    const act = mine ? `<button class="btn" data-act="book-cancel" data-id="${o.id}" style="padding:3px 8px;font-size:12px">Withdraw</button>`
-      : emb ? '<span class="small muted">Embargo</span>'
-      : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${10*MKT_LOT}" style="padding:3px 8px;font-size:12px" title="${bid ? 'Sell' : 'Buy'} ${resFull(o.res, 10*MKT_LOT)} for $${fmt(lotCash(10*MKT_LOT, o.price))}M">${bid ? 'Sell' : 'Buy'} ${fmtQ(10*MKT_LOT)}</button><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${o.qty}" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} all · $${fmt(lotCash(o.qty, o.price))}M</button></div>`;
-    return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td class="bk-n">${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td class="bk-g"><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td class="bk-q" data-l="Qty" title="${resFull(o.res, o.qty)}">${fmt(o.qty)}</td><td class="bk-p" data-l="Price / ${fmt(MKT_LOT)}" title="${lotPriceTxt(o.res, o.price)}">$${o.price.toFixed(2)}M</td><td class="bk-e small muted" data-l="Ends">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td class="bk-a">${act}</td></tr>`; }).join(''); }
-let BK_FILT = null;   // the good the offer lists are narrowed to (a goods card was clicked), null = every good
-let BK_RES = 'oil';   // the good last chosen in the offer form (its world price is the default asking price)
-const BK_F = {type:'sell', qty:50*MKT_LOT, price:null};   // the rest of the offer form as the player left it (price null = the chosen good's world price), so a rebuild of the market sheet keeps it
-function bookHTML(){ const F = BK_FILT, all = (S.book || []).filter(o => canSee(o, PLAYER) && (!F || o.res === F)), fl = F ? ` · ${rlbl(F)} only <button class="btn bkf" data-act="mk-filter" data-k="" style="padding:1px 8px">Show all goods</button>` : '', early = dayOf(S.hour) <= 5, sells = all.filter(o => !isBid(o)).sort((a, b) => a.res.localeCompare(b.res) || a.price - b.price), bids = all.filter(isBid).sort((a, b) => a.res.localeCompare(b.res) || b.price - a.price);
-  const head = `<thead><tr><th>Nation</th><th>Goods</th><th>Qty</th><th title="Prices are in millions of dollars per ${fmt(MKT_LOT)} barrels, tons or crates">Price / ${fmt(MKT_LOT)}</th><th>Ends</th><th></th></tr></thead>`;
-  return `<div class="eyebrow" style="margin-top:6px">Sell offers · nations selling${fl}${!F && sells.length > 6 ? ' · <span class="bkf muted">click a goods card above to show one good</span>' : ''}</div>
-    ${sells.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(sells, false)}</tbody></table></div>` : `<p class="small muted">No nation is selling${F ? ' ' + rlbl(F) : ''} right now.${early ? ' In the first days nobody has a surplus yet: sellers usually appear from about day 4, and a buy offer posted before then may run out unfilled.' : F ? ' Post a buy offer below: sellers fill it when the price suits them.' : ''}</p>`}
-    <div class="eyebrow" style="margin-top:12px">Buy offers · nations buying${fl}</div>
-    ${bids.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(bids, true)}</tbody></table></div>` : `<p class="small muted">No nation is buying${F ? ' ' + rlbl(F) : ''} right now.</p>`}
-    <div class="eyebrow" style="margin-top:12px">Post your own offer (3 days)</div>
-    <div class="row" style="align-items:center"><select id="bk-type" aria-label="Offer type"><option value="sell">I sell</option><option value="buy" ${BK_F.type === 'buy' ? 'selected' : ''}>I want to buy</option></select><input id="bk-qty" type="number" min="${MKT_LOT}" step="${MKT_LOT}" value="${BK_F.qty}" style="width:92px" aria-label="Quantity" title="Goods trade in lots of ${fmt(MKT_LOT)}">
-      <select id="bk-res" aria-label="Goods">${MKT_K.map(k => `<option value="${k}" ${k === BK_RES ? 'selected' : ''}>${RES.find(r => r.k === k).name}</option>`).join('')}</select><span class="bkgrp"><span class="small muted">at $</span><input id="bk-price" type="number" min="0.1" step="0.1" value="${BK_F.price != null ? BK_F.price : mkt().p[BK_RES].toFixed(1)}" style="width:70px" aria-label="Price per ${fmt(MKT_LOT)} units"><span class="small muted">M per ${fmt(MKT_LOT)}</span>
-      <button class="btn primary" data-act="book-post">Post offer</button></span></div>
-    <div class="small muted">Offers run 3 days ${itip('A sell offer holds your goods and a buy offer holds your money until someone takes it or it expires. Every listing is public; coalition partners can also send each other supplies directly from Messages.')}</div>`; }
-// one card per traded good: world reference price and its change since yesterday, a 30-day sparkline, your stock against storage and your daily net
-function goodsHTML(){ const M = mkt(), N = S.nations[PLAYER], cap = stockCap(PLAYER), inc = income(PLAYER), all = (S.book || []).filter(o => canSee(o, PLAYER));
-  return `<div class="goods">${MKT_K.map(k => { const R = RES.find(r => r.k === k), pr = M.p[k], d = pr - (M.prev[k] || pr), ch = d/pr*100, net = inc.net[k], ns = all.filter(o => o.res === k && !isBid(o)).length, nb = all.filter(o => o.res === k && isBid(o)).length;
-    return `<div class="good res-${k}${BK_FILT === k ? ' on' : ''}" data-act="mk-filter" data-k="${k}" role="button" tabindex="0" aria-pressed="${BK_FILT === k}" title="${R.name}: world reference price ${lotPriceTxt(k, pr)} (base $${MKT_BASE[k].toFixed(2)}M).&#10;You hold ${resFull(k, N[k])} of ${fmt(cap)} storage, ${net >= 0 ? '+' : '-'}${fmt(Math.abs(net))} a day. Used for ${R.use}. From ${R.src}.${noCityOf(k) ? '&#10;' + noCityTxt(k) : ''}&#10;Click to show only ${rlbl(k)} offers."><div class="gh">${icon(k, 16)}<b>${R.name}</b></div>
-      <div class="gp"><b>$${pr.toFixed(2)}</b><small>M / ${fmtQ(MKT_LOT)}</small><span class="${Math.abs(ch) < 0.05 ? 'fl' : ch > 0 ? 'up' : 'dn'}">${Math.abs(ch) < 0.05 ? '–' : (ch > 0 ? '▲' : '▼') + Math.abs(ch).toFixed(1) + '%'}</span></div>
-      ${spark((M.hist[k] || []).slice(-30), 132, 20, RCOL[k])}
-      <div class="gs"><span>You <b>${fmtQ(N[k])}</b><span class="muted">/${fmtQ(cap)}</span></span><span class="${net < 0 ? 'neg' : 'pos'}">${net >= 0 ? '+' : ''}${fmtQ(net)}/d</span></div>
-      <i class="gf" style="--f:${Math.min(100, Math.round(N[k]/cap*100))}%"></i>
-      <div class="go small muted">${ns ? `${ns} selling` : 'none selling'} · ${nb ? `${nb} buying` : 'none buying'}</div>${noCityOf(k) ? `<div class="gn">No city of yours makes it</div>` : ''}</div>`; }).join('')}</div>`; }
-function marketHTML(){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]); void cap;
-  return `<div class="rhead"><div><div class="eyebrow">Open market · day ${dayOf(S.hour)} ${itip('Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Offers from nations at war with you are marked red.')}</div><h1>Market</h1></div><div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
-    ${goodsHTML()}
-    ${emb.length ? `<div class="status battle">Embargoed by ${emb.map(m => flagHTML(m.id, 11) + ' ' + m.name).join(', ')}: they will not trade with you.</div>` : ''}
-    ${bookHTML()}
-    <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
+/* ---------------- Market: the STOCK MARKET screen (the order book, ECO-9) ----------------
+   A banner header, one tab per traded good (MKT_K) and under the tabs one of three views (MK.view): 'top' (the slim chart of the good's world
+   price over the whole game, your stock, the 3 cheapest sell offers you can buy from and the 3 highest buy offers you can sell to: the rest wait
+   in line and move up when one of these is filled, withdrawn or runs out), 'create' (post an offer) and 'book' (the whole queue, and your own
+   offers with Cancel). Buy and Sell open a quantity panel under the row (MK.open). Prices are money only ($M per MKT_LOT units). The page reads
+   the rules through their readers (topOffers, fillLimit, worldHistory, mkt, stockCap, income) and changes them only through fillOffer, postOffer
+   and cancelOffer. */
+const MK = {view:'top', open:null, chart:false, all:false, more:false};   // open: {id, q} (q null: the most you can take, Max)
+let BK_RES = 'oil';   // the tab: the good shown (and the good of the offer form)
+const BK_F = {type:'sell', qty:50*MKT_LOT, price:null};   // the offer form as the player left it (price null = the good's world price), so a rebuild of the market sheet keeps it
+let MK_DRAG = 0;   // how far a press on the expanded chart moved (a drag reads prices; it does not fold the chart)
+const mkPhone = () => innerWidth < 700;
+// a nation's flag as a small chip in the unit badges' style (flagBand / badgeBody: the real flag, a light fabric sheen, a thin dark edge, a soft
+// shadow, and for your own side, allies and enemies a 2 px bar of the side's colour joined under it, SIDE_T; none for the others); tapping it opens
+// that nation (mkNation). Your own flag is not a button
+function flagChip(n, h = mkPhone() ? 18 : 16){ const sd = sideOf(n), st = sd === 'other' ? '' : `--sc:${sideT(sd)[0]}`, nm = S.nations[n] ? esc0(S.nations[n].name) : '';
+  return n === PLAYER ? `<span class="fchip s-own" style="${st}" title="You">${flagHTML(n, h, 'fc')}</span>`
+    : `<button class="fchip s-${sd}" style="${st}" data-act="mk-nat" data-id="${n}" aria-label="${nm}: about player" title="${nm}: about player">${flagHTML(n, h, 'fc')}</button>`; }
+// the one way from the Market to a nation: its ABOUT PLAYER page in the Diplomacy window (openNationPage)
+// MK_BACK: while the window it opened is showing, its title band carries a "Market" button back to the Market as it was (tab, view, scroll)
+let MK_BACK = null;
+function mkNation(n){ if (n === PLAYER || !S.nations[n]) return; MK_BACK = {top:$('sheet').scrollTop, kind:null};
+  openNationPage(n);
+  MK_BACK.kind = modalKind; mkBackBtn(); }
+function mkBackBtn(){ if (!MK_BACK) return; if ($('modal').hidden || modalKind !== MK_BACK.kind){ if (modalKind !== 'market') MK_BACK = null; return; }
+  const hd = $('sheet').firstElementChild; if (!hd || hd.querySelector('.mk-ret')) return;
+  // the Diplomacy window: on the page the flag opened (nothing to go back to inside it) its back arrow becomes the way back to the Market; a view
+  // opened from there (a trade, the conversation) keeps its own back arrow to that page
+  if (MK_BACK.kind === 'diplo'){ const rb = hd.querySelector('.rs-back[data-act="dp-back"]'); if (DV.back.length || !rb) return;
+    rb.dataset.act = 'mk-ret'; rb.classList.add('mk-ret'); rb.title = 'Back to the Market'; rb.setAttribute('aria-label', 'Back to the Market'); rb.insertAdjacentHTML('beforeend', '<span>Market</span>'); return; }
+  hd.insertAdjacentHTML('afterbegin', `<button class="btn mk-ret" data-act="mk-ret" title="Back to the Market">${rg('back', 18)}<span>Market</span></button>`); }
+// the banner behind the title: a dark navy chart, all code (a faint grid, 30 candlesticks from a fixed seed and a glowing price line); built once
+const MK_BAN = (() => { let s = 0x2e1f3, y = 46, c = ''; const r = () => (s = (Math.imul(s, 1103515245) + 12345) >>> 0)/4294967296, pts = [];
+  for (let i = 0; i < 30; i++){ const x = 170 + i*14.5, o = y, cl = Math.max(14, Math.min(64, o + (r() - 0.53)*15)), hi = Math.min(o, cl) - 2 - r()*7, lo = Math.max(o, cl) + 2 + r()*7, col = cl < o ? '#4fd0de' : '#d0473c';
+    c += `<path d="M${x} ${hi.toFixed(1)}V${lo.toFixed(1)}" stroke="${col}"/><rect x="${x - 4}" y="${Math.min(o, cl).toFixed(1)}" width="8" height="${Math.max(1.5, Math.abs(cl - o)).toFixed(1)}" fill="${col}"/>`; pts.push(`${x},${((o + cl)/2).toFixed(1)}`); y = cl; }
+  return `<svg class="mk-bg" viewBox="0 0 620 76" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><defs><pattern id="mkgrid" width="20" height="19" patternUnits="userSpaceOnUse"><path d="M20 0H0V19" fill="none" stroke="rgba(150,200,230,.09)" stroke-width="1"/></pattern>
+    <linearGradient id="mkfade" x1="0" x2="1"><stop offset="0" stop-color="#0f1e33" stop-opacity="1"/><stop offset=".42" stop-color="#0f1e33" stop-opacity=".2"/><stop offset="1" stop-color="#0f1e33" stop-opacity="0"/></linearGradient></defs>
+    <rect width="620" height="76" fill="url(#mkgrid)"/><g opacity=".38" stroke-width="1">${c}</g><polyline points="${pts.join(' ')}" fill="none" stroke="#7fe8f2" stroke-width="6" stroke-linejoin="round" opacity=".16"/><polyline points="${pts.join(' ')}" fill="none" stroke="#8ff0f8" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/><rect width="620" height="76" fill="url(#mkfade)"/></svg>`; })();
+// our own glyphs: a cart (an arrow into it to buy, out of it to sell), a plus, a ledger
+const MK_CART = up => `<svg class="mk-gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 5h2.4l2.2 9.6a1.4 1.4 0 0 0 1.4 1.1h8.6a1.4 1.4 0 0 0 1.4-1.1L20.6 9H11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.6" cy="19.6" r="1.7" fill="currentColor"/><circle cx="16.6" cy="19.6" r="1.7" fill="currentColor"/><path d="${up ? 'M15 11V3.5m-3 3 3-3 3 3' : 'M15 3v7.5m-3-3 3 3 3-3'}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const MK_PLUS = '<svg class="mk-gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
+const MK_LEDGER = '<svg class="mk-gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z" fill="currentColor" opacity=".9"/><path d="M6 3v18" stroke="#1d4650" stroke-width="2"/><path d="M10 8h6M10 12h6M10 16h4" stroke="#1d4650" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const mkName = k => RES.find(r => r.k === k).name;
+// money in $M for the Market's cost lines: two decimals under $1M, one under $100M, whole millions above (fmt alone floors $14.8M to $14M)
+const mkM = v => v < 1 ? (Math.round(v*100)/100).toFixed(2) : v < 100 ? (Math.round(v*10)/10).toLocaleString('en-US', {maximumFractionDigits:1}) : fmt(Math.round(v));
+// a price per MKT_LOT units: two decimals, with a thousands separator from $1,000
+const mkP = p => p >= 1000 ? p.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) : p.toFixed(2);
+// a number typed in an amount or price field ("12,000", "1.5"): the separators are dropped
+const mkNum = v => +String(v == null ? '' : v).replace(/[^0-9.]/g, '') || 0;
+const mkDays = o => { const h = o.exp - S.hour; return h >= 24 ? `${Math.ceil(h/24)} d` : `${Math.max(1, Math.ceil(h))} h`; };
+// a place in the queue: 1 + the offers of that good and side ahead of it (cheaper sell offers, higher buy offers; the older first at one price)
+const mkRank = o => 1 + (S.book || []).filter(x => x !== o && x.res === o.res && isBid(x) === isBid(o) && x.qty > 0 && (isBid(o) ? byBid(x, o) < 0 : byAsk(x, o) < 0)).length;
+// the price chart of good k over the whole game (worldHistory): points scaled to a 1000 x 1000 box, kept until a new day's price arrives
+const MKC = new Map();
+// (ex: more prices the scale must hold, today's best offers on the unfolded chart; kept apart from the folded one's)
+function mkSeries(k, ex = []){ const h = worldHistory(k), M = mkt(), last = h.length ? h[h.length - 1] : null, key = `${h.length}:${last ? last.d + ':' + last.p : ''}:${ex.join()}`, mk = k + (ex.length ? '+' : ''), c = MKC.get(mk); if (c && c.key === key) return c;
+  const ps = h.length ? h.map(x => x.p) : [M.p[k]], b = MKT_BASE[k], lo0 = Math.min(b, ...ps, ...ex), hi0 = Math.max(b, ...ps, ...ex), pad = Math.max(0.04*b, (hi0 - lo0)*0.12), lo = lo0 - pad, hi = hi0 + pad;
+  const Y = p => 1000 - (p - lo)/(hi - lo)*1000, n = ps.length, X = i => n > 1 ? i/(n - 1)*1000 : 1000, xy = ps.map((p, i) => [+X(i).toFixed(1), +Y(p).toFixed(1)]);
+  const line = n > 1 ? 'M' + xy.map(q => q.join(',')).join('L') : `M0,${xy[0][1]}L1000,${xy[0][1]}`, C = {key, h, lo, hi, Y, xy, line, area:line + 'L1000,1000L0,1000Z', baseY:+Y(b).toFixed(1)};
+  MKC.set(mk, C); return C; }
+// the chart strip at the top of a tab: the world price, its change since yesterday, the slim line; tapped, it unfolds to a full chart (gridlines
+// with prices, the first day, the middle and today, the base price, today's best sell and buy offers, a readout under the finger or the pointer)
+function mkChart(k){ const ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOffers(PLAYER, k, 'bid', 1)[0], C = mkSeries(k, MK.chart ? [ask, bid].filter(Boolean).map(o => o.price) : []), M = mkt(), pr = M.p[k], ch = (pr - (M.prev[k] || pr))/pr*100, big = MK.chart, col = RCOL[k], last = C.xy[C.xy.length - 1];
+  const chs = Math.abs(ch) < 0.05 ? '<span class="fl">–</span>' : `<span class="${ch > 0 ? 'up' : 'dn'}">${ch > 0 ? '▲' : '▼'}${Math.abs(ch).toFixed(1)}%</span>`;
+  const tip = `${mkName(k)}: world reference price ${lotPriceTxt(k, pr)} (base $${MKT_BASE[k].toFixed(2)}M). The price the world market pays and charges; nations trade with each other at their own prices. ${big ? 'Tap to fold the chart.' : 'Tap to see the whole game.'}`;
+  if (big) MK_BIGC = C;   // (the readout under the finger uses the unfolded chart's scale)
+  let over = `<i class="mk-dot" style="left:${last[0]/10}%;top:${last[1]/10}%;--c:${col}"></i>`, grid = '';
+  if (big){ const step = (C.hi - C.lo)/4; for (let i = 1; i <= 3; i++){ const p = C.lo + step*i, y = C.Y(p)/10; grid += `<path d="M0,${(y*10).toFixed(1)}H1000" class="g"/>`; over += `<span class="yl" style="top:${y}%">$${p.toFixed(2)}</span>`; }
+    const h = C.h, d0 = h.length ? h[0].d : dayOf(S.hour), dn = dayOf(S.hour), dm = Math.round((d0 + dn)/2);
+    over += `<span class="xl" style="left:0">Day ${d0}</span>${dn - d0 > 4 ? `<span class="xl" style="left:50%;transform:translateX(-50%)">Day ${dm}</span>` : ''}<span class="xl" style="right:0">Today</span>${C.h.length < 2 ? '<span class="mk-c1">The price history starts tomorrow</span>' : ''}`;
+    const mark = (o, cls, t) => o ? `<i class="mk-mk ${cls}" style="top:${Math.max(0, Math.min(100, C.Y(o.price)/10))}%" title="${t} $${mkP(o.price)}M"></i>` : '';
+    over += mark(ask, 'ask', 'Best sell offer') + mark(bid, 'bid', 'Best buy offer') + `<span class="mk-ro" aria-live="polite"></span><i class="mk-cur"></i>`; }
+  return `<button class="mk-chart${big ? ' big' : ''}" data-act="mk-chart" aria-expanded="${big}" title="${tip}">
+    <span class="mk-chh"><span>World price <b>$${mkP(pr)}M</b> per ${fmt(MKT_LOT)}</span>${chs}</span>${big ? `<span class="mk-leg">${ask ? `<span><i class="ask"></i>best sell $${mkP(ask.price)}</span>` : ''}${bid ? `<span><i class="bid"></i>best buy $${mkP(bid.price)}</span>` : ''}<span><i class="base"></i>base $${mkP(MKT_BASE[k])}</span></span>` : ''}
+    <span class="mk-cv" data-k="${k}"><svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">${grid}<path d="M0,${C.baseY}H1000" class="b"/>${C.h.length < 2 ? '' : `<path d="${C.area}" fill="${col}" opacity=".16"/><path d="${C.line}" fill="none" stroke="${col}" class="l"/>`}</svg>${over}${!big && C.h.length < 2 ? '<span class="mk-c1">History starts tomorrow</span>' : ''}</span></button>`; }
+// your stock of the good, against storage, and your daily net
+function mkStock(k){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), net = income(PLAYER).net[k], R = RES.find(r => r.k === k), pct = Math.min(100, Math.round(N[k]/cap*100));
+  return `<div class="mk-stock" title="You hold ${resFull(k, N[k])} of ${fmt(cap)} storage, ${net >= 0 ? '+' : '-'}${fmt(Math.abs(net))} a day. Used for ${R.use}. From ${R.src}.">${icon(k, 22)}<span class="mk-sl">You hold <b>${fmt(N[k])}</b><span class="muted"> / ${fmt(cap)}</span></span><span class="mk-net ${net < 0 ? 'neg' : 'pos'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}/day</span><i class="mk-fill" style="--f:${pct}%"></i></div>${noCityOf(k) ? `<div class="mk-note">No city of yours makes it. ${noCityTxt(k)}</div>` : ''}`; }
+// one offer row (top 3 and the Order Book): flag chip, goods, amount (green: you get it, red: you give it), price, and Buy (green) or Sell (yellow)
+// (the amount's sign and colour say what moves to or from you: + green you get the goods, − red you give them; your own offer the same way, as its
+// maker: your sell offer gives goods, your buy offer gets them)
+function mkRow(o, rank = 0){ const bid = isBid(o), N = S.nations[o.seller], enemy = atWar(PLAYER, o.seller), mine = o.seller === PLAYER, emb = !mine && embargoed(o.seller, PLAYER), op = MK.open && MK.open.id === o.id, give = mine ? !bid : bid;
+  const tip = mine ? `Your ${bid ? 'buy' : 'sell'} offer` : enemy ? `This offer is made by an enemy: ${N.name}. ${bid ? 'Selling to them supplies their war.' : 'Buying from them funds their war.'}` : emb ? `${mkt().emb[o.seller + '>' + PLAYER] ? N.name + ' has an embargo on you' : 'You have an embargo on ' + N.name} and no deals are made.` : `${bid ? 'Buy offer' : 'Sell offer'} by ${N.name}: ${resFull(o.res, o.qty)} at ${lotPriceTxt(o.res, o.price)}`;
+  const act = mine ? `<button class="mk-x" data-act="book-cancel" data-id="${o.id}">Cancel</button>` : emb ? '<span class="mk-emb-t">Embargo</span>'
+    : `<button class="mk-go ${bid ? 'sell' : 'buy'}" data-act="mk-open" data-id="${o.id}" aria-expanded="${!!op}" aria-label="${bid ? 'Sell' : 'Buy'} ${rlbl(o.res)} ${bid ? 'to' : 'from'} ${esc0(N.name)} at ${lotPriceTxt(o.res, o.price)}">${MK_CART(bid)}<span>${bid ? 'Sell' : 'Buy'}</span></button>`;
+  return `<div class="mk-row${enemy ? ' enemy' : ''}${emb ? ' mk-embr' : ''}${mine ? ' mine' : ''}${op ? ' open' : ''}${rank ? ' rk' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}">${rank ? `<span class="mk-rk">#${rank}</span>` : ''}${flagChip(o.seller)}<span class="mk-ic">${icon(o.res, 28)}</span>
+    <span class="mk-amt ${give ? 'neg' : 'pos'}"><b>${give ? '−' : '+'}${fmt(o.qty)}</b><small>${mkDays(o)} · ${enemy ? '<span class="etag">ENEMY</span> ' : ''}${o.priv ? '<span class="ptag">🔒 COALITION</span> ' : ''}${mine ? `Your ${bid ? 'buy' : 'sell'} offer` : esc0(N.name)}</small></span>
+    <span class="mk-pr" title="${lotPriceTxt(o.res, o.price)}">${icon('cash', 16)}<b>${mkP(o.price)}</b></span>${act}</div>${op ? mkPanel(o) : ''}`; }
+// what taking q units of offer o would do (the panel's cost line and its confirm button; also patched in place while the amount is typed)
+function mkDeal(o, q){ const bid = isBid(o), L = fillLimit(PLAYER, o.id), me = S.nations[PLAYER], v = lotCash(q, o.price), room = kFloor(stockCap(PLAYER) - me[o.res]);
+  const why = L.q >= o.qty ? '' : L.why === 'money' ? `your money pays for ${fmt(L.q)}` : L.why === 'storage' ? `your storage is nearly full (room for ${fmt(L.q)})` : L.why === 'stock' ? `you hold ${fmt(L.q)}` : L.why === 'room' ? `their storage takes only ${fmt(L.q)}` : '';
+  const cost = bid ? `You get <b>$${mkM(v)}M</b> · you hold ${fmt(me[o.res])}` : `Cost <b>$${mkM(v)}M</b> · you have $${fmt(me.cash)}M · room ${fmt(room)}`;
+  return {L, cost:`${cost}${why ? `<br><span class="mk-why">Max is ${fmt(L.q)}: ${why}.</span>` : ''}`, txt:`${bid ? 'Sell' : 'Buy'} ${fmt(q)} for $${mkM(v)}M`, ok:`<button class="btn mk-ok ${bid ? 'sell' : 'buy'}" data-act="book-buy" data-id="${o.id}" data-q="${q}" ${q > 0 ? '' : 'disabled'}>${bid ? 'Sell' : 'Buy'} ${fmt(q)} for $${mkM(v)}M</button>`}; }
+const mkQ = (o, L) => Math.max(0, Math.min(L.q, MK.open && MK.open.q != null ? MK.open.q : L.q));
+// the quantity panel under a row (one at a time): chips 10K / 50K / Max, a stepper of 1,000, what it costs and what limits it, the enemy warning, confirm
+function mkPanel(o){ const bid = isBid(o), N = S.nations[o.seller], L = fillLimit(PLAYER, o.id), q = mkQ(o, L), D = mkDeal(o, q), w = bid ? 'Sell' : 'Buy';
+  return `<div class="mk-pan ${bid ? 'sell' : 'buy'}" role="group" aria-label="${w} ${rlbl(o.res)}"><div class="mk-pt">${w} ${rlbl(o.res)} ${bid ? 'to' : 'from'} ${flagHTML(o.seller, 13)} <b>${esc0(N.name)}</b> at $${mkP(o.price)}M per ${fmt(MKT_LOT)}</div>
+    <div class="mk-qr"><span class="mk-chips">${[10, 50].map(t => `<button class="mk-chip${q === t*MKT_LOT ? ' on' : ''}" data-act="mk-q" data-v="${t*MKT_LOT}" ${L.q >= MKT_LOT ? '' : 'disabled'}>${fmtQ(t*MKT_LOT)}</button>`).join('')}<button class="mk-chip${q === L.q ? ' on' : ''}" data-act="mk-q" data-v="max" ${L.q >= MKT_LOT ? '' : 'disabled'}>Max</button></span>
+      <span class="mk-step"><button data-act="mk-q" data-d="${-MKT_LOT}" aria-label="1,000 less">−</button><input id="mk-q" type="text" inputmode="numeric" autocomplete="off" value="${fmt(q)}" aria-label="Amount"><button data-act="mk-q" data-d="${MKT_LOT}" aria-label="1,000 more">+</button></span></div>
+    <div class="mk-cost" id="mk-cost">${D.cost}</div>${atWar(PLAYER, o.seller) ? `<div class="mk-warn">${esc0(N.name)} is at war with you: ${bid ? 'selling to them supplies their war' : 'buying funds their war'}.</div>` : ''}
+    <div class="mk-pa"><span id="mk-okw">${D.ok}</span><button class="mk-link" data-act="mk-close">Cancel</button></div></div>`; }
+// a side of the top view: BUY (the sell offers you can buy from, cheapest first) or SELL (the buy offers you can sell to, highest first), 3 shown
+function mkSide(k, bid){ const L = topOffers(PLAYER, k, bid ? 'bid' : 'ask', 0), mine = (S.book || []).filter(o => o.seller === PLAYER && o.res === k && isBid(o) === bid), early = dayOf(S.hour) <= 5;
+  const head = `<div class="mk-sh ${bid ? 'sell' : 'buy'}"><b>${bid ? 'Sell' : 'Buy'} ${esc0(mkName(k))}</b><span class="mk-cnt">${L.length ? `${Math.min(3, L.length)} of ${L.length}` : ''}</span><span class="mk-ph">Price <small>$M per ${fmt(MKT_LOT)}</small></span></div>`;
+  const empty = bid ? `<p class="mk-empty">No nation is buying ${rlbl(k)} right now. <button class="mk-link" data-act="mk-view" data-v="create" data-t="sell">Create Offer</button> to sell yours: buyers take it when the price suits them.</p>`
+    : `<p class="mk-empty">No nation is selling ${rlbl(k)} right now.${early ? ' In the first days nobody has a surplus yet: sellers usually appear within a few days, and a buy offer posted before then may run out unfilled.' : ''} <button class="mk-link" data-act="mk-view" data-v="create" data-t="buy">Create Offer</button> to post a buy offer: sellers fill it when the price suits them.</p>`;
+  const own = mine.length ? `<div class="mk-own">Your ${bid ? 'buy' : 'sell'} offer${mine.length > 1 ? 's' : ''}: ${mine.map(o => `<b>#${mkRank(o)}</b> in line (${fmt(o.qty)} at $${mkP(o.price)})`).join(', ')} <button class="mk-link" data-act="mk-view" data-v="book">Order Book</button></div>` : '';
+  return `<section class="mk-sec ${bid ? 'sell' : 'buy'}">${head}${L.length ? L.slice(0, 3).map(o => mkRow(o)).join('') : empty}${own}</section>`; }
+function mkTop(k){ const emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]);
+  return `${mkChart(k)}${mkStock(k)}${emb.length ? `<div class="mk-embs">Embargoed by ${emb.map(m => `${flagChip(m.id, 14)} ${esc0(m.name)}`).join(', ')}: they will not trade with you.</div>` : ''}<div class="mk-cols">${mkSide(k, false)}${mkSide(k, true)}</div>`; }
+// the offer form (Create Offer): I sell / I buy, the good (the tab), the amount, the price; what it holds, its place in line, a warning when it
+// crosses the best offer on the other side (with one tap to take that one instead)
+function mkPrev(k){ const ty = BK_F.type, N = S.nations[PLAYER], pr = Math.round(mkPrice(k)*100)/100, q = kFloor(Math.max(0, +BK_F.qty || 0)), ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOffers(PLAYER, k, 'bid', 1)[0];
+  const room = kFloor(stockCap(PLAYER) - N[k]), have = ty === 'sell' ? kFloor(N[k]) : lotsFor(N.cash, Math.max(0.01, pr)), qq = Math.min(q, have);
+  const rank = 1 + (S.book || []).filter(o => o.res === k && isBid(o) === (ty === 'buy') && o.qty > 0 && (ty === 'buy' ? o.price >= pr : o.price <= pr)).length;
+  let s = !(pr >= BOOK_MIN_PRICE) ? `Set a price of at least $${BOOK_MIN_PRICE}M per ${fmt(MKT_LOT)}.` : !qq ? (ty === 'sell' ? `You hold no ${rlbl(k)} to sell.` : 'Not enough money for a buy offer at that price.')
+    : ty === 'sell' ? `Holds <b>${fmt(qq)}</b> ${rlbl(k)} for 3 days; nations can take part of it. You get up to <b>$${mkM(lotCash(qq, pr))}M</b>.` : `Holds <b>$${mkM(lotCash(qq, pr))}M</b> for 3 days to buy ${fmt(qq)} ${rlbl(k)}; nations can fill part of it.${qq > room ? ` Your storage has room for ${fmt(room)} now.` : ''}`;
+  if (qq && qq < q) s += ` <span class="mk-why">You asked for ${fmt(q)}: ${ty === 'sell' ? `you hold ${fmt(have)}` : `your money pays for ${fmt(have)}`}.</span>`;
+  if (qq && pr >= BOOK_MIN_PRICE) s += ` Your offer would be <b>#${rank}</b> in line.`;
+  const x = ty === 'sell' && bid && pr <= bid.price ? bid : ty === 'buy' && ask && pr >= ask.price ? ask : null;
+  if (x) s += `<span class="mk-cross">${ty === 'sell' ? `A buy offer already pays $${mkP(x.price)}M: sell into it now.` : `A sell offer already asks $${mkP(x.price)}M: buy it now.`} <button class="mk-link" data-act="mk-take" data-id="${x.id}">${ty === 'sell' ? 'Sell to' : 'Buy from'} ${esc0(S.nations[x.seller].name)}</button></span>`;
+  return s; }
+const mkPrice = k => BK_F.price != null && BK_F.price !== '' && +BK_F.price > 0 ? +BK_F.price : +mkt().p[k].toFixed(2);
+function mkCreate(k){ const ty = BK_F.type, M = mkt(), ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOffers(PLAYER, k, 'bid', 1)[0], pr = mkPrice(k);
+  const chip = (v, t) => `<button class="mk-chip" data-act="mk-cp" data-v="${v.toFixed(2)}">${t} $${mkP(v)}</button>`;
+  return `<div class="mk-back"><button class="mk-link" data-act="mk-view" data-v="top">◀ Top offers</button></div>
+    <div class="mk-form"><div class="mk-seg" id="bk-type" data-v="${ty}" role="radiogroup" aria-label="Offer type"><button class="sell${ty === 'sell' ? ' on' : ''}" role="radio" aria-checked="${ty === 'sell'}" data-act="mk-type" data-v="sell">${MK_CART(true)}I sell</button><button class="buy${ty === 'buy' ? ' on' : ''}" role="radio" aria-checked="${ty === 'buy'}" data-act="mk-type" data-v="buy">${MK_CART(false)}I buy</button></div>
+    <label class="mk-fl"><span>Goods</span><select id="bk-res" aria-label="Goods">${MKT_K.map(g => `<option value="${g}" ${g === k ? 'selected' : ''}>${mkName(g)}</option>`).join('')}</select></label>
+    <div class="mk-fl"><span>Amount</span><span class="mk-step"><button data-act="mk-cq" data-d="${-MKT_LOT}" aria-label="1,000 less">−</button><input id="bk-qty" type="text" inputmode="numeric" autocomplete="off" value="${fmt(mkNum(BK_F.qty))}" aria-label="Quantity" title="Goods trade in lots of ${fmt(MKT_LOT)}"><button data-act="mk-cq" data-d="${MKT_LOT}" aria-label="1,000 more">+</button></span>
+      <span class="mk-chips">${[10, 50, 100].map(t => `<button class="mk-chip" data-act="mk-cq" data-v="${t*MKT_LOT}">${fmtQ(t*MKT_LOT)}</button>`).join('')}<button class="mk-chip" data-act="mk-cq" data-v="max">Max</button></span></div>
+    <div class="mk-fl"><span>Price <small>$M per ${fmt(MKT_LOT)}</small></span><span class="mk-step"><button data-act="mk-cp" data-d="-0.05" aria-label="5 cents less">−</button><input id="bk-price" type="text" inputmode="decimal" autocomplete="off" value="${mkP(Math.round(pr*100)/100)}" aria-label="Price per ${fmt(MKT_LOT)} units"><button data-act="mk-cp" data-d="0.05" aria-label="5 cents more">+</button></span>
+      <span class="mk-chips">${chip(M.p[k], 'World')}${bid ? chip(bid.price, 'Best buy') : ''}${ask ? chip(ask.price, 'Best sell') : ''}</span></div>
+    <div class="mk-prev" id="mk-prev">${mkPrev(k)}</div>
+    <button class="btn mk-post ${ty}" data-act="book-post">${MK_PLUS}<span class="mk-pt2">Post ${ty === 'buy' ? 'buy' : 'sell'} offer${pr ? ` at $${mkP(+pr)}` : ''}</span></button>
+    <div class="small muted">Offers run 3 days ${itip('A sell offer holds your goods and a buy offer holds your money until someone takes it or it expires; nations can take part of it. Every listing is public; coalition partners can also send each other supplies directly from Messages.')}</div></div>`; }
+// the Order Book: the whole queue of the good (or of every good), sell offers cheapest first and buy offers highest first, 20 a side until "Show
+// all"; then your own offers (every good) with their place in line and Cancel
+// (All goods: a heading per good with its count and its first 5 a side; the heading opens that good's own list. Your own offers always show)
+function mkBook(k){ const all = MK.all, L = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive && canSee(o, PLAYER) && (all || o.res === k)), ko = o => MKT_K.indexOf(o.res), n = MK.more ? 1e9 : all ? 5 : 20;
+  const list = (bd, t, e) => { let h = `<div class="mk-bh">${t}</div>`, any = false, more = 0;
+    for (const g of all ? MKT_K : [k]){ const A = L.filter(o => o.res === g && isBid(o) === bd).sort(bd ? byBid : byAsk); if (!A.length) continue; any = true; more += Math.max(0, A.length - n);
+      if (all) h += `<button class="mk-gh" data-act="mk-filter" data-k="${g}" data-book="1" title="${mkName(g)}: the whole list">${icon(g, 20)}<b>${mkName(g)}</b><small>${A.length} ${bd ? 'buying' : 'selling'}</small><span class="mk-gha">All ›</span></button>`;
+      h += A.filter((o, i) => i < n || o.seller === PLAYER).map(o => mkRow(o, mkRank(o))).join(''); }   // (your own offer is always shown, at its place in line)
+    return h + (!any ? `<p class="mk-empty">${e}</p>` : more || MK.more ? `<button class="mk-link mk-more" data-act="mk-more">${MK.more ? 'Show fewer' : `Show all (${more} more)`}</button>` : ''); };
+  const mine = (S.book || []).filter(o => o.seller === PLAYER && o.qty > 0).sort((x, y) => ko(x) - ko(y) || x.id - y.id);
+  const myRows = mine.map(o => `<div class="mk-my"><span class="mk-ic">${icon(o.res, 24)}</span><span class="mk-myt"><b class="${isBid(o) ? 'buy' : 'sell'}">${isBid(o) ? 'Buying' : 'Selling'} ${rlbl(o.res)}</b><small>${fmt(o.qty)} of ${fmt(o.q0 || o.qty)} left · $${mkP(o.price)}M · ends in ${mkDays(o)} · <b>#${mkRank(o)}</b> in line</small></span><button class="mk-x" data-act="book-cancel" data-id="${o.id}" title="Withdraw it: ${isBid(o) ? `the $${mkM(lotCash(o.qty, o.price))}M held comes back` : `the ${fmt(o.qty)} ${rlbl(o.res)} come back to your stock`}">Cancel</button></div>`).join('');
+  return `<div class="mk-back"><button class="mk-link" data-act="mk-view" data-v="top">◀ Top offers</button><span class="mk-sw" role="group" aria-label="Show"><button data-act="mk-all" data-v="0" aria-pressed="${!all}">This good</button><button data-act="mk-all" data-v="1" aria-pressed="${all}">All goods</button></span></div>
+    ${list(false, `Sell offers <small>cheapest first: you buy from these</small>`, `No nation is selling ${all ? 'anything' : rlbl(k)} right now.`)}
+    ${list(true, `Buy offers <small>highest first: you sell to these</small>`, `No nation is buying ${all ? 'anything' : rlbl(k)} right now.`)}
+    <div class="mk-bh mine">Your offers <small>every good</small></div>${myRows || '<p class="mk-empty">You have no offers on the market. <button class="mk-link" data-act="mk-view" data-v="create">Create Offer</button></p>'}`; }
+function marketHTML(){ const N = S.nations[PLAYER], k = MKT_K.includes(BK_RES) ? BK_RES : (BK_RES = 'oil');
+  if (MK.open && !(S.book || []).some(o => o.id === MK.open.id && o.qty > 0)){ MK.open = null; setTimeout(() => toast('That offer is gone.', 'info', null), 0); }   // taken or run out while its panel was open
+  const nk = (S.book || []).filter(o => o.res === k && o.qty > 0 && canSee(o, PLAYER)).length, mine = (S.book || []).filter(o => o.seller === PLAYER && o.qty > 0).length, v = MK.view;
+  return `<div class="rhead mk-ban">${MK_BAN}<div class="mk-bt"><h1>Stock Market</h1><div class="mk-sub"><span class="eyebrow">Day ${dayOf(S.hour)} ${itip('Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Each good shows its 3 best offers on each side; the others wait in line and move up when one is filled, withdrawn or runs out. Offers from nations at war with you are marked red.')}</span><span class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></span></div></div></div>
+    <div class="mk-tabs" role="tablist" aria-label="Goods">${MKT_K.map(g => { const R = RES.find(r => r.k === g), on = g === k, M = mkt(), p = M.p[g], d = p - (M.prev[g] || p), c = Math.abs(d) < p*0.0005 ? '' : d > 0 ? ' up' : ' dn';
+      return `<button class="mk-tab${on ? ' on' : ''}" role="tab" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-act="mk-filter" data-k="${g}" title="${R.name}: world price ${lotPriceTxt(g, p)}">${icon(g, 26)}<span class="tl"><span class="ab">${R.ab}</span><span class="fn">${R.name}</span><span class="tp${c}">$${mkP(p)}</span></span></button>`; }).join('')}</div>
+    <div class="mk-body v-${v}" role="tabpanel" aria-label="${esc0(mkName(k))}">${v === 'create' ? mkCreate(k) : v === 'book' ? mkBook(k) : mkTop(k)}</div>
+    <div class="row mk-foot"><button class="btn mk-fb cr${v === 'create' ? ' on' : ''}" data-act="mk-view" data-v="create" aria-pressed="${v === 'create'}">${MK_CART(true)}Create Offer</button><button class="btn mk-fb ob${v === 'book' ? ' on' : ''}" data-act="mk-view" data-v="book" aria-pressed="${v === 'book'}" title="${nk} offers for ${rlbl(k)}${mine ? `; ${mine} of them yours` : ''}">${MK_LEDGER}Order Book${nk ? ` <span class="mk-n">${nk}</span>` : ''}</button></div>`; }
+// the Market after a change (a tab, a view, a panel, a deal)
+const mkRender = () => { if (modalKind === 'market' && !$('modal').hidden) setHTML($('sheet'), marketHTML()); };
 
 
 /* ---------------- Diplomacy ---------------- */
@@ -12037,12 +12320,29 @@ document.addEventListener('click', e => {
     case 'dp-bloc-rename': { const v = $('blocname') ? $('blocname').value : ''; if (!blocRename(PLAYER, v)) toast('Choose a name (up to 28 letters).', 'bad', null); else toast('Coalition renamed.', 'good', null); dpRender(); renderSide(true); break; }
     case 'dp-bloc-leave': if (b.dataset.v === 'no') DV.leaveAsk = false; else if (b.dataset.sure !== '1') DV.leaveAsk = true; else { DV.leaveAsk = false; if (blocLeave(PLAYER)) toast('You left your coalition.', 'info', null); renderSide(true); } dpRender(); break;
     case 'dp-me-save': { const ok = NET.setMe({name:($('dp-me-name') || {}).value, motto:($('dp-me-motto') || {}).value}); toast(ok ? 'Profile saved.' : 'Your name needs at least one letter.', ok ? 'good' : 'bad', null); dpRender(); break; }
-    case 'book-buy': { const o0 = (S.book || []).find(x => x.id === +b.dataset.id); if (!o0) break; const sel0 = o0.seller, res0 = o0.res, pr0 = o0.price, bid0 = isBid(o0); const q = fillOffer(PLAYER, +b.dataset.id, +b.dataset.q);
-      if (q){ const msg = bid0 ? `Sold ${resFull(res0, q)} to ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(lotCash(q, pr0))}M.` : `Bought ${resFull(res0, q)} from ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(lotCash(q, pr0))}M.`; toast(msg, atWar(PLAYER, sel0) ? 'bad' : 'good', null); log(msg, '', null); }
-      else toast(bid0 ? 'You do not have any to sell.' : 'Not enough money or storage.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
-    case 'mk-filter': { const k = b.dataset.k || null; BK_FILT = k && BK_FILT !== k ? k : null; if (BK_FILT){ BK_RES = BK_FILT; BK_F.price = null; } setHTML($('sheet'), marketHTML()); break; }
-    case 'book-cancel': { const o = (S.book || []).find(x => x.id === +b.dataset.id); if (o){ if (isBid(o)) S.nations[PLAYER].cash += lotCash(o.qty, o.price); else S.nations[PLAYER][o.res] += o.qty; S.book = S.book.filter(x => x !== o); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
-    case 'book-post': { const ty = $('bk-type').value, k = $('bk-res').value, q = Math.round(+$('bk-qty').value), pr = +$('bk-price').value; const got = postOffer(PLAYER, k, q, pr, ty); if (got) toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${fmt(got)} ${rlbl(k)} at ${lotPriceTxt(k, pr)} for 3 days${ty === 'buy' ? ` ($${fmt(lotCash(got, pr))}M held)` : ''}.${got < q ? (ty === 'buy' ? ` You asked for ${fmt(q)}: your money pays for ${fmt(got)}.` : ` You asked for ${fmt(q)}: ${got === kFloor(q) ? `goods trade in lots of ${fmt(MKT_LOT)}` : `you hold ${fmt(got)}`}.`) : ''}`, 'good', null); else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'book-buy': { const id = +b.dataset.id, o0 = (S.book || []).find(x => x.id === id); if (!o0){ MK.open = null; toast('That offer is gone.', 'info', null); mkRender(); break; }
+      const sel0 = o0.seller, res0 = o0.res, pr0 = o0.price, bid0 = isBid(o0), ask = Math.max(0, mkNum(b.dataset.q)), L0 = fillLimit(PLAYER, id), q = fillOffer(PLAYER, id, ask);
+      const why = q < kFloor(ask) ? (L0.why === 'money' ? 'your money' : L0.why === 'storage' ? 'storage full' : L0.why === 'stock' ? 'all you hold' : L0.why === 'room' ? 'their storage full' : 'all they had') : '';
+      if (q){ const amt = why ? `${fmt(q)} of ${fmt(kFloor(ask))} ${rlbl(res0)} (${why})` : resFull(res0, q), msg = bid0 ? `Sold ${amt} to ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${mkM(lotCash(q, pr0))}M.` : `Bought ${amt} from ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${mkM(lotCash(q, pr0))}M.`; toast(msg, atWar(PLAYER, sel0) ? 'bad' : 'good', null); log(msg, '', null); MK.open = null; }
+      else toast(bid0 ? (L0.why === 'room' ? `${S.nations[sel0].name} has no storage room left for it.` : 'You do not have any to sell.') : L0.why === 'storage' ? 'Your storage is full.' : 'Not enough money.', 'bad', null); mkRender(); renderSide(true); break; }
+    case 'mk-filter': { const k = b.dataset.k; if (MKT_K.includes(k) && k !== BK_RES){ BK_RES = k; BK_F.price = null; MK.open = null; MK.more = false; } if (b.dataset.book){ MK.all = false; MK.more = false; } mkRender(); if (b.dataset.book) $('sheet').scrollTop = 0; { const t = $('sheet').querySelector(`.mk-tab[data-k="${k}"]`); if (t && e.detail === 0 && !b.dataset.book) t.focus({preventScroll:true}); } break; }
+    case 'mk-chart': if (MK_DRAG > 8){ MK_DRAG = 0; break; } MK.chart = !MK.chart; mkRender(); break;
+    case 'mk-open': { const id = +b.dataset.id; if (!(S.book || []).some(o => o.id === id && o.qty > 0)){ MK.open = null; toast('That offer is gone.', 'info', null); } else MK.open = MK.open && MK.open.id === id ? null : {id, q:null}; mkRender(); break; }
+    case 'mk-close': MK.open = null; mkRender(); break;
+    case 'mk-q': { if (!MK.open) break; const L = fillLimit(PLAYER, MK.open.id); let q = MK.open.q != null ? MK.open.q : L.q; if (b.dataset.v === 'max') q = L.q; else if (b.dataset.v) q = +b.dataset.v; else q += +b.dataset.d; MK.open.q = Math.max(Math.min(MKT_LOT, L.q), Math.min(L.q, kFloor(q))); mkRender(); break; }
+    case 'mk-take': { const id = +b.dataset.id; MK.view = 'top'; MK.open = (S.book || []).some(o => o.id === id) ? {id, q:null} : null; mkRender(); $('sheet').scrollTop = 0; break; }
+    case 'mk-view': { const v = b.dataset.v; MK.view = v === 'top' || MK.view === v ? 'top' : v; if (b.dataset.t) BK_F.type = b.dataset.t === 'buy' ? 'buy' : 'sell'; MK.open = null; MK.more = false; mkRender(); $('sheet').scrollTop = 0; break; }
+    case 'mk-type': BK_F.type = b.dataset.v === 'buy' ? 'buy' : 'sell'; mkRender(); break;
+    case 'mk-cq': { const N = S.nations[PLAYER], pr = mkPrice(BK_RES), max = BK_F.type === 'sell' ? kFloor(N[BK_RES]) : Math.min(lotsFor(N.cash, pr), kFloor(stockCap(PLAYER) - N[BK_RES])); let q = Math.round(mkNum(BK_F.qty));
+      q = b.dataset.v === 'max' ? max : b.dataset.v ? +b.dataset.v : q + +b.dataset.d; BK_F.qty = Math.max(MKT_LOT, kFloor(q)); mkRender(); break; }
+    case 'mk-cp': { let pr = b.dataset.v ? +b.dataset.v : mkPrice(BK_RES) + +b.dataset.d; BK_F.price = Math.max(BOOK_MIN_PRICE, Math.round(pr*100)/100).toFixed(2); mkRender(); break; }
+    case 'mk-all': MK.all = b.dataset.v === '1'; MK.more = false; mkRender(); break;
+    case 'mk-more': MK.more = !MK.more; mkRender(); break;
+    case 'mk-nat': mkNation(+b.dataset.id); break;
+    case 'mk-ret': { const t = MK_BACK ? MK_BACK.top : 0; MK_BACK = null; openModal(marketHTML(), 'market'); $('sheet').scrollTop = t; break; }
+    case 'book-cancel': { const id = +b.dataset.id, o = (S.book || []).find(x => x.id === id), got = o ? cancelOffer(PLAYER, id) : 0;
+      if (got){ const over = !isBid(o) && S.nations[PLAYER][o.res] > stockCap(PLAYER); toast(isBid(o) ? `Buy offer withdrawn: the $${mkM(lotCash(got, o.price))}M held for it is back in your treasury.` : `Sell offer withdrawn: ${resFull(o.res, got)} back in your stock${over ? ', which is now over your storage limit: use or sell them before the next day, or the excess is lost' : ''}.`, over ? 'bad' : 'info', null); } if (MK.open && MK.open.id === id) MK.open = null; mkRender(); renderSide(true); break; }
+    case 'book-post': { const ty = BK_F.type === 'buy' ? 'buy' : 'sell', k = $('bk-res') && MKT_K.includes($('bk-res').value) ? $('bk-res').value : BK_RES, q = Math.round(mkNum($('bk-qty') ? $('bk-qty').value : BK_F.qty)), pr = Math.round(mkNum($('bk-price') ? $('bk-price').value : mkPrice(k))*100)/100; if (!(pr >= BOOK_MIN_PRICE)){ toast(`Set a price of at least $${BOOK_MIN_PRICE}M per ${fmt(MKT_LOT)}.`, 'bad', null); break; } const got = postOffer(PLAYER, k, q, pr, ty); if (got){ toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${fmt(got)} ${rlbl(k)} at ${lotPriceTxt(k, pr)} for 3 days${ty === 'buy' ? ` ($${mkM(lotCash(got, pr))}M held)` : ''}.${got < q ? (ty === 'buy' ? ` You asked for ${fmt(q)}: your money pays for ${fmt(got)}.` : ` You asked for ${fmt(q)}: ${got === kFloor(q) ? `goods trade in lots of ${fmt(MKT_LOT)}` : `you hold ${fmt(got)}`}.`) : ''}`, 'good', null); MK.view = 'book'; MK.all = false; } else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); mkRender(); renderSide(true); break; }
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
@@ -12062,7 +12362,7 @@ document.addEventListener('click', e => {
     case 'ovl': ovlToggle(b.dataset.k, b.dataset.v == null ? undefined : b.dataset.v === 'true'); break;   // (Settings > Map: On / Off)
     case 'mode': mapModeSet(b.dataset.k); break;
     case 'mapstyle': mapModeSet(mapMode === 'terrain' ? 'political' : 'terrain'); break;   // (the More menu: Political <-> Terrain)
-    case 'trade': { const k = b.dataset.k, q = +b.dataset.q, done = trade(PLAYER, k, q); if (done){ toast(`${done > 0 ? 'Bought' : 'Sold'} ${resFull(k, Math.abs(done))} on the anonymous exchange (no nation involved).`, 'info', null); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'trade': { const k = b.dataset.k, q = +b.dataset.q, done = trade(PLAYER, k, q); if (done){ toast(`${done > 0 ? 'Bought' : 'Sold'} ${resFull(k, Math.abs(done))} on the anonymous exchange (no nation involved).`, 'info', null); } mkRender(); renderSide(true); break; }
     case 'market-open': openModal(marketHTML(), 'market'); break;
     case 'trade-escort': { const r = routeById(+b.dataset.id), f = r ? escortPick(r) : null; if (!f) toast('No idle fleet with warships: build frigates at a Naval Yard, or free a fleet.', 'bad', null); else escortSet(f, r.id); dpRender(); renderSide(true); break; }
     case 'trade-close': tradeClose(PLAYER, +b.dataset.id); dpRender(); renderSide(true); break;
@@ -12111,14 +12411,36 @@ document.addEventListener('input', e => { if (e.target.id === 'pickq'){ pickQ = 
     if (r && q(`[data-ss="${k}"]`)) q(`[data-ss="${k}"]`).textContent = `${r.n - spTaken(k, -1)} stay`; if (q(`[data-mc="${k}:${SPLIT.g}"]`)) q(`[data-mc="${k}:${SPLIT.g}"]`).textContent = v; if (r && q(`[data-mc="${k}:s"]`)) q(`[data-mc="${k}:s"]`).textContent = r.n - spTaken(k, -1); return; } });
 // market offer form: remember what the player picked or typed, and mark the sheet as current so the 4-a-second refresh does not rebuild it and reset the form
 function bkSync(){ if (modalKind === 'market' && !$('modal').hidden) lastSig.sheet = marketHTML(); }
-function bkForm(el){ if (el.id === 'bk-type') BK_F.type = el.value === 'buy' ? 'buy' : 'sell'; else if (el.id === 'bk-qty') BK_F.qty = String(el.value).replace(/[^0-9.]/g, ''); else if (el.id === 'bk-price') BK_F.price = String(el.value).replace(/[^0-9.]/g, ''); bkSync(); }
-document.addEventListener('input', e => { const el = e.target; if (el && (el.id === 'bk-qty' || el.id === 'bk-price')) bkForm(el); });
+// (what the form shows below the fields, its preview and the Post button, follows the typing at once; the quantity panel's cost line and its
+// confirm button follow its amount the same way)
+// (a press on a button that blurs the field fires 'change' before its click: nothing here replaces a button or a link, the confirm button and the
+// Post button are patched in place, and the preview, which holds the "Sell to X" link, is rewritten only when its text changed)
+const mkSet = (el, h) => { if (el && el.dataset.h !== h){ el.dataset.h = h; el.innerHTML = h; } };
+function bkForm(el){ if (el.id === 'bk-qty') BK_F.qty = String(el.value).replace(/[^0-9.]/g, ''); else if (el.id === 'bk-price') BK_F.price = String(el.value).replace(/[^0-9.]/g, '');
+  else if (el.id === 'mk-q' && MK.open){ const o = (S.book || []).find(x => x.id === MK.open.id); if (o){ const L = fillLimit(PLAYER, o.id); MK.open.q = Math.max(0, Math.min(L.q, kFloor(mkNum(el.value)))); const D = mkDeal(o, MK.open.q), w = $('mk-okw'), ob = w && w.querySelector('.mk-ok');
+      mkSet($('mk-cost'), D.cost); if (ob){ ob.dataset.q = MK.open.q; ob.disabled = !(MK.open.q > 0); if (ob.textContent !== D.txt) ob.textContent = D.txt; }
+      for (const c of $('sheet').querySelectorAll('.mk-pan .mk-chip')) c.classList.toggle('on', c.dataset.v === 'max' ? MK.open.q === L.q : +c.dataset.v === MK.open.q); } }
+  const pv = $('mk-prev'); if (pv && (el.id === 'bk-qty' || el.id === 'bk-price')){ mkSet(pv, mkPrev(BK_RES)); const pb = $('sheet').querySelector('.mk-post .mk-pt2'); if (pb){ const t = `Post ${BK_F.type === 'buy' ? 'buy' : 'sell'} offer at $${mkP(+mkPrice(BK_RES))}`; if (pb.textContent !== t) pb.textContent = t; } }
+  bkSync(); }
+document.addEventListener('input', e => { const el = e.target; if (el && (el.id === 'bk-qty' || el.id === 'bk-price' || el.id === 'mk-q')) bkForm(el); });
+// the Market's tabs: the arrow keys move between them; the expanded price chart: a readout of the day and the price under the pointer or the finger
+document.addEventListener('keydown', e => { const t = e.target; if (!t || !t.classList || !t.classList.contains('mk-tab') || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return; e.preventDefault();
+  const i = MKT_K.indexOf(t.dataset.k), k = MKT_K[(i + (e.key === 'ArrowRight' ? 1 : MKT_K.length - 1)) % MKT_K.length]; const nb = $('sheet').querySelector(`.mk-tab[data-k="${k}"]`); if (nb) nb.click(); });
+let MK_PX = null, MK_BIGC = null;
+function mkRead(e){ if (modalKind !== 'market' || !MK.chart) return; const cv = e.target && e.target.closest && e.target.closest('.mk-chart.big .mk-cv'); if (!cv) return; const k = cv.dataset.k, h = worldHistory(k); if (!h.length) return;
+  const r = cv.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left)/r.width)), i = Math.round(f*(h.length - 1)), C = MK_BIGC && MK_BIGC.h.length === h.length ? MK_BIGC : mkSeries(k), x = h.length > 1 ? i/(h.length - 1)*100 : 100;
+  if (MK_PX != null) MK_DRAG = Math.max(MK_DRAG, Math.abs(e.clientX - MK_PX));
+  const ro = cv.querySelector('.mk-ro'), cu = cv.querySelector('.mk-cur'); if (ro){ ro.textContent = `Day ${h[i].d} · $${h[i].p.toFixed(2)}M`; ro.style.left = Math.min(78, Math.max(0, x - 11)) + '%'; ro.classList.add('on'); }
+  if (cu){ cu.style.left = x + '%'; cu.style.top = C.Y(h[i].p)/10 + '%'; cu.classList.add('on'); } }
+document.addEventListener('pointermove', mkRead);
+document.addEventListener('pointerdown', e => { if (e.target && e.target.closest && e.target.closest('.mk-chart.big .mk-cv')){ MK_PX = e.clientX; MK_DRAG = 0; mkRead(e); } else MK_PX = null; });
+document.addEventListener('pointerup', () => { MK_PX = null; });
 document.addEventListener('change', e => { const el = e.target; if (!el) return;
   if (el.dataset && el.dataset.act === 'raid-set'){ const a = sel.army != null ? armyById(sel.army) : null; if (a && a.owner === PLAYER){ if (!raidSet(a, el.value ? +el.value : null)) toast('No sea route to that lane from here.', 'bad', null); } el.blur(); renderSide(true); return; }
   if (el.dataset && el.dataset.act === 'escort-set'){ const a = sel.army != null ? armyById(sel.army) : null; if (a && a.owner === PLAYER) escortSet(a, el.value ? +el.value : null); el.blur(); renderSide(true); return; }
   if (el.classList && el.classList.contains('sp-rng')){ el.blur(); renderSide(true); return; }
-  if (el.id === 'bk-res' && MKT_K.includes(el.value)){ BK_RES = el.value; BK_F.price = null; const pr = $('bk-price'); if (pr) pr.value = mkt().p[el.value].toFixed(1); bkSync(); return; }
-  if (el.id === 'bk-type' || el.id === 'bk-qty' || el.id === 'bk-price'){ bkForm(el); return; }
+  if (el.id === 'bk-res' && MKT_K.includes(el.value)){ BK_RES = el.value; BK_F.price = null; MK.open = null; el.blur(); mkRender(); return; }   // (the good of the form is the tab: both follow)
+  if (el.id === 'bk-qty' || el.id === 'bk-price' || el.id === 'mk-q'){ bkForm(el); const v = mkNum(el.value); if (v > 0) el.value = el.id === 'bk-price' ? mkP(Math.round(v*100)/100) : fmt(el.id === 'mk-q' && MK.open && MK.open.q != null ? MK.open.q : v); return; }   // (left: the number as the rest of the Market writes it)
   if (el.id === 'sp-n' && SPLIT){ SPLIT.n = +el.value; el.blur(); const a = armyById(SPLIT.id); if (a) spUse(a, evenPlan(a, Math.min(SPLIT.n, count(a)))); } });
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.act === 'dp-tv'){ dpTv(e.target); return; } if (e.target.id === 'dp-q'){ dpFilter(e.target.value); return; } if (e.target.id === 'volume'){ SET.vol = +e.target.value/100; saveSet(); if (master && !muted) master.gain.value = SET.vol; const sp = e.target.nextElementSibling; if (sp) sp.textContent = e.target.value + '%'; e.target.style.setProperty('--v', e.target.value + '%'); } });
 let renaming = null, dropFor = null;
@@ -12276,6 +12598,9 @@ function openModal(html, kind = ''){ if (kind !== 'cities' && openModal.kind ===
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
   hd.classList.add('hasx'); hd.insertAdjacentHTML('beforeend', `<button class="rs-x mx" data-act="resume" aria-label="Close" title="Back to the map (Esc)">${rg('x', 18)}</button>`); }).observe($('sheet'), {childList:true});
+// the Market's way back from a nation window opened by a flag (mkBackBtn), on every render of that window; closed, the way back is forgotten
+new MutationObserver(() => mkBackBtn()).observe($('sheet'), {childList:true});
+new MutationObserver(() => { if ($('modal').hidden) MK_BACK = null; }).observe($('modal'), {attributes:true, attributeFilter:['hidden']});   // (closed: the way back is forgotten)
 // the closing sheet: a lifeless copy (no ids, no actions) slides out while the real one is already hidden, so closing stays instant for the game and the tests
 function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || afxReduced() || m.classList.contains('menu')) return; const r = sh.getBoundingClientRect(); if (r.width < 10) return;
   const g = sh.cloneNode(true); g.removeAttribute('id'); g.querySelectorAll('[id],[data-act],[name],[for]').forEach(e => { e.removeAttribute('id'); e.removeAttribute('data-act'); e.removeAttribute('name'); e.removeAttribute('for'); });

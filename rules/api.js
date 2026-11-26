@@ -24,6 +24,8 @@ IM.api = {
   leaderOf, personOf, isPerson, seatInfo, muteSet, isMuted, friendSet, friendsOf, markRead, msgSend, dealNorm, dealWhy, dealAnswer, dealPreview, dealPropose, dealApply, offerAct,
   relView, relRows, relInfo, relMenu, relAct, natStats, natStatsAll, knownArmy, warList, offersWith, threads, threadView, unreadAll, treatyWhy, treatyPropose, giftCash, payTribute, blocRename, blocLeave, embargoAct, terrTransfer, blocsView,
   tradeOpen, tradeClose, postOffer, fillOffer, escortSet,
+  // the Market: withdraw one's own offer; what the page reads (the best offers for a good, what limits taking one, the whole game's world prices)
+  cancelOffer, topOffers, fillLimit, worldHistory,
   // a seat's dealings with an AI nation (first argument: the seat)
   say, aiReply, dealOK, dealValueFor, applyTrade, sendGift, tribute, tributeOk,
   // territory sales (rules/territory.js): a nation offers or answers; the value, the floor and what may be sold
