@@ -33,8 +33,11 @@ const PLAY = `(sv) => { const K = typeof RES_K === 'number' ? RES_K : 1, totals 
 // the scaled fields of a loaded old save against the save text: {checked, bad: [first differences]}
 const CMP = `(sv) => { const o = JSON.parse(sv), K = RES_K, G0 = ['oil', 'metal', 'iron', 'elec', 'rare'], bad = []; let checked = 0;
     const eq = (at, a, b) => { checked++; if (!(a === b || Math.abs(a - b) <= 1e-9*Math.max(1, Math.abs(a), Math.abs(b)))) bad.push(at + ': ' + a + ' vs ' + b); };
-    S.nations.forEach((N, i) => { const O = o.nations[i]; for (const k of G0) eq(N.name + '.' + k, N[k], O[k]*K); eq(N.name + '.cash', N.cash, O.cash); eq(N.name + '.mp', N.mp, O.mp); });
-    (S.book || []).forEach((b, i) => { eq('book' + i + '.qty', b.qty, o.book[i].qty*K); eq('book' + i + '.price', b.price, o.book[i].price); });
+    // (the offers the load added for the Market's depth floor, bookMigrate, hold their makers' goods or money: counted back with them)
+    const hold = S.nations.map(() => ({cash:0})); for (const b of (S.book || []).slice((o.book || []).length)){ const H = hold[b.seller]; if (b.type === 'buy') H.cash += b.qty/MKT_LOT*b.price; else H[b.res] = (H[b.res] || 0) + b.qty; }
+    S.nations.forEach((N, i) => { const O = o.nations[i], H = hold[i]; for (const k of G0) eq(N.name + '.' + k, N[k] + (H[k] || 0), O[k]*K); eq(N.name + '.cash', N.cash + H.cash, O.cash); eq(N.name + '.mp', N.mp, O.mp); });
+    (S.book || []).slice(0, (o.book || []).length).forEach((b, i) => {   // (the save's own offers; the load adds the Market's depth floor after them, bookMigrate)
+    eq('book' + i + '.qty', b.qty, o.book[i].qty*K); eq('book' + i + '.price', b.price, o.book[i].price); });
     for (const k of G0) if (S.mkt && S.mkt.p) eq('price.' + k, S.mkt.p[k], o.mkt.p[k]);
     (S.trade && S.trade.routes || []).forEach((r, i) => { const R = o.trade.routes[i]; for (const v of ['va', 'vb']) if (r[v] && typeof r[v].q === 'number') eq('route' + i + '.' + v + '.q', r[v].q, R[v].q*K); });
     return {rk:S.rk, checked, bad:bad.slice(0, 5), book:(S.book || []).length, routes:(S.trade && S.trade.routes || []).length}; }`;

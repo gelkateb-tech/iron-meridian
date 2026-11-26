@@ -1,7 +1,7 @@
 // Foreign army intel (owner's MAP-2 feedback, 2026-11-18; rules/vision.js armyKnown): a foreign force that is only spotted shows nothing but a
 // '?' badge and 'Unidentified army'; recon (a UAV, a drone, Special Forces, SAM radar, a battle) identifies it; an ally's force is always known.
 //   node .test/intel.js [W H]      (run tools/mkpage.sh first; prints JSON {checks, fails, errors} and exits 1 on any failure)
-// rules   spotted by infantry or a city: seen, not identified; Special Forces, a drone in flight, a UAV on station (and its 12 h after it leaves),
+// rules   spotted by infantry: seen, not identified; Special Forces, a drone in flight, a UAV on station (and its 12 h after it leaves),
 //         a battle with you, a SAM's radar under a wing: identified; an ally: always; armyView (what a host may tell a seat) has no nation,
 //         size, types or name for an unidentified force; an old save without S.intel loads and plays
 // ui      the game as Afghanistan (the nations world): the Pakistani force spotted at the border is one '?' plate (no flag, count, type, name or
@@ -83,7 +83,12 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), PHONE = W <
   // ---- the page, as Afghanistan: the Pakistani force spotted at the border ----
   const off = await p.evaluate(() => { const r = document.getElementById('map').getBoundingClientRect(); return [r.left, r.top]; });
   const F = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G, pk = S.nations.findIndex(n => n.name === 'Pakistan'); visCache = null; const vis = visibleSet(0);
-    const a = S.armies.find(x => x.owner === pk && !x.air && x.to === null && armyVisible(x, vis) && !armyKnown(x, vis)); if (!a) return null;
+    let a = S.armies.find(x => x.owner === pk && !x.air && x.to === null && armyVisible(x, vis) && !armyKnown(x, vis));
+    // (since the owner's fog rule of 2026-11-25 a force outside your land shows only once it is in your land or in your units' sight: a
+    // Pakistani force is put in an empty Afghan province by the border, where it is spotted, not identified)
+    if (!a){ const v = G.P.find(P => !P.sea && S.owner[P.id] === 0 && !P.city && P.nbs.some(q => S.owner[q] === pk) && !S.armies.some(o => o.at === P.id));
+      const b = v && S.armies.find(x => x.owner === pk && !x.air && x.to === null && count(x)); if (!b) return null; atMove(b, v.id); b.pos = null; visCache = null;
+      const v2 = visibleSet(0); a = armyVisible(b, v2) && !armyKnown(b, v2) ? b : null; if (!a) return null; }
     const P = G.P[a.at], v = im.view, R = document.getElementById('map').getBoundingClientRect(), sd = document.getElementById('side'), q = sd && sd.getBoundingClientRect(), mw = q && q.width && q.left > R.left + 100 ? q.left - R.left : R.width;
     v.s = 150/12; v.x = mw/2 - P.x*v.s; v.y = R.height/2 - P.y*v.s; im.redraw();
     const names = [...new Set(Object.values(UNITS).map(U => U.name)), 'Division', 'Brigade', 'Squadron', 'Pakistan', 'Pakistani'];

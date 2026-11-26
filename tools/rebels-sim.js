@@ -5,6 +5,9 @@
 //     plan    the plan's numbers (rebels for certain below 30% morale in occupied cities, 3 days' grace, 5 days' cooldown) with today's AI
 //     planai  the plan plus a stand-in for the AI's new habit: it pays Pacify ($40M) for an occupied city under 45% morale that has a unit in it
 //     --duel  rebels against a garrison in a captured city (who wins the fight), 6 cities per match-up
+//     --scenarios  occupation cases with expected results, today's rule (auto-test harness, run by tools/headless.js --scenarios): a force walks
+//             into an undefended enemy province and takes it (occupation clock and unrest set), a captured city with a garrison stays calmer
+//             and integrates, the same city left empty grows restless
 // The computer never starts a war (AI_STARTS_WARS false): what it takes here is independent land (the nations world: TIER_FREE).
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.join(__dirname, '..');
@@ -48,7 +51,7 @@ const RBS = {spawn:0, spawnG:[0, 0, 0, 0, 0], revolt:0, toHome:0, toFree:0, inte
 { const f = rebelHour; rebelHour = function(){ const o0 = S.owner.slice(); f(); for (let p = 0; p < o0.length; p++) if (S.owner[p] !== o0[p]){ RBS.revolt++; if (S.owner[p] >= 0) RBS.toHome++; else RBS.toFree++; } }; }
 `;
 const SRC = "'use strict';\nlet REB_AI = " + (VAR === 'planai') + ";\n" + RULES + (VAR === 'now' ? '' : PLAN) + COUNT +
-  '\nreturn {IM, RBS, get S(){ return S; }, get G(){ return G; }, groundN, moraleOf, unrestOf, addArmy, count, popOf, NEUTRAL, tick:() => tick()};';
+  '\nreturn {IM, RBS, get S(){ return S; }, get G(){ return G; }, groundN, moraleOf, unrestOf, addArmy, count, popOf, NEUTRAL, tick:() => tick(), setRel, orderMove, etaHours, unrestDay};';
 
 function play(){
   const R = new Function(SRC)(), api = R.IM.api; let caps = 0, capFree = 0; const out = {};
@@ -78,5 +81,30 @@ function duel(){
     res[`${g} garrison v ${r} rebels`] = `garrison wins ${win}/${n}` + (win ? `, ${(left/win).toFixed(1)} units left` : ''); }
   return res;
 }
+// ---- --scenarios (auto-test): occupation, with expected results (the nations world, every nation a seat that gives no orders)
+function scenarios(){ const out = [], chk = (name, c, d) => out.push({name, ok:!!c, d});
+  const game = () => { const R = new Function(SRC)(), api = R.IM.api; api.useScenario('world64'); api.newGame(SEED, 0, Array.from({length:68}, (_, i) => i)); const S = R.S, G = R.G; S.started = true; return {R, S, G}; };
+  // A attacks B: a city of B next to A's land, its defenders taken away; A's force walks in from next door
+  const pick = (S, G, city) => { for (const P of G.P){ const B = S.owner[P.id]; if (P.sea || B < 0 || !!P.city !== city || S.nations[B].capital === P.id) continue; const v = P.nbs.find(q => !G.P[q].sea && S.owner[q] >= 0 && S.owner[q] !== B); if (v != null) return {p:P.id, B, A:S.owner[v], from:v}; } };
+  const take = (R, S, G, w) => { R.setRel(w.A, w.B, 'war'); S.armies = S.armies.filter(a => a.at !== w.p); const f = R.addArmy(w.A, w.from, {inf:4}); R.orderMove(f, w.p); f.forced = true; const eta = R.etaHours(f);
+    let h = 0; for (; h < 24*6 && S.owner[w.p] !== w.A; h++) R.tick(); return {f, h, eta}; };
+  { const {R, S, G} = game(), w = pick(S, G, false), r = take(R, S, G, w);
+    chk(`a force walks into an undefended enemy province (${G.P[w.p].name}) and takes it, close to its ETA`, S.owner[w.p] === w.A && r.h <= r.eta + 2, `taken after ${r.h} h (ETA ${r.eta} h), occupied since hour ${S.occ[w.p]}, unrest ${R.unrestOf(w.p)}`);
+    chk('the capture starts the occupation clock and some unrest', S.occ[w.p] != null && R.unrestOf(w.p) >= 15, `occ ${S.occ[w.p]}, unrest ${R.unrestOf(w.p)}`); }
+  const run = garrison => { const {R, S, G} = game(), w = pick(S, G, true), r = take(R, S, G, w); if (!garrison){ R.orderMove(r.f, w.from); r.f.forced = true; }
+    const u0 = R.unrestOf(w.p); for (let h = 0; h < 24*8; h++) R.tick(); return {R, S, G, w, u0, u1:R.unrestOf(w.p), integ:(S.integ || {})[w.p + ':' + w.A] || 0, rebels:S.armies.filter(a => a.rebel && a.at === w.p).length, owner:S.owner[w.p], taken:S.owner[w.p] === w.A || r.h < 24*6}; };
+  const g = run(true), e = run(false), nm = g.G.P[g.w.p].cityName || g.G.P[g.w.p].name;
+  chk(`a captured city (${nm}) held by 4 infantry for 8 days stays calmer than the same city left empty`, g.taken && e.taken && g.u1 < e.u1, `garrisoned unrest ${g.u0} -> ${g.u1}, empty ${e.u0} -> ${e.u1}${e.rebels ? `, ${e.rebels} rebel force(s) rose in the empty one` : ''}${e.owner !== g.w.A ? `, the empty one is now ${e.owner < 0 ? 'independent' : e.S.nations[e.owner].name + "'s"}` : ''}`);
+  chk('the garrisoned city counts days towards integration', g.integ >= 7, `integration days ${g.integ}`);
+  // partisans that rise in an emptied occupied city hand it back only after holding it alone for a day (rules/economy.js rebelHour: the hold
+  // count starts at 0 when they rise; round 1 of the auto-test found it undefined, so the city flipped in the first hour)
+  { const {R, S, G} = game(), w = pick(S, G, true), r = take(R, S, G, w); R.orderMove(r.f, w.from); r.f.forced = true; for (let h = 0; h < 72 && r.f.at === w.p; h++) R.tick();
+    let rb = null; for (let i = 0; i < 80 && !rb && r.f.at !== w.p; i++){ S.unrest[w.p] = 100; R.unrestDay(); rb = S.armies.find(a => a.rebel && a.at === w.p && R.count(a)); }
+    let h = 0; if (rb) for (; h < 72 && S.owner[w.p] === w.A; h++) R.tick();
+    chk(`partisans rising in an emptied captured city (${G.P[w.p].cityName || G.P[w.p].name}) take it after holding it alone for a day, not at once`, rb && S.owner[w.p] !== w.A && h >= 23 && h <= 25, rb ? `the city changed hands ${h} h after they rose${S.owner[w.p] === w.A ? ' (not within 72 h)' : ''}` : 'no partisans rose'); }
+  console.log('OCCUPATION SCENARIOS (nations world, today\'s rule, every nation a seat that gives no orders)');
+  for (const c of out) console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.name}   [${c.d}]`);
+  const nb = out.filter(c => !c.ok).length; console.log(nb ? `OCCUPATION SCENARIOS FAILED: ${nb}` : `OCCUPATION SCENARIOS OK: ${out.length}`); process.exit(nb ? 1 : 0); }
+if (process.argv.includes('--scenarios')) scenarios();
 const t0 = Date.now();
 console.log(JSON.stringify({scn:SCN, variant:VAR, seed:SEED, days:DAYS, ...(DUEL ? {duel:duel()} : {at:play()}), s:Math.round((Date.now() - t0)/1000)}));

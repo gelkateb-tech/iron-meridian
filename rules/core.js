@@ -10,7 +10,7 @@
 'use strict';
 const IM = { subs:{},
   on(t, f){ (this.subs[t] || (this.subs[t] = [])).push(f); },
-  emit(t, a, b, c, d){ const L = this.subs[t]; if (L) for (let i = 0; i < L.length; i++) L[i](a, b, c, d); } };
+  emit(t, a, b, c, d, e, f){ const L = this.subs[t]; if (L) for (let i = 0; i < L.length; i++) L[i](a, b, c, d, e, f); } };   // (up to six values: fxRanged sends its aim point and kill details as the fifth and sixth)
 
 // ---- the tick's lookups. While a tick runs (tickQ, rules/tick.js: tickDepth > 0) only rule code changes the state, so a few lookups the rules ask
 // for again and again (the forces in a province, the provinces a nation holds, a nation's wars) are kept until a rule changes what they hold, and

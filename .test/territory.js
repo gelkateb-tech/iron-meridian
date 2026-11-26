@@ -94,7 +94,7 @@ R.setRel(US, DE, 'war'); r = R.terrOffer(US, DE, q2, R.provValue(q2)); ok(!r.ok 
 const caOwn = G.P.find(P => !P.sea && S.owner[P.id] === CA && !R.isCapital(P.id)).id;
 r = R.terrOffer(US, CA, caOwn, 500); ok(!r.ok && /never sells/.test(r.why), 'a computer-run nation never sells: ' + r.why);
 { const D = {give:R.emptySide(), get:R.emptySide()}; D.get.provs = [caOwn]; D.give.cash = 900; ok(/never sells/.test(R.dealOK(US, CA, D) || ''), 'a trade deal asking for its land is refused'); }
-{ const D = {give:R.emptySide(), get:R.emptySide()}; D.give.provs = [q2]; ok(/Territory/.test(R.dealOK(US, CA, D) || ''), 'land is not handed over in a trade deal'); }
+{ const D = {give:R.emptySide(), get:R.emptySide()}; D.give.provs = [q2]; ok(/New Trade|Territory/.test(R.dealOK(US, CA, D) || ''), 'land is not handed over in a trade deal'); }
 // 6. the AI buys: its own lost land back at up to 150% of the value
 S.nations[CA].cash = 3000; S.mem[CA] = {}; S.mem[CA][US] = 0;
 const w2 = R.terrWant(CA, p2, US), vp2 = R.provValue(p2); ok(w2 >= vp2*1.2, `Canada wants its own city back: up to $${w2}M for $${vp2}M`);

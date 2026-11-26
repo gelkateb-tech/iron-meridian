@@ -167,7 +167,7 @@ const BUNKER_HIT = 20;        // the health one building hit takes from a bunker
 const BUNKER_SHIELD_LV = 1;   // the other buildings of the province are shielded with this level's protection, whatever the bunker's level ("up to level 1")
 const BUNKER_FIX = 2.5;       // health a bunker repairs an hour (a lost level is not repaired: it is built again)
 const BUILD = {
-  fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:18, metal:6, iron:6, days:1}, where:'city', desc:'Unlocks and trains ground units. Level I (cheap, one day): infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. Each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Your first two Army Bases cost the base price; from the third on, each one you already own in another province makes the next cost 40% more.'},
+  fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:10, metal:2, iron:2, hours:0.5}, where:'city', desc:'Unlocks and trains ground units. Level I (cheap, 30 minutes): infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. With a membership, each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Level I costs the same in every city. Levels II\u2013V: your first two cost the base price; from the third on, each other province where you already have level II or higher makes the next cost 40% more.'},
   air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
@@ -176,8 +176,9 @@ const BUILD = {
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
 };
 const BK = Object.keys(BUILD);
-// a building's price table for level l: level I of a building with lv1 (the Army Base: cheap and quick, so every nation can open one on day 1) has its own
-// money, materials, iron and days; every other level comes from the building's line (cost, metal, iron, elec, days; x1.6 a level, see buildCost)
+// a building's price table for level l: level I of a building with lv1 (the Army Base: cheap and quick, so every nation can open one in every starting
+// city on day 1, with an Arms Industry and its first infantry research besides; owner 2026-11-25) has its own money, materials, iron and time (hours:
+// game hours, a fraction allowed: 0.5 is 30 minutes, counted down in quarter-hour steps by consQuarter, rules/production.js); every other level comes from the building's line (cost, metal, iron, elec, days; x1.6 a level, see buildCost)
 const bldLv = (k, l) => l === 1 && BUILD[k].lv1 ? BUILD[k].lv1 : BUILD[k];
 // ---- economy: every city produces ONE main resource (P.main, set from the map in rules/map.js cityMains; a city without one is a money city)
 const ECO_Y = {cash:1.6, oil:9.4, metal:8.2, iron:7.6, elec:3.3, rare:4.7};   // a city's main resource a day: money is a factor on the city's money, the rest are units (times the city-size factor)
@@ -562,6 +563,9 @@ const TIER_RANK = {S:0, A:1, B:2, C:3};
 // The Bunker at the start (owner, 2026-11-14, as Fortifications): every nation's capital starts with a Bunker of this level, and no other province has any
 // (before, a tier C capital and the border guards' provinces of tiers B and C had level I, and the classic world's small powers their capital and borders: about 150 forts)
 const START_FORT = 1;
+// The Airbase at the start (owner, 2026-11-25): every nation's capital also starts with an Airbase of this level and one wing of START_AIR_UNIT based
+// there (one Air Superiority Fighter), so every nation can patrol and scout from day one; computer nations alike. New games only (startAir, rules/state.js)
+const START_AIR = 1, START_AIR_UNIT = 'asf';
 const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
 const TIER_FULL = {
   S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, inf:6, tank:3, art:2, cityTanks:4, guards:5, recs:4},

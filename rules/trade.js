@@ -210,6 +210,7 @@ function trPortsOk(r){ if (r.kind === 'land') return S.owner[r.pa] === r.a && S.
   return okP(r.pa, r.a) && okP(r.pb, r.b, r.nc); }
 // why a route can no longer run (null if it can)
 function trInvalid(r){ const T = trS(), M = mkt();
+  if (r.a === r.b) return 'gone';   // (a route of a nation with itself: an old save's, from before tradeOpen refused it)
   if (!S.nations[r.a].alive || S.owner[S.nations[r.a].capital] !== r.a) return 'gone';
   if (r.b >= 0){ if (!S.nations[r.b].alive || S.owner[S.nations[r.b].capital] !== r.b) return 'gone';
     if (atWar(r.a, r.b) || S.decl.some(d => (d.by === r.a && d.to === r.b) || (d.by === r.b && d.to === r.a))) return 'war';
@@ -226,7 +227,7 @@ const TR_WHY = {war:'war broke out', embargo:'an embargo', refused:'they no long
 function trMake(a, b, kind, nc = null){ const T = trS(), r = {id:T.nid++, a, b, nc:b === NEUTRAL ? nc : null, kind, key:trKey(a, b, nc), t0:S.hour, f:1, why:'', by:-1, bz:-1, raid:-1e9, raidZ:-1, acc:0, accN:0, va:null, vb:null, sunk:0};
   if (trInvalid(r) || !trPlace(r)) return null; T.routes.push(r); T.ver = (T.ver || 0) + 1; trStatus(r); return r; }
 function trEnded(r, why){ const T = trS(); T.ver = (T.ver || 0) + 1;
-  for (const a of S.armies) if (a.escort === r.id) delete a.escort;
+  for (const a of S.armies){ if (a.escort === r.id) delete a.escort; if (a.raid && a.raid.r === r.id) delete a.raid; }   // (escort and raid orders on it end with it)
   if (why !== 'closed') for (const me of [r.a, r.b]) if (isSeat(me)) tell(me, `The ${trName(r, me)} trade route has ended: ${TR_WHY[why] || why}.`, 'info', r.path[Math.floor(r.path.length/2)]); }
 // pre-trade money income: the economy that drives a route's value
 const trGdp = n => { const i = income(n); return Math.max(40, i.gross.cash - (i.trade ? i.trade.cash : 0)); };
@@ -390,7 +391,10 @@ function tradeGen(){ const T = trS(); NEUP = null;
   for (const r of T.routes) trValue(r);
   T.ver = (T.ver || 0) + 1; }
 // nation n opens a route with nation b (or with the unaligned country nc), or closes its route id
-function tradeOpen(n, b, nc = null, kind = null){ const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
+function tradeOpen(n, b, nc = null, kind = null){ if (b === n) return 'not with yourself';   // (a route of a nation with itself would make money and goods from nothing)
+  const T = trS(), key = trKey(n, b, nc);
+  if (isSeat(n) && !T.routes.some(r => r.key === key) && routesOf(n).length >= TR_MAX) return `you can run at most ${TR_MAX} trade routes: close one first`;   // (a player's limit, NAV-4)
+  delete T.closed[key]; T.want[key] = kind || 1;
   if (T.routes.some(r => r.key === key)) return true;
   if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
   const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);

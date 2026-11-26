@@ -9,9 +9,11 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 - **Pause is not cancel (owner, 2026-11-21):** a pause or stop click from the owner never cancels a job; only "cancel" plus the job's name does. Paused jobs are resumed from where they stopped.
 - **Old phones are not a target (owner, 2026-11-21, verbatim):** "we dont want to focus on bad phones becasue these players probably wont spend anyway". No work aimed at old or low-end phones; keep things fast on ordinary modern phones and desktops.
+- **Screenshots to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule for screenshots: every screenshot or sheet you send me, also save to the repo so I can review it in my other Claude chat. - Put them on a separate branch called "shots", never on master and never merged. - One folder per day and job, e.g. shots/2026-11-26/rebels/berlin-before.jpg. - Save them as JPG, at most 1600 px wide, so the repo stays small. - In each message to me, name the folder. - Clean up automatically: keep only the last 14 days, and rewrite the branch when you remove old ones so they don't pile up in the history." Done with `python3 -I tools/push-shots.py <date> <job> <files...>` (worktree /home/user/iron-meridian-shots, orphan branch shots; prunes and squashes past 14 days).
+- **Messages to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule: every message you send me, also save word for word to the shots branch, in a separate top-level folder: messages/<date>/<HH-MM>-<job>.md, one file per message, with the folder names of any pictures it refers to. Keep the picture folders (shots/<date>/<job>/) pictures only. Same 14-day cleanup for both." Done with `python3 -I tools/push-shots.py --msg <date> <HH-MM> <job> <file.md> --pics <folders>` (times UTC), before the message is sent.
 - **New messages never cancel running jobs (owner, 2026-11-19):** a new message from the owner never cancels or replaces a running job unless the owner says "cancel" or "stop" with the job's name. Each new block is extra work added to the queue. If a message seems to change a running job, ask the owner before stopping it. Every job brief quotes the owner's request it comes from, so a worker never mistakes a newer, unrelated message for its own task.
 
-Last updated: 2026-11-22 (map surface merged, Dev Build v66; playtest waiting for review; cities redo running).
+Last updated: 2026-11-26 (merge chain in, Dev Build v68; REBELS and city lots sheets sent; Q-DEFAULTS next).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -22,17 +24,178 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **CITIES REDO** (2026-11-21, with the CITIES follow-up) | owner's brief verbatim in Next free slots item 1 (now running): real 3D buildings that pop at play zoom, no slab, greenery, a different road layout per city, lit windows at night, cached once per zoom; build, art and tech critique, repair, recheck, polish; before/after sheets for Berlin, Kabul and a small town at play and closest zoom; NOTHING merged until the owner has seen them | Opus | cities-redo |
+| **CITY BUILDING LOTS** (2026-11-25, on cities-redo; the cities merge of 2026-11-25 was reverted on master, a4fbeb0, at the owner's request) | **Brief now Part A of the owner notes of 2026-11-25 (below, verbatim: A1-A7 and the sheets with no buildings, all built, one under construction), which replaces the earlier text.** Earlier, verbatim: "CITIES redo (branch cities-redo): I like it, don't change the look. One problem before merging: the capital HQ and every building I build (Army Base, Airbase, Naval Yard, Bunker, etc.) sits on top of the city blocks like a sticky note. Fix it so they look built into the city: 1. Fixed building lots: every city reserves a lot for each building type in its street plan. The city blocks never cover those lots, and roads lead to them. 2. The HQ sits in the centre on a city square. The Army Base and Bunker go near the centre. The Airbase goes at the edge of town on open ground. The Naval Yard goes on the waterfront. 3. Before a building exists, its lot shows as normal city ground (a small park or open square). While it's being built, show the crane and scaffolding on that lot. 4. The lot is part of the city's ground (paving, grass, a fence line). It's not a slab under the picture, so my no-slab rule still holds. 5. Draw city blocks and building pictures in one depth order, so a block in front of a building covers it and a block behind it sits behind. Same light direction and shadows for both. Show me Berlin, Hamburg and Kolkata at play zoom and closest zoom, before and after, with all buildings built and with one under construction. Don't merge until I've seen them." **Owner re-sent the brief (2026-11-25) with two more points and an extra sheet case, verbatim:** "6. Make the built buildings smaller so they match the city's scale: only a little bigger than the biggest normal city buildings, like a landmark that stands out but fits in. Players tap the city, not the building, so they don't need to be big. 7. The city grows around what's built: when a building finishes, and again as it levels up, the area around it changes to fit. New access roads, a few extra city blocks and greenery around it, so the city looks like it grew around the building. Only redraw that one city when this happens, to keep it fast. Show me Berlin, Hamburg and Kolkata at play zoom and closest zoom, before and after, with no buildings, with all buildings built, and with one under construction." The running round (points 1-5) was not stopped (standing rule); points 6-7 and the no-buildings sheets run as a follow-up round on cities-redo as soon as it finishes, then the owner sees the sheets. **2026-11-26:** points 1-5 done on cities-redo 7f463c8 (2 polish rounds used); sheets sent to the owner (Berlin, Hamburg, Kolkata, lots overview, Hamburg close-up). Open: Hamburg's buildings stand on grass east of town with no street; 34 lots in 13 towns still use the old cluster; mid zoom hex 50-60. **Follow-up job CITY LOTS GROW running (wf_1078e43c-aa0):** points 6-7 plus the Hamburg fix, at most 2 polish rounds, new sheets incl. a growth sequence and a phone frame. Build, look and tech critique, repair, two rechecks. Keeps the city centre point free for UNITS IN CITIES. **Not merged until the owner has seen the sheets.** | Opus | cities-redo |
+| **Q-DEFAULTS** (2026-11-26, owner: "go with your defaults on Q1–Q31" and "D10: fix it, so a computer nation refuses deals where it gets nothing back") | Q1-Q31 defaults that are not yet in the code (triage first; Q27/Q28 go to REBELS, Q8 missile half and Q19 to MISSILES), plus D10 tightened so a $1M token payment no longer gets round it; rules then screens, two critics, at most 2 polish rounds; phone screenshots of any visible change before merging | Opus | q-defaults |
+| **REBELS REFRESH** (2026-11-26) | rebels-2 brought up to master v68 (merge commit), Q27 A / Q28 B reconciled with the builder's own calls (RB5), the leftover "Independent Rebels destroyed" log line fixed, all checks re-run; independent verify. Still not merged until the owner OKs REBELS | Opus | rebels-2 |
+| **UC-DOT** (2026-11-26, owner, verbatim: "Correction to my last answers, UNITS IN CITIES, UC2: no, not your default. The dot is the army's true position (my position-dot rule) and must never move. When something is in the way, move the counter aside instead, with a thin line to its dot. Everything else in that block stands.") | on units-in-cities: merge master first (index.html conflict from the 1126 merges); the dot always at the army's true spot, the counter moves aside with a thin leader line; UC1 (joins the city's counter at hex 12) and UC3 (Szczecin beside the city's counter) as defaults; before/after phone sheets; at most 2 polish rounds | Sonnet | units-in-cities |
 
 ## Next free slots (in this order)
 
-1. **(RUNNING since 2026-11-21, see Running)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
+- **PASTED-ON CHECK** (owner 2026-11-26, verbatim: "After A6, tell me honestly whether the building pictures still look pasted on: their own ground pad, a different light direction or angle from the city blocks, or too much detail next to them. Don't redraw anything. If you think they need it, show me the problem and a single Army Base test picture with the cost, and wait for my OK."): runs when CITY LOTS GROW finishes. An independent look critic that has not seen the job's reports, plus my own look at full size, on the three points (ground pad, light and angle, detail). Only if they need it: one Army Base test picture, cost logged against the $5 floor, then wait for the owner's OK. No other picture is redrawn.
+
+1. **(DONE 2026-11-22, waiting for the owner; see Ready)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
+
+
+## Owner answers 2026-11-26 (verbatim; extra work, cancels nothing)
+
+> Answers:
+> - R1–R17 (rebels plan): all your suggested answers, OK. Start REBELS.
+> - M1–M15 (missiles plan): all OK, except M13: send me the gas and radiation zone mockup first.
+> - D4–D13, K1–K8, U1–U4, E1–E8, F1–F6: all your defaults, except D10: fix it, so a computer nation refuses deals where it gets nothing back.
+> - Merge Market, Fog-clash and UI-fixes.
+> - Merge auto-test/fixes (the playtest's 16 bug fixes) after re-running the checks on top of today's merges, and go with your defaults on Q1–Q31.
+> - Keep the rules from before: at most 2 polish rounds per job, Sonnet for interface follow-ups.
+
+Jobs from it: MERGE CHAIN (Market, then Fog-clash, then UI-fixes, then auto-test/fixes re-checked on top, then D10-FIX), REBELS (R1-R17 defaults; running), Q-DEFAULTS (Q1-Q31 defaults that need code, after the auto-test/fixes merge), MISSILES (after REBELS and the auto-test/fixes merge, per M14; M13 zones wait for the owner's look at the mockup). Rule kept: at most 2 polish rounds per job; Sonnet for interface follow-ups.
+
+## Owner notes 2026-11-25 (verbatim; extra work, cancels nothing)
+
+```
+Two sets of changes from me. This is extra work: it cancels nothing in docs/QUEUE.md. Split it into jobs by area (max 5 at once, no overlapping files). Use Opus for the rule, economy and city changes and Sonnet for the small interface fixes. First check auto-test/fixes so nothing gets fixed twice. Anything visual: send me before/after screenshots before merging. Rule changes: run the balance and headless checks. If you already have my CITIES building-lots request from earlier tonight, this replaces it.
+
+=== PART A: CITIES (branch cities-redo) ===
+I like the new 3D cities, don't change the look. One problem before merging: the capital HQ and every building I build (Army Base, Airbase, Naval Yard, Bunker, etc.) sits on top of the city blocks like a sticky note. Fix it so they look built into the city:
+A1. Fixed building lots: every city reserves a lot for each building type in its street plan. The city blocks never cover those lots, and roads lead to them.
+A2. The HQ sits in the centre on a city square. The Army Base and Bunker go near the centre. The Airbase goes at the edge of town on open ground. The Naval Yard goes on the waterfront.
+A3. Before a building exists, its lot shows as normal city ground (a small park or open square). While it's being built, show the crane and scaffolding on that lot.
+A4. The lot is part of the city's ground (paving, grass, a fence line). It's not a slab under the picture, so my no-slab rule still holds.
+A5. Draw city blocks and building pictures in one depth order, so a block in front of a building covers it and a block behind it sits behind. Same light direction and shadows for both.
+A6. Make the built buildings smaller to match the city's scale: only a little bigger than the biggest normal city buildings, like a landmark that stands out but fits in. Players tap the city, not the building, so they don't need to be big.
+A7. The city grows around what's built: when a building finishes, and again as it levels up, the area around it changes to fit, with new access roads, a few extra city blocks and greenery. Only redraw that one city when this happens, to keep it fast.
+Show me Berlin, Hamburg and Kolkata at play zoom and closest zoom, before and after, with no buildings, with all buildings built, and with one under construction. Don't merge until I've seen them.
+
+=== PART B: PLAYTEST NOTES (14 points) ===
+
+BUGS
+1. Enemy units pass each other without fighting. They should meet and fight.
+2. Fog of war: enemy armies outside my territory still show as "unidentified". They shouldn't show at all. I only see them once they cross into my land, or when one of my units sees them within its sight range (infantry sees only up close; a fighter on patrol sees much further).
+3. Research tree: the infantry picture doesn't fit inside its research icon. Fit it properly, like the other units.
+4. The Build button is grey even when I can afford it, so it looks like I can't build. Make it blue when I can afford it, and grey only when I can't.
+
+START OF GAME
+5. Every capital starts with a level 1 Airbase already built and one air superiority fighter based there (on top of its Fortifications), so every nation can patrol and scout from day one. The same goes for computer nations.
+
+ECONOMY
+6. The level 1 Army Base costs too much: on day one I can only afford it in 5 cities. Make it cheaper so I can build one in every city, and an Arms Industry in any city. I should also be able to afford the infantry research on day one. The level 1 Army Base builds in 30 minutes instead of 20 hours.
+7. Mobilization queue: free players lose it (one unit at a time per city). It becomes a paid membership feature. Add a membership on/off flag with a dev toggle so I can test both. Don't build any payment system yet.
+
+OCCUPATION, MORALE AND REBELS: copy Conflict of Nations' system and numbers exactly.
+8. Annexing: an occupied city gives 25% of its resources and can't mobilize units. Annexing raises it to 50% and lets it mobilize. Annexing is built like a building from the city's build list ("Annex City"), with a high cost (money and manpower, more for bigger cities) and a build time. Propose the cost and time and show me before building. I can start it any time, even while the city is burning. If the city is captured, it loses its annexed status. If I have troops in the city, rebels attack them, the city stays mine, my troops get the +25% dug-in city bonus and the annexing carries on. If the city is empty and rebels take it, I lose the city, the annexing and its cost.
+9. Morale:
+   - Every city and province starts the game at 70%. A newly occupied city or province drops to 25%; a liberated homeland one to 55%.
+   - At every day change, morale moves toward its target by (target − current) ÷ 8.
+   - Base targets: homeland cities 90%, annexed cities 75%, occupied cities 60%, countryside provinces 100%.
+   - Modifiers on the target:
+     - Distance to the capital: −5 per unit of distance, rounded. Propose how distance is measured and show me.
+     - Wars: −2 per nation I'm at war with, rebels included, nations with 0 VP not counted, max −25.
+     - Enemy neighbours: −5 per adjacent province held by a nation I'm at war with.
+     - Enemy units in the province: −1.
+     - Low-morale neighbours (my adjacent provinces at 40% or less): −7 each for a city, −4 each for a countryside province.
+     - High-morale neighbours (my adjacent provinces at 100%): +3 each for a city, +1 each for a countryside province.
+     - Resource shortage (any resource short with negative production): up to −50.
+     - Civilian casualties: up to −30, shrinking by a third each day.
+     - Capital lost: −20 on every province's target.
+     - The capital city itself: +25.
+     - Bunker level 1–5: +5 / +10 / +20 / +35 / +50.
+   - Show the target and every modifier in the city panel, as a morale factors list.
+   - Keep today's link between morale and output.
+   This replaces today's unrest system, plus the daily per-unit changes and "integration" in docs/REBELS-PLAN.md.
+10. Rebels:
+   - A city at 33% morale or lower can rebel, and shows a burning fire-and-smoke animation. Above 33%, the fire goes out and the risk is gone. Countryside never rebels. The fire must stay light on phones.
+   - Check once a day at the day change. The chance rises from 0% at 33% morale to 50% at 25%, and higher below that. Troops in the city lower the chance: propose how much and show me.
+   - Rebels attack any troops in the city in a real fight, with my troops getting the +25% dug-in city bonus. If the city is empty, rebels take it.
+   - Keep the rest of the rebels plan (crossed-rifles badge, rebels as their own side).
+11. Occupying a country I trade with should hurt my economy: I lose that trade, on top of the morale drop. The occupied cities stay weak until their morale recovers, and after that, holding and annexing them pays off. The difference between occupying a trade partner and a non-trade partner should be clearly noticeable.
+
+MISSILES
+12. The Missile Silo needs Conventional Warhead researched first. Cruise missiles don't. Add chemical and nuclear warheads as new missile units in research. Start from the weapons table in docs/RESEARCH.md 12.5 and write the plan first: research days, costs, effects, limits, and how they show on the map. Show me before building.
+
+INTERFACE
+13. Market rework: for each material, show the top 3 sellers and the top 3 buyers.
+14. Diplomacy has too many buttons. Simplify it: show me 2–3 layout options before changing anything.
+
+Points 8 to 10 replace parts of the REBELS job, which still hasn't started. Run REBELS next and build them together with it.
+
+Log any questions in docs/QUESTIONS.md and keep going.
+```
+
+Jobs from these notes (split by area, at most 5 at once): CITY BUILDING LOTS (Part A, running), FOG-CLASH (B1-B2, running), ECON-START (B5-B7, running), PROPOSALS (B8-B11 plan, B12 plan, B14 layout options; docs and mockups only, running), UI-FIXES (B3, B4, B13; Sonnet; queued, starts when UNITS IN CITIES finishes), then REBELS (B8-B10 built with the REBELS job once the owner OKs the proposals; B11 with it), MISSILES (after the owner OKs the plan), DIPLOMACY (owner sent a reference layout instead of picking an option: built to it, queued after UI-FIXES).
+
+## Owner notes 2026-11-25, Diplomacy (verbatim; replaces point 14's "show me 2–3 layout options"; extra work, cancels nothing)
+
+```
+Point 14, Diplomacy: here's the reference you asked for (4 Conflict of Nations screenshots attached: the list, a real player's page, the conversation screen, and a computer nation's page). Match this layout instead of making 2–3 options. Style only: no copying their art, names or icons. Build everything now, even though online play isn't live yet; it works with computer nations today and real players later.
+
+LIST SCREEN
+- Header "DIPLOMACY" with the red close button. Three tabs: Information, Coalitions, Messages & Trades.
+- Under the tabs: a Sort dropdown (default: Points), a direction toggle and a Search button.
+- One row per nation, sorted by points: big flag on the left, then "COUNTRY | player or leader name" in bold, a trophy with their victory points, a city icon with how many cities they hold, and their coalition's emblem and name if they're in one.
+- On the right of each row, two relation diamonds: "their" (how they treat me) and "your" (how I treat them). Each of our relations gets its own colour and icon: war, ceasefire, peace, non-aggression pact (NAP), right of way, and shared-intel alliance.
+- No other buttons on the rows. Tapping a row opens that nation's page.
+
+NATION PAGE: two versions
+Both versions:
+- Back button, title "ABOUT PLAYER", close button.
+- Big flag with a "Progress towards victory" bar and percentage.
+- "Their relation ⇄ Your relation" diamonds with a dropdown arrow. Tapping mine opens the menu to change it: declare war, offer peace or ceasefire, Offer NAP (20 days), ask for right of way, propose an alliance, embargo. Keep the current rules and the treaty-breaker warning.
+- Stats list: Provinces, Average Morale, Victory Points, Capital, Known Army Size (shows "Unknown" unless my scouts or spies have seen their forces, matching the fog-of-war rule), and At War With (a list of nations, rebels included; empty if none).
+A) Nation played by a real player:
+- The player's name with an Add Friend button, and their motto under it.
+- Buttons beside the flag: Send Message, Player Profile, Mute Player.
+B) Computer nation (not playable, or not taken by a real player):
+- The nation's leader name instead of a player name, no motto. Invented leader names only, never real politicians.
+- No Add Friend, Send Message, Player Profile or Mute buttons. Just one New Trade button beside the flag, so I can still trade with them and buy or sell territory.
+
+CONVERSATION SCREEN (real players only: Send Message, or a conversation in the Messages & Trades tab)
+- Header with the player's name over a faded flag, back button and close button.
+- Empty state: "Create a new trade or type a message below to start this conversation."
+- Messages and trade offers show as a chat history, newest at the bottom.
+- At the bottom: a message box on the left, and on the right three buttons: Send Message, New Trade, Mute Player.
+- Mute hides that player's messages and trade offers until I unmute.
+
+TRADES (both real players and computer nations)
+- New Trade opens a trade builder. Each side picks what it gives: money, any resource, cities and provinces (our territory selling stays, it's our big difference), and treaties (peace, NAP, right of way, alliance).
+- Offers show Accept, Decline and Counter buttons. With a real player, the offer appears in the chat. With a computer nation, it answers with the AI's existing deal logic (accept, decline or counter, with a short reason) in the Messages & Trades tab.
+- The Messages & Trades tab lists every conversation and trade, newest first, with unread counts.
+
+KEEP WHAT'S OURS
+- Keep every diplomacy action we already have, just moved into this layout: nothing gets removed.
+
+Show me all screens on a 440 px phone before merging, including a computer nation's page and a real player's page.
+```
+
+## Owner notes 2026-11-25, Market (verbatim; replaces point 13's one line; extra work, cancels nothing)
+
+```
+Point 13, Market rework: reference attached (Conflict of Nations "Stock Market" screenshot). Match its layout, style only, and keep our price chart and seller flags.
+
+LAYOUT
+- Header "STOCK MARKET" with a chart-style banner and the red close button.
+- A row of resource tabs under the header, one per tradable resource, using our resource icons.
+- Each tab shows only the best 3 offers on each side:
+  - BUY section: the 3 cheapest sell offers I can buy from. Each row has the resource icon, the amount in green (+4,000), the unit price with the money icon, and a green Buy button.
+  - SELL section: the 3 highest buy offers I can sell to. Each row has the amount in red (−2,070), the unit price, and a yellow Sell button.
+  - All other offers wait in line. When one of the top 3 is filled or cancelled, the next best moves up.
+- Bottom buttons: Create Offer and Order Book. Order Book shows the full queue for that resource, plus my own open offers with a Cancel button.
+- Prices in money only.
+
+KEEP OURS
+- The price chart: a slim chart at the top of each resource tab showing that resource's price over the whole game. Tap it to expand to full size.
+- Seller and buyer flags on every offer row, so I can see who I'm trading with and avoid nations I'll fight later. Make the flags sleek, in the same style as the unit badges: the real flag with a light fabric sheen, a thin dark edge and a soft shadow, small and neat. Tapping a flag opens that nation's diplomacy page.
+
+ALSO
+- Make sure computer nations actually post buy and sell offers (the playtest found they sit on goods and never sell, IMP-2), so the market is never empty.
+
+Show me each resource tab and the Order Book on a 440 px phone, before and after, before merging.
+```
 
 ## Ready, waiting for the owner
 
 | Job | State | Branch |
 |---|---|---|
-| **AUTOTEST** (2026-11-21, extra job: cancels and replaces nothing in this file) | autonomous playtest session (owner brief and the owner's changes quoted in each workflow): rollback point pre-auto-test (tag local, branch on origin) at 2dc5573; setup extends the existing tools (headless, balance, eco-check, stack-duel, nations-balance, rebels-sim, perf) with invariants, scenarios and stats, sanity breaks; new files in docs/ (DECISIONS, IMPROVEMENTS, ROUND_LOG, QUESTIONS) plus a LATER.md section; max 3 rounds, 1 prototype per round on idea/*; bug fixes only on branch auto-test/fixes (never merged, owner reviews at the end); hands off map, cities, weather, research screen (bugs there logged for those jobs). **Round 1 done:** 16 bugs fixed (auto-test/fixes 6c522d0), IMP-1..13, prototype idea/sea-legs a0e4982. **Round 2 done:** 23 more bugs fixed (auto-test/fixes d3670ca), IMP-14..20, prototype idea/port-sortie d7a2ea0. **Round 3 (last) done:** 18 more bugs fixed in 17 commits (auto-test/fixes e379c0e, 60 commits on master, merges cleanly), IMP-21..27, Q25-Q31, prototype idea/phone-group 4ac62da. **Session over; waiting for the owner to review auto-test/fixes and the three idea branches.** | auto-test/fixes, idea/sea-legs, idea/port-sortie, idea/phone-group |
+| **UNITS IN CITIES** (2026-11-22; DONE 2026-11-26, recheck 7 READY, units-in-cities 398a749; 14 phone sheets sent, shots/2026-11-26/units-in-cities/; questions UC1-UC6 in docs/QUESTIONS.md; needs one merge with master (index.html conflict from the 1126 merges) and a re-check once the owner OKs it, extra job: cancels and replaces nothing) | owner, verbatim: "Units in cities: on the map I can't tell whether an army is in the middle of a city or just near it, and the units get lost in the city texture. Fix both: 1. Each city's centre point (where armies stand to hold or capture it) gets a clear marker, visible at every zoom. 2. When an army stands on that point, its position dot snaps onto the marker and the marker lights up with a ring in the army's side colour, so "in the city" is obvious at a glance. Armies near the city but not on the point clearly look outside it. 3. Make units stand out on busy city ground with a soft dark shadow and a thin outline under each unit and badge, without making them bigger. 4. Tapping a city shows who's inside, e.g. "In the city: 1st Infantry Division (5 units)". Show me screenshots on a 440 px phone at play zoom and close zoom: my army in Berlin, one just outside it, and an enemy army in a city. Don't merge until I've seen them." Unit/overlay layer and the city sheet only (no city building drawing, so it runs beside CITIES REDO); rules unchanged; build, look and tech critique, repair, recheck. 2026-11-25: fourth recheck NOT READY (the city's own name moves over the border when a second army stands just outside, e.g. "Berlin" over Poland); fourth polish fixed that (8c929da). Fifth recheck NOT READY: at mid zoom city names move and drop even on an empty map (Berlin's name sits in central Germany, because names step off the new markers); fifth polish fixed that (6ab08bf: 0 names moved, dropped or added in 1568 checked). Sixth recheck NOT READY: at mid zoom an army a few km off a held city is drawn 40-50 px away, beside another city, and a lone army's dot sits inside the diamond; sixth polish and seventh recheck running. Past the owner's 2-polish-round rule: after this round the sheets go to the owner whatever the verdict, no more rounds. **Not merged until the owner has seen the phone sheets.** | Opus | units-in-cities |
+| **REBELS** (2026-11-26; DONE, READY, sheets sent, owner: "R1–R17 (rebels plan): all your suggested answers, OK. Start REBELS."; owner points 8-11 verbatim under Owner notes 2026-11-25) | docs/REBELS-PLAN.md (plans-1125) with R1-R17 defaults: morale replaces unrest, Annex City, rebels, trade partners (option C), administration; rules then screens, rules and look critics, at most 2 polish rounds; phone sheets before merging. **2026-11-26: done, READY after polish 1 (rebels-2 776769e, all checks pass); 8 phone sheets sent; waiting for the owner's OK and answers RB1-RB5 (docs/QUESTIONS.md). Before merging: merge origin/master again (today's merge chain) and re-run the checks; small leftovers: the extra 'Independent Rebels destroyed' log line, and the old-look items listed in the recheck.** | Opus | rebels-2 |
+| **PROPOSALS** (2026-11-25; DONE 2026-11-25, plans-1125 19dd3af, sent to the owner; waiting for OK on R1 and the missiles plan, questions R1-R17 and M1-M15 in docs/QUESTIONS.md) | owner notes points 8-11 (occupation, morale, annex, rebels plan with the three proposals: Annex City cost and time, distance measure, troop effect on rebel chance), 12 (missiles plan) and 14 (2-3 Diplomacy layout options; **superseded 2026-11-25 by the owner's reference layout, see "Owner notes 2026-11-25, Diplomacy"**: the options draft was already done, its button inventory in docs/DIPLOMACY-OPTIONS.md is the checklist of actions to keep). Docs and mockups only, nothing built; shown to the owner before building. | Opus (diplomacy mockups Sonnet) | plans-1125 |
 | **BUNKER ART options** | done 2026-11-18 (bunker-art): A concrete command bunker with earth berm, B bunker half sunk into a grassy hillock (recommended), C pillbox with trench on its own earth block (slab-like, not recommended); level 1 and 5 each, no ground patch; about $0.20; sheets and map previews sent; nothing in the game changed | bunker-art |
 | **UNIT-ART tank sets** | done 2026-11-18 (unit-art): 45 pictures, 5 groups x 3 looks x (side / scene / top-down), $1.83 with checks (log 365 calls, about $12.10; estimated balance $39.05); 7 single-check flags and 8 three-way flags (mostly mirrored roof details on the top-downs); nothing redone; full set 1,095 pictures, about $44.49 (about $42.67 left, a top-up of about $8.6 needed to keep the $5 floor); sheets sent; NOT merged | unit-art |
 | **CITIES** | done 2026-11-18 (7129852): block clusters, a quarter smaller, owner colour from the town coat, towers lower, hidden at hexPx 26 and below, brighter night windows; checks pass; faster than master except desktop day close-zoom panning +4.7% per frame (probably noise); screenshots sent | cities-3d |
@@ -160,6 +323,9 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| **MERGE 1126** (v68, 2026-11-26, merged 8448af9 after the owner's OK: "Merge Market, Fog-clash and UI-fixes." / "Merge auto-test/fixes ... after re-running the checks on top of today's merges" / "D10: fix it"): Stock Market to the reference (computer nations post buy and sell offers; flag opens ABOUT PLAYER with "« Market"), fog (enemy armies outside your land and sight hidden), columns that meet fight, blue Build/Upgrade/Train buttons when affordable, infantry icon fits its diamond, the playtest's 16 fixes, D10 (a computer nation refuses a deal where it gets nothing back). Independent verify SAFE; all checks pass. Known gap: a $1M token payment still gets round D10 (follow-up in Q-DEFAULTS). | Opus |
+| **ECON-START** (v67, 2026-11-26, merged 244638b after the owner's OK: "Merge the economy and diplomacy. I like them."): capital Airbase and fighter at the start, level 1 Army Base $10M and 30 minutes, mobilization queue as a membership feature with a dev toggle; independent verify identical to a scratch merge, all checks pass; units about 10-15% fewer than before at day 60 (balance look later) | Opus |
+| **DIPLOMACY** (v67, 2026-11-26, merged 244638b, same OK): reference layout list, ABOUT PLAYER pages, conversation, trade builder with Accept / Decline / Counter; every old action kept; cherry-pick trailers reworded at merge (same code) | Opus |
 | **MAP SURFACE** (v66, 2026-11-22): texture back at every zoom (far colours kept, faster detail tiles), jungle look C reworked from Google Earth, sea look B at every zoom; sea mixes built but off until the owner picks. Merged one at a time (texture, jungle, sea); golden, headless, sea-mix, battery and zoom-look checks pass. | Opus |
 | Naval cities (Dev Build v65, merge 0898d01, owner OK 2026-11-19): anchor at 349 coastal cities, troops board and land only at naval cities (assault landings at enemy or independent ones, 45 min, first-day penalty), Marines (new unit, any coast when the force is all Marines; infantry pictures until their own exist). Also brings the buildings follow-up (cities-2): buildings on land as drawn, 17% smaller, Naval Yards on the water. | Opus |
 | Unit pictures set 2 (Dev Build v64, packed two files a unit by UNIT-ATLAS so the build stays under 511 files): 17 units x 45 pictures, wrong-way pictures flipped, pale plate removed; the cloud colour fix (clouds stay white and grey) | Sonnet / Opus |

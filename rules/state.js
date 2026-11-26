@@ -103,7 +103,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
-    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
+    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
     // compact powers (Germany, Japan, Britain...) start with a denser home army (their border guards had level I forts until the start-forts rule)
@@ -111,6 +111,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     // power may attack them (graceFor), so the compact, dug-in powers next door do not pick them off in the second week
     n.mid = !n.small && GS > 1 && np <= 55; if (n.mid) addArmy(n.id, n.capital, {inf:3, art:1});
     S.bld[n.capital].fort = START_FORT;   // only the capital starts with Fortifications (every power)
+    startAir(n.id);   // and an Airbase with one fighter wing
     if (n.small){ addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) addArmy(n.id, P.id, {inf:2}); }
   }
@@ -120,11 +121,12 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
   INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
   if (T){ tierCatchUp(mode); INCC.v = -1; }
+  bookOpen();   // the Market's first offers, on both sides where stocks allow (rules/economy.js)
   tellAll(me => `${S.nations[me].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   IM.emit('newGame');
 }
 // ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
-// Every nation: its tier's stocks, Fortifications I and a Recruiting Office in the capital (no Army Base: level I is cheap and takes a day, and the
+// Every nation: its tier's stocks, Fortifications I, an Airbase I with one fighter (startAir) and a Recruiting Office in the capital (no Army Base: level I is cheap and takes 30 minutes, and the
 // computer builds one in its capital on its first turn; infantry trains only where one stands), more
 // offices in its biggest cities, the capital force, 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest
 // neighbour first (no forts: only the capital starts with them), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards).
@@ -136,9 +138,10 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     for (const k of ['cash', 'mp', 'oil', 'metal', 'iron', 'elec']) N[k] = kit[k];
     N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40*RES_K : 60*RES_K;   // no rare-earth city: a little more in stock for the first weeks
     { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
-    for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES)
+    for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25)
     S.bld[N.capital].fort = START_FORT;   // only the capital starts with Fortifications, in every tier
     addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
+    startAir(n);   // the capital's Airbase and its fighter wing
     cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
     let guards = kit.guards;
     if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
@@ -161,6 +164,9 @@ function tierCatchUp(mode){ const mult = (raw, trade, T, floor) => { const home 
   for (const N of S.nations){ N.boost = 1; N.boostM = 1; } INCC.v = -1;
   const raw = S.nations.map(N => income(N.id).gross), tr = S.nations.map(N => tradeIncome(N.id).cash);
   for (const N of S.nations){ const kit = tierKit(N.tier, mode); N.boost = mult(raw[N.id].cash, tr[N.id], kit.day, kit.floor); N.boostM = mult(raw[N.id].mp, 0, kit.mpDay, kit.floor); } }
+// the capital's Airbase at the start (START_AIR, rules/data.js; owner 2026-11-25): Airbase I and one Air Superiority Fighter based there, beside its
+// Fortifications, for every nation (seats and computer nations alike), so each can patrol and scout from day one. New games only (old saves keep their start)
+function startAir(n){ const cap = S.nations[n].capital; S.bld[cap].air = Math.max(S.bld[cap].air || 0, START_AIR); const a = addArmy(n, cap, {[START_AIR_UNIT]:1}); a.air = {base:cap, cd:0}; return a; }
 // where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
 function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
@@ -256,6 +262,7 @@ function restore(data){
   S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
+  for (const a of S.armies){ if (a.raid && a.raid.r != null && !routeById(a.raid.r)) delete a.raid; if (a.blk && !shipsOnly(a)) delete a.blk; }   // (saves from before these orders were dropped with their route or fleet: rules/trade.js trEnded, movement.js merge)
   for (const N of S.nations) if (N.ai === undefined) N.ai = N.id !== 0;   // (every save so far carries the flag: nation 0 is the seat of a one-player game)
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
   for (const me of seats()){ const D = desk(me); if (D.sunOff == null) D.sunOff = sunOffFor(me); }   // older saves: the same display-only daylight offset
@@ -269,6 +276,16 @@ function restore(data){
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
   for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
+  // saves from before NAVAL CITIES (S.nc unset): ships standing on land that is no naval city (they docked on any coast then) put out to sea: to the first sea zone next to
+  // them (else the nearest naval city of their own); ships sailing into such land stay on the water they sail from. A fleet plans its old
+  // destination again over the water; ships in a force with troops leave it as a fleet of their own (the troops stay, or land where they were going)
+  if (NAVAL_CITIES && !S.nc) for (const a of S.armies.slice()){ if (a.air || a.fly || !shipsN(a)) continue;
+    const ashore = !G.P[a.at].sea && !navalCity(a.at) && !(a.to !== null && G.P[a.to].sea), docking = G.P[a.at].sea && a.to !== null && !G.P[a.to].sea && !navalCity(a.to); if (!ashore && !docking) continue;
+    let z = docking ? a.at : G.P[a.at].nbs.find(v => G.P[v].sea); if (z === undefined){ z = -1; const seen = new Set([a.at]), Q = [a.at]; for (let i = 0; i < Q.length && z < 0; i++) for (const v of G.P[Q[i]].nbs){ if (seen.has(v)) continue; seen.add(v); if (!G.P[v].sea && navalCity(v) && S.owner[v] === a.owner){ z = v; break; } Q.push(v); } }
+    if (z < 0) continue;
+    let f = a, dest = null; if (shipsOnly(a)){ dest = a.path.length ? a.path[a.path.length - 1] : a.to; a.to = null; a.t = 0; a.legFrom = null; a.pos = null; delete a.sail; a.dest = null; if (a.wp) delete a.wp; }
+    else { f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
+    atMove(f, z); f.path = dest != null && dest !== z ? pathFor(f, z, dest) : []; }
   // saves from before NAVAL CITIES (S.nc unset): troops already at sea (or sailing out) whose route comes ashore away from a naval city still land
   // there (a.oldLand: rules/tick.js; it goes with the landing, or with a new order). A force still on land with such a route is planned again now
   // through a naval city (keeping its old route only when there is none: the hourly check then stops it at sea, with a message). A save of this
@@ -278,6 +295,7 @@ function restore(data){
     if (!off) continue; if (G.P[a.at].sea || (a.to !== null && G.P[a.to].sea)){ a.oldLand = 1; continue; }
     const q = pathFor(a, a.to ?? a.at, a.path[a.path.length - 1]); if (q.length) a.path = q; }
   if (NAVAL_CITIES) S.nc = 1;
+  bookMigrate();   // last: a save from before the Market's depth floor gets its first computer offers now (rules/economy.js)
   IM.emit('restored');
   return true;
 }
@@ -407,8 +425,9 @@ function checkNation(n, by = NEUTRAL){
   if (!cities.length){
     N.alive = false; relChanged();
     const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
+    // (the annexer's own home land among it comes back unoccupied, as on a capture)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
-      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
+      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.home[p] === by ? null : S.hour; if (S.unrest && S.home[p] === by) S.unrest[p] = 0; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); geoChanged();
     tellAll(me => n === me ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, me => n === me ? 'bad' : by === me ? 'good' : 'info');
