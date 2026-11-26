@@ -8309,9 +8309,10 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
         const real = !j && D1 === d, g = real ? 0 : heartGnd(p, vx, vy); if (g === 2) continue;
         let cost = c0 + 15*g + (NM.near.some(b => boxPt(b, vx, vy) < dR) ? 40 : 0) + (ON.some(b => boxPt(b, vx, vy) < dR + 1) ? 120 : 0) + (nearer(vx, vy, 0) > 0 ? 30 : 0); if (cost >= bc) continue;   // (ON: off the other names as drawn last frame where it can)
         if (!cf){ bc = cost; best = {dot:[vx, vy], ctr:null, cc:0}; continue; }
-        const [cc, cp] = ctr(vx, vy, bc - cost); if (!cp) continue; cost += cc; if (cost < bc){ bc = cost; best = {dot:[vx, vy], ctr:cp, cc}; } } }
+        const [cc, cp] = ctr(vx, vy, bc - cost); if (!cp) continue; cost += cc; if (cost < bc){ bc = cost; best = {dot:[vx, vy], ctr:cp, cc, real}; } } }
     return best; };
   let best = run(true);
+  if (best && best.real && (!hb || st)) return {dot:best.dot, ctr:null, cc:0};   // (one already standing clear of the marker where it is keeps the counter it has anywhere, above its dot: heartBadge)
   if (fold && HC && (!best || best.cc >= NEAR)){ const b0 = run(false); if (b0) best = {dot:b0.dot, ctr:[(HC[0] + HC[2])/2, (HC[1] + HC[3])/2], fold:true}; }   // (no room by its dot in its own city's area: it joins the city's counter)
   return best; }
 // (its dot and its counter stay on its own province's land, else its own country's: never in the sea or across a border. Nothing found: null,
