@@ -132,9 +132,49 @@ function aiSpies(n){
   const N = S.nations[n]; if (agentsOf(n).length < 2 && N.cash > 220 && rng() < 0.3) trainAgent(n);
   const wars = warsOf(n); if (!wars.length || !idleAgents(n).length || rng() > 0.4) return;
   const m = wars[Math.floor(rng()*wars.length)], provs = ownedBy(m).filter(p => !G.P[p].sea).map(p => G.P[p]); if (!provs.length) return;
-  const P = provs[Math.floor(rng()*provs.length)], op = S.home[P.id] !== m ? 'incite' : BK.some(k => S.bld[P.id][k]) ? 'sabotage' : 'steal';
+  const P = provs[Math.floor(rng()*provs.length)], op = P.city && occSt(P.id) === 'occ' ? 'incite' : BK.some(k => S.bld[P.id][k]) ? 'sabotage' : 'steal';   // (Incite revolt: an occupied city only)
   startSpy(n, P.id, op);
 }
+/* ---------------- AI: occupation, morale and rebels (docs/REBELS-PLAN.md 7.1) ----------------
+   The computer follows the rule as a person does, with four habits:
+   1. garrisons: every city it holds showing MOR.aiGar (38%) or less keeps at least as many of its ground units as the city's rebel band (3 to 6),
+      and a city where rebels are fighting one more than the rebels: idle stacks there are set apart from the idle lists, and the nearest idle
+      stacks within two days' march are sent in when that is not enough (aiGarrison)
+   2. annexing: Annex City in its occupied cities, the largest it can afford first, whenever its treasury holds the price plus MOR.aiCash and its manpower the
+      price plus MOR.aiMp (aiAnnex)
+   3. retaking: a city lost to rebels is an ordinary target (aiTarget: it is its own lost land, or an enemy's or independent city)
+   4. self-brake: no new offensive while MOR.aiBrake (2) or more of its cities show 33% or less (aiBrake) */
+function aiAnnex(n, N){ const cs = ownedBy(n).filter(p => G.P[p].city && occSt(p) === 'occ' && !S.cons[p]).sort((a, b) => popOf(b) - popOf(a) || a - b);
+  for (const p of cs){ const c = annexCost(p); if (N.cash < c.cash + MOR.aiCash || N.mp < c.mp + MOR.aiMp) continue; annexCity(n, p); } }   // (one it cannot afford does not block a smaller, cheaper one)
+function aiBrake(n){ let k = 0; for (const p of ownedBy(n)) if (G.P[p].city && morShown(p) <= MOR.rebelAt && ++k >= MOR.aiBrake) return true; return false; }
+// habit 1: idleBy (province -> its idle stacks, aiTurn0) loses the stacks set apart or sent as garrisons; they are also kept in AIT.gar, so the
+// offensive launched from a staging province (aiOperate) leaves them where they are
+const aiTakeN = (a, k) => { const plan = {}; let got = 0; for (const t of [...INF_T, ...GROUND_T.filter(t => !INF_T.includes(t))]){ if (got >= k || !a.u[t]) continue; const v = Math.min(a.u[t], k - got); Object.assign(plan, aiTakePlan(a, t, v)); got += v; } return plan; };
+function aiGarrison(n, idleBy){ const want = [], gar = AIT ? AIT.gar : new Set();
+  for (const p of ownedBy(n)){ if (!G.P[p].city) continue; const r = rebelsAt(p), m = morShown(p); if (!r && m > MOR.aiGar) continue;
+    const need = Math.max(m <= MOR.aiGar ? rebelSize(p) : 0, r ? count(r) + 1 : 0); want.push([p, need, m - (r ? 100 : 0)]); }
+  if (!want.length) return;
+  want.sort((x, y) => x[2] - y[2] || x[0] - y[0]);
+  const ok = a => !a.air && !shipsOnly(a) && !gunsOnly(a) && groundN(a) > 0 && count(a) > 0;
+  const keep = (a, L) => { gar.add(a); if (L){ const i = L.indexOf(a); if (i >= 0) L.splice(i, 1); } };
+  for (const [p, need] of want){
+    // (already on its way there)
+    let got = 0; for (const a of armiesOf(n)) if (ok(a) && a.at !== p && (a.path.length ? a.path[a.path.length - 1] === p : a.to === p)) got += groundN(a);
+    // the stacks standing there: the idle ones first, then those only passing through; whole stacks while they fit, else the part needed (infantry first)
+    const here = idleBy.get(p) || [], pass = (byAt(p) || S.armies).filter(a => a.owner === n && a.at === p && a.to === null && a.path.length > 0 && ok(a) && !gar.has(a));
+    for (const a of [...here.filter(ok).sort((x, y) => groundN(x) - groundN(y) || x.id - y.id), ...pass]){ if (got >= need) break; const g = groundN(a), w0 = need - got;
+      if (g - w0 >= CAP_MIN + 1){ const [b] = splitPlan(a, [aiTakeN(a, w0)]); if (b){ b.path = []; b.dest = null; b.forced = false; got += groundN(b); keep(b, null); } }
+      else { if (a.path.length){ a.path = []; a.dest = null; } got += g; keep(a, here); } }
+    if (got >= need) continue;
+    // the nearest idle stacks over its own land (within 6 provinces, two days' march), not the capital's garrison when it is threatened
+    const seen = new Map([[p, 0]]), q = [p];
+    for (let h = 0; h < q.length && got < need; h++){ const u = q[h], du = seen.get(u); if (du >= 6) continue;
+      for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v);
+        if (v === S.nations[n].capital && threatNear(v, n)) continue; if (S.battles.includes(v)) continue;
+        const L = idleBy.get(v) || []; for (const a of L.filter(ok)){ if (got >= need) break; if (G.P[v].city && morShown(v) <= MOR.aiGar) continue;   // (not from another burning city)
+          const pth = pathFor(a, a.at, p); if (!pth.length || pth.some(w => G.P[w].sea) || etaHours(a, pth) > 48) continue; const g = groundN(a), w0 = need - got;
+          if (g - w0 >= CAP_MIN + 1){ const [b] = splitPlan(a, [aiTakeN(a, w0)]); if (b){ b.path = pth; b.forced = true; got += groundN(b); keep(b, null); } }
+          else { a.path = pth; a.forced = true; got += g; keep(a, L); } } } } } }
 /* ---------------- AI ---------------- */
 let PPC = {v:-1, m:null};
 function provPowers(){ if (PPC.v !== tickVer || PPC.S !== S || !keep()){ if (PPC.v === tickVer && PPC.S === S) return PPC.m; const m = new Map(); for (const a of S.armies){ if (a.to !== null || a.fly) continue; let e = m.get(a.at); if (!e) m.set(a.at, e = []); e.push([a.owner, power(a), 1/digF(a)]); } if (!keep()) return m; PPC = {v:tickVer, S, m}; } return PPC.m; }
@@ -234,6 +274,7 @@ const focusOf = n => { const R = S.blocReg && Object.values(S.blocReg).find(R =>
 // pick one offensive objective against the main enemy and the own provinces next to it to gather in
 function aiPlan(n){ const P0 = (S.plans || (S.plans = {}))[n];
   if (isSated(n)){ delete S.plans[n]; return null; }   // the nations world: grown enough for now, no offensive (rules/diplomacy.js isSated)
+  if (!(P0 && S.owner[P0.tgt] !== n) && aiBrake(n)){ delete S.plans[n]; return null; }   // two or more of its cities burning: no new offensive (habit 4)
   if (P0 && S.owner[P0.tgt] !== n && atWar(n, S.owner[P0.tgt] ?? -1) && S.hour - P0.made < 24*8) return P0;
   const wars = warsOf(n); if (!wars.length){ delete S.plans[n]; return null; }
   const foe = focusOf(n) != null && wars.includes(focusOf(n)) ? focusOf(n) : wars.slice().sort((x, y) => natPower(x) - natPower(y))[0];
@@ -256,7 +297,7 @@ function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = ne
   if (!plan) return used;
   // 2. gather at the staging provinces, then strike together from every side once strong enough
   const stage = plan.stage.filter(v => S.owner[v] === n); if (!stage.length){ delete S.plans[n]; return used; }
-  const atStage = armiesOf(n).filter(a => !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a) && (a.at !== N.capital || idle.includes(a)));   // (not the capital's garrison)
+  const atStage = armiesOf(n).filter(a => !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a) && (a.at !== N.capital || idle.includes(a)) && !(AIT && AIT.gar.has(a)));   // (not the capital's garrison, nor a burning city's: aiGarrison)
   const massed = atStage.reduce((s0, a) => s0 + power(a)*terrFit(a, plan.tgt, true)*(riverX(a.at, plan.tgt) ? RIVER_ATK : 1), 0), need = defPower(plan.tgt, n)*1.5 + 10;
   if (massed >= need){ for (const a of atStage){ const m = aiGunsStay(a, plan.tgt); if (m) orderMove(m, plan.tgt); used.add(a); } plan.launched = S.hour;   // (guns that can shell the target stay behind)
     { const eta = atStage.filter(a => a.path.length).map(a => [a, etaHours(a)]), slow = Math.max(0, ...eta.map(e => e[1])); for (const [a, h] of eta) if (slow - h >= 3) a.delay = Math.min(36, Math.round(slow - h)); }   // all arrive together
@@ -470,12 +511,13 @@ function mapNbs(){ if (MNB && MNB.G === G) return MNB; const n = G.P.length, o =
   const v = new Int32Array(k), sea = new Uint8Array(n); for (let p = 0; p < n; p++){ v.set(G.P[p].nbs, o[p]); sea[p] = G.P[p].sea ? 1 : 0; } return MNB = {G, o, v, sea}; }
 // the turn in progress (AIT: answers that hold for one nation's whole turn, nothing in a turn changes them; see aiPickUnit)
 let AIT = null;
-function aiTurn(n){ const N = S.nations[n]; if (!N.alive) return; const prev = AIT; AIT = {n, foeTr:undefined}; try { aiTurn0(n, N); } finally { AIT = prev; } }
+function aiTurn(n){ const N = S.nations[n]; if (!N.alive) return; const prev = AIT; AIT = {n, foeTr:undefined, gar:new Set()}; try { aiTurn0(n, N); } finally { AIT = prev; } }
 // no Army Base in the capital (every nation at the start of a game, or a new capital after the old one fell): level I there before anything else
 // (it costs little and takes a day), so no computer nation waits long to train infantry. A capital busy with another building waits for it
 function aiCapBase(n, N){ const c = N.capital; if (S.owner[c] === n && G.P[c].city && !S.bld[c].fac && !S.cons[c] && canBuildHere(c, 'fac')) build(n, c, 'fac'); }
 function aiTurn0(n, N){
   aiCapBase(n, N);
+  aiAnnex(n, N);   // (Annex City in its occupied cities: habit 2)
   aiResearch(n);
   const inc = income(n), provs = ownedBy(n).length;
   const units = aiCountsOf(n).allU + ownedBy(n).reduce((s, p) => s + S.queue[p].length, 0);   // (its forces have not changed yet this turn)
@@ -599,6 +641,7 @@ function aiTurn0(n, N){
     const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries, fleets stay fleets)
   removeEmpty();
   for (const list of idleBy.values()){ for (const a of list.slice()) list.push(...aiSplitToLimit(a)); }
+  aiGarrison(n, idleBy);   // (burning cities and cities with rebels keep their garrison: habit 1)
   const idleAll = () => [...idleBy.values()].flat().filter(a => count(a) && !a.path.length && a.to === null);
   // at war the capital's infantry garrison (4-10 by army size) is set apart first: neither the offensive planner nor the idle moves below take it
   if (warsOf(n).length){ const list = idleBy.get(N.capital); if (list){ const keep = Math.min(STACK_LIM.land, Math.max(4, Math.min(12, Math.round(units*0.07)))); let got = 0;
@@ -642,7 +685,7 @@ function aiTurn0(n, N){
     if (a.path.length){ if (a.seaIdle != null) delete a.seaIdle; }
     else if (a.seaIdle == null) a.seaIdle = S.hour;
     else if (S.hour - a.seaIdle >= 72){ for (const t of UT) if (UNITS[t].cls !== 'naval'){ a.u[t] = 0; a.w[t] = 0; } delete a.seaIdle; } }
-  const ready = [];   // stacks free for an offensive of their own
+  const ready = [], brake = aiBrake(n);   // stacks free for an offensive of their own; brake: only its own lost land is a target (habit 4)
   for (const a of idleAll()){
     if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;
     if (shipsOnly(a)){ if (a.escort == null && !a.raid && !a.blk && !a.sail) aiFleet(a, n); continue; }
@@ -669,7 +712,7 @@ function aiTurn0(n, N){
       const lead = left.reduce((x, y) => power(y) > power(x) ? y : x, left[0]);
       const maxD = warsOf(n).length ? 10 : 7, fw = fitW(lead), cold = !arctic(n), fc = {}, foc = focusOf(n);
       const fitAt = v => { const k = G.P[v].terrain || 'plains'; return fc[k] ?? (fc[k] = fitOf(fw, k, true, cold)); };
-      const best = aiTarget(n, p0, maxD, pw, targeted, sated, freeLeft, fitAt, foc, left.every(amphib));
+      const best = aiTarget(n, p0, maxD, pw, targeted, sated || brake, freeLeft, fitAt, foc, left.every(amphib));
       if (best < 0) break;
       // the capital keeps a garrison when the force there marches out: two infantry in peace (at war the garrison was set apart above)
       if (p0 === N.capital && !warsOf(n).length && round === 0){ const g0 = left.find(a => (a.u.inf || 0) >= 4); if (g0){ addArmy(n, p0, {inf:2}); g0.u.inf -= 2; } }

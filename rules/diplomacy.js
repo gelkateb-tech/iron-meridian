@@ -190,7 +190,9 @@ const tribute = (me, m) => Math.round(Math.max(100, 0.15*S.nations[me].cash + 3*
 const tributeOk = (me, m) => atWar(m, me) && (S.hour - rel(m, me).since)/24 >= 2 && natPower(m) < 2.5*Math.max(1, natPower(me));
 // provinces each side holds of the other's home land: these change hands for good when peace is signed
 function warTerms(a, b){ const toA = [], toB = []; for (const P of G.P){ if (P.sea) continue; if (S.home[P.id] === b && S.owner[P.id] === a) toA.push(P.id); else if (S.home[P.id] === a && S.owner[P.id] === b) toB.push(P.id); } return {toA, toB}; }
-function cede(list, to){ for (const p of list){ S.home[p] = to; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = Math.min(unrestOf(p), 10); } if (list.length) geoChanged(); }
+// (the land a peace treaty hands over arrives annexed, or liberated when it is the receiver's own homeland: rules/economy.js landGiven; owner question 5;
+// it keeps its old home country. Rebels in it lay down their arms: the peace settles it, question Q27 option A)
+function cede(list, to){ for (const p of list){ landGiven(p, to); rebelsDisband(p, 'peace'); } if (list.length){ geoChanged(); INCC.v = -1; } }   // (the emptied rebel forces go at the next removeEmpty)
 // the land terms of a peace in words, as read by nation `me` ("you" where it is a party)
 const termsText = (a, b, T, me) => { const nm = id => G.P[id].cityName || G.P[id].name, part = (lst, from, to) => lst.length ? `${S.nations[from].name} cedes ${lst.slice(0, 3).map(nm).join(', ')}${lst.length > 3 ? ` and ${lst.length - 3} more` : ''} to ${to === me ? 'you' : S.nations[to].name}` : '';
   return [part(T.toA, b, a), part(T.toB, a, b)].filter(Boolean).join('; ') || 'No land changes hands'; };
@@ -367,7 +369,7 @@ function dealOK(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
 function applyTrade(me, ai, D){ const N = S.nations[me], A = S.nations[ai];
   { const why = dealOK(me, ai, D); if (why){ refuse(me, `Not possible: ${why}.`); return false; } }   // (every caller asks dealOK first; IM.api callers may not)
   for (const k of DEAL_K){ const d = (D.get[k] || 0) - (D.give[k] || 0); N[k] += d; A[k] -= d; }
-  const cedeTo = (p, to) => { const prev = S.owner[p]; S.owner[p] = to; ownChanged(); S.home[p] = to; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; if (S.unrest) S.unrest[p] = 0; evict(prev, to); geoChanged(); if (prev >= 0) checkNation(prev, to); };
+  const cedeTo = (p, to) => { const prev = S.owner[p]; S.owner[p] = to; ownChanged(); landGiven(p, to); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; evict(prev, to); geoChanged(); if (prev >= 0) checkNation(prev, to); };
   if (D.give.treaty.includes('peace') || D.get.treaty.includes('peace')) if (atWar(ai, me)) setRel(ai, me, 'truce', 10);
   for (const p of D.give.provs) cedeTo(p, ai); for (const p of D.get.provs) cedeTo(p, me);
   for (const k of new Set([...D.give.treaty, ...D.get.treaty])) if (k !== 'peace') applyDeal(ai, me, k);
@@ -386,7 +388,7 @@ const giftRoom = (n, k) => k === 'cash' ? 1e9 : k === 'mp' ? Math.max(0, Math.fl
 // nation `me` gives stocks and provinces (g) to its coalition partner n
 function sendGift(me, n, g){ const M0 = S.nations[me], N = S.nations[n]; if (!g || !sameBloc(me, n)) return false; const parts = [];
   for (const k of GIFT_K){ const q = Math.max(0, Math.min(g[k] || 0, isGood(k) ? kFloor(M0[k]) : Math.floor(M0[k]), giftRoom(n, k))); if (!q) continue; M0[k] -= q; N[k] += q; parts.push(k === 'cash' ? `$${fmt(q)}M` : k === 'mp' ? `${q}k manpower` : `${fmt(q)} ${rlbl(k)}`); }
-  for (const p of g.provs || []){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; if (S.occ) S.occ[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }
+  for (const p of g.provs || []){ if (S.owner[p] !== me || isCapital(p)) continue; S.owner[p] = n; ownChanged(); S.home[p] = n; landGiven(p, n); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; evict(me, n); geoChanged(); parts.push(G.P[p].cityName || G.P[p].name); }   // (a gift gives home title: question Q28, option B)
   if (!parts.length) return false; addMem(n, me, Math.min(15, 2 + parts.length*2));
   if (isSeat(me)){ say(me, n, me, `Sending you ${parts.join(', ')}.`); say(me, n, n, 'Received with thanks. The coalition stands together.'); const D = desk(me); if (D.unread) D.unread[n] = 0; }
   tell(me, `You sent ${parts.join(', ')} to your coalition partner ${N.name}.`, 'good', null); checkEnd(); return true; }
@@ -414,7 +416,7 @@ function offerSeat(me, from, kind){ const D = desk(me), L = D.offers || (D.offer
 const SPY_OPS = {
   recon:   {name:'Reconnaissance', cost:20,  base:0.85, desc:'Reveals the province and its neighbours for 3 days.'},
   sabotage:{name:'Sabotage',       cost:40,  base:0.55, desc:'Destroys one building level (or halts construction).'},
-  incite:  {name:'Incite unrest',  cost:35,  base:0.65, desc:'+35 unrest in occupied land; may spark a revolt.'},
+  incite:  {name:'Incite revolt',  cost:35,  base:0.65, desc:'-20 morale at once in an occupied city; at 33% or less it may rise in revolt.'},
   steal:   {name:'Steal technology', cost:60, base:0.35, desc:'Takes one technology the owner has and you lack.'},
 };
 const agentsOf = n => (S.spies || []).filter(a => a.owner === n);
@@ -427,7 +429,7 @@ function spyCheck(n, p, op){
   if (o === n) return {ok:false, why:'That is your own province.'};
   if (G.P[p].sea) return {ok:false, why:'Agents work on land.'};
   if (N.cash < O.cost) return {ok:false, why:`Needs $${O.cost}M.`};
-  if (op === 'incite' && (o < 0 || S.home[p] === o)) return {ok:false, why:'Only occupied land can be incited.'};
+  if (op === 'incite' && (o < 0 || !G.P[p].city || occSt(p) !== 'occ')) return {ok:false, why:'Only an occupied city can be incited to revolt.'};
   if (op === 'steal' && (o < 0 || !rStealable(n, o).length)) return {ok:false, why:'They have no technology you lack.'};
   if (op === 'sabotage' && !BK.some(k => S.bld[p][k]) && !S.cons[p]) return {ok:false, why:'Nothing to sabotage there.'};
   return {ok:true, chance:spyChance(n, p, op)};
@@ -445,8 +447,8 @@ function spyHour(){
       if (o !== n && isSeat(o)) tell(o, `Counter-intelligence caught ${artA(S.nations[n].name)} agent in ${where}.`, 'good', p); continue; }
     let res = '';
     if (k === 'recon'){ S.reveal = S.reveal || {}; for (const v of [p, ...G.P[p].nbs]) S.reveal[v] = S.hour + 72; intelNote(n, [p, ...G.P[p].nbs], S.hour + 72); visCache = null; res = 'the area is revealed for 3 days'; }
-    else if (k === 'sabotage'){ if (S.cons[p]){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ const h = bldHit(p, b); res = h.shielded ? `the ${BUILD.fort.name} here shielded the ${BUILD[b].name}` : h.bunker ? `${BUILD.fort.name} damaged${h.lost ? '' : ' (still standing)'}` : `${BUILD[b].name} damaged`; } } }
-    else if (k === 'incite'){ S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = Math.min(100, unrestOf(p) + 35); res = `unrest now ${Math.round(S.unrest[p])}%`; }
+    else if (k === 'sabotage'){ if (S.cons[p] && S.cons[p].k !== 'annex'){ S.cons[p] = null; res = 'construction destroyed'; } else { const ks = BK.filter(b => S.bld[p][b]); const b = ks[Math.floor(rng()*ks.length)]; if (b){ const h = bldHit(p, b); res = h.shielded ? `the ${BUILD.fort.name} here shielded the ${BUILD[b].name}` : h.bunker ? `${BUILD.fort.name} damaged${h.lost ? '' : ' (still standing)'}` : `${BUILD[b].name} damaged`; } } }
+    else if (k === 'incite'){ if (occSt(p) === 'occ' && G.P[p].city){ setMor(p, morOf(p) - 20); res = `morale now ${morShown(p)}%`; } else res = 'the city is no longer occupied: nothing to stir'; }   // (Incite revolt: question 13)
     else if (k === 'steal' && o >= 0){ const ts = rStealable(n, o).filter(t => rReqsOk(n, RN[t], rLevel(n, t) + 1) && !rRunning(S.nations[n], t)); const t = ts[Math.floor(rng()*ts.length)]; if (t){ const lv = rLevel(n, t) + 1; rGrant(S.nations[n], t, lv); res = `${rName(RN[t], lv)} acquired`; } else res = 'nothing usable found'; }
     if (isSeat(n)) tell(n, `${SPY_OPS[k].name} in ${where} succeeded: ${res}.`, 'good', p);
     if (o !== n && isSeat(o) && k !== 'recon') tell(o, `Enemy agents struck ${where}: ${res}.`, 'bad', p);

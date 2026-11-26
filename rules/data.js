@@ -176,6 +176,36 @@ const BUILD = {
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
 };
 const BK = Object.keys(BUILD);
+/* ---- occupation, morale, annexing and rebels (owner points 8-11, 2026-11-25; docs/REBELS-PLAN.md with the owner's answers R1-R17 of 2026-11-26).
+   The rules are in rules/economy.js (morale, status, rebels, Annex City), rules/trade.js (point 11) and rules/ai.js (the computer's habits).
+   MOR: morale per province, a whole number shown (stored to two decimals).
+     start 70 at the start of a game; occ 25 when a province is captured (or passed to the nation that destroyed its holder); lib 55 when a
+     province of the holder's own homeland is taken back or handed back. Each day change morale moves (target - morale)/rate toward its target.
+     Base targets: home 90 (a city of the holder's homeland), anx 75 (an annexed city), occT 60 (an occupied city), rural 100 (any countryside).
+     Modifiers: kmStep (-5 per kmUnit 1,000 km straight line to the capital of the moment, rounded, at most kmMax -30); war (-2 per nation at war
+     with the holder that holds land, rebels in one of its cities count as one more, at most warMax -25); foeNb (-5 per neighbouring province held
+     by a nation at war with the holder: nations only); foeHere (-1, whatever their number, for enemy or rebel forces standing in the province);
+     lowC/lowR (-7 for each neighbouring city of the holder showing low (40) or less, -4 for each such countryside province, read as they stood
+     before the day's step); hiC/hiR (+3 / +1 for each such neighbour showing 100); shortMax (shortage: -50 x the share of the day's need unmet,
+     at least shortMin -5 a resource, at most -50); casMax (civilian casualties: casK, half a point per point of war damage, at most 30, x casFade
+     at each day change); capLost (-20 on every province while the original capital is held by another); cap (+25 for the capital city itself);
+     bunk (the Bunker's working level 1-5: +5/+10/+20/+35/+50); mob (-5 per Mobilisation level on homeland provinces: question 12).
+     Output: occOut 25% for occupied land, anxOut 50% for annexed land, 100% for homeland (times today's morale link, rules/economy.js provYield);
+     against the administration factor occupied land counts occAdm, annexed anxAdm (question 17).
+     Rebels: a city showing rebelAt (33) or less burns and can rise. The chance at the day change: 0 at 33, +6.25 points per point down to 50%
+     at rebel25 (25), then a straight line to 100% at sure (10); each of the holder's ground units standing in the city halves it.
+     The computer: aiGar (garrisons in cities showing 38 or less), aiCash/aiMp (what it keeps after paying for an annexing), aiBrake (no new attack
+     while this many of its cities show rebelAt or less) */
+const MOR = {start:70, occ:25, lib:55, rate:8, home:90, anx:75, occT:60, rural:100, kmStep:5, kmUnit:1000, kmMax:30, war:2, warMax:25, foeNb:5, foeHere:1,
+  low:40, lowC:7, lowR:4, hiC:3, hiR:1, shortMax:50, shortMin:5, casK:0.5, casMax:30, casFade:2/3, capLost:20, cap:25, bunk:[0, 5, 10, 20, 35, 50], mob:5,
+  occOut:0.25, anxOut:0.5, occAdm:0.25, anxAdm:0.5, rebelAt:33, rebel25:25, sure:10, aiGar:38, aiCash:150, aiMp:40, aiBrake:2};
+// Annex City (question 1, option B): by the city's size band (rebelBand: a town under 1.5 million people, a city, a large city from 5 million, a
+// metropolis from 20 million): money ($M), manpower (k) and days. Paid when it starts; one construction slot, as a building
+const ANNEX_COST = [{cash:50, mp:10, days:3}, {cash:80, mp:15, days:4}, {cash:120, mp:25, days:5}, {cash:180, mp:40, days:6}];
+const REBEL_SIZE = [3, 4, 5, 6];   // rebel infantry by the same size band
+// constructions that are not buildings (S.cons[p].k): their name for the dispatches and the page. consB(k) reads either table
+const CONS_X = {annex:{name:'Annex City', max:1}};
+const consB = k => BUILD[k] || CONS_X[k];
 // a building's price table for level l: level I of a building with lv1 (the Army Base: cheap and quick, so every nation can open one in every starting
 // city on day 1, with an Arms Industry and its first infantry research besides; owner 2026-11-25) has its own money, materials, iron and time (hours:
 // game hours, a fraction allowed: 0.5 is 30 minutes, counted down in quarter-hour steps by consQuarter, rules/production.js); every other level comes from the building's line (cost, metal, iron, elec, days; x1.6 a level, see buildCost)

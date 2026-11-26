@@ -26,7 +26,7 @@
 //                             flagged; exit 1 if one is not.  --nomutants: the state faults only
 //   --scenarios               scripted mechanic checks on the real api (research, mobilizing, embark/disembark and their timers, movement over
 //                             land and sea, convoys and blockades, diplomacy), then the --scenarios modes of tools/stack-duel.js (combat, ranged),
-//                             tools/eco-check.js (economy, trade) and tools/rebels-sim.js (occupation). Each order is also checked for "an action
+//                             tools/eco-check.js (economy, trade) and tools/rebels-check.js (occupation, morale, rebels). Each order is also checked for "an action
 //                             that does nothing" (accepted, no state change, no reason) and for refusals that give no reason
 // e.g. node tools/headless.js --games 5 --days 60 --invariants --stats --provoke 3 --jobs 3 --json /tmp/r.json
 'use strict';
@@ -79,7 +79,7 @@ const XN = ['count', 'groundN', 'shipsN', 'shipsOnly', 'ground', 'shipPlaceOk', 
   'wingRange', 'dropRange', 'hexDist', 'stockCap', 'income', 'CK', 'GOODS', 'NEUTRAL', 'SEA', 'embarkH', 'landH', 'EMBARK_H', 'LAND_H', 'LAND_PORT_H', 'bdis', 'reqsOf', 'rOpenSteps', 'rCost', 'hasC', 'ucost',
   'LAND_MIN', 'trainH', 'unlocked', 'canMobilize', 'researchWhy', 'canResearch', 'embarkWhy', 'etaHours', 'addArmy', 'setRel', 'armyById', 'routeById', 'blockadeSet', 'raidSet', 'escortSet', 'trRefresh', 'trS',
   'trStatus', 'trState0', 'computeBlockade', 'stopsEta', 'legH', 'natPower', 'QUEUE_MAX', 'rLevel', 'has', 'buildCost', 'DOM_T', 'RANGE_KM', 'rangedOf', 'rangeOf', 'orderBombard', 'bombardInfo',
-  'tradeIncome', 'RES_K', 'cmdList', 'removeEmpty', 'armyHP', 'effHP', 'rng', 'warsOf0', 'portOk', 'landOk', 'canEnter', 'moraleOf', 'unrestOf', 'popOf', 'rPack', 'canBuildHere', 'linkCheck',
+  'tradeIncome', 'RES_K', 'cmdList', 'removeEmpty', 'armyHP', 'effHP', 'rng', 'warsOf0', 'portOk', 'landOk', 'canEnter', 'moraleOf', 'unrestOf', 'morOf', 'occSt', 'popOf', 'rPack', 'canBuildHere', 'linkCheck',
   'frontage', 'atMove', 'airCheck', 'canDrop', 'rNextLv', 'rOpen', 'nextLvl', 'canRecruit', 'queueWhy', 'warTerms', 'friendly', 'trSpot', 'trDetour', 'armyXY', 'kmBetween', 'seaIndex'];
 const XRET = '\nreturn {IM, X:{' + XN.map(n => `${n}: typeof ${n} === 'undefined' ? undefined : ${n}`).join(', ') + '}};', SRCX = SRC.replace(/\nreturn IM;$/, XRET);
 // a rule mutant (--selftest): the same source with one text in one rules file replaced, in memory only (the files on disk are not touched).
@@ -538,9 +538,9 @@ const MUTANTS = [
     expect:['teleported', 'teleported-to-sea', 'ship-on-land', 'landed-off-port', 'force-in-closed-land', 'exception'], hours:24},
   {key:'save-drops-morale', what:'(f) a field dropped from the save: saveJSON() leaves out each force\'s morale (a load puts 80 back)', file:'rules/state.js',
     from:'return JSON.stringify(o, function(k, v){\n', to:"return JSON.stringify(o, function(k, v){\n  if (k === 'm' && this && this.id != null && this.at != null) return undefined;\n", expect:['save-load'], hours:20},
-  {key:'load-drops-unrest', what:'(f) a field dropped on load: restore() starts every province\'s unrest at 0', file:'rules/state.js',
-    from:'S.unrest = S.unrest || G.P.map(() => 0);', to:'S.unrest = G.P.map(() => 0);', expect:['save-load'], hours:20,
-    setup:(S, G) => { let k = 0; for (const P of G.P) if (!P.sea && S.owner[P.id] >= 0 && k < 5){ S.unrest[P.id] = 50; k++; } }},
+  {key:'load-drops-morale', what:'(f) a field dropped on load: restore() works every province\'s morale out afresh, as for a save from before the morale rule', file:'rules/state.js',
+    from:'  moraleMigrate();   // (after the other migrations)', to:'  delete S.mv; moraleMigrate();', expect:['save-load'], hours:20,
+    setup:(S, G) => { let k = 0; for (const P of G.P) if (!P.sea && S.owner[P.id] >= 0 && k < 5){ S.mor[P.id] = 50; k++; } }},
 ];
 // one rule mutant (or, mutated false, the real rules with the same setup): {cnt: type -> [{k: the violation's key, d: details}]} for a game mutant, {fails, odd} for a mechanic one
 function runMutant(m, base, mutated){ const src = mutated ? mutSrc(m.file, m.from, m.to) : {n:1, srcx:SRCX};
@@ -709,7 +709,7 @@ function scenarios(){ const {res, note, s} = mechanics();
   for (const e of odd) console.log(`  ${e.kind}: ${e.label} -> returned ${e.r}${e.err ? ' ' + e.err : ''}`);
   const bad = res.filter(r => r.ok === false).length;
   // the scenario modes of the other tools (combat and ranged, economy and trade, occupation)
-  let other = 0; for (const t of ['stack-duel.js', 'eco-check.js', 'rebels-sim.js']){ const cp = require('child_process'); const r = cp.spawnSync(process.execPath, [path.join(__dirname, t), '--scenarios'], {encoding:'utf8', maxBuffer:1 << 26});
+  let other = 0; for (const t of ['stack-duel.js', 'eco-check.js', 'rebels-check.js']){ const cp = require('child_process'); const r = cp.spawnSync(process.execPath, [path.join(__dirname, t), '--scenarios'], {encoding:'utf8', maxBuffer:1 << 26});
     console.log(`\n== node tools/${t} --scenarios (exit ${r.status})`); console.log((r.stdout || '').trim()); if (r.stderr) console.log(r.stderr.trim().split('\n').slice(0, 8).join('\n')); if (r.status) other++; }
   console.log(`\nSCENARIOS ${bad || other ? 'FAILED' : 'OK'}: ${res.filter(r => r.ok === true).length} of ${res.length} mechanic checks passed here, ${res.filter(r => r.ok === 'warn').length} with a warning (no reason given), ${bad} failed${other ? `; ${other} other tool(s) failed` : ''}`);
   process.exit(bad || other ? 1 : 0); }

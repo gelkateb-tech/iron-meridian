@@ -3,7 +3,9 @@
 // 1. every city has one main resource, the same on every load; rare-earth cities are scarce (0 to 2 per country)
 // 2. buildings: Army Base (key fac) gives no income; Arms Industry adds 25% of the city's main resource per level; Refinery, Foundry and
 //    Rare Earth Mine are gone; prices rise per level and per other city that has one
-// 3. every playable nation of every scenario has money, manpower, materials and iron income on day 1 and can pay for its basic units
+// 3. every playable nation of every scenario has money, manpower, materials and iron income on day 1 and can pay for its basic units (the income
+//    read at the morale each province settles at in peace, rules/economy.js morPeace: a game starts every province at 70%, owner point 9, and the
+//    economy is calibrated to the settled morale, docs/REBELS-PLAN.md 2.6)
 // 4. an old save (Refinery II, Foundry under construction, knocked-out Mine, eco1 researched, eco3 running) loads with the refunds,
 //    without the old buildings, with the eco1 bonus kept and eco3 complete; a second load changes nothing more
 // 5. the resource scale (RES_K): a save from before it (no S.rk, goods in the old units) loads with every stored quantity of goods times RES_K
@@ -18,7 +20,7 @@ globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(pa
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') +
-  '\nreturn {IM, income, provYield, buildCost, ucost, cityMain, cityOut, canBuildHere, trainF, stockCap, has, useScenario, SCENARIOS, UNITS, BUILD, RNODES, RCATS, RN, BK, MKT_BASE, ARMS_PCT, RES_K, GOODS,' +
+  '\nreturn {IM, atPeaceMor:typeof atPeaceMor === "function" ? atPeaceMor : (f => f()), income, provYield, buildCost, ucost, cityMain, cityOut, canBuildHere, trainF, stockCap, has, useScenario, SCENARIOS, UNITS, BUILD, RNODES, RCATS, RN, BK, MKT_BASE, ARMS_PCT, RES_K, GOODS,' +
   ' tradeIncome:typeof tradeIncome === "function" ? tradeIncome : null, addArmy, CK, lotCash:typeof lotCash === "function" ? lotCash : null};';
 const load = () => new Function(SRC)();
 let bad = 0; const ok = (c, msg) => { if (!c){ bad++; console.log('FAIL  ' + msg); } }, near = (a, b, e = 1e-6) => Math.abs(a - b) <= e*Math.max(1, Math.abs(a), Math.abs(b));
@@ -38,7 +40,8 @@ if (process.argv.includes('--scenarios')){ const out = [], chk = (name, c, d) =>
     chk('a stock that would go negative stops at zero and is marked short', net < 0 && N.oil === 0 && N.short && N.short.oil, `net oil a day with 60 more tanks ${(net/K).toFixed(1)}K; oil now ${N.oil}, short ${JSON.stringify(N.short)}`); }
   // 4. Arms Industry raises its city's main resource by ARMS_PCT a level
   { const n = 13, N = T.nations[n], P = Gq.P.find(q => T.owner[q.id] === n && q.city && Q.cityMain(q.id) !== 'cash' && !T.cons[q.id] && !(T.bld[q.id].arms > 0)); N.cash += 1000; for (const k of Q.GOODS) N[k] = Math.max(N[k], 200*K);
-    const k = Q.cityMain(P.id), y0 = Q.provYield(P.id)[k], ok2 = a2.build(n, P.id, 'arms'), c = T.cons[P.id]; let h = 0; for (; h < 24*30 && T.cons[P.id]; h++) a2.tick(); const y1 = Q.provYield(P.id)[k];
+    const k = Q.cityMain(P.id), y0 = Q.provYield(P.id)[k], m0 = T.mor ? T.mor[P.id] : null, ok2 = a2.build(n, P.id, 'arms'), c = T.cons[P.id]; let h = 0; for (; h < 24*30 && T.cons[P.id]; h++) a2.tick();
+    let y1; { const m1 = T.mor ? T.mor[P.id] : null; if (T.mor) T.mor[P.id] = m0; y1 = Q.provYield(P.id)[k]; if (T.mor) T.mor[P.id] = m1; }   // (at the morale it had before: a city's morale moves at each day change, and its output with it)
     chk(`Arms Industry I in ${P.cityName} (${k}) is built in its time and raises its output by ${Q.ARMS_PCT*100}%`, ok2 && c && T.bld[P.id].arms === 1 && Math.abs(h - c.h0) <= 1 && near(y1, y0*(1 + Q.ARMS_PCT), 2e-3), `built ${ok2}, ${h} h of ${c && c.h0}, ${k} ${y0.toFixed(2)} -> ${y1.toFixed(2)}`); }
   // 5. trade: a route's income, and closing it takes that income away
   if (Q.tradeIncome){ const r = T.trade.routes.find(x => x.b >= 0 && x.f > 0), n = r.a, i0 = Q.tradeIncome(n).cash, mine = r.va ? r.va.cash : null; a2.tradeClose(n, r.id); const i1 = Q.tradeIncome(n).cash;
@@ -89,7 +92,7 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
 
 // ---- 3. every playable nation can field its basic units
 for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn); Q.IM.api.newGame(12345, 0, []); const S2 = Q.IM.api.S; let low = {};
-  for (const N of S2.nations){ const g = Q.income(N.id).gross;
+  for (const N of S2.nations){ const g = Q.atPeaceMor(() => ({...Q.income(N.id).gross}));
     for (const k of ['cash', 'mp', 'metal', 'iron', 'oil']){ ok(g[k] > (k === 'cash' ? 150 : k === 'mp' ? 30 : 4*K), `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
     for (const k of ['elec', 'rare']){ ok(g[k] > 1*K, `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
     for (const t of ['inf', 'at', 'tank', 'art']){ const c = Q.ucost(N.id, t); ok(Object.keys(c).every(k => N[k] >= c[k]), `${scn}: ${N.name} cannot pay for ${t} on day 1`); } }

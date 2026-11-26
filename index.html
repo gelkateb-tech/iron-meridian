@@ -1389,6 +1389,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .crow .cn b{font-size:15px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .crow .capst{font-style:normal; color:var(--cn-gold)}
 .crow .cl{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--cn-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .crow .cl > span{overflow:hidden; text-overflow:ellipsis}
+.crow .cmc{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; min-width:0} .crow .cmc .oc-chip{flex:none}   /* the morale chips on a line of their own: never cut (rebels, burning, occupied, annexed) */
 .crow .cbl{display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; font-size:11.5px; color:var(--cn-fg2)}   /* the city's buildings (no city level: BLD-RULES) */
 .crow .cbk{display:inline-flex; align-items:center; gap:1px; flex:none} .crow .cbk b{font:700 10.5px/1 var(--body); color:var(--cn-fg2)} .crow .cbk.ko{opacity:.5}
 .crow .cbx{display:flex; align-items:center; gap:10px; min-width:0}
@@ -1709,6 +1710,54 @@ button.cs-c.add:hover .cs-plus{transform:scale(1.1)}
 .cs-ct{position:absolute; left:5px; top:5px; padding:2px 5px; border-radius:2px; font:700 10px/1 var(--body); color:#fff; background:rgba(8,20,26,.78); box-shadow:inset 0 0 0 1px rgba(79,208,222,.6)}
 .cs-c.ko .cs-ci{filter:grayscale(.8) brightness(.7)} .cs-c.ko::after{content:"✕"; position:absolute; left:6px; top:5px; font:700 13px/1 var(--body); color:#ff8f86; text-shadow:0 1px 1px #000}
 .cs-empty{padding:16px 14px; font:600 12.5px/1.2 var(--body); color:var(--cn-fg2); background:linear-gradient(180deg, #30454d, #263840)}
+/* the morale factors list (owner point 9; docs/REBELS-PLAN.md 6.1): opened by the stat row's morale chip; the base and every modifier of the target,
+   two columns on a desktop (the factors at 0 dimmed), one on a phone (only those that count); the status, the output, Annex City and the rebels' note */
+.cs-mor.tog{cursor:pointer} .cs-mor.tog:focus-visible{outline:2px solid var(--cn-teal); outline-offset:-2px}
+.cs-mor .mf-car{position:relative; margin-left:-6px; font:700 10px/1 var(--body); color:#16323c; opacity:.7; transition:transform .15s} .cs-mor.open .mf-car{transform:rotate(180deg)}
+.cs-mor.fire{box-shadow:inset 0 0 0 2px #d4483e} .cs-mor .mor-fire{position:relative; display:inline-flex; margin-left:auto; margin-right:4px}
+.mf{background:linear-gradient(180deg, #2b3f47, #22343b); border-bottom:1px solid #16252b; color:#e8eef0; font:600 13px/1.25 var(--body)}
+.mf-hd{display:flex; align-items:center; gap:6px 12px; padding:8px 12px 7px; border-bottom:1px solid rgba(0,0,0,.35); box-shadow:inset 0 -1px 0 rgba(255,255,255,.05); flex-wrap:wrap}
+.mf-big{display:flex; align-items:baseline; gap:7px; font:800 19px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap}
+.mf-big em{font-style:normal; font:700 12px/1 var(--body); letter-spacing:.02em; text-transform:none; color:#a9bcc2}
+.mf-arrow{color:#8fd8e2; font-weight:800}
+.mf-trend{font:700 12px/1 var(--body); color:#f59a90; white-space:nowrap} .mf-trend.up{color:#8ee08a} .mf-trend.flat{color:#a9bcc2}
+.mf-sp{flex:1}
+.mf-rb{display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 6px; border-radius:2px; background:linear-gradient(180deg, #d4483e, #a82a24); color:#fff; font:800 12px/1 var(--body); letter-spacing:.03em; text-transform:uppercase; box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 1px 3px rgba(0,0,0,.4); white-space:nowrap}
+.mf-rb small{font:700 11px/1 var(--body); text-transform:none; letter-spacing:0; opacity:.9} .mf-rb.on{background:linear-gradient(180deg, #8a2f2a, #5e1b17); box-shadow:inset 0 0 0 1px #ff8f86, 0 1px 3px rgba(0,0,0,.4)}
+.mf-bd{display:grid; grid-template-columns:1fr 1fr; gap:0 22px; padding:6px 12px 4px}
+.mf-r{display:flex; align-items:center; gap:8px; min-height:25px; border-bottom:1px dashed rgba(143,163,170,.18)}
+.mf-r .ic{flex:none; width:18px; height:18px; display:grid; place-items:center; color:#8fd8e2}
+.mf-r .lb{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#dfe8ea}
+.mf-r .lb i{font-style:normal; color:#94a9b0; font-weight:600}
+.mf-r .v{flex:none; min-width:38px; text-align:right; font:800 14px/1 var(--body); font-variant-numeric:tabular-nums}
+.mf-r .v.neg{color:#ff9d93} .mf-r .v.pos{color:#8ee08a} .mf-r .v.base{color:#fff}
+.mf-r.zero{opacity:.42} .mf-r.zero .v{color:#cfd8db}
+.mf-ft{display:flex; align-items:center; gap:6px 14px; padding:7px 12px 9px; border-top:1px solid rgba(0,0,0,.35); box-shadow:inset 0 1px 0 rgba(255,255,255,.05); flex-wrap:wrap}
+.mf-tg{font:800 14px/1 var(--body); white-space:nowrap} .mf-tg b{font-size:16px; color:#ffd36b}
+.mf-out{font:600 12.5px/1.3 var(--body); color:#c3d2d6} .mf-out b{color:#fff}
+.mf-st{flex:1 1 100%; font:600 12px/1.3 var(--body); color:#a9bcc2} .mf-st b{color:#e8eef0}
+.mf-ax{margin-left:auto; display:inline-flex; align-items:center; gap:8px; min-height:32px; padding:0 12px; border:0; border-radius:2px; color:#fff; font:800 12.5px/1 var(--body); letter-spacing:.05em; text-transform:uppercase; cursor:pointer;
+  background:linear-gradient(180deg, #5fc9d6, #2a9aaa); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 2px 4px rgba(0,0,0,.4); text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.mf-ax small{font:700 11.5px/1 var(--body); letter-spacing:0; text-transform:none; opacity:.95}
+.mf-ax:hover{filter:brightness(1.08)} .mf-ax:active{transform:scale(.98)} .mf-ax[aria-disabled="true"]{filter:grayscale(.7) brightness(.8); cursor:default}
+.mf-run{margin-left:auto; display:inline-flex; align-items:center; gap:9px; min-width:220px; font:800 12px/1 var(--body); letter-spacing:.04em; text-transform:uppercase; color:#ffe7a8}
+.mf-run .cs-pb{position:relative; flex:1; height:8px; border-radius:1px; background:rgba(0,0,0,.5); box-shadow:0 0 0 1px rgba(255,255,255,.2); overflow:hidden} .mf-run .cs-pb i{display:block; height:100%; background:linear-gradient(180deg, #f4d58b, #c48f2c)}
+.mf-run em{font:700 11.5px/1 var(--body); font-style:normal; text-transform:none; letter-spacing:0; color:#e8eef0; white-space:nowrap}
+.mf-why{flex:1 1 100%; text-align:right; font:600 11.5px/1.2 var(--body); color:#ffcf8a}
+.mf-note{padding:0 12px 9px; font:600 11.5px/1.35 var(--body); color:#a9bcc2} .mf-note b{color:#ffd7cf}
+.mf-fx{display:flex; align-items:center; gap:8px; padding:6px 12px; background:linear-gradient(180deg, #3a2622, #2c1d1a); font:600 12.5px/1.3 var(--body); color:#ffd7cf; border-bottom:1px solid #16252b}
+.cs-c.annex{background:linear-gradient(180deg, #f4d58b 0%, #d9a43a 50%, #a8761c 100%); border-color:#f6e7b8}
+.cs-c.annex .cs-ci{display:grid; place-items:center; padding-top:10px}
+.cs-c.annex .tag{position:absolute; left:4px; right:4px; top:4px; padding:2px 0; border-radius:2px; background:rgba(20,26,30,.78); font:800 10px/1.1 var(--body); color:#ffe7a8; letter-spacing:.02em; white-space:nowrap}
+.cs-c.annex .cs-cn{background:linear-gradient(180deg, #ffe7a8, #e8c46a); color:#3b2606}
+.cs-c.annex.blk{filter:saturate(.55) brightness(.85)} .cs-c.annex.busy .cs-cb i{background:linear-gradient(180deg, #fff1c4, #d9a43a)}
+.cs-bp.ax, .bi.ax{display:grid; place-items:center; background:linear-gradient(180deg, #f4d58b, #c48f2c)} .bi.ax{width:var(--bs); height:var(--bs); border-radius:2px} .bi.ax svg{width:80%; height:80%}
+.cs-bmod .bld.annex{border-color:#d9a43a; box-shadow:inset 0 0 0 1px rgba(244,213,139,.35), inset 0 1px 0 rgba(255,255,255,.08)}
+.mob-off small{color:#ffcf8a !important}
+.oc-chip{display:inline-flex; align-items:center; gap:4px; padding:1px 8px 1px 6px; border-radius:9px; font-weight:700; font-size:12px; color:#fff; white-space:nowrap; vertical-align:1px}
+.oc-chip.fire{background:#c4302a} .oc-chip.on{background:#5e1b17; box-shadow:inset 0 0 0 1px #ff8f86} .oc-chip svg{flex:none}
+.trr.lost{opacity:.62; border-style:dashed} .trr.lost .st{color:var(--danger-t)}
+.dp-wn.reb svg{flex:none; color:#ffc7a0}
 /* the map controls, hints and the tutorial box move up above the sheet */
 @media (min-width: 821px){ body.cs-on #hint, body.cs-on #tut{bottom:calc(var(--csh, 0px) + 18px)} }
 body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
@@ -1757,6 +1806,11 @@ body.cs-on #miniframe, body.cs-on #mini{transition:opacity .2s}
   .cs-pp{padding:0 9px} .cs-mp{display:none}
   .cs-blds{gap:6px; padding:8px 6px 9px}
   .cs-c{width:84px; height:84px} .cs-ci.gl{background-size:54px; background-position:center 5px} .cs-cn{font-size:9px; padding:3px 3px 4px}
+  .mf-bd{grid-template-columns:1fr; padding:4px 10px 2px} .mf-r{min-height:23px} .mf-r.zero{display:none} .mf-hd{gap:6px 10px; padding:7px 10px 6px} .mf-big{font-size:17px}
+  .mf-ft{padding:6px 10px 8px; gap:6px 8px} .mf-ax, .mf-run{margin-left:0; width:100%; justify-content:center} .mf-why{text-align:left} .mf-note{padding:0 10px 8px}
+  .cs-body:has(.mf){max-height:calc(100dvh - 150px); overflow-y:auto; overscroll-behavior:contain}
+  .cs-c.annex .tag{font-size:8.5px; letter-spacing:0} .cs-c.annex .cs-ci{padding-top:12px} .cs-c.annex .cs-ci svg{width:40px; height:40px}
+  .mob-off small{white-space:normal !important; overflow:visible !important; text-overflow:clip !important; line-height:1.15}
   body.cs-on main{grid-template-rows:minmax(0, 1fr) 0}
   body.cs-on aside#side{display:none}
   body.cs-on .mapctl{bottom:calc(var(--csh, 0px) + 6px); transition:bottom .25s var(--ease)}
@@ -3340,16 +3394,36 @@ function uiconC(t, W, col, sh = 0){ const key = uiconKey(t) + '|' + W + '|' + co
   c = document.createElement('canvas'); c.width = c.height = Math.max(1, W); const g = c.getContext('2d'); g.scale(W/32, W/32);
   if (sh){ g.save(); g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = sh*W/32; g.shadowOffsetY = sh*0.4*W/32; g.fillStyle = col; g.fill(uiconPath(t)); g.restore(); }
   g.fillStyle = col; g.fill(uiconPath(t)); UICONC.set(key, c); return c; }
+// the rebels' emblem, drawn in code (owner, list item 22: crossed rifles): two AK-pattern rifles crossed in an X, muzzles up, in colour col on a
+// 100 x 100 drawing, each outlined in the ground colour bg where it crosses the other
+function rifleX(g, col, bg){
+  const rifle = full => { const p = new Path2D(); p.moveTo(-47, -5); p.lineTo(-25, -3.5); p.lineTo(-25, 3.5); p.lineTo(-47, 8); p.closePath();   // stock
+    p.rect(-26, -4.5, 28, 8); p.rect(2, -3.5, 19, 6.5); p.rect(20, -1.6, 27, 3.2); p.rect(41, -5, 2.6, 4);   // receiver, handguard, barrel, front sight
+    if (full){ p.moveTo(-9, 3); p.lineTo(-1, 3); p.quadraticCurveTo(2, 10, 6, 15.5); p.lineTo(-1.5, 18); p.quadraticCurveTo(-5.5, 11, -9, 3); p.closePath();   // the curved magazine
+      p.moveTo(-17, 3); p.lineTo(-12, 3); p.lineTo(-14, 10.5); p.lineTo(-18.5, 10); p.closePath(); } return p; };   // pistol grip
+  // (the rifle behind has no magazine or grip: they would poke out round the front rifle at the crossing as a small hook)
+  const back = rifle(false), R = rifle(true); g.save(); g.translate(50, 52); g.lineJoin = 'round';   // (each rifle drawn 1.5 times as thick as it is long-scaled, so it reads at a badge's size)
+  for (const second of [false, true]){ g.save(); if (second){ g.rotate(0.72 - Math.PI); g.scale(1, -1.5); } else { g.rotate(-0.72); g.scale(1, 1.5); }   // (muzzles to the upper right and the upper left, the front magazine down)
+    if (bg && second){ g.lineWidth = 7; g.strokeStyle = bg; g.stroke(R); }
+    g.fillStyle = col; g.fill(second ? R : back); g.restore(); }
+  g.restore(); }
+// the grey band across the top of a rebel force's badge (in place of a flag) with the crossed rifles in white; w x h css px, cached per size
+const RBAND = new Map();
+function rebBadgeBand(w, h){ const W = Math.round(w*dpr), H = Math.round(h*dpr), key = W + 'x' + H; let c = RBAND.get(key); if (c) return c;
+  c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#6d7377'); gr.addColorStop(1, '#4a5054'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  const e = Math.min(W, H*1.02); g.save(); g.translate((W - e)/2, (H - e)/2); g.scale(e/100, e/100); rifleX(g, '#ffffff', '#5a6064'); g.restore();
+  if (RBAND.size > 40) RBAND.clear(); RBAND.set(key, c); return c; }
 // the badge tag's icon: flat navy on the white tag, a W x W device-pixel canvas. Infantry is exactly the owner's helmet (100 x 100 drawing: navy helmet,
 // a white band and a navy chin strap), also for Motorized Infantry, Paratroopers, Special Forces and Anti-Tank Infantry (BADGE_INF); every other type its own silhouette in navy, fitted to the square
 const NAVY = '#1d2c45', UICONN = new Map();
 const BADGE_INF = new Set(['inf', 'para', 'spec', 'at', 'mar']);   // owner, 2026-11-18: on the map badge every infantry type is the same plain helmet (the exact type shows on a tap and in the 3D soldiers)
-function uiconNavy(t, W){ const k = BADGE_INF.has(t) ? 'inf' : uiconKey(t), key = k + '|' + W; let c = UICONN.get(key); if (c) return c; if (UICONN.size > 300) UICONN.clear();
+function uiconNavy(t, W){ const k = BADGE_INF.has(t) ? 'inf' : t === 'reb' ? 'reb' : uiconKey(t), key = k + '|' + W; let c = UICONN.get(key); if (c) return c; if (UICONN.size > 300) UICONN.clear();
   c = document.createElement('canvas'); c.width = c.height = Math.max(1, W); const g = c.getContext('2d');
   const helmet = () => { g.fillStyle = NAVY; g.fill(new Path2D('M12 62 C12 35 31 17 55 17 C78 17 91 35 91 56 L96 66 L80 66 C70 61 32 61 12 62 Z'));
     g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(new Path2D('M20 57 C40 53 64 53 84 59'));
     g.strokeStyle = NAVY; g.lineWidth = 6; g.stroke(new Path2D('M33 64 C33 80 47 87 59 81 L66 66')); };
   if (k === 'inf'){ g.scale(W/100, W/100); helmet(); }
+  else if (t === 'reb'){ g.scale(W/100, W/100); rifleX(g, NAVY, '#ffffff'); }   // rebels: the crossed rifles (rebBadgeBand has the same emblem in white)
   else { const B = uiconBox(t), bw = Math.max(1, B[2] - B[0]), bh = Math.max(1, B[3] - B[1]), f = W/Math.max(bw, bh); g.scale(f, f); g.translate(-B[0] + (Math.max(bw, bh) - bw)/2, -B[1] + (Math.max(bw, bh) - bh)/2); g.fillStyle = NAVY; g.fill(uiconPath(t)); }
   UICONN.set(key, c); return c; }
 // the icon tile for the HTML UI: the same dark square as a picture tile (.ut, size classes xs..lg), the white silhouette on it
@@ -5114,7 +5188,9 @@ document.addEventListener('pointerdown', e => { if (!muted) audio(); if (AC && A
 const FX = [];
 // ---- the map effects (fx.js): the module gets the page's view (FXH: getters, read-only except the few it sets) and returns its drawing and
 // effect functions; the rules' map events are wired to them in RULES EVENTS ----
-const FXH = {get AC(){ return AC; },
+// (the burning cities' frame request on effects Low: one frame in ms, only while the game runs or the map was touched lately, as the ambient motion)
+const fireTick = ms => { if ((S && S.speed > 0 && !S.over) || performance.now() - RD.inp < ambIdle()) animIn(ms); };
+const FXH = {get AC(){ return AC; }, get fireTick(){ return fireTick; },
   get missileAlert(){ return missileAlert; },
   get dispPos(){ return dispPos; },
   get master(){ return master; },
@@ -5159,7 +5235,7 @@ const FXH = {get AC(){ return AC; },
   get wrapSX(){ return wrapSX; },
   get zx(){ return zx; }};
 const FXM = window.IMFX(FXH);
-const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
+const {AFX, BFX, BSM, CLPOS, FXG, FXW, GLOW, MUZZ, PART, PROJ, SCORCH, SPR, WFX, WRECKS, afxAmbient, drawCityFire, afxCrater, afxMark, afxPuff, battleBadge, bfxFigure, bfxFoes, bfxOwn, drawBattleSmoke, drawCraters, drawParticlesOver, drawParticlesUnder, drawTrailDust, drawWFX, drawWFXFlash, emit, explode, figVolley, fxOff, fxRetire, fxh, lastDust, plateBoxes, plateClipOn, shoot, softSprite, volley, wfxCap, wfxCover, wfxFire, wfxRing, wfxScorch, wfxSmoke, wfxStart, wfxStrike, fxLv, bigShake, flightStep, orderMark, drawMarks, tapCombat, fxStats, cfxFire, weaponOf, airImg, intercept, impact, destroyed, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, cqRun, wdx, turnTo, moveFig} = FXM;
 // a city's glow at night: warm amber, never white; peaked at the city's point and fading out well inside its own radius (cityNightR)
 let CGLOWC = null; const CGLOW = () => CGLOWC || (CGLOWC = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,204,138,1)'); gr.addColorStop(0.16, 'rgba(255,186,110,.6)'); gr.addColorStop(0.42, 'rgba(248,158,74,.2)'); gr.addColorStop(0.72, 'rgba(232,128,46,.05)'); gr.addColorStop(1, 'rgba(220,110,30,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })());
@@ -5910,20 +5986,29 @@ function dpMsgHTML(){ const me = PLAYER, T = threads(me).filter(t => S.nations[t
 // the trade routes card (folded to one line until opened): each route with Show, Escort (sea), Pause / Resume and Close, closed routes to reopen,
 // and opening a new one (independent ports too)
 function tradeHTML(){ const me = PLAYER, T = S.trade || {routes:[], closed:{}}, mine = routesOf(me), tot = tradeIncome(me), ico = k => icon(k, 13);
-  const head = `<button class="dp-rh" data-act="dp-routes" aria-expanded="${DV.routes}">${icon('cash', 18)}<b>Trade routes</b><span>+$${fmt1(tot.cash)}M a day · ${mine.length}/${TR_MAX}${tot.cut ? ` · <em>${tot.cut} cut or slowed</em>` : ''}${tot.paused ? ` · ${tot.paused} paused` : ''}</span>${dpI('chev', 18)}</button>`;
+  // point 11 (rules/trade.js lostRoutesOf): a route lost to war keeps its slot empty while the war lasts or a side holds the other's cities unannexed;
+  // holding a former partner's cities unannexed costs 25% on the other routes (tot.shock)
+  const LR = lostRoutesOf(me), shockBy = LR.filter(L => L.shock).map(L => S.nations[L.partner].name);
+  const head = `<button class="dp-rh" data-act="dp-routes" aria-expanded="${DV.routes}">${icon('cash', 18)}<b>Trade routes</b><span>+$${fmt1(tot.cash)}M a day · ${mine.length}/${TR_MAX}${tot.cut ? ` · <em>${tot.cut} cut or slowed</em>` : ''}${tot.paused ? ` · ${tot.paused} paused` : ''}${LR.length ? ` · <em>${LR.length} lost</em>` : ''}${tot.shock ? ` · <em>−${Math.round(tot.shock*100)}%: partners wary</em>` : ''}</span>${dpI('chev', 18)}</button>`;
   if (!DV.routes) return `<div class="dp-routes">${head}</div>`;
   const rows = mine.map(r => { const v = trSide(r, me), o = trOther(r, me), [cls, txt] = trStateText(r, me), risk = trRisk(r), mid = r.path[Math.floor(r.path.length/2)];
     const via = r.via && (r.via[0] != null || r.via[1] != null) ? ` <span title="Shipped through a partner's or an independent port">(via ${pName(r.a === me ? r.pa : r.pb)})</span>` : '';
     return `<div class="trr"><div class="nm">${flagHTML(o >= 0 ? o : G.countries[r.nc].name, 15)}<b>${trName(r, PLAYER)}</b><span class="small muted">${r.kind === 'land' ? '⛟ Land route' : '⚓ Sea route'} · ${pName(r.a === me ? r.pa : r.pb)} → ${pName(r.a === me ? r.pb : r.pa)}${via}${r.kind === 'sea' ? ` · ${pluN(r.len, 'sea zone')}` : ''}</span></div>
-      <div class="v" title="Per day while the route runs: money and goods from the partner. Full value $${fmt1(v.cash)}M + ${resFull(v.k, v.q)}."><b>+$${fmt1(v.cash*r.f)}M</b>${r.f < 1 ? `<span class="small muted"> of $${fmt1(v.cash)}M</span>` : ''} <span class="res-${v.k}">${ico(v.k)}</span> +${fmtQ(v.q*r.f)} <span class="small muted">${rlbl(v.k)}</span></div>
+      <div class="v" title="Per day while the route runs: money and goods from the partner. Full value $${fmt1(v.cash)}M + ${resFull(v.k, v.q)}."><b>+$${fmt1(v.cash*r.f*(1 - (tot.shock || 0)))}M</b>${r.f < 1 || tot.shock ? `<span class="small muted"> of $${fmt1(v.cash)}M</span>` : ''}${tot.shock ? ` <span class="small" style="color:var(--danger-t)" title="Your partners are wary of you: you hold occupied cities of a former partner">−${Math.round(tot.shock*100)}%</span>` : ''} <span class="res-${v.k}">${ico(v.k)}</span> +${fmtQ(v.q*r.f*(1 - (tot.shock || 0)))} <span class="small muted">${rlbl(v.k)}</span></div>
       <div class="st ${cls}">${txt}${risk > 0.05 && cls === 'ok' ? ` · <span style="color:var(--danger-t)" title="Chance the next convoy is attacked (escorts can still save it)">raid risk ${Math.round(risk*100)}%</span>` : ''}</div>
       <div class="acts"><button class="btn" data-act="goto" data-id="${mid}">Show</button>${r.kind === 'sea' ? `<button class="btn" data-act="trade-escort" data-id="${r.id}" title="Send your nearest idle fleet with warships to escort this route">Escort</button>` : ''}${r.pause === me ? `<button class="btn primary" data-act="trade-pause" data-id="${r.id}" data-v="0" title="Send convoys again: the route earns again (and can be raided again)">Resume</button>` : r.pause == null ? `<button class="btn" data-act="trade-pause" data-id="${r.id}" data-v="1" title="Hold the convoys in port: nothing can be sunk or captured, and the route earns nothing until you resume it. No opinion cost.">Pause route</button>` : ''}<button class="btn" data-act="trade-close" data-id="${r.id}" title="Stop trading with ${trName(r, PLAYER)} (−4 opinion). You can reopen it later.">Close</button></div></div>`; }).join('');
+  const lost = LR.map(L => { const nm = S.nations[L.partner].name, v = L.v || {cash:0, k:'metal', q:0};
+    const why = L.war ? `At war with ${nm}: the slot stays empty while you are at war, or while either of you holds the other's cities without annexing them.` : `${L.shock ? `You hold cities of ${nm}` : `${nm} holds cities of yours`} without annexing them: the slot stays empty until they are annexed or handed back.`;
+    return `<div class="trr lost" title="${why}"><div class="nm">${flagHTML(L.partner, 15)}<b>Lost: ${nm}</b><span class="small muted">${L.kind === 'land' ? '⛟ Land route' : '⚓ Sea route'} · ${L.war ? 'war' : 'cities held'} · since day ${dayOf(L.h)}</span></div>
+      <div class="v" title="What the route paid you a day before it ended"><b>−$${fmt1(v.cash)}M</b> <span class="res-${v.k}">${ico(v.k)}</span> −${fmtQ(v.q)} <span class="small muted">${rlbl(v.k)} a day</span></div>
+      <div class="st bad">${why}</div></div>`; }).join('');
   const closed = Object.keys(T.closed || {}).filter(k => { const [x, y] = k.split(':'); return +x === me || +y === me; }).map(k => { const [x, y] = k.split(':'), nm = y[0] === 'n' ? G.countries[+y.slice(1)].name : S.nations[+x === me ? +y : +x].name;
     return `<span class="chipx">${nm} · closed <button data-act="trade-reopen" data-k="${k}" aria-label="Reopen" title="Reopen this route">↺</button></span>`; }).join('');
   const cands = S.nations.filter(N => N.alive && N.id !== me && !atWar(me, N.id) && !T.routes.some(r => r.key === trKey(me, N.id))).map(N => `<option value="n${N.id}">${N.name} · ships ${rlbl(trGoods(N.id)[0])}${opinion(N.id, me) < -30 ? ' (refuses)' : ''}</option>`);
   const C = G.P[S.nations[me].capital], neu = [...neuPorts()].filter(([nc]) => !T.routes.some(r => r.key === trKey(me, NEUTRAL, nc))).map(([nc, ps]) => [nc, neuGdp(nc)/(1 + hexDist(C.cc, G.P[ps[0]].cc)/60)]).sort((x, y) => y[1] - x[1]).slice(0, 10).map(([nc]) => `<option value="c${nc}">${G.countries[nc].name} (independent) · ships ${rlbl(neuGood(nc))}</option>`);
   return `<div class="dp-routes open">${head}<p class="dp-rtip">Routes pay both partners every day: money, plus some of what the partner produces. Blockades cut or slow them; submarines, warships and patrol aircraft can sink a day's convoy. Escort a route with a fleet, or Pause it to keep its convoys in port.</p>
-    <div class="trl">${rows || '<p class="small muted">No trade routes: you are at war with everyone, or have no port.</p>'}</div>${closed ? `<div class="chips">${closed}</div>` : ''}
+    ${tot.shock ? `<p class="dp-rtip" style="color:var(--danger-t)">Your partners are wary of you: you hold occupied cities of ${shockBy.join(', ') || 'a former partner'}, so your other routes pay ${Math.round(tot.shock*100)}% less until you annex them.</p>` : ''}
+    <div class="trl">${rows || (lost ? '' : '<p class="small muted">No trade routes: you are at war with everyone, or have no port.</p>')}${lost}</div>${closed ? `<div class="chips">${closed}</div>` : ''}
     <div class="dp-ropen"><select id="tropen" aria-label="Open a route with" ${mine.length >= TR_MAX ? 'disabled' : ''}><option value="">Open a route with…</option>${cands.join('')}${neu.join('')}</select><button class="dp-btn" data-act="trade-open" ${mine.length >= TR_MAX ? `disabled title="At most ${TR_MAX} routes"` : ''}>Open route</button></div></div>`; }
 
 /* ---- ABOUT PLAYER: a nation's page (a person's, or a computer nation's) ---- */
@@ -5946,7 +6031,7 @@ function dpNationHTML(n){ const me = PLAYER, N = S.nations[n], w = dpWho(n), P =
 function dpStatsHTML(n, st, R, I){ const me = PLAYER, K = knownArmy(me, n), W = warList(n), B = st.bloc;
   const sales = ((S.terr && S.terr.log) || []).filter(e => (e.seller === me && e.buyer === n) || (e.seller === n && e.buyer === me)).slice(-5).reverse();
   const army = !K ? 'Unknown' : K.cmp ? `${fmt(K.units)} units · ${K.cmp} military` : K.all ? `${fmt(K.units)} units` : `${fmt(K.units)} units seen`;
-  const wars = [...W.nations.map(m => `<span class="dp-wn">${flagHTML(m, 14)} ${m === me ? 'You' : S.nations[m].name}</span>`), ...(W.rebels ? [`<span class="dp-wn reb">${W.rebels}</span>`] : [])];
+  const wars = [...W.nations.map(m => `<span class="dp-wn">${flagHTML(m, 14)} ${m === me ? 'You' : S.nations[m].name}</span>`), ...(W.rebels ? [`<span class="dp-wn reb" title="Rebels hold out in its cities: they count as one more war">${OC_RIFLES(16, '#ffc7a0')} ${W.rebels}</span>`] : [])];
   const opin = `<button class="dp-sr dp-opr" data-act="dp-why" aria-expanded="${DV.why}"><span>Opinion of you:</span> <b class="${I.opinion > 0 ? 'pos' : I.opinion < 0 ? 'neg' : ''}">${I.opinion > 0 ? '+' : ''}${I.opinion}</b><i>${DV.why ? 'Hide' : 'Why'} ▾</i></button>
     ${DV.why ? `<ul class="dp-why">${I.parts.length ? I.parts.map(x => `<li><span>${x[0]}</span><b class="${x[1] > 0 ? 'pos' : 'neg'}">${x[1] > 0 ? '+' : ''}${x[1]}</b></li>`).join('') : '<li><span>Neutral</span></li>'}</ul>` : ''}`;
   return `<div class="dp-stats">${opin}<div class="dp-sr"><span>Provinces:</span> <b>${fmt(st.provinces)}</b></div><div class="dp-sr"><span>Average morale:</span> <b>${st.morale}%</b></div>
@@ -6062,7 +6147,7 @@ function dpProfileHTML(n){ const me = PLAYER, own = n === me, N = S.nations[n], 
     <div class="dp-scroll"><div class="dp-prof">${flagHTML(n, 60, 'dp-pf')}<div><b>${dpEsc(P.name)}</b>${P.motto ? `<span class="dp-motto">${dpEsc(P.motto)}</span>` : ''}<small>Playing ${N.name} since day ${dayOf(P.since || 0)}</small></div></div>
       ${own ? `<div class="dp-card"><div class="dp-mgh">Your name and motto</div><label class="dp-fld"><span>Name</span><input id="dp-me-name" class="rn2" maxlength="24" value="${dpEsc(P.name)}" autocomplete="off"></label><label class="dp-fld"><span>Motto</span><input id="dp-me-motto" class="rn2" maxlength="80" value="${dpEsc(P.motto)}" autocomplete="off"></label><button class="dp-btn cy" data-act="dp-me-save">Save</button></div>` : ''}
       <div class="dp-stats"><div class="dp-mgh">This game</div><div class="dp-sr"><span>Victory points:</span> <b>${fmt(st.vp)}</b></div><div class="dp-sr"><span>Provinces:</span> <b>${fmt(st.provinces)}</b></div><div class="dp-sr"><span>Cities:</span> <b>${st.cities}</b></div>
-        <div class="dp-sr"><span>Coalition:</span> <b>${st.bloc ? dpEmb(st.bloc, 20) + ' ' + dpEsc(st.bloc.name) : 'none'}</b></div><div class="dp-sr"><span>Wars:</span> <b>${[...W.nations.map(m => m === me ? 'you' : S.nations[m].name), ...(W.rebels ? [W.rebels] : [])].join(', ') || 'none'}</b></div></div>
+        <div class="dp-sr"><span>Coalition:</span> <b>${st.bloc ? dpEmb(st.bloc, 20) + ' ' + dpEsc(st.bloc.name) : 'none'}</b></div><div class="dp-sr"><span>Wars:</span> <b>${[...W.nations.map(m => m === me ? 'you' : S.nations[m].name), ...(W.rebels ? [`<span class="dp-wn reb" style="font-size:inherit">${OC_RIFLES(14, '#ffc7a0')} ${W.rebels}</span>`] : [])].join(', ') || 'none'}</b></div></div>
       ${own ? `<div class="dp-card"><div class="dp-mgh">Friends</div>${FR.length ? FR.map(pid => `<div class="dp-fr">${dpI('person', 16)} ${fname(pid)}</div>`).join('') : '<p class="dp-foot">No friends yet: Add Friend on a player\'s page.</p>'}</div>` : ''}
       <p class="dp-foot">The online record (games played, wins, ranking) arrives with online play.</p></div>`; }
 
@@ -6614,10 +6699,10 @@ const zoomK = hexPx => Math.max(0.75, Math.min(hexPx > 24 ? Math.min(3, Math.max
    fixed bearing of their own at rest (turning smoothly, never offset per frame); night darkens them like the map. Drawn over the path lines and
    under the names, the HQ and the counters; only what is on screen (and a margin) is drawn, at most 40 groups (24 with low effects) a frame,
    those nearest the middle of the view first. Wings in flight keep their flat icons. Settings: 'Troop models' (off: the counters only). */
-const TMM = {inf:['sol', 'hmv'], para:['sol'], mar:['sol'], spec:['ssf'], at:['sat'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['lst'],
+const TMM = {inf:['sol', 'hmv'], reb:['reb'], para:['sol'], mar:['sol'], spec:['ssf'], at:['sat'], jam:['hmv'], ifv:['ifv'], tank:['tank'], art:['art'], mlrs:['mlrs'], sam:['sam'], frig:['frig'], sub:['sub'], crui:['crui'], carr:['carr'], lst:['lst'],
   jet:['jet'], bomb:['bomb'], stealth:['stealth'], mpa:['mpa'], awacs:['awacs'], int:['int'], asf:['asf'], heli:['heli'], drone:['drone'], sdrone:['sdrone'], swarm:['swarm']};   // (every aircraft type its own model)
 // each model's size as [characteristic length in metres, share of a tank's length]: a tank is tmRW() world px long (world-sized: it grows with the map)
-const TMG = {sol:[1.8, 0.42], sat:[1.8, 0.42], ssf:[1.8, 0.42], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
+const TMG = {sol:[1.8, 0.42], reb:[1.8, 0.42], sat:[1.8, 0.42], ssf:[1.8, 0.42], hmv:[5.2, 0.62], truck:[8, 0.78], tank:[9.8, 1], ifv:[8, 0.86], art:[10, 1], mlrs:[8, 0.86], sam:[9.6, 0.92],
   frig:[7.4, 1.25], lst:[8.0, 1.32], crui:[8.8, 1.4], sub:[8.6, 1.15], carr:[11, 1.7], jet:[16.5, 0.86], int:[17, 0.9], asf:[19.5, 0.98], heli:[17, 0.82], drone:[10.6, 0.66], sdrone:[10, 0.68], swarm:[8, 0.62],
   bomb:[46, 1.45], awacs:[46, 1.4], mpa:[36, 1.2], stealth:[21, 0.62]};   // (parked aircraft a little under scale, so a wing stays tucked by its counter; the big ones further under it: a
   // bomber or an AWACS about half as long again as a fighter, never longer than a carrier; the Stealth Bomber by its length, its span about 1.5 tanks)
@@ -6681,11 +6766,12 @@ let TMFOAM = null; function tmFoam(){ if (TMFOAM) return TMFOAM; const N = 128, 
   g.fillStyle = gr; g.fillRect(0, 0, N, N); g.globalCompositeOperation = 'destination-in'; const m = g.createLinearGradient(0, 0, N, 0); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.3, 'rgba(0,0,0,.6)'); m.addColorStop(0.7, 'rgba(0,0,0,.6)'); m.addColorStop(1, 'rgba(0,0,0,1)'); g.fillStyle = m; g.fillRect(0, 0, N, N);
   return (TMFOAM = c); }
 // a model's class: 'g' ground, 's' naval, 'a' air
-const TM_FOOT = new Set(['sol', 'sat', 'ssf']);   // the squads (on the march: a walking bob)
+const TM_FOOT = new Set(['sol', 'reb', 'sat', 'ssf']);   // the squads (on the march: a walking bob)
 const TM_CLS = t => /^(frig|lst|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|asf|bomb|stealth|mpa|awacs|heli|drone|sdrone|swarm)$/.test(t) ? 'a' : 'g';
-const TM_CT = {g:['sol', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'lst', 'sub', 'crui', 'carr'], a:['jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs', 'heli', 'drone', 'sdrone', 'swarm']};
+const TM_CT = {g:['sol', 'reb', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'lst', 'sub', 'crui', 'carr'], a:['jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs', 'heli', 'drone', 'sdrone', 'swarm']};
 // the unit mix of some armies: count per unit type (troops embarked at sea count as their transport, 'lst')
 function tmUnits(list){ const u = {}; for (const q of list){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ u.lst = (u.lst || 0) + count(q); continue; }
+    if (rebArmy(q)){ u.reb = (u.reb || 0) + count(q); continue; }   // rebels: their own squad of irregular fighters (the model 'reb')
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) u[t] = (u[t] || 0) + q.u[t]; } return u; }
 // the models a force shows (of class cls only): its unit types most numerous first (ties: the heavier), one model each, then the second
 // models (the 4x4 of motorized infantry) while there is room; never a model of a type it does not have
@@ -6982,7 +7068,7 @@ function satPlace(shown, near, now){ const placed = [];
   if (STKSLOT.size > 600) for (const [k2, E] of STKSLOT) if (now - E.t > 4000) STKSLOT.delete(k2); }
 // one stacked counter (satPlace) drawn at its place: returns its tap box
 function satDraw(q, now){ const lead = q.list.reduce((b, z) => count(z) > count(b) ? z : b, q.list[0]), fighting = q.cl.some(pbFight), selected = q.list.some(z => z.id === sel.army || sel.group.includes(z.id));
-  const [t0, mixed] = ucTypes(q.list), icon = ucIcon(t0, lead.owner), tk = forceSide(lead), fi = q.quiet ? false : fighting, sl = selected;
+  const [t0, mixed] = ucTypes(q.list), icon = rebArmy(lead) ? 'reb' : ucIcon(t0, lead.owner), tk = forceSide(lead), fi = q.quiet ? false : fighting, sl = selected;
   counter.ang = null; counter.dug = dugIn(lead);
   return q.tag ? tagDraw(q.x, q.y, lead, q.list, q.n, tk, icon, sl, false, fi, q.quiet, now, mixed && !lead.air) : diaDraw(q.x, q.y, lead, q.list, q.n, tk, icon, mixed && !lead.air, sl, false, fi, q.quiet, now); }
 function plateFade(clusters, k, now){ const hud = hudRects(), mg = 300, shown = [], cell = 96, grid = new Map();
@@ -8766,6 +8852,9 @@ const SIDEC = new Map();
 function sideOf(o){ if (o === PLAYER) return 'own'; if (o == null || o < 0 || !S || !S.nations[o]) return 'other'; let k = SIDEC.get(o); if (k) return k;
   k = atWar(PLAYER, o) ? 'war' : rel(PLAYER, o).st === 'ally' || sameBlocView(PLAYER, o) ? 'ally' : 'other'; SIDEC.set(o, k); return k; }
 const forceSide = a => !a ? 'own' : a.rebel ? 'war' : sideOf(a.owner);
+// rebels on the map (the crossed-rifles badge, the rebel squad, shown at every zoom): those that rose in a city (a.rebel), and the garrison of a city
+// that rebels took and holds as an independent city (its homeland is a nation's: rules/economy.js rebelFlip leaves S.home as it was)
+const rebArmy = a => !!a && (!!a.rebel || (a.owner === NEUTRAL && a.to === null && !a.air && !!G.P[a.at] && !!G.P[a.at].city && !!S.home && S.home[a.at] >= 0 && S.owner[a.at] === NEUTRAL));
 // the side colours of the counters, tags and forces (top, bottom, edge): yours green, allies blue, at war red, everyone else grey; the colour-blind
 // setting (like the map's) makes yours blue and the enemy orange, and allies purple
 const SIDE_T = {own:['#62b34a', '#3c8a2d', '#173f10'], ally:['#4c8fd6', '#2b63a4', '#10305a'], war:['#d0473c', '#9c2a23', '#4a100c'], other:['#8a9194', '#61686b', '#23292c']},
@@ -8876,11 +8965,12 @@ function supplyMark(x, y){ const q = 5; ctx.beginPath(); ctx.moveTo(x, y - q); c
 // commander's star beside it), out of supply at its upper right, over the stack limit at its lower left, a worn air wing's wrench at its lower
 // right, the crossed-bars battle badge at its right and a red breathing edge in battle
 function badgeDraw(x, y, a, L, n, tk, icon, mixed, selected, moving, fighting, minor, now, far){
-  const D = plateDims(n, 1, minor, !far), W = D.w, H = D.h, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = far ? null : flagBand(plateFlagOf(a), D.w, D.fh), E = badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor, far), x0 = X - W/2 + D.ox/2, y0 = Y - H/2, ang = counter.ang;
+  const D = plateDims(n, 1, minor, !far), W = D.w, H = D.h, X = moving ? x : snapD(x), Y = moving ? y : snapD(y), fc = far ? null : a && rebArmy(a) ? rebBadgeBand(D.w, D.fh) : flagBand(plateFlagOf(a), D.w, D.fh), E = badgeBody(tk, icon, n, fc, mixed, selected, fighting, minor, far), x0 = X - W/2 + D.ox/2, y0 = Y - H/2, ang = counter.ang;
   if (far && moving && !minor && ang != null){ const ca = Math.cos(ang), sa = Math.sin(ang), t = (W/2 + 5)/Math.max(0.7, Math.max(Math.abs(ca), Math.abs(sa))), cx = X + ca*t, cy = Y + sa*t, q = 4.6;   // heading chevron: just off the badge's edge, drawn under it
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(q, 0); ctx.lineTo(-q*0.8, -q*0.9); ctx.lineTo(-q*0.35, 0); ctx.lineTo(-q*0.8, q*0.9); ctx.closePath();
     ctx.lineJoin = 'round'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(5,8,10,.85)'; ctx.stroke(); ctx.fillStyle = sideHi(tk); ctx.fill(); ctx.restore(); }
   ctx.drawImage(E.c, x0 - E.ox, y0 - E.oy, E.c.width/dpr, E.c.height/dpr);
+  /*@TEST*/if (a && rebArmy(a) && (TMDBG.on || window.__rbOn)){ const L = window.__rbdbg || (window.__rbdbg = []); if (L.length > 200) L.length = 0; L.push({id:a.id, icon, band:!!fc, far:!!far, x:Math.round(X), y:Math.round(Y)}); }/*@ENDTEST*/   // (rebel badges drawn: .test/rebels-ui.js)
   if (fighting && !afxReduced()){ const k = 0.5 + 0.5*Math.sin(now*Math.PI*2/1600); animAmb(); ctx.save(); roundRect(ctx, x0 - 2, y0 - 2, W + 4, H + 4, D.rr + 2); ctx.strokeStyle = `rgba(255,96,80,${(0.12 + 0.3*k).toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }   // the red edge breathes
   let bg = null;
   if (!minor){ const cmd = L.some(cmdOf), dug = counter.dug && !moving;
@@ -8920,7 +9010,7 @@ function posDots(clusters){ const sat = new Set(); for (const c of clusters) if 
     const al = (c.pv ? c.pa ?? 1 : c.owner === PLAYER || sat.has(c) ? 1 : 0)*(c.hud ? PF_HUD : 1); dotDraw(c.px, c.py, forceSide(c.list[0]), al); } }
 function counter(c, a, L, n, selected, fighting, now){
   const quiet = a && a.owner !== PLAYER && !fighting && (a.owner === NEUTRAL || !atWar(PLAYER, a.owner)), o = a ? a.owner : PLAYER;
-  const [t0, mixed] = ucTypes(L), icon = ucIcon(t0, o), tk = forceSide(a), mv = c.moving && !quiet, sl = selected, fi = quiet ? false : fighting, ang = counter.ang;
+  const [t0, mixed] = ucTypes(L), icon = rebArmy(a) ? 'reb' : ucIcon(t0, o), tk = forceSide(a), mv = c.moving && !quiet, sl = selected, fi = quiet ? false : fighting, ang = counter.ang;
   // on the march, close in: a faint wake behind a ship's diamond, a little dust behind a ground force (world-anchored particles)
   if (mv && view.s*HS0 >= FORM_PX && ang != null && a && !a.air && !afxReduced()){ const D = plateDims(n, 1, false, false), ca = Math.cos(ang), sa = Math.sin(ang), t = (D.d/2 + 1)/Math.max(0.7, Math.abs(ca) + Math.abs(sa)), bx = c.dx - ca*t, by = c.dy - sa*t;
     if (G.P[a.at].sea){ if (!c.tag){ const Lw = D.d*0.9; ctx.save(); ctx.globalAlpha *= c.da ?? 1; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(232,240,244,.3)'; ctx.lineWidth = 1.3; ctx.beginPath();
@@ -9772,8 +9862,8 @@ function draw(now){ draw.now = now;
   const showNeutral = GS > 1 ? hexPx >= 49 : hexPx >= 11, items = [];   // (they fade in where they show)   // independent garrisons stay hidden until zoomed in (or selected / fighting)
   const unkA = [], ROLES = new Map(); LAY_R = ROLES; SIDEC.clear(); TMAS = tmArtSig();
   for (const a of S.armies){ if (!shownNow(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; }
-    if (!knowA(a, vis)){ if (!a.fly && !(a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at)){ unkA.push(a); tmRoleAdd(ROLES, a); } continue; }   // (its spot in the province is the one it would have identified: the '?' stands where it stands)   // spotted, not identified: only the '?' badge (no flag, count, type, name or 3D models)
-    tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
+    if (!knowA(a, vis)){ if (!a.fly && !(a.owner === NEUTRAL && !rebArmy(a) && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at)){ unkA.push(a); tmRoleAdd(ROLES, a); } continue; }   // (its spot in the province is the one it would have identified: the '?' stands where it stands)   // spotted, not identified: only the '?' badge (no flag, count, type, name or 3D models)
+    tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !rebArmy(a) && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;   // (rebels show at the zoom every other force shows)
     if (a.fly) continue;
     let [wx, wy] = armyPos(a); const mv = a.to !== null || (!!a.sail && (G.P[a.at].sea || !S.battles.includes(a.at))) || (a.path.length > 0 && GO.S === S && GO.has(a.id));   // (a walk held by a battle where it stands: standing, laid out with the other side's counter, not faded under it)
     let mvm = null; if (!a.air){ const m = mvm = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
@@ -10046,6 +10136,7 @@ function draw(now){ draw.now = now;
   if (PART.length) drawTrailDust();
   AFX.avoid = plateBoxes(hitsPrev); FXM.PLATECLIP = FXM.PLATEBOX = null;
   afxAmbient(now, vis);
+  drawCityFire(now, vis, LPL);   // cities at 33% morale or lower burn (fx.js: fire and smoke, display only)
   cqRun(now);   // the effects' queued steps (a salvo's rounds, the turn before firing)
   drawParticlesUnder(now);   // smoke, fire, flashes and bursts: under the counters, so no plate is ever veiled
   if (WFX.list.length || WFX.burn.length) drawWFX(now);   // strike and blast effects (missiles, warheads, combat blasts): over the small ones, still under the counters
@@ -10530,11 +10621,15 @@ function intelHTML(){ const N = S.nations[PLAYER], ag = agentsOf(PLAYER), idle =
   const slots = Array.from({length:5}, (_, i) => `<i class="ag ${i < ag.length ? (ag[i].op ? 'busy' : 'idle') : ''}" title="${i < ag.length ? (ag[i].op ? 'On a mission' : 'Idle, ready') : 'Empty slot'}"></i>`).join('');
   const miss = busy.map(a => { const P0 = G.P[a.op.p], o = S.owner[a.op.p];
     return `<div class="irow m"><i class="fw">${o >= 0 ? flagHTML(o, 14) : ''}</i><span><b>${SPY_OPS[a.op.k].name}</b> <span class="muted">· ${P0.cityName || P0.name}</span></span><span class="small muted">${a.op.h} h left · ${Math.round(spyChance(PLAYER, a.op.p, a.op.k)*100)}%</span><button class="btn" data-act="goto" data-id="${a.op.p}">Show</button></div>`; }).join('');
-  const ops = Object.values(SPY_OPS).map(O => `<div class="irow"><span><b>${O.name}</b><div class="small muted">${O.desc}</div></span><span class="small">$${O.cost}M · ${Math.round(O.base*100)}% base</span></div>`).join('');
+  // the province picked on the map, when it is foreign land: each operation with its button and, when it cannot be run there, why (Incite revolt:
+  // only an occupied city; rules/diplomacy.js spyCheck)
+  const tp = sel.prov !== null && !G.P[sel.prov].sea && S.owner[sel.prov] !== PLAYER ? sel.prov : -1, tP = tp >= 0 ? G.P[tp] : null;
+  const ops = Object.entries(SPY_OPS).map(([k, O]) => { const c = tp >= 0 ? spyCheck(PLAYER, tp, k) : null;
+    return `<div class="irow"><span><b>${O.name}</b><div class="small muted">${O.desc}${c && !c.ok ? ` <span style="color:#ffcf8a">${c.why}</span>` : ''}</div></span><span class="small">$${O.cost}M · ${c && c.ok ? Math.round(c.chance*100) + '% here' : Math.round(O.base*100) + '% base'}</span>${c ? `<button class="btn" data-act="spy" data-k="${k}" data-id="${tp}" ${c.ok ? '' : 'disabled'}>Send</button>` : ''}</div>`; }).join('');
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · intelligence service</div><h1>Intelligence</h1></div><div class="chip">${idle} idle</div></div>
     <div class="iagents"><span class="agslots">${slots}</span><span><b>${ag.length}/5 agents</b> <span class="muted">· ${idle} idle · ${busy.length} on missions</span></span><button class="btn${canTrain ? ' can' : ''}" data-act="train-agent" ${canTrain ? '' : 'disabled'}>Train agent · $60M</button></div>
     <div class="eyebrow">Missions under way</div>${miss || '<div class="muted small">No agent is on a mission. Open a foreign province on the map and pick an operation.</div>'}
-    <div class="eyebrow">Operations</div>${ops}
+    <div class="eyebrow">Operations${tP ? ` · ${tP.cityName || tP.name} (${nationName(S.owner[tp])})` : ''}</div>${ops}
     <div class="small muted">Each idle enemy agent lowers your chance by 8%. A caught agent is lost and costs relations.</div>`; }
 function armiesHTML(){
   const L = S.armies.filter(a => a.owner === PLAYER && count(a)).sort((x, y) => (x.air ? 2 : shipsOnly(x) ? 1 : 0) - (y.air ? 2 : shipsOnly(y) ? 1 : 0) || power(y) - power(x));
@@ -10679,7 +10774,7 @@ function tipShow(x, y){ tip.classList.remove('dugtip');
     if (navalCity(p)) h += `<div class="small nct">${NC_ICON} ${NC_TIP}</div>`;
     h += `<div class="r"><span>Population</span><span>${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span></div>`;
     { const sz = season(p), w = stormAt(p); if (sz || w) h += `<div class="r"><span>Weather</span><span>${[sz ? `${SEASON_FX[sz].name} (${SEASON_FX[sz].tip})` : '', w ? `${w.kind === 'blizzard' ? 'Blizzard' : 'Storm'} (air grounded, −20% speed)` : ''].filter(Boolean).join(' · ')}</span></div>`; }
-    if (unrestOf(p) > 10) h += `<div class="r"><span>Unrest</span><span style="color:${unrestOf(p) > 60 ? 'var(--danger)' : 'var(--accent)'}">${Math.round(unrestOf(p))}%</span></div>`;
+    { const F = morFactors(p); if (F && (F.st !== 'home' || F.shown <= 40)) h += `<div class="r"><span>Morale</span><span style="color:${F.burning ? 'var(--danger)' : 'var(--accent)'}">target ${Math.round(F.target)}%${F.st !== 'home' ? ` · ${F.st === 'anx' ? 'annexed' : 'occupied'}, ${Math.round(F.out*100)}% output` : ''}${F.burning ? ` · rebels ${Math.round(F.chance*100)}% at the day change` : ''}</span></div>`; }
     const B = bldSeen(p, PLAYER), bl = BK.filter(k => B[k]).map(k => BUILD[k].name + (BUILD[k].max > 1 ? ' ' + ROMAN[B[k]] : '')); if (bl.length) h += `<div class="r"><span>Built</span><span>${bl.join(', ')}</span></div>`; }
   if (foes.length) h += `<div class="r"><span>Hostile</span><span>${pluN(foes.reduce((s, a) => s + count(a), 0), 'unit')} · ${Math.round(foes.reduce((s, a) => s + power(a), 0))} str</span></div>`;
   if (unkHere) h += `<div class="r"><span>Contact</span><span style="color:#9fd8ff">? Unidentified army</span></div>`;
@@ -10772,12 +10867,17 @@ document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; let 
 /* Cities (bottom nav): every city you hold with its main resource, level, population and morale, what it is building and training (the same squares as the city
    sheet's BUILD and MOBILIZE UNIT, with the free slots: one construction slot, queueMax training slots), and Build / Mobilize buttons that open that city's
    lists right here (Back returns to this list). The rest of a row flies to the city. Sort: by city (capital first, then size), by main resource, idle first. */
-const CITY_SORTS = [['city', 'City', 'Capital first, then the biggest cities'], ['res', 'Resource', 'Grouped by main resource'], ['idle', 'Idle first', 'Cities with a free build or training slot on top']];
+const CITY_SORTS = [['city', 'City', 'Capital first, then the biggest cities'], ['res', 'Resource', 'Grouped by main resource'], ['idle', 'Idle first', 'Cities with a free build or training slot on top'], ['mor', 'Morale', 'Cities with rebels or burning (33% or lower) first, then the lowest morale']];
+// the Cities list's morale chips: rebels in the city, or burning (rebels may rise), and the occupied or annexed status (rules/economy.js morFactors)
+const cpMorChip = p => { const F = morFactors(p); if (!F) return ''; const st = F.st === 'occ' ? ` <span class="oc-chip lk" style="background:#6b5a2a" title="Occupied: ${Math.round(MOR.occOut*100)}% output, no mobilizing. Annex it from its build list.">Occupied</span>` : F.st === 'anx' ? ` <span class="oc-chip" style="background:#3c6b4f" title="Annexed: ${Math.round(MOR.anxOut*100)}% output">Annexed</span>` : '';
+  return (F.rebels ? ` <span class="oc-chip on" title="Rebels hold out in this city">${OC_RIFLES(12)}Rebels!</span>` : F.burning ? ` <span class="oc-chip fire" title="Burning: rebels ${mfPct(F.chance)}% at the day change">${MF_FIRE(11)}${mfPct(F.chance)}%</span>` : '') + st; };
 let CITY_SORT = 'city'; try { const v = localStorage.getItem('im-cities-sort'); if (CITY_SORTS.some(x => x[0] === v)) CITY_SORT = v; } catch (e) {}
 let CMOD_FROM = '';   // 'cities' while the Build / Mobilize list of a city was opened from the Cities tab: its Back button returns there
 function citySort(cities, N){ const QM = queueMax(PLAYER), RK = RES.map(r => r.k), big = (a, b) => (b.id === N.capital) - (a.id === N.capital) || popOf(b.id) - popOf(a.id) || String(a.cityName).localeCompare(b.cityName),
     free = P => (S.cons[P.id] ? 0 : 1) + (QM - Math.min(QM, queueUsed(P.id)))/QM;   // 2 = nothing built or trained, 0 = every slot busy
-  return cities.slice().sort(CITY_SORT === 'res' ? (a, b) => RK.indexOf(cityMain(a.id)) - RK.indexOf(cityMain(b.id)) || big(a, b) : CITY_SORT === 'idle' ? (a, b) => free(b) - free(a) || big(a, b) : big); }
+  const burn = P => (rebelsAt(P.id) ? 2 : morShown(P.id) <= MOR.rebelAt ? 1 : 0);
+  return cities.slice().sort(CITY_SORT === 'res' ? (a, b) => RK.indexOf(cityMain(a.id)) - RK.indexOf(cityMain(b.id)) || big(a, b) : CITY_SORT === 'idle' ? (a, b) => free(b) - free(a) || big(a, b)
+    : CITY_SORT === 'mor' ? (a, b) => burn(b) - burn(a) || morOf(a.id) - morOf(b.id) || big(a, b) : big); }
 // slot pips: filled for each slot in use, hollow for each free one ("Train 1/2")
 const slotPips = (used, max, what) => `<span class="sl${used >= max ? ' full' : ''}" title="${what}: ${used} of ${max} slot${max === 1 ? '' : 's'} in use${used < max ? ', ' + (max - used) + ' free' : ''}">${'<i class="on"></i>'.repeat(Math.min(used, max))}${'<i></i>'.repeat(Math.max(0, max - used))}<small>${what} ${used}/${max}</small></span>`;
 /* Cities panel, inline options and multi-select. CP holds what the panel remembers while it is open (cleared when it closes):
@@ -10793,7 +10893,7 @@ function buildWhy(p, k){ const B = BUILD[k], P = G.P[p], lv = S.bld[p][k] || 0, 
   if (k === 'silo' && !has(PLAYER, 'msl1')) return `Research required: ${RN.msl1.name}`;
   if (!canBuildHere(p, k)) return B.where === 'port' && P.city && !P.coast ? `No coast: a ${B.name} needs a coastal city` : B.where === 'city' && !P.city ? `${B.name} needs a city` : `Cannot be built here`;
   if (lv >= B.max) return B.max > 1 ? `Already at max level (${ROMAN[B.max]})` : 'Already built';
-  if (c) return c.k === k ? `Already building it (${csTime(c.h)} left)` : `Busy building ${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} (${csTime(c.h)} left)`;
+  if (c) return c.k === k ? `Already building it (${csTime(c.h)} left)` : `Busy building ${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''} (${csTime(c.h)} left)`;
   return ''; }
 const trainWhy = (p, t) => canMobilize(PLAYER, p, t) || queueWhy(PLAYER, p);
 const cpCost = (p, kind, k) => kind === 'bld' ? buildCost(PLAYER, k, nextLvl(p, k), p) : ucost(PLAYER, k);
@@ -10814,7 +10914,7 @@ function cpTrain(p, t){ if (!recruit(PLAYER, p, t)) return false; (S.lastUnit ||
 const cpTime = h => csTime(h);
 function cpSlots(p){ const c = S.cons[p], q = S.queue[p], QM = queueMax(PLAYER);
   return `<div class="cpq"><div class="cpqh"><b>Already queued here</b>${slotPips(c ? 1 : 0, 1, 'Build')}${slotPips(queueUsed(p), QM, 'Train')}</div>`
-    + (c ? `<div class="cpqi">${bimg(c.k, c.lvl, 22)}<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${cpTime(c.h)} left</em><span class="cpbar"><i style="width:${Math.round((1 - c.h/(c.h0 || c.h || 1))*100)}%"></i></span></div>` : '')
+    + (c ? `<div class="cpqi">${consImg(c, 22)}<span>${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${cpTime(c.h)} left</em><span class="cpbar"><i style="width:${Math.round((1 - c.h/(c.h0 || c.h || 1))*100)}%"></i></span></div>` : '')
     + q.map((it, i) => `<div class="cpqi">${it.msl ? mslIcon(it.t, 18) : unitPic(it.t, 'xs')}<span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><em>${i === 0 ? cpTime(it.h) + ' left' : 'waiting'}</em>${i === 0 ? `<span class="cpbar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></span>` : ''}</div>`).join('')
     + (!c && !q.length ? '<div class="cpqi none">Nothing is being built or trained here.</div>' : '') + '</div>'; }
 function cpBldOpt(p, k){ const N = S.nations[PLAYER], B = BUILD[k], lv = S.bld[p][k] || 0, nl = Math.min(B.max, lv + 1), cc = buildCost(PLAYER, k, nl, p), why = buildWhy(p, k), miss = !why && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : '', w = why || miss;
@@ -10827,7 +10927,7 @@ function cpUnitOpt(p, t){ const N = S.nations[PLAYER], U = UNITS[t], c = ucost(P
     <button class="btn cpb${w ? '' : ' can'}" data-act="cp-train" data-id="${p}" data-t="${t}" ${w ? 'aria-disabled="true"' : ''} title="${w || 'Train ' + U.name + ' in ' + cpName(p)}">Train</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
 // the options expanded under a row
 function cpInlineHTML(p, kind){ let list;
-  if (kind === 'bld') list = `<div class="cpl">${BK.map(k => cpBldOpt(p, k)).join('')}</div>`;
+  if (kind === 'bld') list = `<div class="cpl">${axShow(p) ? axCpOpt(p) : ''}${BK.map(k => cpBldOpt(p, k)).join('')}</div>`;
   else { const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b))), open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), far = UT.filter(t => blk(t) && !near(blk(t)));
     list = `<div class="cpl">${open.map(t => cpUnitOpt(p, t)).join('') || '<p class="muted cpnone">Nothing can be trained here yet.</p>'}</div>${far.length ? `<details class="locked cplock" ${CP.lock ? 'open' : ''}><summary>${far.length} locked unit${far.length > 1 ? 's' : ''} ▸</summary><div class="cpl">${far.map(t => cpUnitOpt(p, t)).join('')}</div></details>` : ''}`; }
   return `<div class="cpi" id="cpi" role="region" aria-label="${kind === 'bld' ? 'Build' : 'Train'} options for ${cpName(p)}"><div class="cpih"><b>${kind === 'bld' ? 'Build' : 'Train'} in ${cpName(p)}</b><span class="muted">${kind === 'bld' ? 'one construction at a time' : `${queueUsed(p)}/${queueMax(PLAYER)} training slots used`}</span><button class="btn cpx" data-act="cp-close" title="Close the options (Esc)" aria-label="Close the options">Close</button></div>${cpSlots(p)}${list}</div>`; }
@@ -10853,11 +10953,11 @@ function citiesHTML(){ const N = S.nations[PLAYER], cities = cpCities(), QM = qu
   const mine = new Set(cities.map(P => P.id)); for (const p of [...CP.sel]) if (!mine.has(p)) CP.sel.delete(p); if (CP.open && !mine.has(CP.open.p)) CP.open = null;
   const idle = cities.filter(P => !S.queue[P.id].length).length, ticked = cities.filter(P => CP.sel.has(P.id)).map(P => P.id);
   const rows = cities.map(P => { const p = P.id, q = S.queue[p], c = S.cons[p], mk = cityMain(p), used = queueUsed(p), q0 = q[0], on = CP.open && CP.open.p === p ? CP.open.kind : '', nm = P.cityName;
-    const bTxt = c ? `<b>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</b><em>${csTime(c.h)} left</em>` : `<b class="idle">No construction</b>${BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? '' : '<em>Fully built</em>'}`;
+    const bTxt = c ? `<b>${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''}</b><em>${csTime(c.h)} left</em>` : `<b class="idle">No construction</b>${BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? '' : '<em>Fully built</em>'}`;
     const tTxt = q0 ? `<b>${(UNITS[q0.t] || MISSILES[q0.t]).name}</b><em>${csTime(q0.h)} left${q.length > 1 ? ` · +${q.length - 1} waiting` : ''}</em>` : `<b class="idle">${csMobIdle(p)}</b>${used < QM ? '' : '<em>Queue full</em>'}`;
     return `<div class="cw${CP.sel.has(p) ? ' sel' : ''}${on ? ' open' : ''}" data-id="${p}"><div class="crow${q.length || c ? '' : ' idle'}" data-id="${p}">
       <label class="ccb" title="Tick ${nm} to queue in several cities at once"><input type="checkbox" data-act="cp-chk" data-id="${p}" ${CP.sel.has(p) ? 'checked' : ''} aria-label="Select ${nm}"></label>
-      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl">${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span>${cityBldsHTML(p)}</span>
+      <span class="cf res-${mk}" title="Main resource: ${cap1(MAIN_NAME[mk])}">${icon(mk, 38)}</span><span class="cn"><b>${nm}${p === N.capital ? ' <i class="capst" title="Capital">★</i>' : ''}</b><span class="cl">${p === N.capital ? 'Capital' : 'City'} · <span class="res-${mk}" title="Main resource">${cap1(MAIN_NAME[mk])}</span> · ${popOf(p).toFixed(1)}M · morale ${Math.round(moraleOf(p))}%</span>${(c => c ? `<span class="cmc">${c}</span>` : '')(cpMorChip(p))}${cityBldsHTML(p)}</span>
       <span class="cbx" title="Construction${c ? '' : ': nothing is being built'}">${csBldIcon(p, c)}<span class="ct">${bTxt}${slotPips(c ? 1 : 0, 1, 'Build')}</span></span>
       <span class="cbx" title="Training${q0 ? '' : ': nothing is being trained'}">${csMobIcon(q0)}<span class="ct">${tTxt}${slotPips(used, QM, 'Train')}</span></span>
       <span class="ca"><button class="btn cbtn${on === 'bld' ? ' on' : ''}" data-act="cp-open" data-kind="bld" data-id="${p}" aria-expanded="${on === 'bld'}" ${on === 'bld' ? 'aria-controls="cpi"' : ''} title="Build in ${nm}: the options open here">Build</button><button class="btn cbtn${on === 'trn' ? ' on' : ''}" data-act="cp-open" data-kind="trn" data-id="${p}" aria-expanded="${on === 'trn'}" ${on === 'trn' ? 'aria-controls="cpi"' : ''} title="Train in ${nm}: the options open here">Train</button><button class="btn cbtn cgo" data-act="goto" data-id="${p}" aria-label="Go to ${nm}" title="Go to ${nm} on the map">${GOICO}</button></span></div>${on ? cpInlineHTML(p, on) : ''}</div>`; }).join('');
@@ -10917,8 +11017,8 @@ const csMobIcon = q0 => q0 ? `<span class="cs-bi cs-mi tr${saverOn() || afxReduc
 // (S.cons[p].h0); an old save without it takes the time of the build from its data.
 const csBldH0 = (p, c) => c.h0 || (c.k && BUILD[c.k] && (buildCost(PLAYER, c.k, c.lvl, p) || {}).h) || c.h || 1;
 const csBldF = (p, c) => c ? Math.max(0, Math.min(1, 1 - c.h/csBldH0(p, c))) : -1;
-const csBPic = c => { const A = csArt(c.k, c.lvl); return `<span class="cs-bp${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>`; };
-const csBldIcon = (p, c) => c ? `<span class="cs-bi cs-mi tr cs-bpic${saverOn() || afxReduced() ? '' : ' live'}" title="${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' level ' + ROMAN[c.lvl] : ''}">${csBPic(c)}${BUILD[c.k].max > 1 ? `<b class="cs-bl">${ROMAN[c.lvl]}</b>` : ''}<i class="cs-mf" style="transform:translateY(${csMobY(csBldF(p, c))})"></i></span>` : `<span class="cs-bi">${CS_ICO.bld}</span>`;
+const csBPic = c => { if (c.k === 'annex') return `<span class="cs-bp ax">${AX_SVG(30)}</span>`; const A = csArt(c.k, c.lvl); return `<span class="cs-bp${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>`; };
+const csBldIcon = (p, c) => c ? `<span class="cs-bi cs-mi tr cs-bpic${saverOn() || afxReduced() ? '' : ' live'}" title="${consB(c.k).name}${consB(c.k).max > 1 ? ' level ' + ROMAN[c.lvl] : ''}">${csBPic(c)}${consB(c.k).max > 1 ? `<b class="cs-bl">${ROMAN[c.lvl]}</b>` : ''}<i class="cs-mf" style="transform:translateY(${csMobY(csBldF(p, c))})"></i></span>` : `<span class="cs-bi">${CS_ICO.bld}</span>`;
 // a city's main resource in words ("Oil city") and as the chip of the city sheet (with today's output and what the Arms Industry adds)
 // goods none of your cities produce (the city-resource economy: buy them or take a city)
 const noCityOf = k => MKT_K.includes(k) && !G.P.some(P => P.city && S.owner[P.id] === PLAYER && cityMain(P.id) === k);
@@ -10931,7 +11031,7 @@ const mainOutTxt = o => o.k === 'cash' ? '$' + Math.round(o.y) + 'M' : fmt(Math.
 function mainChip(p){ const o = cityOut(p); if (!o) return ''; const A = BUILD.arms;
   return `<span class="cs-main res-${o.k}" title="Main resource: ${MAIN_NAME[o.k]}, ${mainOutTxt(o)} a day.&#10;${A.name}${o.lv ? ' ' + ROMAN[o.lv] + ': +' + Math.round(ARMS_PCT*100*o.lv) + '% of it' : ': +' + Math.round(ARMS_PCT*100) + '% of it per level'}.">${icon(o.k, 12)}<b>${o.k === 'rare' ? 'Rare mat.' : cap1(MAIN_NAME[o.k])}</b></span>`; }
 // what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a building (no Army Base: infantry's reason, 'Needs Army Base level 1') says so
-const csMobIdle = p => { if (UT.some(t => !canMobilize(PLAYER, p, t))) return 'Nothing in training'; const k = mobBlock(PLAYER, p, 'inf'); return k && k.kind === 'bld' ? k.why : 'Nothing in training'; };
+const csMobIdle = p => { if (UT.some(t => !canMobilize(PLAYER, p, t))) return 'Nothing in training'; const k = mobBlock(PLAYER, p, 'inf'); return k && (k.kind === 'bld' || k.kind === 'occ') ? k.why : 'Nothing in training'; };   // (an occupied city: 'Occupied: annex the city to mobilize here')
 const CS_ICO = {
   flag:`<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><g fill="currentColor"><rect x="4" y="2" width="1.8" height="16" rx=".9"/><path d="M5.8 3.2h10l-2.6 3.6 2.6 3.6h-10z"/></g></svg>`,
   bld:`<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><path d="M15 18h7.4v4.2H15zM23.6 18H31v4.2h-7.4zM19.3 23.4h7.4v4.2h-7.4zM15 23.4h3.1v4.2H15zM27.9 23.4H31v4.2h-3.1zM15 28.8h7.4V31H15zM23.6 28.8H31V31h-7.4zM19.3 12.6h7.4v4.2h-7.4z"/>
@@ -10943,11 +11043,107 @@ const CS_ICO = {
     <path d="${m > 65 ? 'M5.8 11.6Q10 16.2 14.2 11.6' : m > 35 ? 'M6.4 13H13.6' : 'M6 14.6Q10 10.6 14 14.6'}" fill="none" stroke="#16323c" stroke-width="1.5" stroke-linecap="round"/></svg>`};
 const dayTxt = h => h % 24 ? csTime(h) : h === 24 ? '1 day' : h/24 + ' days';   // whole days in words ('1 day'), else as csTime
 const csTime = h => { if (h > 0 && h < 1) return durTxt(h); h = Math.max(0, Math.ceil(h)); return h >= 24 ? `${Math.floor(h/24)} d ${h % 24} h` : `${h} h`; };   // (under an hour: minutes, "30 min": Army Base I)
-// status line: Capital, Homeland City, Occupied City, Homeland Province ...
+// status line: Capital, Homeland City, Occupied City · 25% output, Annexed City · 50% output, Homeland Province ... (rules/economy.js occSt, occFactor)
 function csStatus(p){ const P = G.P[p], o = S.owner[p];
   if (isCapital(p)) return 'Capital';
-  if (o === NEUTRAL) return P.city ? 'Independent City' : 'Independent Province';
-  return (S.home && S.home[p] !== o ? 'Occupied ' : 'Homeland ') + (P.city ? 'City' : 'Province'); }
+  if (o === NEUTRAL) return P.city ? (S.home && S.home[p] >= 0 ? 'Independent City · held by rebels' : 'Independent City') : 'Independent Province';
+  const st = occSt(p), w = P.city ? 'City' : 'Province';
+  return st === 'occ' ? `Occupied ${w} · ${Math.round(occFactor(p)*100)}% output` : st === 'anx' ? `Annexed ${w} · ${Math.round(occFactor(p)*100)}% output` : 'Homeland ' + w; }
+/* ---- Occupation, morale, annexing and rebels on the page (owner points 8-11; docs/REBELS-PLAN.md section 6). Display only: every figure comes from the
+   rules (rules/economy.js morFactors, occSt, annexCost, annexWhy, rebelsAt; rules/trade.js lostRoutesOf). ---- */
+// the flame (a city at 33% morale or lower), the crossed rifles (rebels: the same drawing as the badge's rifleX) and the Annex City seal
+const MF_FIRE = (px = 16) => `<svg viewBox="0 0 16 18" width="${px}" height="${Math.round(px*18/16)}" aria-hidden="true"><path d="M8 1c1 3.2 4.8 4.6 4.8 9.2A4.8 4.8 0 0 1 3.2 10.2C3.2 7.6 5 6.4 5.6 4.4c.9 1.4 1.1 2.6 1 3.6C7.9 6.6 8.4 4.2 8 1z" fill="#ff8a1e" stroke="#7a1f0a" stroke-width=".8"/><path d="M8 8.2c.8 1.6 2.4 2.2 2.4 4.2a2.4 2.4 0 0 1-4.8 0c0-1.2.8-1.8 1.1-2.8.5.6.6 1.1.6 1.6.6-.8.9-1.8.7-3z" fill="#ffe27a"/></svg>`;
+const OC_RIFLES = (px, col = '#fff') => `<svg viewBox="0 0 100 100" width="${px}" height="${px}" aria-hidden="true"><g fill="${col}"><path transform="translate(50 52) rotate(-41.25) scale(1 1.5)" d="M-47-5L-25-3.5V3.5L-47 8ZM-26-4.5h28v8h-28ZM2-3.5h19v6.5H2ZM20-1.6h27v3.2H20Z"/><path transform="translate(50 52) rotate(-138.75) scale(1 -1.5)" d="M-47-5L-25-3.5V3.5L-47 8ZM-26-4.5h28v8h-28ZM2-3.5h19v6.5H2ZM20-1.6h27v3.2H20ZM-9 3h8q3 7 7 12.5l-7.5 2.5q-4-7-7.5-15ZM-17 3h5l-2 7.5-4.5-.5Z"/></g></svg>`;
+const AX_SVG = (px = 50) => `<svg viewBox="0 0 48 48" width="${px}" height="${px}" aria-hidden="true"><g fill="none" stroke="#3b2606" stroke-width="2.6"><rect x="9" y="7" width="30" height="34" rx="2" fill="#fff6dc"/><path d="M14 15h20M14 21h20M14 27h12"/></g><circle cx="33" cy="33" r="9" fill="#c4302a" stroke="#6e130f" stroke-width="2"/><path d="M29 33l3 3 5-6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+// a construction's small picture (Annex City is no building: its seal)
+const consImg = (c, px) => c.k === 'annex' ? `<i class="bi ax" style="--bs:${px}px" aria-hidden="true">${AX_SVG(px)}</i>` : bimg(c.k, c.lvl, px);
+const MF_ICO = {
+  base:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><rect x="1" y="7" width="4" height="8"/><rect x="6" y="3" width="4" height="12"/><rect x="11" y="5" width="4" height="10"/></g></svg>',
+  dist:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="3" cy="12" r="2"/><circle cx="13" cy="4" r="2"/><path d="M4.6 10.6 11.4 5.4" stroke-dasharray="2 1.6"/></g></svg>',
+  wars:'<svg viewBox="0 0 16 16" width="16" height="16"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l12 12M14 2 2 14"/></g></svg>',
+  foeNb:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><path d="M1 2h6l-1 4 1 4H1z" opacity=".5"/><path d="M9 2h6v8H9l1-4z"/><rect x="7.4" y="1" width="1.2" height="14"/></g></svg>',
+  foeHere:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><path d="M3 9a5 5 0 0 1 10 0v1H3z"/><rect x="2" y="10" width="12" height="2" rx="1"/></g></svg>',
+  lowNb:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 11.6q3-3 6 0" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="6.6" r="1"/><circle cx="10" cy="6.6" r="1"/></g></svg>',
+  hiNb:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 9.6q3 3 6 0" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="6.6" r="1"/><circle cx="10" cy="6.6" r="1"/></g></svg>',
+  short:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="4" y="9" width="3" height="2"/></g></svg>',
+  cas:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><path d="M2 14V7l6-5 6 5v7h-4v-4H6v4z"/><path d="M11 1l2 3-3 1z" fill="#ff8a1e"/></g></svg>',
+  cap:'<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M8 1l2 4.6 5 .4-3.8 3.2 1.2 4.8L8 11.4 3.6 14l1.2-4.8L1 6l5-.4z"/></svg>',
+  capLost:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.8l1.8 4.1 4.5.4-3.4 2.9 1 4.3L8 11.2l-3.9 2.3 1-4.3L1.7 6.3l4.5-.4z"/><path d="M2 14 14 2"/></g></svg>',
+  bunker:'<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M1 14V9q7-7 14 0v5h-4v-3H5v3z"/></svg>',
+  mob:'<svg viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><circle cx="5" cy="4" r="2"/><circle cx="11" cy="4" r="2"/><path d="M1.5 14c0-3.4 1.6-5.6 3.5-5.6S8.5 10.6 8.5 14zM7.5 14c0-3.4 1.6-5.6 3.5-5.6s3.5 2.2 3.5 5.6z"/></g></svg>'};
+const mfPct = v => v > 0 && v < 0.005 ? '<1' : String(Math.round(v*100));
+const mfPm = v => v > 0 ? '+' + v : v < 0 ? '−' + Math.abs(v) : '0';
+// the factors list's open or closed state, remembered on this device for two kinds of province: one that needs watching (occupied, 40% or less,
+// rebels in it: open by default) and any other (closed by default)
+const MF = {pref:null};
+function mfPref(){ if (MF.pref) return MF.pref; let v = null; try { v = JSON.parse(localStorage.getItem('im-morale-factors') || 'null'); } catch (e) {} return (MF.pref = v && typeof v === 'object' ? v : {}); }
+const mfAlarm = F => F.st === 'occ' || F.shown <= 40 || F.rebels;
+const mfOpen = F => { const v = mfPref()[mfAlarm(F) ? 'a' : 'c']; return v == null ? !!mfAlarm(F) : !!v; };
+function mfToggle(p){ const F = morFactors(p); if (!F) return; const P = mfPref(); P[mfAlarm(F) ? 'a' : 'c'] = !mfOpen(F); try { localStorage.setItem('im-morale-factors', JSON.stringify(P)); } catch (e) {} }
+// one row of the list: an icon, what it is in plain words with its count, the value (red when negative, green when positive)
+function mfRow(p, r){ const P = G.P[p], o = S.owner[p], v = Math.round(r.v), nm = n => S.nations[n] ? S.nations[n].name : 'Independent';
+  let lb = '';
+  switch (r.k){
+    case 'base': lb = !r.city ? 'Countryside <i>(100 whoever holds it)</i>' : r.st === 'occ' ? `Occupied city <i>(home ${MOR.home} · annexed ${MOR.anx})</i>` : r.st === 'anx' ? `Annexed city <i>(home ${MOR.home} · occupied ${MOR.occT})</i>` : `Homeland city <i>(annexed ${MOR.anx} · occupied ${MOR.occT})</i>`; break;
+    case 'dist': lb = r.cap >= 0 ? (p === r.cap ? 'The capital itself <i>(no distance)</i>' : `${fmt(r.km)} km from ${placeNm(r.cap)} <i>(−${MOR.kmStep} per ${fmt(MOR.kmUnit)} km, at most −${MOR.kmMax})</i>`) : 'Distance to the capital <i>(no capital held)</i>'; break;
+    case 'wars': { const L = S.nations.filter(M => M.alive && M.id !== o && atWar(o, M.id) && score(M.id) > 0).map(M => M.name);
+      lb = !r.n && !r.reb ? 'Wars <i>(−2 a nation at war, at most −25)</i>' : `At war with ${r.n ? pluN(r.n, 'nation') : ''}${r.n && r.reb ? ' and ' : ''}${r.reb ? 'rebels' : ''}${L.length ? ` <i>(${L.slice(0, 3).join(', ')}${L.length > 3 ? '…' : ''})</i>` : ''}`; break; }
+    case 'foeNb': { const ow = [...new Set(P.nbs.filter(q => !G.P[q].sea && S.owner[q] >= 0 && S.owner[q] !== o && atWar(o, S.owner[q])).map(q => S.owner[q]))];
+      lb = r.n ? `${pluN(r.n, 'neighbour')} held by ${ow.length === 1 ? nm(ow[0]) : 'the enemy'}` : 'Neighbours held by an enemy <i>(−5 each)</i>'; break; }
+    case 'lowNb': lb = r.c + r.r ? `${pluN(r.c + r.r, 'neighbour')} at ${MOR.low}% or less <i>(${[r.c ? pluN(r.c, 'city', 'cities') : '', r.r ? r.r + ' countryside' : ''].filter(Boolean).join(', ')})</i>` : `Neighbours at ${MOR.low}% or less <i>(−${MOR.lowC} a city, −${MOR.lowR} countryside)</i>`; break;
+    case 'hiNb': lb = r.c + r.r ? `${pluN(r.c + r.r, 'neighbour')} at 100% <i>(${[r.c ? pluN(r.c, 'city', 'cities') : '', r.r ? r.r + ' countryside' : ''].filter(Boolean).join(', ')})</i>` : `Neighbours at 100% <i>(+${MOR.hiC} a city, +${MOR.hiR} countryside)</i>`; break;
+    case 'foeHere': lb = `Enemy units in the ${P.city ? 'city' : 'province'}`; break;
+    case 'short': { const K = Object.keys(r.sh || {}); lb = K.length ? `Resource shortage <i>(${K.map(k => rlbl(k)).join(', ')})</i>` : 'Resource shortage <i>(none)</i>'; break; }
+    case 'cas': lb = 'Civilian casualties <i>(fades by a third a day)</i>'; break;
+    case 'capLost': lb = v ? `Capital lost <i>(${placeNm(r.c0)})</i>` : 'Capital lost'; break;
+    case 'cap': lb = `The capital city <i>(+${MOR.cap})</i>`; break;
+    case 'bunker': lb = r.lv ? `Bunker ${ROMAN[r.lv]}` : 'Bunker <i>(none built)</i>'; break;
+    case 'mob': lb = `Mobilisation${r.lv ? ` <i>(${['Peacetime', 'Partial', 'Total'][r.lv]})</i>` : ' <i>(homeland only)</i>'}`; break;
+    default: lb = r.k; }
+  const cls = r.k === 'base' ? 'base' : v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+  return `<div class="mf-r${v === 0 && r.k !== 'base' ? ' zero' : ''}" data-k="${r.k}"><span class="ic" aria-hidden="true">${MF_ICO[r.k] || MF_ICO.base}</span><span class="lb">${lb}</span><span class="v ${cls}">${r.k === 'base' ? v : mfPm(v)}</span></div>`; }
+// the Annex City button of the factors list's footer (an occupied city of yours): its price and time; while it runs, the bar and the days left;
+// the reason when it cannot start
+function mfAnnex(p, F){ const P = G.P[p], c = S.cons[p]; if (!P.city || S.owner[p] !== PLAYER) return '';
+  if (c && c.k === 'annex') return `<span class="mf-run" title="Annex City: ${csTime(c.h)} left. Lost if the city is captured or taken by rebels.">Annexing<span class="cs-pb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><em>${csTime(c.h)} left</em></span>`;
+  if (F.st !== 'occ') return '';
+  const k = annexCost(p), why = annexWhy(PLAYER, p);
+  return `<button class="mf-ax" data-act="annex" data-id="${p}"${why ? ' aria-disabled="true"' : ''} title="Annex City: $${k.cash}M and ${k.mp}k manpower, ${k.days} days. Output ${Math.round(MOR.anxOut*100)}% (from ${Math.round(MOR.occOut*100)}%), morale target ${MOR.anx}% (from ${MOR.occT}%), units can be mobilized here.${why ? '&#10;' + cap1(why) + '.' : ''}">Annex city <small>$${k.cash}M · ${k.mp}k · ${k.days} d</small></button>${why ? `<span class="mf-why">${cap1(why)}</span>` : ''}`; }
+// the factors list of province p held by you (null F: none)
+function mfHTML(p, F){ if (!F) return ''; const P = G.P[p], sh = F.shown, T = Math.round(F.target), st = F.st, g = F.units, rb = F.rebels ? rebelsAt(p) : null;
+  const tr = F.step > 0 ? `<span class="mf-trend up">+${F.step} a day</span>` : F.step < 0 ? `<span class="mf-trend">−${Math.abs(F.step)} a day</span>` : '<span class="mf-trend flat">steady</span>';
+  const chip = rb ? `<span class="mf-rb on">${OC_RIFLES(15)}Rebels <small>in the city</small></span>` : F.burning ? `<span class="mf-rb" title="The chance of a rising at the next day change">${MF_FIRE(14)}Rebels ${mfPct(F.chance)}% <small>at the day change</small></span>` : '';
+  const sw = st === 'occ' ? 'occupied' : st === 'anx' ? 'annexed' : 'homeland';
+  const stl = st === 'occ' ? (P.city ? `<b>Occupied city</b>: ${Math.round(MOR.occOut*100)}% of its output, and no units can be mobilized here. Annexed: ${Math.round(MOR.anxOut*100)}% output, units can be mobilized.` : `<b>Occupied land</b>: ${Math.round(MOR.occOut*100)}% of its output. It is annexed with its nearest city when you annex that city.`)
+    : st === 'anx' ? (P.city ? `<b>Annexed city</b>: ${Math.round(MOR.anxOut*100)}% of its output; units can be mobilized here. A capture takes the status away.` : `<b>Annexed land</b>: ${Math.round(MOR.anxOut*100)}% of its output.`)
+    : `<b>Homeland</b>: its full output${P.city ? '; units can be mobilized here' : ''}.`;
+  let note = '';
+  if (rb) note = `<b>${pluN(count(rb), 'rebel unit')} hold${count(rb) === 1 ? 's' : ''} out here.</b> ${g ? `Your ${pluN(g, 'unit')} ${g > 1 ? 'are' : 'is'} fighting them, dug in (+25% in a city). The city stays yours while your troops hold; if they are destroyed, it goes over to the rebels.` : 'None of your troops are left here: the city goes over to them.'}`;
+  else if (F.burning) note = `<b>Rebels can rise at ${MOR.rebelAt}% morale or lower.</b> At the day change: ${mfPct(F.chance0)}% at ${sh}% morale${g ? `, halved for each of your ${pluN(g, 'unit')} here: <b>${mfPct(F.chance)}%</b>. Each unit you add halves it again. They fight your troops here; an empty city is lost to them.` : `: <b>${mfPct(F.chance)}%</b>. None of your troops are here: an empty city is lost to them at once. Each unit you station halves the chance.`}`;
+  return `<div class="mf" id="mf" aria-label="Morale factors">
+    <div class="mf-hd"><span class="mf-big">Morale ${sh}% <span class="mf-arrow" aria-hidden="true">➜</span> ${T}% <em>target</em></span>${tr}<span class="mf-sp"></span>${chip}</div>
+    <div class="mf-bd">${F.rows.map(r => mfRow(p, r)).join('')}</div>
+    <div class="mf-ft"><span class="mf-tg">Target <b>${T}%</b></span><span class="mf-out">Output <b>${Math.round(F.out*F.link*100)}%</b> of a home city at full morale: <b>${Math.round(F.out*100)}%</b> ${sw} × <b>${Math.round(F.link*100)}%</b> at this morale</span>
+      <span class="mf-st">${stl}</span>${mfAnnex(p, F)}</div>
+    ${note ? `<div class="mf-note">${note}</div>` : ''}</div>`; }
+// a foreign city you can see: it burns (morale 33% or less: a burning city is no secret, question 16), or rebels you have identified hold out in it
+function mfForeign(p, F){ if (!F || !G.P[p].city) return ''; const o = S.owner[p], rb = rebelsAt(p), vis = visibleSet(PLAYER); if (!vis.has(p)) return '';
+  if (rb && knowA(rb, vis)) return `<div class="mf-fx">${OC_RIFLES(16, '#ffc7a0')}<span><b>Rebels</b> · ${pluN(count(rb), 'rebel unit')} hold${count(rb) === 1 ? 's' : ''} out here against ${nationName(o)}.</span></div>`;
+  return F.burning ? `<div class="mf-fx">${MF_FIRE(14)}<span><b>Burning</b> · morale ${F.shown}%: rebels may rise against ${nationName(o)} at the day change.</span></div>` : ''; }
+// the Annex City card that leads the city sheet's building cards (an occupied city of yours, or one being annexed)
+function axCard(p){ const c = S.cons[p], run = c && c.k === 'annex', k = annexCost(p), why = run ? '' : annexWhy(PLAYER, p);
+  const ttl = run ? `Annex City · ${csTime(c.h)} left&#10;Lost if the city is captured or taken by rebels.` : `Annex City: $${k.cash}M and ${k.mp}k manpower, ${k.days} days.&#10;Output ${Math.round(MOR.anxOut*100)}% (from ${Math.round(MOR.occOut*100)}%), morale target ${MOR.anx}% (from ${MOR.occT}%), units can be mobilized here.${why ? '&#10;' + cap1(why) + '.' : ''}`;
+  return `<button class="cs-c annex${run ? ' busy' : ''}${why ? ' blk' : ''}" data-act="annex" data-id="${p}" title="${ttl}"><span class="cs-ci">${AX_SVG(46)}</span>${run ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : `<span class="tag">$${k.cash}M · ${k.mp}k · ${k.days} d</span>`}<span class="cs-cn">Annex City</span></button>`; }
+const axShow = p => S.owner[p] === PLAYER && G.P[p].city && (occSt(p) === 'occ' || (S.cons[p] && S.cons[p].k === 'annex'));
+// the build list's Annex City row (the BUILD panel) and option (the Cities list)
+function axBldRow(p){ const N = S.nations[PLAYER], c = S.cons[p], run = c && c.k === 'annex', k = annexCost(p), why = run ? '' : annexWhy(PLAYER, p);
+  return `<div class="bld annex" data-bk="annex"><span class="bh">${consImg({k:'annex'}, 54)}<span><span class="nm">Annex City</span> <span class="lv">${run ? 'Annexing' : 'Occupied'}</span></span></span>
+    ${run ? `<span class="lv">${csTime(c.h)} left</span>` : `<button class="btn" data-act="annex" data-id="${p}" ${why ? 'disabled' : ''} title="${why ? cap1(why) : ''}"><span class="bt">Annex · ${k.days} d</span>${costHTML({cash:k.cash, mp:k.mp}, N)}</button>`}
+    <span class="ds">${why && !run ? `<span class="needt" style="color:#ffcf8a">${cap1(why)}.</span>` : ''}Occupied: ${Math.round(MOR.occOut*100)}% of the city's output and no mobilizing. Annexed: ${Math.round(MOR.anxOut*100)}% output, morale target ${MOR.anx}% (from ${MOR.occT}%), units can be mobilized, and the occupied countryside around it (the provinces nearest to this city) is annexed with it. It takes the city's construction slot; a capture or a rising loses it with its cost.</span></div>`; }
+function axCpOpt(p){ const N = S.nations[PLAYER], c = S.cons[p], run = c && c.k === 'annex', k = annexCost(p), w0 = run ? '' : annexWhy(PLAYER, p), why = run ? 'Being annexed: ' + csTime(c.h) + ' left' : w0 ? cap1(w0) : '';
+  return `<div class="cpo${why ? ' blk' : ''}" data-bk="annex"><span class="cpn">${consImg({k:'annex'}, 30)}<span><b>Annex City</b><small>occupied: ${Math.round(MOR.occOut*100)}% output</small></span></span>
+    <span class="cpc">${costHTML({cash:k.cash, mp:k.mp}, N)}<i class="cpt" title="Time">${k.days} d</i></span>
+    <button class="btn cpb" data-act="annex" data-id="${p}" ${why ? 'aria-disabled="true"' : ''} title="${why || 'Annex ' + cpName(p) + ': 50% output, units can be mobilized'}">Annex</button>${why ? `<span class="cpw">${why}</span>` : ''}</div>`; }
 // building pictures: the owner's art at its level where there is one, else the map symbol drawn large
 const CS_GL = {};
 function csGlyph(k){ if (CS_GL[k]) return CS_GL[k]; let u = '';
@@ -10967,8 +11163,8 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   let acts = '';
   if (mine){ const q0 = q[0];
     const mob = P.city ? big('cs-mob', csMobIcon(q0), 'Mobilize unit', q0 ? `${q0.msl ? mslIcon(q0.t, 15) : unitPic(q0.t, 'xs')}<span>${(UNITS[q0.t] || MISSILES[q0.t]).name}</span><em>${csTime(q0.h)}${q.length > 1 ? ` · +${q.length - 1}` : ''}</em>` : csMobIdle(p), q0 ? 1 - q0.h/(q0.h0 || 24) : null, (q0 ? '' : 'idle ') + 'cs-mob') : '';
-    const bld = big('cs-bld', csBldIcon(p, c), 'Build', c ? `<span>${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${csTime(c.h)}</em>` : BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? 'No construction' : 'Fully built', c ? csBldF(p, c) : null, 'cs-bldb');
-    acts = `<div class="cs-acts${P.city ? '' : ' one'}">${mob}${bld}</div>`; }
+    const bld = big('cs-bld', csBldIcon(p, c), 'Build', c ? `<span>${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><em>${csTime(c.h)}</em>` : BK.some(k => canBuildHere(p, k) && S.bld[p][k] < BUILD[k].max) ? 'No construction' : 'Fully built', c ? csBldF(p, c) : null, 'cs-bldb');
+    acts = `<div class="cs-acts${P.city ? '' : ' one'}">${P.city && !q0 && occSt(p) === 'occ' ? mob.replace('class="cs-big ', 'class="cs-big mob-off ') : mob}${bld}</div>`; }
   else if (o >= 0) acts = `<div class="cs-acts">${big('diplo-open', 'dip', 'Diplomacy', `${REL[r.st]} with ${nationName(o)}`, null)}${big('intel', 'intel', 'Intel', `${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}`, null)}</div>`;
   const st = csStatus(p);
   const ban = `<div class="cs-ban"><span class="cs-fl">${fl}</span><span class="cs-tt"><b class="cs-nm">${name}${isCapital(p) ? '<i class="cs-star" title="Capital">★</i>' : ''}</b>
@@ -10976,7 +11172,9 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
       <button class="cs-i" data-act="cs-info" aria-label="Province details" title="Province details">i</button><button class="cs-x" data-act="clear" aria-label="Close" title="Close (Esc)">${rg('x', 16)}</button></div>`;
   const yl = YK.filter(k => k !== 'mp' && y[k] >= yMin(k)).map(k => { const v = k === 'cash' ? Math.round(y[k]) : fmtQ(y[k]), R0 = RES.find(x => x.k === k);
     return `<span class="cs-y res-${k}" title="${k === 'cash' ? '$' + v + 'M ' + R0.name.toLowerCase() : resFull(k, y[k])} a day">${icon(k, 17)}<b>${k === 'cash' ? '$' + v + 'M' : v}</b></span>`; }).join('');
-  const stat = `<div class="cs-stat"><span class="cs-mor ${m > 65 ? 'hi' : m > 35 ? 'mid' : 'lo'}" title="Morale ${m}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}&#10;Low morale cuts this province's output."><i style="width:${m}%"></i>${CS_ICO.face(m)}<b>${m}%</b></span>
+  // the morale chip: its bar, face and whole-number morale; a flame and a red outline at 33% or lower; on your own land a tap opens the factors list
+  const F = !P.sea && o >= 0 ? morFactors(p) : null, mfo = mine && F ? mfOpen(F) : false;
+  const stat = `<div class="cs-stat"><span class="cs-mor ${m > 65 ? 'hi' : m > 35 ? 'mid' : 'lo'}${F && F.burning ? ' fire' : ''}${mine && F ? ' tog' + (mfo ? ' open' : '') : ''}"${mine && F ? ` data-act="mf-tog" role="button" tabindex="0" aria-expanded="${mfo}" aria-controls="mf"` : ''} title="Morale ${m}%${F ? ` · target ${Math.round(F.target)}%` : ''}${F && F.burning ? ` · burning: rebels ${mfPct(F.chance)}% at the day change` : ''}&#10;Low morale cuts this province's output.${mine && F ? `&#10;Tap for what moves it (${mfo ? 'close' : 'open'} the morale factors).` : ''}"><i style="width:${m}%"></i>${CS_ICO.face(m)}${F && F.burning ? `<span class="mor-fire">${MF_FIRE(14)}</span>` : ''}<b>${m}%</b>${mine && F ? '<span class="mf-car" aria-hidden="true">▾</span>' : ''}</span>
       <span class="cs-yl" title="Daily production">${yl || '<span class="cs-none">No production</span>'}</span>
       <span class="cs-pp" title="Population ${popOf(p).toFixed(1)}M · manpower ${Math.round(y.mp || 0)}k a day">${CS_ICO.pop}<b>${popOf(p).toFixed(1)}M</b>${(y.mp || 0) >= 0.5 ? `<span class="cs-mp res-mp">${icon('mp', 15)}<b>${Math.round(y.mp)}k</b></span>` : ''}</span></div>`;
   // building cards: the city first, then what stands here, then (yours) what can still be built
@@ -10987,9 +11185,10 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
     return `<${tag} class="cs-c${l ? '' : ' add'}${need ? ' need' : ''}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const B = bldSeen(p, PLAYER), built = BK.filter(k => B[k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [], first = P.city && can[0] === 'fac' ? can.shift() : null;   // (no Army Base yet: its card comes first; a foreign Bunker is hidden)
-  const cards = (isCapital(p) && o >= 0 ? hqCard() : '') + (first ? card(first, 0, {btn:true}) : '') + built.map(k => card(k, B[k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
+  const cards = (mine && axShow(p) ? axCard(p) : '') + (isCapital(p) && o >= 0 ? hqCard() : '') + (first ? card(first, 0, {btn:true}) : '') + built.map(k => card(k, B[k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
   const rl = mine && P.city ? (rallyOf(p) != null ? `<div class="cs-rl"><span class="cs-rt" title="New units from ${name} walk to ${rallyName(rallyOf(p))}">${CS_ICO.flag}<span>Rally point: <b>${rallyName(rallyOf(p))}</b></span></span><button data-act="rally" data-id="${p}">Change</button><button data-act="rally-clear" data-id="${p}">Clear</button></div>` : `<div class="cs-rl"><button class="cs-rb" data-act="rally" data-id="${p}" title="New units from ${name} will walk to a spot you pick on the map">${CS_ICO.flag}<span>Rally point</span></button><span class="cs-rn">New units stay in the city</span></div>`) : '';
-  return `${acts}<div class="cs-body">${ban}${stat}${rl}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
+  const mf = mine ? (mfo ? mfHTML(p, F) : '') : mfForeign(p, F);
+  return `${acts}<div class="cs-body">${ban}${stat}${mf}${rl}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
 function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWanted(), phone = innerWidth <= 820, on = p >= 0 && !(CS.det && phone);
   document.body.classList.toggle('cs-on', on); document.body.classList.toggle('cs-det', p >= 0 && CS.det && phone);
   if (!on){ CS.p = -1; if (!el.hidden && !el.classList.contains('out')){ el.classList.add('out'); clearTimeout(CS.t); CS.t = setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, afxReduced() ? 0 : 170); } return; }
@@ -11210,13 +11409,13 @@ function prodHTML(){
       return `<button class="qb${canRecruit(PLAYER, p, t) ? ' can' : ''}" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: ${costTxt(uc, ', ')}${queueMax(PLAYER) > 1 ? ' (shift-click: queue to the limit)' : ''}" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted"><span class="res-${cityMain(p)}" title="Main resource: ${MAIN_NAME[cityMain(p)]}">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${BK.filter(k => S.bld[p][k]).map(k => (k === 'fac' ? 'Base' : k === 'arms' ? 'Industry' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
-      <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${hoursTxt(c.h)}` : '<span class="muted">—</span>'}</td>
+      <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${consB(c.k).name} ${consB(c.k).max > 1 ? ROMAN[c.lvl] : ''} · ${hoursTxt(c.h)}` : '<span class="muted">—</span>'}</td>
       <td class="qcell"><div class="ub">${btns || `<span class="small muted">${qw || (k => k && k.kind === 'bld' ? k.why : 'Needs research')(mobBlock(PLAYER, p, 'inf'))}</span>`}</div></td>
       <td class="rcell"><label class="rep" title="Repeat: keep training the last unit queued here while you can afford it"><input type="checkbox" data-act="repeat" data-p="${p}" ${rp ? 'checked' : ''}><i aria-hidden="true"></i><span>${rp ? UNIT_NICK[rp] || UNITS[rp].short : 'Repeat'}</span></label></td></tr>`; }).join('');
   const idle = cities.filter(P => !S.queue[P.id].length).length;
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · ${cities.length} cities</div><h1>Production</h1></div>
     <div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
-    <div class="row" style="align-items:center;margin:4px 0 8px"><span class="small muted">Mobilisation</span>${['Peacetime', 'Partial', 'Total'].map((nm, i) => `<button class="btn ${(N.mob || 0) === i ? 'primary' : ''}" data-act="mob" data-v="${i}" style="padding:3px 9px;font-size:12px" title="${i === 0 ? 'Normal manpower, no strain.' : `Manpower +${i*40}%, cash income −${i*6}%, home unrest up to ${i*15}%.`}">${nm}</button>`).join('')}<span class="small muted">${fmt(N.mp)}k manpower · ${income(PLAYER).net.mp >= 0 ? '+' : ''}${fmt(income(PLAYER).net.mp)}k/day</span></div>
+    <div class="row" style="align-items:center;margin:4px 0 8px"><span class="small muted">Mobilisation</span>${['Peacetime', 'Partial', 'Total'].map((nm, i) => `<button class="btn ${(N.mob || 0) === i ? 'primary' : ''}" data-act="mob" data-v="${i}" style="padding:3px 9px;font-size:12px" title="${i === 0 ? 'Normal manpower, no strain.' : `Manpower +${i*40}%, cash income −${i*6}%, homeland morale target −${i*MOR.mob}.`}">${nm}</button>`).join('')}<span class="small muted">${fmt(N.mp)}k manpower · ${income(PLAYER).net.mp >= 0 ? '+' : ''}${fmt(income(PLAYER).net.mp)}k/day</span></div>
     ${idle ? `<div class="small" style="color:var(--accent)">${idle} ${idle === 1 ? 'city is' : 'cities are'} idle</div>` : ''}
     <div class="tblwrap"><table class="ptab prodt"><thead><tr><th>City</th><th>Training</th><th>Construction</th><th>Queue a unit</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">You hold no cities.</td></tr>'}</tbody></table></div>
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`;
@@ -12164,8 +12363,8 @@ function armsHere(p, lv){ const o = cityOut(p); if (!o) return ''; const d1 = v 
 function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '';
     const c = S.cons[p];
     html += `<div class="eyebrow">Construction</div>`;
-    if (c) html += `<div class="queue"><div class="qi"><span>${bimg(c.k, c.lvl, 22)}${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><span class="muted">${hoursTxt(c.h)} left</span></div><div class="bar"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></div></div>`;
-    html += `<div>${BK.filter(k => canBuildHere(p, k)).map(k => { const B = BUILD[k], lv = S.bld[p][k], nl = lv + 1, cc = buildCost(PLAYER, k, nl, p);
+    if (c) html += `<div class="queue"><div class="qi"><span>${consImg(c, 22)}${consB(c.k).name}${consB(c.k).max > 1 ? ' ' + ROMAN[c.lvl] : ''}</span><span class="muted">${c.k === 'annex' ? csTime(c.h) : hoursTxt(c.h)} left</span></div><div class="bar"><i style="width:${Math.round((1 - c.h/c.h0)*100)}%"></i></div></div>`;
+    html += `<div>${axShow(p) ? axBldRow(p) : ''}${BK.filter(k => canBuildHere(p, k)).map(k => { const B = BUILD[k], lv = S.bld[p][k], nl = lv + 1, cc = buildCost(PLAYER, k, nl, p);
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc), need = k === 'fac' && !lv && G.P[p].city;
       return `<div class="bld${need ? ' need' : ''}" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
         ${maxed ? '<span class="lv">Max</span>' : `<button class="btn${ok ? ' can' : ''}" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${ok ? '' : c ? buildWhy(p, k) : !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${cc.h < 1 ? csTime(cc.h) : Math.round(cc.h/2.4)/10 + ' d'}</span>${costHTML(cc, N)}</button>`}
@@ -12180,7 +12379,7 @@ function provHTML(p){
   const y = provYield(p);
   let html = `${CS.det && innerWidth <= 820 && !P.sea ? '<button class="btn cs-back" data-act="cs-back">‹ City view</button>' : ''}<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${navalCity(p) ? ' · Naval city' : P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
     <div class="sub">${P.city && !sameName(P.cityName, P.name) ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
-    <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${dmgOf(p) > 1 ? ` · war damage −${Math.round(dmgOf(p))}` : ''}${unrestOf(p) > 1 ? ` · unrest −${Math.round(unrestOf(p))}` : ''}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : ''].filter(Boolean).join(' · '))}${P.city && !P.sea ? (o => `<dt>Produces</dt><dd><span class="res-${o.k}">${icon(o.k, 11)}</span> <b>${cap1(MAIN_NAME[o.k])}</b>: ${mainOutTxt(o)} a day${o.lv ? ` (${BUILD.arms.name} ${ROMAN[o.lv]}: +${Math.round(ARMS_PCT*100*o.lv)}%)` : ` · ${BUILD.arms.name}: +${Math.round(ARMS_PCT*100)}% per level`}</dd>`)(cityOut(p)) : ''}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>Occupied</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
+    <dl class="kv"><dt>Population</dt><dd>${popOf(p).toFixed(1)}M</dd><dt>Morale</dt><dd style="color:${moraleOf(p) > 65 ? 'var(--ok)' : moraleOf(p) > 35 ? 'var(--accent)' : 'var(--danger)'}">${Math.round(moraleOf(p))}%${(F => F ? ` · target ${Math.round(F.target)}%` : '')(morFactors(p))}</dd>${S.owner[p] >= 0 && !homeComponent(S.owner[p]).has(p) ? `<dt>Overseas</dt><dd>${CONVOY_LOST.has(p) ? '<span style="color:var(--danger-t)">convoy sunk today</span>' : 'output ships home by convoy'}</dd>` : ''}${(d => d ? `<dt>Deposits</dt><dd>${d}</dd>` : '')([P.oil ? `<span class="res-oil">${icon('oil', 11)}</span> oil field` : '', P.ore ? `<span class="res-metal">${icon('metal', 11)}</span> ore` : '', P.iron ? `<span class="res-iron">${icon('iron', 11)}</span> iron hills` : ''].filter(Boolean).join(' · '))}${P.city && !P.sea ? (o => `<dt>Produces</dt><dd><span class="res-${o.k}">${icon(o.k, 11)}</span> <b>${cap1(MAIN_NAME[o.k])}</b>: ${mainOutTxt(o)} a day${o.lv ? ` (${BUILD.arms.name} ${ROMAN[o.lv]}: +${Math.round(ARMS_PCT*100*o.lv)}%)` : ` · ${BUILD.arms.name}: +${Math.round(ARMS_PCT*100)}% per level`}</dd>`)(cityOut(p)) : ''}<dt>Daily yield</dt><dd class="ycs">${yieldChips(y)}</dd>${occFactor(p) < 1 ? `<dt>${occSt(p) === 'anx' ? 'Annexed' : 'Occupied'}</dt><dd>${Math.round(occFactor(p)*100)}% output</dd>` : ''}
     ${isCapital(p) && o >= 0 ? `<dt>Capital</dt><dd title="${hqTip(o)}">${hqImg(o, 34)}Headquarters · ${hqStyleName(bnHqStyle(o))} style</dd>` : ''}
     <dt>Buildings</dt><dd>${(B => BK.filter(k => B[k]).map(k => `<span class="bl">${bimg(k, B[k], 30)}${BUILD[k].name}${BUILD[k].max > 1 ? ' ' + ROMAN[B[k]] : ''}${bdis(p, k) ? ` <span style="color:var(--danger-t)" title="Knocked out by a precision strike: works again when repaired">knocked out · ${bdisH(p, k)} h</span>` : ''}</span>`).join(''))(bldSeen(p, PLAYER)) || 'None'}</dd>
     ${!P.sea && o >= 0 ? (f => `${f != null ? `<dt>Captured from</dt><dd>${terrFrom(p)}</dd>` : ''}<dt>Value</dt><dd><b>$${fmt(provValue(p))}M</b>${mine && f != null ? (w => w ? ` <span class="muted">· ${terrLockH(p) ? `bought: resale in ${hrsTxt(terrLockH(p))}` : 'cannot be sold: ' + w}</span>` : ` <span class="muted">· can be sold in Diplomacy (Territory)</span>`)(terrWhyNot(PLAYER, p)) : ''}</dd>`)(capturedFrom(p)) : ''}
@@ -12188,8 +12387,9 @@ function provHTML(p){
     <dt>Capture</dt><dd>At once when ground troops reach ${P.city ? 'the city' : 'its centre'}</dd>
     <dt>Garrison</dt><dd>${foeUnk ? `<span style="color:#9fd8ff" title="Spotted, not identified: send recon">? Unidentified army</span>${foeKnown.length ? ' · ' + pluN(foeKnown.reduce((s, a) => s + count(a), 0), 'hostile unit') : ''}` : foe.length && !foeKnown.length && foe.some(a => armyLocated(a, vis)) ? '<span style="color:#9fd8ff" title="Detected by AWACS: location only">? Unidentified contact (AWACS)</span>' : foe.length && !foeKnown.length ? 'Unknown' : foeKnown.length ? pluN(foeKnown.reduce((s, a) => s + count(a), 0), 'hostile unit') : mine ? (own.length ? own.reduce((s, a) => s + count(a), 0) + ' of yours' : 'Empty') : 'None seen'}</dd></dl>`;
   if (o >= 0 && o !== PLAYER){ const r = rel(PLAYER, o); html += `<div class="status" style="border-left-color:${REL_COLOR[r.st]}">${REL[r.st]} with ${nationName(o)}${r.st === 'war' ? '' : '. Declare war in Diplomacy to attack.'} <button class="btn" data-act="diplo-open" style="padding:2px 7px;font-size:12px">Diplomacy</button></div>`; }
-  if (!P.sea && (o === PLAYER && unrestOf(p) > 0 || o !== PLAYER && unrestOf(p) > 20)){ const u = Math.round(unrestOf(p));
-    html += `<div class="status" style="border-left-color:${u > 60 ? 'var(--danger)' : u > 30 ? 'var(--accent)' : 'var(--ok)'}">Unrest ${u}%${u > 60 ? ' · revolt risk' : ''} · output −${Math.round(u/2)}% <div class="bar" style="margin-top:4px"><i style="width:${u}%;background:${u > 60 ? 'var(--danger)' : 'var(--accent)'}"></i></div>${o === PLAYER ? `<div class="row" style="margin-top:6px"><button class="btn" data-act="pacify" data-id="${p}" ${S.nations[PLAYER].cash >= 40 ? '' : 'disabled'} style="padding:3px 8px;font-size:12px">Pacify · $40M (−25%)</button><span class="small muted">Garrisons lower unrest every day.</span></div>` : ''}</div>`; }
+  // morale, occupation and rebels (rules/economy.js morFactors; the full factors list is the city panel's)
+  { const F = !P.sea && o >= 0 ? morFactors(p) : null; if (F && (F.st === 'occ' || F.shown <= 40 || F.rebels) && (o === PLAYER || P.city)){ const u = F.shown, c = S.cons[p], ax = c && c.k === 'annex', why = o === PLAYER ? annexWhy(PLAYER, p) : '', k = P.city ? annexCost(p) : null;
+    html += `<div class="status" style="border-left-color:${F.burning ? 'var(--danger)' : u <= 40 ? 'var(--accent)' : 'var(--ok)'}">Morale ${u}% → target ${Math.round(F.target)}% (${F.step >= 0 ? '+' : ''}${F.step} a day)${F.st !== 'home' ? ` · ${F.st === 'anx' ? 'annexed' : 'occupied'}: ${Math.round(F.out*100)}% output` : ''}${F.burning ? ` · <b style="color:var(--danger)">rebels ${Math.round(F.chance*100)}% at the day change</b>` : ''} <div class="bar" style="margin-top:4px"><i style="width:${u}%;background:${F.burning ? 'var(--danger)' : 'var(--accent)'}"></i></div>${o === PLAYER && P.city && F.st === 'occ' ? `<div class="row" style="margin-top:6px">${ax ? `<span class="small">Annexing · ${hoursTxt(c.h)} left</span>` : `<button class="btn" data-act="annex" data-id="${p}" ${why ? 'disabled' : ''} title="${why || '50% output, morale base 75, units can be mobilized here'}" style="padding:3px 8px;font-size:12px">Annex City · $${k.cash}M · ${k.mp}k · ${k.days} d</button>`}<span class="small muted">${F.burning ? 'Each of your units here halves the chance.' : 'Occupied: 25% output, no mobilizing.'}</span></div>` : ''}</div>`; } }
   if (!P.sea && o !== PLAYER){ html += `<div class="eyebrow">Intelligence · ${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}</div><div class="row">${Object.entries(SPY_OPS).map(([k, O]) => { const c = spyCheck(PLAYER, p, k); return `<button class="btn" data-act="spy" data-k="${k}" data-id="${p}" ${c.ok ? '' : 'disabled'} title="${O.desc}${c.ok ? ` ${Math.round(c.chance*100)}% chance.` : ' ' + c.why}" style="padding:4px 8px;font-size:11.5px">${O.name} · $${O.cost}M</button>`; }).join('')}</div>`; }
   if (S.battles.includes(p) && here.some(a => count(a) && (a.owner === PLAYER || isAlly(PLAYER, a.owner) || armyShown(a, vis)))){ const B = S.bt && S.bt[p];   // (a battle you cannot see is not told: owner 2026-11-25, nothing of foreign forces outside your land and sight)
     html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${pluN(frontage(p), 'unit')}${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => o !== PLAYER && !isAlly(PLAYER, o) && !here.some(a => a.owner === o && knowA(a, vis)) ? '\u0001' : o).filter((o, i, A) => o !== '\u0001' || A.indexOf(o) === i).map(o => { if (o === '\u0001') return '<br><span style="color:#9fd8ff">?</span> Unidentified army'; const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${pluN(b.n, 'unit')}${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
@@ -12219,8 +12419,10 @@ document.addEventListener('click', e => {
     case 'tab': setTab(b.dataset.tab); renderSide(); break;
     case 'notif': if (!$('modal').hidden && S && S.started) closeModal(); setTab('log'); if (innerWidth <= 820) sideOpen = true; renderSide(true); break;
     case 'intel': if (modalKind === 'intel' && !$('modal').hidden) closeModal(); else openModal(intelHTML(), 'intel'); break;
-    case 'pacify': { const pp = +b.dataset.id; if (S.nations[PLAYER].cash >= 40){ S.nations[PLAYER].cash -= 40; S.unrest[pp] = Math.max(0, unrestOf(pp) - 25); } renderSide(true); break; }
-    case 'spy': startSpy(PLAYER, +b.dataset.id, b.dataset.k); renderSide(true); break;
+    case 'annex': { const pp = +b.dataset.id, c = S.cons[pp], why = c && c.k === 'annex' ? '' : annexWhy(PLAYER, pp); if (c && c.k === 'annex') toast(`Annexing ${placeNm(pp)}: ${csTime(c.h)} left.`, 'info', pp); else if (why) toast(`Annex City: ${why}.`, 'bad', null); else { annexCity(PLAYER, pp); sfx('order'); }
+      if (modalKind === 'cities' && !$('modal').hidden) cpSet(); renderSide(true); break; }
+    case 'mf-tog': if (sel.prov !== null){ mfToggle(sel.prov); lastSig.csheet = ''; csSync(); const t = document.querySelector('#csheet .cs-mor.tog'); if (t && e.detail === 0) t.focus(); } break;
+    case 'spy': startSpy(PLAYER, +b.dataset.id, b.dataset.k); if (modalKind === 'intel' && !$('modal').hidden) setHTML($('sheet'), intelHTML()); renderSide(true); break;
     case 'train-agent': if (trainAgent(PLAYER)) log('A new intelligence agent is ready.', 'good', null); if (modalKind === 'intel' && !$('modal').hidden) setHTML($('sheet'), intelHTML()); renderSide(true); break;
     case 'msl-build': if (sel.prov !== null && buildMissile(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
     case 'msl-aim': if (sel.prov !== null){ if (modalKind === 'cbld' && !$('modal').hidden) closeModal(); aimMsl = {from:sel.prov, k:b.dataset.k}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
@@ -12686,7 +12888,7 @@ const HELP_SEC = [
     <li><b>Capture</b>: a province is yours the moment your ground units reach its centre point, the city (or, without a city, the crossroads in its middle where its roads meet), with no defenders left: there is no capture timer, and ${CAP_MIN === 1 ? 'one ground unit is enough' : CAP_MIN + ' ground units are needed'}. Every province's roads meet at that point, and a march into a province ends on it. Crossing the border or stopping anywhere else in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more. Enemy columns on the move that come into the same province or sea zone stop where they meet and fight; a force that meets the enemy in the province it was going to walks on to its point once it has won.</li>
     <li><b>Supply</b> reaches about 4,800 km over land from your cities (half across sea). Cut-off troops lose strength daily and get a red dashed outline.</li>
-    <li><b>Occupation</b>: conquered land grows unrest unless garrisoned; above 60% partisans may hand it back. Pacify it or keep troops there.</li></ul>`],
+    <li><b>Morale</b>: every province moves an eighth of the way to its morale target each day (homeland city 90, annexed city 75, occupied city 60, countryside 100, plus or minus distance to the capital, wars, enemy neighbours, shortages, casualties, the Bunker and more). Tap the morale chip in a city's panel for its target and every factor.</li><li><b>Occupation</b>: conquered land gives 25% of its output and cannot mobilize units; Annex City (in the city's build list) raises it to 50% and lets it mobilize. A capture takes the status away.</li><li><b>Rebels</b>: a city at 33% morale or less burns (fire and smoke on the map) and may rise at the day change (50% at 25%, certain at 10%); each of your ground units there halves the chance. The rebels (a grey badge with crossed rifles) fight your troops there, who count as dug in (+25%); an empty city is lost to them, with any annexing under way.</li><li><b>Trade partners</b>: a route lost to war stays empty while you are at war or hold the partner's cities unannexed, and holding them costs 25% on your other routes until you annex them.</li></ul>`],
   ['cmd', 'Commanding forces', `<ul>
     <li><b>Command bar</b> (bottom of the map): Move <kbd>M</kbd>, Attack <kbd>K</kbd> to pursue a force, Delay <kbd>L</kbd> to time a pincer, Split, Merge, Halt <kbd>X</kbd> and stance. Right-click moves or attacks (shift + right-click keeps the force selected). A force is released once ordered; its route stays drawn.</li>
     <li><b>Select many</b>: shift-click or shift-drag a box. <kbd>Ctrl</kbd>+4…9 saves a group, 4…9 recalls it.</li>
@@ -12737,7 +12939,7 @@ const HELP_SEC = [
     <li><b>Coalition gifts</b>: in Diplomacy's <b>Coalitions</b> tab choose <b>Give</b> by a partner (or <b>Give (coalition)</b> in its relation menu) to send money, oil, materials, iron, electronics, rare materials, manpower or even provinces: free and instant, limited by what they can store. AI partners also send you supplies when you run short.</li>
     <li><b>Market</b> (T): nations list goods for sale or wanted; you can post your own offers. Embargoes worsen your prices.</li></ul>`],
   ['intel', 'Intelligence and missiles', `<ul>
-    <li><b>Agents</b>: train up to 5 ($60M) and send them from any foreign province to scout, sabotage, stir unrest or steal technology. Failed agents are lost.</li>
+    <li><b>Agents</b>: train up to 5 ($60M) and send them from any foreign province to scout, sabotage, incite revolt in an occupied city or steal technology. Failed agents are lost.</li>
     <li><b>Fog of war</b>: you see everything on your own and allied land; beyond it, only what your units see: about 50 km around your forces (Special Forces 100); aircraft, UAVs, satellites and AWACS see further (see Drones). Your cities and airbases do not see past your border: an enemy army outside your land shows only once it crosses into it or comes into your units' sight.</li>
     <li><b>Strategic missiles</b>: research Cruise Missiles (Strategic Weapons), build a Missile Silo, produce Cruise or Ballistic missiles and launch them at any province in range. SAMs and frigates near the target can intercept.</li></ul>`],
 ];
@@ -13255,7 +13457,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () =>
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i], Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m, sea) => bnWet(nm, pts, x, y, s, m, 1, sea ? bnSea : bnWater), water:(x, y) => bnWater(x, y), isWet:(x, y) => isWet(x, y), box:(nm, mir) => bnBox(nm, mir), NAMEH:BN_NAMEH, lake:(x, y) => bnSmallLake(x, y), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), riv:(p, e) => { const P = G.P[p], d = bnRivDist(P.x, P.y, 20), R = bnRivers(); return {d, rivers:R.sea.length, toSea:R.sea.filter(Boolean).length}; }, rivDist:(x, y, l) => bnRivDist(x, y, l), stages:BN_STG, pierWater:p => { const its = bnItems(p), i = its.findIndex(e => e.k === 'yard'); if (i < 0) return null; const e = its[i], Lo = bnLayout(p, its), P = G.P[p], M = BNMETA[e.nm], F = bnFoot(e.nm), s = window.__im.bn.wsize(p, i, 100), Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, mir = !!Lo.mir[i], x = P.x + Lo.pos[i][0], y = P.y + Lo.pos[i][1], riv = !!(Lo.shore && Lo.shore.riv), Q = Lo.shore && Lo.shore.bas ? bnBasinGeo(e.nm) : null;
     let sea = 0, rv = 0, bs = 0; for (const [u, v] of F.pier){ const X = x + (mir ? M.ax - u : u - M.ax)*w, Y = y + (v - M.ay)*h; if (bnSea(X, Y)) sea++; else if (riv && bnRivDist(X, Y, 0.4) < 0.4) rv++; else if (Q && Q.in(u, v)) bs++; } const n = Math.max(1, F.pier.length); return {sea:sea/n, river:rv/n, basin:bs/n, water:(sea + rv + bs)/n}; }});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
 if (location.protocol === 'file:' && window.__im) window.__im.dock = {isWet:(x, y) => isWet(x, y), cands:p => dockCands(p), fkey:(a, p) => fkey(a, p)};   // ships-never-on-land display check (.test/ships-dock.js)
-if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor, far) => plateDims(n, 1, !!minor, !far), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, get tradeKinds(){ return TRSH.kinds; }, trKind:n => trKind(n)[0], tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
+if (location.protocol === 'file:' && window.__im) window.__im.uicon = {D:UICON_D, key:t => uiconKey(t), navy:(t, W) => uiconNavy(t, W), rband:(w, h) => rebBadgeBand(w, h), svg:(t, px) => uiconSVG(t, px), c:(t, W, col, sh) => uiconC(t, W, col, sh), path:t => uiconPath(t), pic:(t, sz) => unitPic(t, sz), dia:(t, side, n, mixed) => diaBody(side, t, n, !!mixed, false, false, false), tag:(t, side, n, o) => tagBody(side, t, n, flagBand(o, plateDims(n, 1, false, true).w, plateDims(n, 1, false, true).fh), false, false, false), badge:(t, side, n, o, mixed, minor, fighting) => badgeBody(side, t, n, flagBand(o, plateDims(n, 1, !!minor, true).w, plateDims(n, 1, !!minor, true).fh), !!mixed, false, !!fighting, !!minor), sandbag:(W, H) => sbmPaint(W, H), dims:(n, minor, far) => plateDims(n, 1, !!minor, !far), get dughit(){ return DUGHIT; }, get dpr(){ return dpr; }, get tradeDrawn(){ return TRSH.n; }, get tradeKinds(){ return TRSH.kinds; }, trKind:n => trKind(n)[0], tradeOn:() => tradeOn(), tradeCap:TRSHCAP};   // the unit icons (icon sheet, checks; dia/tag: the map's own counters)
 if (location.protocol === 'file:' && window.__im) window.__im.hitOf = id => { const h = tapList().find(q => q.ids.includes(id) && !q.unk); return h ? [h.x + h.w/2, h.y + h.h/2] : null; };   // (the attack range test: where a force's counter is tapped)
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im, {cp:{get CP(){ return CP; }, plan:(kind, k, ids) => cpPlan(kind, k, ids), buildWhy:(p, k) => buildWhy(p, k), trainWhy:(p, t) => trainWhy(p, t), buildCost:(k, p) => buildCost(PLAYER, k, nextLvl(p, k), p), ucost:t => ucost(PLAYER, t), cities:() => cpCities().map(P => P.id), units:() => UT.slice(), render:() => renderSide(true)}});
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BV:{get:() => BV}, GEO:{get:() => GEO}, lodBand:{value:h => lodBand(h)}, provAtV:{value:(x, y) => provAt(x, y)}, provAtW:{value:(x, y, b) => provAtW(x, y, b)}, provAtCell:{value:(x, y) => { const c = worldToCell(...screenToWorld(x, y)); return c >= 0 ? G.prov[c] : -1; }}, PLAY:{get:() => PLAY}, provFill:{value:(p, b) => provFill(p, b)}, bvWantHi:{value:() => bvWantHi()}, bvHiWanted:{value:() => !GEO || !GEO.bv || view.s*HS0 < 36 || !!BV.f2}, coastSets:{value:() => ({L:COASTR, B0:COASTR_B0, H1:COASTR_HI1, H2:COASTR_HI, MID:COASTR_MID})}});   // real borders (.test/borders-real.js)

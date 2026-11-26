@@ -18,7 +18,7 @@ const TIERS = ['S', 'A', 'B', 'C'];
 function load(){ globalThis.window = globalThis; if (!globalThis.WORLD){ require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js')); }
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
   return new Function("'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-    + '\nreturn {IM, UNITS, income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
+    + '\nreturn {IM, UNITS, atPeaceMor:typeof atPeaceMor === "function" ? atPeaceMor : (f => f()), income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
 const hash = s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 + c, 0x85ebca6b) ^ (h2 >>> 13); } return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0'); };
 const provs = S => { const c = S.nations.map(() => 0); for (const o of S.owner) if (o >= 0) c[o]++; return c; };
 const unitsOf = S => { const c = S.nations.map(() => 0); for (const a of S.armies) if (a.owner >= 0) for (const k in a.u) c[a.owner] += a.u[k] || 0; return c; };
@@ -67,7 +67,9 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
   const R = load(), api = R.IM.api, NAT = globalThis.NATIONS;
   api.useScenario('world64'); api.newGame(12345, 0, []); const S = api.S, G = api.G, mode = S.mode;
   const kitOf = N => R.tierKit(N.tier, mode);
-  const open = S.nations.map(N => { const g = R.income(N.id).gross; return {N, cash:g.cash, mp:g.mp, units:unitsOf(S)[N.id], kit:kitOf(N), cities:G.P.filter(P => S.owner[P.id] === N.id && P.city)}; });
+  // (the opening income read at the morale each province settles at in peace, as the catch-up is set (rules/economy.js morPeace): a game starts every
+  // province at 70% morale, owner point 9, so the first days' income is about 16% lower and rises as morale settles, docs/REBELS-PLAN.md 2.6)
+  const open = S.nations.map(N => { const g = R.atPeaceMor(() => ({...R.income(N.id).gross})); return {N, cash:g.cash, mp:g.mp, units:unitsOf(S)[N.id], kit:kitOf(N), cities:G.P.filter(P => S.owner[P.id] === N.id && P.city)}; });
   if (has('table')){ console.log(`nations world, ${S.nations.length} nations, mode ${mode} (spread ${R.tierMode(mode).spread}, floor ${R.tierMode(mode).floor}); capitals to win ${R.WIN_CAPS}, land to win ${R.landNeed(0)}+`);
     for (const o of open) console.log(`${o.N.tier} ${o.N.name.padEnd(15)} ${String(R.POWERS[o.N.power].region).padEnd(12)} prov ${String(provs(S)[o.N.id]).padStart(4)} cities ${String(o.cities.length).padStart(3)}  $/day ${o.cash.toFixed(0).padStart(4)} (target ${o.kit.day}, x${o.N.boost.toFixed(2)})  mp/day ${o.mp.toFixed(0).padStart(3)} (target ${o.kit.mpDay}, x${o.N.boostM.toFixed(2)})  units ${String(o.units).padStart(3)}  stock $${o.N.cash} mp ${o.N.mp} rare ${o.N.rare}  mains ${o.cities.map(P => (R.cityMain(P.id) || '?')[0]).sort().join('')}`);
     process.exit(0); }
