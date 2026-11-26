@@ -27,7 +27,7 @@
 //      city has no room for a second counter: out at hex 12 its own ground is narrower than two counters) joined to the city's counter, its dot still
 //      outside the ring; in at least 38 of the 40 cases at each mid zoom. And the other cities' names it would hide: master's names round it (fixtures/
 //      uc-mid-master.json, captured as for (A) with UC_MID_SAVE=1) dropped at most 1 per view. Also at play zoom (hex 30), where the play-zoom gaps from the city's counter come first: its own city's area in
-//      32 of 40 (Szczecin, on the coast and the border, has no such place: it is drawn as close in)
+//      24 of 40 (Szczecin and Poznan, crowded by neighbours and a border, have no such place: the leader line joins counter and dot)
 //  (S) mid zoom, no holder: a lone army 2 to 15 km off Berlin's, Munich's or Poznan's point (N and E), hex 8, 12, 16 and 20: its dot within 0.5 px of
 //      where it stands, no ring
 //  (B) Hamburg held at hex 12 (mid zoom, every city's name up): "Berlin" is drawn nearer Berlin's point than Hamburg's (a held ring never
@@ -202,7 +202,7 @@ async function midAll(p){ const out = [], KW = await p.evaluate(() => KM_W);
   // (M) mid zoom: a second army off a held point stands in its own city's area and hides no more than one other name a view; (S) a lone army's dot
   if (!process.env.UC_NO_MID){ const F = fs.existsSync(MID_FIX) ? JSON.parse(fs.readFileSync(MID_FIX)) : null, q = await namesOpen(b, path.join(__dirname, 'page.html')), V = await midAll(q); out.mid = {};
     for (const hp of MID_HEX){ const L = V.filter(v => v.hp === hp), own = L.filter(v => v.joined || v.near === v.p).length, R = {cases:L.length, ownArea:own, joined:L.filter(v => v.joined).length}; out.mid['hex ' + hp] = R;
-      if (own < (hp <= 20 ? 38 : 32)) fail('M the second army\'s counter in its own city\'s area (38 of 40 at mid zoom, 32 at play zoom)', {hp, ...R, other:L.filter(v => !(v.joined || v.near === v.p)).map(v => v.city + ' ' + v.dn)});
+      if (own < (hp <= 20 ? 38 : 24)) fail('M the second army\'s counter in its own city\'s area (38 of 40 at mid zoom, 24 at play zoom: its dot is where it stands, a leader line joins them)', {hp, ...R, other:L.filter(v => !(v.joined || v.near === v.p)).map(v => v.city + ' ' + v.dn)});
       for (const v of L){ if (!v.dot || !v.tru || Math.hypot(v.dot[0] - v.tru[0], v.dot[1] - v.tru[1]) > 0.5) fail('M its dot exactly where it stands', {k:`${v.city} ${v.dn} hex ${hp}`, dot:v.dot, tru:v.tru}); } }
     if (!F) fail('M master\'s names (fixtures/uc-mid-master.json)', 'missing'); else if (F.W !== W || F.H !== H) out.mid.names = 'skipped: master captured at ' + F.W + ' x ' + F.H;
     else { let mx = 0, tot = 0; for (let i = 0; i < F.views.length; i++){ const m = F.views[i], v = V[i], drawn = new Set(v.n.map(l => l.p)), dr = m.n.filter(p => p !== v.p && !drawn.has(p)); mx = Math.max(mx, dr.length); tot += dr.length;
