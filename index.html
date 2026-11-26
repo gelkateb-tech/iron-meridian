@@ -8178,7 +8178,7 @@ const heartOut = hexPx => heartRingR(hexPx) + 2.4 + dotR() + 1 + 6;   // how far
 // (vx, vy): its dot, relative to the city's point (css px). Returns its centre and how clear it is (>= 0: clear)
 /*@TEST*/let HBDBG = null;/*@ENDTEST*/
 // this frame's held points (heartHeld) for the counters stacked beside another (satPlace): none comes onto a held point's marker or its counter
-const HEARTF = {HB:new Map(), HO:new Map(), hexPx:0, on:null, tb:new Map(), nm:new Map()};   // (tb: the counters of the hidden forces placed round each held point this frame: heartHid; nm: heartNames)
+const HEARTF = {HB:new Map(), HO:new Map(), mc:new Map(), hexPx:0, on:null, tb:new Map(), nm:new Map()};   // (tb: the counters of the hidden forces placed round each held point this frame: heartHid; nm: heartNames)
 function heartBlocks(b){ const M = HEARTF.HB; if (!M.size) return false; const Rk = heartRingR(HEARTF.hexPx) + 3;
   let L = HEARTF.on; if (!L){ L = HEARTF.on = []; for (const [p, hb] of M){ const [mx, my] = toScreen(G.P[p].x, G.P[p].y); if (mx < -200 || my < -200 || mx > cw + 200 || my > ch + 200) continue; L.push([mx, my, [hb[0] + mx, hb[1] + my, hb[2] + mx, hb[3] + my]]); } }   // (once a frame: the held points on screen and their counters' boxes)
   for (const [mx, my, a] of L){ if (b[2] < a[0] - 40 || b[0] > a[2] + 40 || b[3] < a[1] - 40 || b[1] > my + Rk + 40) continue; if (boxPt(b, mx, my) < Rk) return true;
@@ -8245,7 +8245,9 @@ function heartHid0(n, q, hexPx, hb, p, T){
   return best; }
 // the held points' own counters (the badge of the force in the city, just above the ring, and the gap down to the ring), relative to each
 // point (css px): an off-point force keeps its dot and its counter clear of them (heartSpot, heartBadge)
-function heartHeld(clusters, hexPx){ const M = new Map(), R = heartRingR(hexPx);
+function heartHeld(clusters, hexPx, unkA = []){ const M = new Map(), R = heartRingR(hexPx);
+  { const r = BADGE/2*0.86 + 1, cy = -(BADGE/2*0.86 + R + 3.2); for (const a of unkA) if (!a.air && a.to === null && heartCity(a.at) && heartOn(a)){ const b = [-r, cy - r, r, Math.max(cy + r, -R)], o = M.get(a.at);   // (an unidentified contact on the point: its plate above the ring, unkPlate)
+      M.set(a.at, o ? [Math.min(o[0], b[0]), Math.min(o[1], b[1]), Math.max(o[2], b[2]), Math.max(o[3], b[3])] : b); } }
   for (const h of clusters){ if (h.hk !== 'H' || h.air || h.moving || h.at == null) continue; const q = clQuiet(h), r = plateRect(0, -(dotLift(h.n, q) + R + 3.2 - dotR() - 2), h.n, 1, q, false);
     const b = [r.x, r.y, r.x + r.w + (S.battles.includes(h.at) ? 14 : 0), Math.max(r.y + r.h, -R)], o = M.get(h.at);
     M.set(h.at, o ? [Math.min(o[0], b[0]), Math.min(o[1], b[1]), Math.max(o[2], b[2]), Math.max(o[3], b[3])] : b); let w = HEARTF.HO.get(h.at); if (!w) HEARTF.HO.set(h.at, w = new Set()); w.add(h.owner); }
@@ -8270,7 +8272,8 @@ function heartSpot(c, d, u, Rm, hexPx, hb, taken){ const rv = [u[0]*d, u[1]*d];
   let r; if (hexPx <= HEART_Z0) r = mid(false); else if (hexPx >= HEART_ZP1) r = play();
   else { let B = mid(1); if (!B.ctr || B.cc >= HEART_NEARC) B = mid(2); if (!B.ctr || B.cc >= HEART_NEARC) B = play();   // (no place by its dot in its own city's area: a little nearer the city's counter (2), else as close in)
     r = hexPx < HEART_ZE ? mix(mid(false), B, smooth01((hexPx - HEART_Z0)/(HEART_ZE - HEART_Z0))) : hexPx > HEART_ZP0 ? mix(B, play(), smooth01((hexPx - HEART_ZP0)/(HEART_ZP1 - HEART_ZP0))) : B; }
-  if (r.ctr) c.hmid = r; if (taken) taken.push(r.dot); return r.dot; }
+  if (r.ctr){ c.hmid = r; if (!r.fold){ const D = plateDims(c.n, 1, clQuiet(c), false); let L = HEARTF.mc.get(c.at); if (!L) HEARTF.mc.set(c.at, L = []); L.push([r.ctr[0] - D.w/2, r.ctr[1] - D.h/2, r.ctr[0] + D.w/2, r.ctr[1] + D.h/2]); } }   // (mc: the counters placed off this point this frame, for the next force's)
+  if (taken) taken.push(r.dot); return r.dot; }
 const HEART_NEARC = 400;   // (heartMid: a counter cost from which it stands nearer another city's point than its own)
 // MID ZOOM (hex up to HEART_Z0): a force off a city's point, the city held or not, has its dot just outside the ring (or the empty marker), along
 // its real bearing where it can (a few km are a pixel or less here: the push is display only), and its counter right by its dot: never on the
@@ -8287,6 +8290,7 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
   for (const [ox, oy] of [[0, -lift], [side, dotR() + 1 - D.h/2], [-side, dotR() + 1 - D.h/2], [0, lift]]) OFF.push([ox, oy, 0]);
   for (let r = 14; r <= 30; r += 4) for (let i = 0; i < 16; i++){ const t = i*Math.PI/8; OFF.push([Math.cos(t)*r, Math.sin(t)*r, 1]); }
   const ON = [], Pp = G.P[p]; for (const [q, r] of NMLAST){ if (q === p) continue; const ox = (G.P[q].x - Pp.x)*view.s, oy = (G.P[q].y - Pp.y)*view.s; if (Math.abs(ox) < 120 && Math.abs(oy) < 120) ON.push([r[0] + ox, r[1] + oy, r[2] + ox, r[3] + oy]); }   // (ON: the other names as drawn last frame)
+  const MC = HEARTF.mc.get(p) || [];
   // the best counter for a dot at (vx, vy): its cost (Infinity: none) and centre (a cost of NEAR or more: nearer another city's point)
   const NEAR = HEART_NEARC, ctr = (vx, vy, lim) => { let bc = lim, best = null;
     for (const [ox, oy, k] of OFF){ const x = vx + ox, y = vy + oy, c0 = 2*Math.hypot(ox, oy + lift) + 0.5*Math.hypot(x, y) + (oy > 0 ? 6 : 0) + k*4; if (c0 >= bc) continue;
@@ -8294,7 +8298,7 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
       if (st && hb && boxGap(pb, hb) < (st === 2 ? 3 : Math.min(pb[3], hb[3]) > Math.max(pb[1], hb[1]) ? HEART_ROW : HEART_GAP)) continue;   // (st 2: where the city has no other room, a narrower gap, beside it too)
       let cost = c0; if (HC){ const ow = Math.min(b[2], HC[2]) - Math.max(b[0], HC[0]), oh = Math.min(b[3], HC[3]) - Math.max(b[1], HC[1]); if (ow > 0 && oh > 0){ const fo = ow*oh/((b[2] - b[0])*(b[3] - b[1])); if (fo > FO) continue; cost += 12 + 200*fo; } }   // (over the city force's counter only a little: their bodies, without the marks)
       const e = nearer(x, y, 2); if (e > 0) cost += NEAR + 20*e; if (cost >= bc) continue;
-      for (const nb of NM.near) if (boxGap(pb, nb) < 0) cost += 150; for (const nb of ON) if (boxGap(pb, nb) < 0) cost += 150; for (const m of MK) if (boxPt(pb, m[0], m[1]) < 2) cost += 40; if (cost >= bc) continue;
+      for (const nb of NM.near) if (boxGap(pb, nb) < 0) cost += 150; for (const nb of ON) if (boxGap(pb, nb) < 0) cost += 150; for (const z of MC) if (boxGap(b, z) < 2) cost += 300;   // (off the counters of the forces placed off this point before it) for (const m of MK) if (boxPt(pb, m[0], m[1]) < 2) cost += 40; if (cost >= bc) continue;
       const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; cost += g === 1.5 ? 40 : 15*g; if (cost < bc){ bc = cost; best = [x, y]; } }
     return [bc, best]; };
   const run = cf => { let best = null, bc = Infinity;
@@ -9325,7 +9329,7 @@ function draw(now){ draw.now = now;
   // WORLD ANCHORS: each force's spot on the map (world units): its province's slot for it (provLayout), its pinned spot, or on the march its
   // smoothed position easing between its old and new slots. The counter is pinned just above it at one pixel size; its models stand just under it.
   const HST = new Map(), hsTaken = p => { let L = HST.get(p); if (!L) HST.set(p, L = []); return L; };   // (units in cities: the dots placed off each city's point this frame)
-  const farT0 = performance.now(); HEARTF.HO.clear(); const HB = HEARTF.HB = heartHeld(clusters, hexPx); HEARTF.hexPx = hexPx; HEARTF.on = null; HEARTF.tb.clear(); /*@TEST*/HBDBG = HB;/*@ENDTEST*/   // (units in cities: the held points' own counters, for the forces off their points)
+  const farT0 = performance.now(); HEARTF.HO.clear(); const HB = HEARTF.HB = heartHeld(clusters, hexPx, unkA); HEARTF.hexPx = hexPx; HEARTF.on = null; HEARTF.tb.clear(); HEARTF.mc.clear(); /*@TEST*/HBDBG = HB;/*@ENDTEST*/   // (units in cities: the held points' own counters, for the forces off their points)
   for (const c of clusters){ const it = c.it, a = c.list[0]; let A;
     if (c.far){ const L0 = PLAY.get(c.at); if (!(L0 && L0.S === S) && performance.now() - farT0 > 6){ c.dead = true; continue; } }   // (an off-screen province not laid out yet waits for a frame with time to spare)
     if (c.pinned && !c.dock){ A = [it.wx, it.wy]; c.cls = c.air ? 'a' : G.P[a.at] && G.P[a.at].sea ? 's' : 'g';
