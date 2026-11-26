@@ -8298,7 +8298,7 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
       if (st && hb && boxGap(pb, hb) < (Math.min(pb[3], hb[3]) > Math.max(pb[1], hb[1]) ? HEART_ROW : HEART_GAP)) continue;   // (play zoom: a clear gap from the city's counter, wider beside it; st 2, where the city has no other room: its dot may go above the ring's sides too)
       let cost = c0; if (HC){ const ow = Math.min(b[2], HC[2]) - Math.max(b[0], HC[0]), oh = Math.min(b[3], HC[3]) - Math.max(b[1], HC[1]); if (ow > 0 && oh > 0){ const fo = ow*oh/((b[2] - b[0])*(b[3] - b[1])); if (fo > FO) continue; cost += 12 + 200*fo; } }   // (over the city force's counter only a little: their bodies, without the marks)
       const e = nearer(x, y, 2); if (e > 0) cost += NEAR + 20*e; if (cost >= bc) continue;
-      for (const nb of NM.near) if (boxGap(pb, nb) < 0) cost += 150; for (const nb of ON) if (boxGap(pb, nb) < 0) cost += 150; for (const z of MC) if (boxGap(b, z) < 2) cost += 300;   // (off the counters of the forces placed off this point before it) for (const m of MK) if (boxPt(pb, m[0], m[1]) < 2) cost += 40; if (cost >= bc) continue;
+      for (const nb of NM.near) if (boxGap(pb, nb) < 0) cost += 150; for (const nb of ON) if (boxGap(pb, nb) < 0) cost += 150; for (const z of MC) if (boxGap(b, z) < 2) cost += 300; if (taken) for (const t of taken) if (boxPt(b, t[0], t[1]) < dR + 1) cost += 300;   // (off the counters and the dots of the forces placed off this point before it) for (const m of MK) if (boxPt(pb, m[0], m[1]) < 2) cost += 40; if (cost >= bc) continue;
       const g = heartGndBox(p, x, y, w2, h2); if (g === 2) continue; cost += g === 1.5 ? 40 : 15*g; if (cost < bc){ bc = cost; best = [x, y]; bn = e > 0; } }
     return [bc, best, bn]; };
   const run = cf => { let best = null, bc = Infinity;
@@ -8307,7 +8307,7 @@ function heartMid0(c, d, u, hexPx, hb, taken, fold, st, nl = []){ const p = c.at
         if ((far && (j || i)) || (taken && taken.some(t => Math.hypot(t[0] - vx, t[1] - vy) < sp))) continue;   // (one standing well clear of the point is drawn where it stands)
         if ((hb && boxPt(hb, vx, vy) < dR + 1) || (NM.own && boxPt(NM.own, vx, vy) < dR + 1) || nl.some(b => boxPt(b, vx, vy) < dR + 2) || (col && vx > col[0] && vx < col[2] && vy < col[3]) || (st && hb && boxPt([hb[0], hb[1], hb[2], Math.max(hb[3], -R)], vx, vy) < 9)) continue;   // (never under the city force's counter or on its city's name)
         const real = !j && D1 === d, g = real ? 0 : heartGnd(p, vx, vy); if (g === 2) continue;
-        let cost = c0 + 15*g + (NM.near.some(b => boxPt(b, vx, vy) < dR) ? 40 : 0) + (ON.some(b => boxPt(b, vx, vy) < dR + 1) ? 120 : 0) + (nearer(vx, vy, 0) > 0 ? 30 : 0); if (cost >= bc) continue;   // (ON: off the other names as drawn last frame where it can)
+        let cost = c0 + 15*g + (MC.some(b => boxPt(b, vx, vy) < dR + 1) ? 300 : 0) + (NM.near.some(b => boxPt(b, vx, vy) < dR) ? 40 : 0) + (ON.some(b => boxPt(b, vx, vy) < dR + 1) ? 120 : 0) + (nearer(vx, vy, 0) > 0 ? 30 : 0); if (cost >= bc) continue;   // (ON: off the other names as drawn last frame where it can)
         if (!cf){ bc = cost; best = {dot:[vx, vy], ctr:null, cc:0}; continue; }
         const [cc, cp, cn] = ctr(vx, vy, bc - cost); if (!cp) continue; cost += cc; if (cost < bc){ bc = cost; best = {dot:[vx, vy], ctr:cp, cc, near:cn, real}; } } }
     return best; };
