@@ -4,7 +4,8 @@
 //   - people: the person playing a seat (name, motto, an id for friends), the friends list and who a seat has muted (stored with the game, D3)
 //   - conversations: one thread per pair (a seat's desk chat): messages, offer cards and system cards (treaties, sales, wars), unread counts
 //   - trades: one deal of money, goods, cities and provinces (every territory rule of rules/territory.js) and treaties both sides sign, checked by
-//     dealWhy; a computer nation answers at once (accept, decline or a deterministic counter-offer, dealAnswer); a person gets the offer for 2 days
+//     dealWhy; a computer nation answers at once (accept, decline or a deterministic counter-offer, dealAnswer; never yes when it gets nothing back,
+//     D10); a person gets the offer for 2 days
 //   - the screen's pure readers (relInfo, relMenu, natStatsAll, knownArmy, warList, threads, threadView, offersWith, dealPreview): they write nothing
 //   - the actions the page used to do itself (aid, tribute, coalition rename and leave, embargo, treaty proposals, offer answers, mark read)
 // State (all lazy: an old save has none of it and loads as it is): S.ppl {n:{name, motto, pid, since}}, S.deals [open offers to and from people,
@@ -142,16 +143,27 @@ function dealWhy(a, b, D){ const A = S.nations[a], B = S.nations[b];
 // what computer nation ai thinks of the deal D from seat me (D from me's side): its value to ai ($M; it says yes at 10 or more), and the firm
 // no's: parts it will not take at any price (land it does not want, an alliance it refuses, its own land)
 const DEAL_OK = 10;
+// what treaty k is worth to computer nation ai, signed with me ($M; null: an alliance it refuses at any price)
+function treatyValue(me, ai, k){ const a = acceptOffer(ai, me, k), op = opinion(ai, me);
+  if (k === 'peace') return a.ok ? 60 : -(140 + natPower(ai)*0.4);
+  if (k === 'nap') return a.ok ? 20 : -110;
+  if (k === 'pass') return (a.ok ? -10 : op >= 0 ? -90 : -300) + 30;   // (right of way is mutual: it gives and receives it)
+  if (k === 'ally') return a.ok ? 40 : null;
+  return 0; }
 function dealValue(me, ai, D){ const firm = [];
   let v = sideCash(D.give) - sideCash(D.get)*1.05;   // (as dealValueFor: what it gives counts 5% more)
   for (const p of D.give.provs){ const w = terrWant(ai, p, me); if (w <= 0) firm.push({k:'prov', p, why:`${S.nations[ai].name} is not interested in ${provName(p)}`}); v += w; }
   for (const p of D.get.provs) firm.push({k:'own', p, why:`${S.nations[ai].name} never sells land`});
-  for (const k of D.give.treaty){ const a = acceptOffer(ai, me, k), op = opinion(ai, me);
-    if (k === 'peace') v += a.ok ? 60 : -(140 + natPower(ai)*0.4);
-    else if (k === 'nap') v += a.ok ? 20 : -110;
-    else if (k === 'pass') v += (a.ok ? -10 : op >= 0 ? -90 : -300) + 30;   // (right of way is mutual: it gives and receives it)
-    else if (k === 'ally'){ if (a.ok) v += 40; else firm.push({k:'treaty', t:k, why:`no alliance: ${a.why}`}); } }
+  for (const k of D.give.treaty){ const t = treatyValue(me, ai, k); if (t == null) firm.push({k:'treaty', t:k, why:`no alliance: ${acceptOffer(ai, me, k).why}`}); else v += t; }
   return {v:v + opinion(ai, me)*1.2, firm}; }
+// D10 (owner, 2026-11-26): a computer nation gives nothing for nothing, whatever it thinks of you. True when, in deal D from seat me, computer
+// nation ai gives something (money, goods, its land, or a treaty that costs it) and gets nothing of value back (no money or goods, no land it
+// wants, no treaty worth something to it). Its own gifts and offers (coalition aid, the trades it proposes to you) do not come here.
+function dealOneWay(me, ai, D){ const tv = D.give.treaty.map(k => treatyValue(me, ai, k) || 0);
+  const gives = sideCash(D.get) > 0 || D.get.provs.length > 0 || tv.some(t => t < 0);
+  const gets = sideCash(D.give) > 0 || D.give.provs.some(p => terrWant(ai, p, me) > 0) || tv.some(t => t > 0);
+  return gives && !gets; }
+const NOTHING_BACK = 'We give nothing for nothing';
 const dealSame = (A, B) => JSON.stringify(dealNorm(A)) === JSON.stringify(dealNorm(B));
 // computer nation ai's answer to seat me's deal D (round: 1 for a first offer, +1 for each counter on either side). Pure: decides, changes nothing.
 // {act:'accept'|'counter'|'decline', why, D (the deal it would sign: the same, or its counter-offer), want ($M it still misses on a decline)}
@@ -167,6 +179,8 @@ function dealAnswer(me, ai, D0, round = 1){ const D = dealNorm(D0), A = S.nation
     else if (f.k === 'treaty'){ D.give.treaty = D.give.treaty.filter(k => k !== f.t); D.get.treaty = D.give.treaty.slice(); } }
   if (changed && dealEmpty(D)) return no(drop[0]);
   { const w = dealWhy(me, ai, D); if (w) return no(w); }
+  // D10: it gives and gets nothing back: no, at any opinion (and no counter-offer of its own: you make the next one)
+  if (dealOneWay(me, ai, D)) return no(drop.length ? `${drop.join('; ')}. ${NOTHING_BACK}` : NOTHING_BACK);
   // 3: the floor on the land it buys: its money and goods must reach it
   if (D.give.provs.length){ const mn = floorFor(me, ai, D.give.provs), got = sideCash(D.get);
     if (got < mn){ const need = Math.ceil(mn - got); if (D.get.cash + need > A.cash) return no(`${name} cannot pay the lowest price, $${fmt(mn)}M`); D.get.cash += need; changed = true; } }

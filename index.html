@@ -1271,6 +1271,11 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .btn.primary:hover:not(:disabled){background:linear-gradient(180deg, #8ad85a, #5fae37 55%, #4b982b); border-color:#c0f09c; color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 3px 12px rgba(95,191,74,.4)}
 .btn.primary.busy{background-image:linear-gradient(90deg,transparent 25%,rgba(255,255,255,.3) 50%,transparent 75%), linear-gradient(180deg, #7ccc4c, #438d25)}
 .btn:disabled{opacity:.5}
+.btn.can{background:linear-gradient(180deg, #4ba8e6, #2f86cb 55%, #266ca9); border-color:#9bd2f5; color:#fff; font-weight:700; text-shadow:0 1px 1px rgba(0,0,0,.5);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 2px 6px rgba(0,0,0,.35)}   /* a Build / Train button the player can use now: blue; grey (disabled) when it cannot be started */
+.btn.can:hover:not(:disabled){background:linear-gradient(180deg, #5cb5f0, #3a93d6 55%, #2d77b8); border-color:#c2e6fb; color:#fff}
+.unit.btn.can{background:linear-gradient(90deg, rgba(47,134,203,.3), rgba(47,134,203,.08) 60%, transparent); box-shadow:inset 3px 0 0 #4ba8e6; font-weight:inherit; text-shadow:none}
+.unit.btn.can:hover:not(:disabled){background:linear-gradient(90deg, rgba(75,168,230,.42), rgba(47,134,203,.12) 60%, transparent)}
 .unit.btn, .armylist button{background:transparent; border-color:transparent; box-shadow:none}
 .unit.btn{border-top:1px solid var(--sep)}
 .ub .btn{background:rgba(0,0,0,.15)}
@@ -1278,6 +1283,8 @@ h2{color:#fff; text-shadow:var(--cn-num)}
 .dacts .btn.war{border-color:rgba(212,42,42,.8); color:#ffb0a8}
 .qb{background:linear-gradient(180deg, #4f666d, #3d535a); box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(0,0,0,.45); color:#fff}
 .qb:hover:not(:disabled){background:linear-gradient(180deg, #5a777f, #46616a); box-shadow:inset 0 0 0 1px var(--cn-teal)}
+.qb.can{background:linear-gradient(180deg, #4ba8e6, #2f86cb 55%, #266ca9); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 0 0 1px rgba(0,0,0,.45)}   /* queue button the player can afford: blue; dimmed grey when not */
+.qb.can:hover:not(:disabled){background:linear-gradient(180deg, #5cb5f0, #3a93d6 55%, #2d77b8); box-shadow:inset 0 0 0 1px #c2e6fb}
 .seg2{border-radius:3px; background:var(--cn-box); box-shadow:inset 0 1px 3px rgba(0,0,0,.5), inset 0 0 0 1px rgba(143,163,170,.4)}
 .seg2 .sg{border-radius:2px; color:var(--cn-fg2)}
 .seg2 .sg.on{color:#06232a; background:linear-gradient(180deg, #74e4ef, #2ea4b3); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(0,0,0,.5)}
@@ -2025,6 +2032,8 @@ html.reduced .cs-mi.live .cs-mf::after{animation:none}
 html.reduced .unit.blk.why > .cost{animation:none}
 .unit.btn.blk:hover{background:transparent} .unit.btn.blk:hover::before{opacity:0}
 .cs-mmod .unit.blk, .cs-mmod .unit.blk:hover{background:linear-gradient(180deg, #2f4047, #29383f); border-color:rgba(143,163,170,.3)}
+.cs-mmod .unit.can, .cs-mmod .unit.can:not([disabled]){background:linear-gradient(180deg, #3d6d8f, #2f5a7a); border-color:rgba(155,210,245,.7); box-shadow:inset 3px 0 0 #4ba8e6, inset 0 1px 0 rgba(255,255,255,.12)}
+.cs-mmod .unit.can:not([disabled]):hover{background:linear-gradient(180deg, #4a7fa4, #386a8e); border-color:#c2e6fb}
 @media (min-width: 821px){ body.cs-on #hint{top:10px!important; bottom:auto!important; left:50%!important; transform:translateX(-50%)!important} }
 
 /* Diplomacy: every action is a real button; trade routes on one aligned grid */
@@ -2534,7 +2543,7 @@ html.reduced .dp-msg.fresh{animation:none}
 .rk-face .rk-sym{width:calc(var(--ds)*.66); height:calc(var(--ds)*.66); filter:drop-shadow(0 1px 1px rgba(0,0,0,.55)) drop-shadow(0 0 3px rgba(0,0,0,.25))}
 .rk-sym .bd{stroke:rgba(22,32,38,.92); stroke-width:1.7; paint-order:stroke; stroke-linejoin:round}
 .ulp{background-repeat:no-repeat}
-.rk-cut{display:block; max-width:96%; max-height:58%; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.rk-cut{display:block; max-width:96%; max-height:calc(var(--ds)*.823); object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
 .rk-sdm{position:relative; flex:none; display:grid; place-items:center; width:54px; height:54px; --ds:36px}
 .rk-sdm .dm{background:radial-gradient(circle, #93deee 0, #3f9cb4 52%, #226277 100%); border-color:#e3f8fc}
 /* a category */
@@ -2739,6 +2748,166 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
   body.side-army #ctx .ab-nm h2{font-size:17px}
   body.side-army #ctx .dia{width:54px; height:60px}
 }
+/* ===================== Market: STOCK MARKET (the order book) =====================
+   The banner (a navy chart drawn in code, MK_BAN), a row of goods tabs, then the view: the slim price chart, your stock, BUY and SELL (the 3 best
+   offers a side) with flag chips; Create Offer; Order Book. All DOM and SVG, box-shadows only (no filters), so it stays cheap on an ordinary phone. */
+.sheet > .rhead.mk-ban:first-child{flex:none; height:64px; margin:-24px -26px 0; padding:0 64px 0 18px; overflow:hidden; align-items:center; flex-wrap:nowrap;
+  background:linear-gradient(180deg, #1d3550 0%, #15283f 55%, #0f1e33 100%); box-shadow:inset 0 -1px 0 rgba(0,0,0,.6), 0 1px 0 rgba(79,208,222,.28), 0 8px 12px -8px rgba(0,0,0,.65)}
+.mk-ban .mk-bg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+.mk-ban .mk-bt{position:relative; display:flex; flex-direction:column; gap:3px; min-width:0}
+.sheet > .rhead.mk-ban:first-child h1{color:#fff; font-size:23px; font-weight:800; letter-spacing:.04em; line-height:1; text-shadow:0 2px 6px rgba(0,0,0,.55); white-space:nowrap}
+.mk-ban .mk-sub{display:flex; align-items:center; gap:8px; white-space:nowrap}
+.sheet > .rhead.mk-ban:first-child .eyebrow{color:#a9c6d3!important; text-shadow:none; font-size:10.5px; letter-spacing:.14em; margin:0}
+.sheet > .rhead.mk-ban:first-child .eyebrow .itip{background:#36576a; color:#dff3f8}
+.sheet > .rhead.mk-ban:first-child .chip{padding:2px 7px; gap:4px; font-size:12px; background:rgba(6,14,24,.6); box-shadow:inset 0 0 0 1px rgba(143,200,220,.3)}
+.sheet > .rhead.mk-ban:first-child .chip .ri{height:13px; width:auto}
+.sheet > .rhead.mk-ban > .mx{right:14px}
+/* the goods tabs */
+.mk-tabs{flex:none; position:sticky; top:40px; z-index:3; display:grid; grid-template-columns:repeat(5, 1fr); margin:-14px -26px 0; background:#24343b; box-shadow:0 1px 0 rgba(0,0,0,.55), 0 6px 10px -6px rgba(0,0,0,.6)}
+.mk-tab{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:62px; padding:3px 2px 2px; border:0; border-left:1px solid rgba(0,0,0,.35); border-radius:0; background:transparent; color:#b9c9cf; cursor:pointer; font:700 10px/1 var(--body); letter-spacing:.08em; text-transform:uppercase}
+.mk-tab:first-child{border-left:0} .mk-tab .ri{height:26px; width:auto; filter:none} .mk-tab .fn{display:none}
+.mk-tab .tl{display:flex; flex-direction:column; align-items:center; gap:3px} .mk-tab .tp{font:600 10.5px/1 var(--body); letter-spacing:0; text-transform:none; color:#c9d4d8; font-variant-numeric:tabular-nums} .mk-tab .tp.up{color:#8fe07c} .mk-tab .tp.dn{color:#ff8f84} .mk-tab.on .tp{color:#fff}
+.mk-tab:hover{background:rgba(255,255,255,.05)}
+.mk-tab.on{background:linear-gradient(180deg, #57737f, #4a6470); color:#fff; box-shadow:inset 0 3px 0 #4fd0de}
+.mk-tab:focus-visible{outline:2px solid #8ff0f8; outline-offset:-3px}
+.mk-body{flex:none; display:flex; flex-direction:column; gap:10px} .mk-body.v-top{margin-top:-14px}
+/* the chart strip, folded and unfolded */
+.mk-chart{display:block; width:auto; margin:0 -26px; padding:7px 14px 6px; border:0; border-radius:0; background:linear-gradient(180deg, #1b2a31, #22323a); box-shadow:inset 0 -1px 0 rgba(0,0,0,.4); color:inherit; text-align:left; cursor:pointer; touch-action:pan-y; font:inherit}
+.mk-chh{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:12.5px; color:#b6c6cc} .mk-chh b{color:#fff; font-size:14px; font-variant-numeric:tabular-nums}
+.mk-chh .up{color:#7ee06a} .mk-chh .dn{color:#ff7a6e} .mk-chh .fl{color:var(--muted)}
+.mk-cv{position:relative; display:block; height:40px; margin-top:4px}
+.mk-cv svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.mk-cv .l{stroke-width:1.8; vector-effect:non-scaling-stroke; stroke-linejoin:round}
+.mk-cv .b{stroke:rgba(255,255,255,.28); stroke-width:1; stroke-dasharray:4 4; vector-effect:non-scaling-stroke}
+.mk-cv .g{stroke:rgba(255,255,255,.08); stroke-width:1; vector-effect:non-scaling-stroke}
+.mk-dot{position:absolute; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:var(--c); box-shadow:0 0 0 2px rgba(0,0,0,.45), 0 0 6px var(--c)}
+.mk-chart.big .mk-cv{height:200px; margin:8px 0 16px 34px}
+.mk-cv .yl{position:absolute; left:-36px; width:32px; margin-top:-7px; font-size:10px; text-align:right; color:#8fa3aa; font-variant-numeric:tabular-nums}
+.mk-cv .xl{position:absolute; bottom:-16px; font-size:10px; color:#8fa3aa; white-space:nowrap}
+.mk-c1{position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); padding:1px 8px; border-radius:2px; background:#1f2e35; font-size:11px; line-height:14px; color:#9fb1b7; white-space:nowrap; pointer-events:none}
+.mk-leg{display:flex; gap:12px; margin-top:3px; font-size:11px; color:#9fb1b7} .mk-leg i{display:inline-block; width:12px; height:3px; margin-right:5px; vertical-align:3px; border-radius:2px} .mk-leg .ask{background:#7ee06a} .mk-leg .bid{background:#e8b923} .mk-leg .base{height:0; border-top:1px dashed rgba(255,255,255,.55); border-radius:0}
+.mk-mk{position:absolute; right:-6px; width:12px; height:3px; margin-top:-1.5px; border-radius:2px} .mk-mk.ask{background:#7ee06a} .mk-mk.bid{background:#e8b923}
+.mk-ro{position:absolute; top:-4px; padding:2px 6px; border-radius:2px; background:rgba(6,14,24,.85); color:#fff; font-size:11px; white-space:nowrap; opacity:0; pointer-events:none} .mk-ro.on{opacity:1}
+.mk-cur{position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px rgba(0,0,0,.5); opacity:0; pointer-events:none} .mk-cur.on{opacity:1}
+/* your stock */
+.mk-stock{position:relative; display:flex; align-items:center; gap:8px; padding:0 0 6px; font-size:13px; color:#c9d4d8}
+.mk-stock .ri{height:22px; width:auto} .mk-stock .mk-sl{flex:1; min-width:0} .mk-stock b{color:#fff; font-variant-numeric:tabular-nums}
+.mk-stock .mk-net{font-weight:600; font-variant-numeric:tabular-nums} .mk-stock .pos{color:#7ee06a} .mk-stock .neg{color:#ff7a6e}
+.mk-fill{position:absolute; left:0; right:0; bottom:0; height:3px; border-radius:2px; background:rgba(255,255,255,.1)} .mk-fill::after{content:""; position:absolute; inset:0 auto 0 0; width:var(--f); border-radius:inherit; background:#4fd0de}
+.mk-note{font-size:12px; color:#e8c67a; margin-top:-4px}
+.mk-embs{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; padding:6px 10px; border-radius:2px; background:rgba(208,71,60,.18); box-shadow:inset 3px 0 0 #d0473c; font-size:12.5px; color:#ffd2cc}
+/* BUY and SELL */
+.mk-cols{display:flex; flex-direction:column; gap:12px; margin:0 -26px}
+.mk-sec{display:flex; flex-direction:column}
+.mk-sh{display:flex; align-items:baseline; gap:8px; padding:6px 14px 5px; background:rgba(255,255,255,.05); border-bottom:1px solid rgba(143,163,170,.35); font:800 13px/1.2 var(--body); letter-spacing:.06em; text-transform:uppercase; color:#e6eef0}
+.mk-sh .mk-cnt{font-weight:600; font-size:11px; letter-spacing:.02em; color:var(--muted); text-transform:none} .mk-sh .mk-ph{margin-left:auto; font-size:11px; letter-spacing:.06em; color:#cfdade} .mk-sh .mk-ph small{font-weight:500; text-transform:none; color:var(--muted); letter-spacing:0}
+.mk-row{display:grid; grid-template-columns:30px 30px minmax(0, 1fr) auto 58px; align-items:center; gap:8px; min-height:56px; padding:4px 10px 4px 14px; border-bottom:1px solid rgba(0,0,0,.35); background:linear-gradient(180deg, rgba(36,52,59,.9), rgba(31,45,51,.9)); box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.mk-row.rk{grid-template-columns:24px 30px 30px minmax(0, 1fr) auto 58px; padding-left:8px}
+.mk-row.enemy{box-shadow:inset 3px 0 0 #d0473c, inset 0 1px 0 rgba(255,255,255,.04); background:linear-gradient(180deg, rgba(74,36,36,.55), rgba(48,32,34,.6))}
+.mk-row.mk-embr{opacity:.55} .mk-row.mine{box-shadow:inset 3px 0 0 #62b34a} .mk-row.open{background:linear-gradient(180deg, #31474f, #2a3e45)}
+.mk-rk{font:700 11px/1 var(--body); color:var(--muted); font-variant-numeric:tabular-nums}
+.mk-ic{display:flex; justify-content:center} .mk-ic .ri{height:28px; width:auto}
+.mk-amt{display:flex; flex-direction:column; gap:2px; min-width:0} .mk-amt b{font:600 17px/1.1 var(--body); font-variant-numeric:tabular-nums}
+.mk-amt.pos b{color:#7ee06a} .mk-amt.neg b{color:#ff7a6e}
+.mk-amt small{font-size:11px; color:#9fb1b7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .mk-amt .etag, .mk-amt .ptag{margin:0; padding:0 4px; font:700 9px/1.45 var(--body); letter-spacing:.04em; vertical-align:1px}
+.mk-pr{display:flex; flex-direction:column; align-items:center; gap:1px; min-width:52px} .mk-pr .ri{height:16px; width:auto} .mk-pr b{font:700 16px/1 var(--body); color:#fff; font-variant-numeric:tabular-nums}
+.mk-go{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; width:56px; height:46px; padding:0; border:1px solid rgba(0,0,0,.45); border-radius:3px; cursor:pointer; font:800 10px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 2px 3px rgba(0,0,0,.4)}
+.mk-go .mk-gl{width:24px; height:24px}
+.mk-go.buy{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff; text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.mk-go.sell{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005}
+.mk-go:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 1px rgba(255,255,255,.25), 0 2px 3px rgba(0,0,0,.4)} .mk-go:active{transform:translateY(1px)}
+.mk-go[aria-expanded="true"]{box-shadow:inset 0 2px 4px rgba(0,0,0,.35), 0 0 0 2px rgba(255,255,255,.55)}
+.mk-x{justify-self:center; padding:6px 9px; border:1px solid rgba(255,140,130,.5); border-radius:3px; background:rgba(208,71,60,.18); color:#ffd2cc; cursor:pointer; font:700 11.5px/1 var(--body)}
+.mk-emb-t{justify-self:center; padding:3px 6px; border-radius:2px; background:rgba(208,71,60,.25); color:#ffb4ab; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em}
+.mk-empty{margin:0; padding:10px 14px; font-size:12.5px; color:#b6c6cc; max-width:none}
+.mk-own{padding:6px 14px; font-size:12px; color:#c9d4d8; background:rgba(98,179,74,.1); box-shadow:inset 3px 0 0 #62b34a}
+.mk-link{padding:0; border:0; background:none; color:#8ff0f8; font:600 inherit; font-size:inherit; text-decoration:underline; text-underline-offset:2px; cursor:pointer}
+/* the quantity panel */
+.mk-pan{display:flex; flex-direction:column; gap:8px; padding:10px 14px 12px; background:#2a3e45; border-bottom:1px solid rgba(0,0,0,.45); box-shadow:inset 0 -2px 0 var(--pc, #5fbf4a)} .mk-pan.sell{--pc:#e8b923}
+.mk-pt{font-size:13px; color:#dfe8eb} .mk-pt .flg{vertical-align:-2px}
+.mk-qr{display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.mk-chips{display:flex; flex-wrap:wrap; gap:6px}
+.mk-chip{min-height:34px; padding:0 11px; border:1px solid rgba(143,163,170,.5); border-radius:3px; background:rgba(255,255,255,.06); color:#e6eef0; cursor:pointer; font:700 12.5px/1 var(--body)}
+.mk-chip.on{background:rgba(79,208,222,.22); border-color:#4fd0de; color:#fff} .mk-chip:disabled{opacity:.4; cursor:default}
+.mk-step{display:inline-flex; align-items:stretch; height:36px; border:1px solid rgba(143,163,170,.5); border-radius:3px; overflow:hidden}
+.mk-step button{width:36px; border:0; background:rgba(255,255,255,.08); color:#fff; cursor:pointer; font:700 18px/1 var(--body)}
+.mk-step input{width:92px; min-width:0; border:0; border-radius:0; text-align:center; background:#15232a; color:#fff; font:600 14px var(--body); font-variant-numeric:tabular-nums; -moz-appearance:textfield}
+.mk-step input::-webkit-inner-spin-button, .mk-step input::-webkit-outer-spin-button{-webkit-appearance:none; margin:0}
+.mk-cost{font-size:12.5px; color:#c9d4d8; line-height:1.45} .mk-cost b{color:#fff} .mk-why{color:#e8c67a}
+.mk-warn{padding:5px 8px; border-radius:2px; background:rgba(208,71,60,.2); box-shadow:inset 3px 0 0 #d0473c; color:#ffd2cc; font-size:12.5px}
+.mk-pa{display:flex; align-items:center; gap:14px}
+.mk-ok{min-height:40px; padding:0 16px; font-weight:800; border:1px solid rgba(0,0,0,.45)} .mk-ok.buy{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff} .mk-ok.sell{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005}
+.mk-ok:disabled{opacity:.45}
+/* the bottom buttons */
+.sheet.mid > .row.mk-foot:last-child{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.mk-fb{display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 10px; border:1px solid rgba(143,244,251,.55); border-radius:3px; color:#fff; font:800 14px/1 var(--display, var(--body)); letter-spacing:.06em; text-transform:uppercase;
+  background:linear-gradient(180deg, #2fa7b8 0%, #1d7f8f 55%, #186b79 100%); box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 2px 4px rgba(0,0,0,.45); text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.mk-fb .mk-gl{width:22px; height:22px; flex:none} .mk-fb.on{background:linear-gradient(180deg, #186b79, #1d7f8f); box-shadow:inset 0 2px 5px rgba(0,0,0,.45), 0 0 0 1px rgba(143,244,251,.6)}
+.mk-n{min-width:20px; padding:2px 5px; border-radius:9px; background:rgba(6,14,24,.55); font:700 11px/1.2 var(--body); letter-spacing:0}
+/* Create Offer and Order Book */
+.mk-back{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px}
+.mk-sw{display:inline-flex; border:1px solid rgba(143,163,170,.5); border-radius:3px; overflow:hidden}
+.mk-sw button{min-height:32px; padding:0 10px; border:0; background:transparent; color:#c9d4d8; cursor:pointer; font:700 12px var(--body)} .mk-sw button[aria-pressed="true"]{background:#4a6470; color:#fff}
+.mk-form{display:flex; flex-direction:column; gap:12px}
+.mk-seg{display:grid; grid-template-columns:1fr 1fr; padding:0; border:1px solid rgba(0,0,0,.45); border-radius:3px; overflow:hidden}
+.mk-seg button{margin:0; border-radius:0; display:flex; align-items:center; justify-content:center; gap:6px; min-height:42px; border:0; background:#2a3a41; color:#c9d4d8; cursor:pointer; font:800 13px var(--body); letter-spacing:.05em; text-transform:uppercase} .mk-seg .mk-gl{width:20px; height:20px}
+.mk-seg button.sell.on{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005} .mk-seg button.buy.on{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff}
+.mk-fl{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px} .mk-fl > span:first-child{flex:0 0 100%; font:700 11px var(--body); letter-spacing:.1em; text-transform:uppercase; color:#9fb1b7} .mk-fl > span:first-child small{text-transform:none; letter-spacing:0; font-weight:500}
+.mk-fl select{min-height:36px} .mk-fl{align-content:flex-start}
+#bk-type.mk-seg{padding:0; background:transparent; border:1px solid rgba(0,0,0,.45); border-radius:3px} .mk-step #bk-qty, .mk-step #bk-price{padding:0; border:0; border-radius:0; background:#15232a; font:600 14px var(--body)}   /* (over the older offer form's id rules) */
+.mk-prev{padding:8px 10px; border-radius:2px; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px rgba(143,163,170,.25); font-size:12.5px; line-height:1.5; color:#c9d4d8} .mk-prev b{color:#fff}
+.mk-cross{display:block; margin-top:6px; padding:5px 8px; border-radius:2px; background:rgba(232,185,35,.15); box-shadow:inset 3px 0 0 #e8b923; color:#f3dd9a}
+.mk-post{display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-weight:800; border:1px solid rgba(0,0,0,.45)} .mk-post .mk-gl{width:18px; height:18px}
+.mk-post.sell{background:linear-gradient(180deg, #e8b923, #b98a12); color:#2a2005} .mk-post.buy{background:linear-gradient(180deg, #5fbf4a, #3c8a2d); color:#fff}
+.mk-bh{margin:4px -26px 0; padding:6px 14px 5px; background:rgba(255,255,255,.05); border-bottom:1px solid rgba(143,163,170,.35); font:800 12.5px/1.2 var(--body); letter-spacing:.07em; text-transform:uppercase; color:#e6eef0}
+.mk-bh small{font-weight:500; letter-spacing:0; text-transform:none; color:var(--muted); margin-left:4px}
+.mk-body.v-book > .mk-row, .mk-body.v-book > .mk-pan, .mk-body.v-book > .mk-my{margin:0 -26px} .mk-body.v-book{gap:0} .mk-body.v-book > .mk-back{margin-bottom:10px} .mk-body.v-book > .mk-more{align-self:flex-start; margin:8px 0}
+.mk-body.v-book > .mk-empty{padding-left:0}
+.mk-my{display:grid; grid-template-columns:28px minmax(0, 1fr) auto; align-items:center; gap:8px; min-height:52px; padding:4px 14px; border-bottom:1px solid rgba(0,0,0,.35); background:rgba(98,179,74,.07)}
+.mk-myt{display:flex; flex-direction:column; gap:2px; min-width:0} .mk-myt b{font-size:13.5px} .mk-myt b.sell{color:#f0c94a} .mk-myt b.buy{color:#7ee06a} .mk-myt small{font-size:11.5px; color:#9fb1b7} .mk-myt small b{font-size:11.5px; color:#fff}
+/* flag chips, in the unit badges' style: the real flag 4:3, a fabric sheen (a diagonal sweep, a vertical fall-off, faint folds), a thin dark edge, a soft
+   shadow, and a 2 px bar of the side's colour joined under it (yours green, allies blue, at war red; none for the others); the tap area is 44 px or more */
+.fchip{position:relative; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:0; width:max-content; justify-self:center; padding:0; border:0; background:none; cursor:pointer; line-height:0; vertical-align:middle}
+.fchip::before{content:""; position:absolute; inset:-12px -8px}
+span.fchip{cursor:default} span.fchip::before{display:none}
+.fchip .flg.fc{margin:0; border-radius:2px; box-shadow:0 0 0 1px rgba(8,12,10,.9), 0 1.8px 3.6px rgba(0,0,0,.55)}
+.fchip .flg.fc::after{border-radius:inherit; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+  background:linear-gradient(90deg, rgba(255,255,255,.07) 0, rgba(0,0,0,.06) 16.7%, rgba(255,255,255,.07) 33.3%, rgba(0,0,0,.06) 50%, rgba(255,255,255,.07) 66.7%, rgba(0,0,0,.06) 83.3%, rgba(255,255,255,.07) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.1) 0, rgba(255,255,255,0) 50%, rgba(0,0,0,.16) 100%),
+    linear-gradient(135deg, rgba(255,255,255,.2) 0, rgba(255,255,255,.04) 35%, rgba(255,255,255,0) 60%, rgba(0,0,0,.14) 100%)}
+.fchip::after{content:""; display:block; width:100%; height:2px; margin-top:0; border-radius:0 0 1px 1px; background:var(--sc, transparent); box-shadow:0 1px 1px rgba(0,0,0,.45)}
+.fchip:not([style*="--sc"])::after{box-shadow:none}
+.fchip:hover .flg.fc{box-shadow:0 0 0 1px rgba(8,12,10,.9), 0 0 0 2.5px rgba(255,255,255,.35), 0 1.8px 3.6px rgba(0,0,0,.55)}
+.fchip:focus-visible{outline:2px solid #8ff0f8; outline-offset:3px; border-radius:2px}
+.mk-embs .fchip{vertical-align:-3px}
+/* All goods in the Order Book: a heading per good (it opens that good's list); the Market button on a nation window opened from a flag */
+.mk-gh{display:flex; align-items:center; gap:8px; width:auto; min-height:44px; margin:0 -26px; padding:4px 14px; border:0; border-bottom:1px solid rgba(0,0,0,.35); border-radius:0; background:rgba(79,208,222,.08); color:#e6eef0; cursor:pointer; font:700 13px var(--body); text-align:left}
+.mk-gh .ri{height:20px; width:auto} .mk-gh small{font-weight:500; color:var(--muted)} .mk-gh .mk-gha{margin-left:auto; color:#8ff0f8; font-size:12px} .mk-gh:hover{background:rgba(79,208,222,.14)}
+.mk-ret{display:inline-flex; align-items:center; gap:4px; min-height:44px; margin-right:8px; padding:0 12px 0 6px; flex:none; order:-1} .mk-ret svg{width:18px; height:18px}
+.rs-back.mk-ret{width:auto; height:auto; min-height:40px; margin-right:0; padding:0 12px 0 8px; font-weight:700; letter-spacing:.02em} .rs-back.mk-ret svg{width:20px; height:20px}
+/* a phone, or any touch screen: every control the Market adds is at least 44 px to the finger (an inline link gets an invisible margin around it) */
+@media (max-width: 699px), (pointer: coarse){
+  .mk-x{min-height:44px; min-width:66px; padding:0 12px; font-size:12.5px}
+  .mk-sw button{min-height:44px; padding:0 14px}
+  .mk-chip{min-height:44px; padding:0 14px}
+  .mk-step{height:46px} .mk-step button{width:44px} .mk-step input{width:96px}
+  .mk-seg button, .mk-ok{min-height:44px}
+  .mk-fl select{min-height:44px}
+  .mk-back > .mk-link{display:inline-flex; align-items:center; min-height:44px}
+  .mk-link{position:relative} .mk-link::after{content:""; position:absolute; inset:-15px -6px}
+  .mk-back > .mk-link::after{display:none}
+  .fchip::before{inset:-14px -13px}
+}
+/* desktop: a taller banner, full names on the tabs, BUY and SELL side by side */
+@media (min-width: 700px){
+  .sheet > .rhead.mk-ban:first-child{height:76px; padding-left:26px} .sheet > .rhead.mk-ban:first-child h1{font-size:28px}
+  .mk-tabs{top:52px} .mk-tab{flex-direction:row; gap:8px; height:56px; font-size:12px; letter-spacing:.05em} .mk-tab .ab{display:none} .mk-tab .fn{display:inline} .mk-tab .tl{align-items:flex-start} .mk-tab .ri{height:30px}
+  .mk-cv{height:48px} .mk-chart.big .mk-cv{height:280px}
+  .mk-row{min-height:48px; padding-left:16px} .mk-go{height:40px}
+  .mk-cols{display:grid; grid-template-columns:1fr 1fr; gap:0 1px; background:rgba(0,0,0,.35)} .mk-cols .mk-sec{background:#2b3c43}
+  .mk-form{display:grid; grid-template-columns:1fr 1fr; gap:14px 18px} .mk-form > .mk-seg, .mk-form > .mk-prev, .mk-form > .mk-post, .mk-form > .small{grid-column:1 / -1}
+}
 </style>
 
 <div id="app">
@@ -2751,10 +2920,10 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
         <div class="hbox clock" id="clock"></div>
         <div class="seg" id="speed" role="group" aria-label="Game speed">
           <button id="sp0" data-speed="0" aria-pressed="true" aria-label="Pause" title="Pause (Space)"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><rect x="2.2" y="1.6" width="2.6" height="8.8" rx=".6" fill="currentColor"/><rect x="7.2" y="1.6" width="2.6" height="8.8" rx=".6" fill="currentColor"/></svg></button>
-          <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)&#10;1 real minute = 4 game minutes, a game day every 6 minutes">1×</button>
-          <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game minutes">2×</button>
-          <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game minutes">4×</button>
-          <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game minutes">8×</button>
+          <button id="sp1" data-speed="1" aria-pressed="false" title="Normal (1)&#10;1 real minute = 4 game hours, a game day every 6 minutes">1×</button>
+          <button id="sp2" data-speed="2" aria-pressed="false" title="Fast (2)&#10;1 real minute = 8 game hours">2×</button>
+          <button id="sp3" data-speed="3" aria-pressed="false" title="Faster (3)&#10;1 real minute = 16 game hours">4×</button>
+          <button id="sp4" data-speed="4" aria-pressed="false" title="Fastest&#10;1 real minute = 32 game hours">8×</button>
 <!--@DEV-->
           <button id="sp5" class="devsp" data-speed="5" aria-pressed="false" title="Developer 16× (9 cycles the developer speeds)">16×</button>
           <button id="sp6" class="devsp" data-speed="6" aria-pressed="false" title="Developer 50× (9 cycles the developer speeds)">50×</button>
@@ -3255,6 +3424,12 @@ function terrUnitsText(k){ const T = TERRAIN[k] || TERRAIN.plains, strong = [], 
 function terrMoveText(k){ const T = TERRAIN[k] || TERRAIN.plains, m = mt => Math.round(T.spd*((TERR_F[mt] && TERR_F[mt][k]) || 1)*100); return `foot ${m('foot')}% · wheels ${m('wheel')}% · tracks ${m('track')}%`; }
 let tab = 'cmd', seenLog = 0, showAllPowers = false, lockedOpen = false, seenHour = -1;
 document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('locked')) lockedOpen = e.target.open; }, true);
+// a More menu (the Diplomacy rows' actions) opens under its button, right-aligned; on a narrow screen, where the row wraps and the button sits at
+// the left, that runs off the left edge: it is shifted back inside the screen (and the other way at the right edge), then scrolled into view
+document.addEventListener('toggle', e => { const d = e.target; if (!d.open || !d.classList || !d.classList.contains('more')) return; const box = d.querySelector('.morebox'); if (!box) return;
+  box.style.right = ''; const vw = document.documentElement.clientWidth, R = [box, ...box.children].map(x => x.getBoundingClientRect()), l = Math.min(...R.map(q => q.left)), r = Math.max(...R.map(q => q.right));
+  let dx = 0; if (r > vw - 4) dx = vw - 4 - r; if (l + dx < 4) dx = 4 - l; if (dx) box.style.right = `${-dx}px`;
+  box.scrollIntoView({block:'nearest'}); }, true);
 // a panel that comes into view slides in (transform/opacity only, skipped with reduced motion)
 /* reduced motion: the in-game setting or the OS preference (prefers-reduced-motion) */
 const AFX_RM = (() => { try { return window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) { return null; } })();
@@ -3262,7 +3437,7 @@ const afxReduced = () => SET.motion === 'reduced' || !!(AFX_RM && AFX_RM.matches
 function slideIn(el, dx = 16, dy = 0, ms = 220){ if (!el || !el.animate || afxReduced()) return; try { el.animate([{opacity:0, transform:`translate(${dx}px,${dy}px)`}, {opacity:1, transform:'none'}], {duration:ms, easing:'cubic-bezier(.2,.8,.25,1)'}); } catch (e) {} }
 function setTab(t){ const was = tab; tab = t; document.querySelectorAll('[data-pane]').forEach(el => { el.hidden = el.dataset.pane !== t; if (!el.hidden && was !== t) slideIn(el, 0, 8, 200); }); document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t))); if (t === 'log' && S) seenHour = S.hour; const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
 function mixHex(a, b, t){ const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16); const ch2 = sh => Math.round(((A >> sh) & 255)*(1 - t) + ((B >> sh) & 255)*t); return `rgb(${ch2(16)},${ch2(8)},${ch2(0)})`; }
-const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game minutes (a game hour every 15 s)
+const HOURS_PER_SEC = [0, 1/15, 2/15, 4/15, 8/15];   // 1x: one real minute = four game hours (a game hour every 15 s)
 /*@DEV*/
 // Developer mode (test build only: tools/build.js strips every @DEV block from the public build). The switches live in this browser
 // (localStorage 'iron-meridian-dev'); every override is off unless its switch is on. Speeds 5-7 = 16x / 50x / 100x.
@@ -5412,43 +5587,166 @@ function escortPick(r){ let best = null, bd = 1e9; const mid = G.P[r.path[Math.f
 function tradeTip(k){ const rs = routesOf(PLAYER); if (!rs.length) return ''; let s = 0; const lines = [];
   for (const r of rs){ const v = trSide(r, PLAYER); if (!v) continue; const q = k === 'cash' ? v.cash*r.f : v.k === k ? v.q*r.f : 0; if (!q && !(k === 'cash' && r.f < 1)) continue; s += q; lines.push(`  · ${trName(r, PLAYER)} ${q ? '+' + (k === 'cash' ? '$' + fmt1(q) + 'M' : fmt(q)) : '0'}${r.f < 1 ? ' (' + (r.why === 'sunk' ? 'convoy sunk' : r.why === 'contested' ? 'contested' : 'blockaded') + ')' : ''}`); }
   if (!lines.length) return ''; return `&#10;Trade routes +${k === 'cash' ? '$' + fmt1(s) + 'M' : fmt(s)}/day&#10;${lines.slice(0, 8).join('&#10;')}`; }
-const spark = (h, w = 120, ht = 28, col = 'var(--accent)') => { if (h.length < 2) return `<svg width="${w}" height="${ht}"></svg>`; const mn = Math.min(...h), mx = Math.max(...h), r = mx - mn || 1;
-  return `<svg width="${w}" height="${ht}" viewBox="0 0 ${w} ${ht}" aria-hidden="true"><polyline fill="none" stroke="${col}" stroke-width="1.6" points="${h.map((v, i) => `${(i/(h.length - 1)*(w - 2) + 1).toFixed(1)},${(ht - 2 - (v - mn)/r*(ht - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
-function offerRows(list, bid){ return list.map(o => { const N = S.nations[o.seller], enemy = o.seller !== PLAYER && atWar(PLAYER, o.seller), mine = o.seller === PLAYER, emb = !mine && embargoed(o.seller, PLAYER), R = RES.find(r => r.k === o.res);
-    const tip = enemy ? `This offer is made by an enemy: ${N.name}. ${bid ? 'Selling to them supplies their war.' : 'Buying from them funds their war.'}` : emb ? `${mkt().emb[o.seller + '>' + PLAYER] ? N.name + ' has an embargo on you' : 'You have an embargo on ' + N.name} and no deals are made.` : `${bid ? 'Buy offer' : 'Sell offer'} by ${N.name}`;
-    const act = mine ? `<button class="btn" data-act="book-cancel" data-id="${o.id}" style="padding:3px 8px;font-size:12px">Withdraw</button>`
-      : emb ? '<span class="small muted">Embargo</span>'
-      : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${10*MKT_LOT}" style="padding:3px 8px;font-size:12px" title="${bid ? 'Sell' : 'Buy'} ${resFull(o.res, 10*MKT_LOT)} for $${fmt(lotCash(10*MKT_LOT, o.price))}M">${bid ? 'Sell' : 'Buy'} ${fmtQ(10*MKT_LOT)}</button><button class="btn" data-act="book-buy" data-id="${o.id}" data-q="${o.qty}" style="padding:3px 8px;font-size:12px">${bid ? 'Sell' : 'Buy'} all · $${fmt(lotCash(o.qty, o.price))}M</button></div>`;
-    return `<tr class="${enemy ? 'enemy' : ''}${o.priv ? ' priv' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}"><td class="bk-n">${flagSVG(o.seller)} <b>${mine ? 'You' : N.name}</b>${enemy ? ' <span class="etag">ENEMY</span>' : ''}${o.priv ? ' <span class="ptag">🔒 COALITION</span>' : ''}</td><td class="bk-g"><span class="res-${o.res}">${icon(o.res)}</span> ${R.name}</td><td class="bk-q" data-l="Qty" title="${resFull(o.res, o.qty)}">${fmt(o.qty)}</td><td class="bk-p" data-l="Price / ${fmt(MKT_LOT)}" title="${lotPriceTxt(o.res, o.price)}">$${o.price.toFixed(2)}M</td><td class="bk-e small muted" data-l="Ends">${Math.max(1, Math.ceil((o.exp - S.hour)/24))} d</td><td class="bk-a">${act}</td></tr>`; }).join(''); }
-let BK_FILT = null;   // the good the offer lists are narrowed to (a goods card was clicked), null = every good
-let BK_RES = 'oil';   // the good last chosen in the offer form (its world price is the default asking price)
-const BK_F = {type:'sell', qty:50*MKT_LOT, price:null};   // the rest of the offer form as the player left it (price null = the chosen good's world price), so a rebuild of the market sheet keeps it
-function bookHTML(){ const F = BK_FILT, all = (S.book || []).filter(o => canSee(o, PLAYER) && (!F || o.res === F)), fl = F ? ` · ${rlbl(F)} only <button class="btn bkf" data-act="mk-filter" data-k="" style="padding:1px 8px">Show all goods</button>` : '', early = dayOf(S.hour) <= 5, sells = all.filter(o => !isBid(o)).sort((a, b) => a.res.localeCompare(b.res) || a.price - b.price), bids = all.filter(isBid).sort((a, b) => a.res.localeCompare(b.res) || b.price - a.price);
-  const head = `<thead><tr><th>Nation</th><th>Goods</th><th>Qty</th><th title="Prices are in millions of dollars per ${fmt(MKT_LOT)} barrels, tons or crates">Price / ${fmt(MKT_LOT)}</th><th>Ends</th><th></th></tr></thead>`;
-  return `<div class="eyebrow" style="margin-top:6px">Sell offers · nations selling${fl}${!F && sells.length > 6 ? ' · <span class="bkf muted">click a goods card above to show one good</span>' : ''}</div>
-    ${sells.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(sells, false)}</tbody></table></div>` : `<p class="small muted">No nation is selling${F ? ' ' + rlbl(F) : ''} right now.${early ? ' In the first days nobody has a surplus yet: sellers usually appear from about day 4, and a buy offer posted before then may run out unfilled.' : F ? ' Post a buy offer below: sellers fill it when the price suits them.' : ''}</p>`}
-    <div class="eyebrow" style="margin-top:12px">Buy offers · nations buying${fl}</div>
-    ${bids.length ? `<div class="tblwrap"><table class="ptab book">${head}<tbody>${offerRows(bids, true)}</tbody></table></div>` : `<p class="small muted">No nation is buying${F ? ' ' + rlbl(F) : ''} right now.</p>`}
-    <div class="eyebrow" style="margin-top:12px">Post your own offer (3 days)</div>
-    <div class="row" style="align-items:center"><select id="bk-type" aria-label="Offer type"><option value="sell">I sell</option><option value="buy" ${BK_F.type === 'buy' ? 'selected' : ''}>I want to buy</option></select><input id="bk-qty" type="number" min="${MKT_LOT}" step="${MKT_LOT}" value="${BK_F.qty}" style="width:92px" aria-label="Quantity" title="Goods trade in lots of ${fmt(MKT_LOT)}">
-      <select id="bk-res" aria-label="Goods">${MKT_K.map(k => `<option value="${k}" ${k === BK_RES ? 'selected' : ''}>${RES.find(r => r.k === k).name}</option>`).join('')}</select><span class="bkgrp"><span class="small muted">at $</span><input id="bk-price" type="number" min="0.1" step="0.1" value="${BK_F.price != null ? BK_F.price : mkt().p[BK_RES].toFixed(1)}" style="width:70px" aria-label="Price per ${fmt(MKT_LOT)} units"><span class="small muted">M per ${fmt(MKT_LOT)}</span>
-      <button class="btn primary" data-act="book-post">Post offer</button></span></div>
-    <div class="small muted">Offers run 3 days ${itip('A sell offer holds your goods and a buy offer holds your money until someone takes it or it expires. Every listing is public; coalition partners can also send each other supplies directly from Messages.')}</div>`; }
-// one card per traded good: world reference price and its change since yesterday, a 30-day sparkline, your stock against storage and your daily net
-function goodsHTML(){ const M = mkt(), N = S.nations[PLAYER], cap = stockCap(PLAYER), inc = income(PLAYER), all = (S.book || []).filter(o => canSee(o, PLAYER));
-  return `<div class="goods">${MKT_K.map(k => { const R = RES.find(r => r.k === k), pr = M.p[k], d = pr - (M.prev[k] || pr), ch = d/pr*100, net = inc.net[k], ns = all.filter(o => o.res === k && !isBid(o)).length, nb = all.filter(o => o.res === k && isBid(o)).length;
-    return `<div class="good res-${k}${BK_FILT === k ? ' on' : ''}" data-act="mk-filter" data-k="${k}" role="button" tabindex="0" aria-pressed="${BK_FILT === k}" title="${R.name}: world reference price ${lotPriceTxt(k, pr)} (base $${MKT_BASE[k].toFixed(2)}M).&#10;You hold ${resFull(k, N[k])} of ${fmt(cap)} storage, ${net >= 0 ? '+' : '-'}${fmt(Math.abs(net))} a day. Used for ${R.use}. From ${R.src}.${noCityOf(k) ? '&#10;' + noCityTxt(k) : ''}&#10;Click to show only ${rlbl(k)} offers."><div class="gh">${icon(k, 16)}<b>${R.name}</b></div>
-      <div class="gp"><b>$${pr.toFixed(2)}</b><small>M / ${fmtQ(MKT_LOT)}</small><span class="${Math.abs(ch) < 0.05 ? 'fl' : ch > 0 ? 'up' : 'dn'}">${Math.abs(ch) < 0.05 ? '–' : (ch > 0 ? '▲' : '▼') + Math.abs(ch).toFixed(1) + '%'}</span></div>
-      ${spark((M.hist[k] || []).slice(-30), 132, 20, RCOL[k])}
-      <div class="gs"><span>You <b>${fmtQ(N[k])}</b><span class="muted">/${fmtQ(cap)}</span></span><span class="${net < 0 ? 'neg' : 'pos'}">${net >= 0 ? '+' : ''}${fmtQ(net)}/d</span></div>
-      <i class="gf" style="--f:${Math.min(100, Math.round(N[k]/cap*100))}%"></i>
-      <div class="go small muted">${ns ? `${ns} selling` : 'none selling'} · ${nb ? `${nb} buying` : 'none buying'}</div>${noCityOf(k) ? `<div class="gn">No city of yours makes it</div>` : ''}</div>`; }).join('')}</div>`; }
-function marketHTML(){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]); void cap;
-  return `<div class="rhead"><div><div class="eyebrow">Open market · day ${dayOf(S.hour)} ${itip('Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Offers from nations at war with you are marked red.')}</div><h1>Market</h1></div><div class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></div></div>
-    ${goodsHTML()}
-    ${emb.length ? `<div class="status battle">Embargoed by ${emb.map(m => flagHTML(m.id, 11) + ' ' + m.name).join(', ')}: they will not trade with you.</div>` : ''}
-    ${bookHTML()}
-    <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
+/* ---------------- Market: the STOCK MARKET screen (the order book, ECO-9) ----------------
+   A banner header, one tab per traded good (MKT_K) and under the tabs one of three views (MK.view): 'top' (the slim chart of the good's world
+   price over the whole game, your stock, the 3 cheapest sell offers you can buy from and the 3 highest buy offers you can sell to: the rest wait
+   in line and move up when one of these is filled, withdrawn or runs out), 'create' (post an offer) and 'book' (the whole queue, and your own
+   offers with Cancel). Buy and Sell open a quantity panel under the row (MK.open). Prices are money only ($M per MKT_LOT units). The page reads
+   the rules through their readers (topOffers, fillLimit, worldHistory, mkt, stockCap, income) and changes them only through fillOffer, postOffer
+   and cancelOffer. */
+const MK = {view:'top', open:null, chart:false, all:false, more:false};   // open: {id, q} (q null: the most you can take, Max)
+let BK_RES = 'oil';   // the tab: the good shown (and the good of the offer form)
+const BK_F = {type:'sell', qty:50*MKT_LOT, price:null};   // the offer form as the player left it (price null = the good's world price), so a rebuild of the market sheet keeps it
+let MK_DRAG = 0;   // how far a press on the expanded chart moved (a drag reads prices; it does not fold the chart)
+const mkPhone = () => innerWidth < 700;
+// a nation's flag as a small chip in the unit badges' style (flagBand / badgeBody: the real flag, a light fabric sheen, a thin dark edge, a soft
+// shadow, and for your own side, allies and enemies a 2 px bar of the side's colour joined under it, SIDE_T; none for the others); tapping it opens
+// that nation (mkNation). Your own flag is not a button
+function flagChip(n, h = mkPhone() ? 18 : 16){ const sd = sideOf(n), st = sd === 'other' ? '' : `--sc:${sideT(sd)[0]}`, nm = S.nations[n] ? esc0(S.nations[n].name) : '';
+  return n === PLAYER ? `<span class="fchip s-own" style="${st}" title="You">${flagHTML(n, h, 'fc')}</span>`
+    : `<button class="fchip s-${sd}" style="${st}" data-act="mk-nat" data-id="${n}" aria-label="${nm}: about player" title="${nm}: about player">${flagHTML(n, h, 'fc')}</button>`; }
+// the one way from the Market to a nation: its ABOUT PLAYER page in the Diplomacy window (openNationPage)
+// MK_BACK: while the window it opened is showing, its title band carries a "Market" button back to the Market as it was (tab, view, scroll)
+let MK_BACK = null;
+function mkNation(n){ if (n === PLAYER || !S.nations[n]) return; MK_BACK = {top:$('sheet').scrollTop, kind:null};
+  openNationPage(n);
+  MK_BACK.kind = modalKind; mkBackBtn(); }
+function mkBackBtn(){ if (!MK_BACK) return; if ($('modal').hidden || modalKind !== MK_BACK.kind){ if (modalKind !== 'market') MK_BACK = null; return; }
+  const hd = $('sheet').firstElementChild; if (!hd || hd.querySelector('.mk-ret')) return;
+  // the Diplomacy window: on the page the flag opened (nothing to go back to inside it) its back arrow becomes the way back to the Market; a view
+  // opened from there (a trade, the conversation) keeps its own back arrow to that page
+  if (MK_BACK.kind === 'diplo'){ const rb = hd.querySelector('.rs-back[data-act="dp-back"]'); if (DV.back.length || !rb) return;
+    rb.dataset.act = 'mk-ret'; rb.classList.add('mk-ret'); rb.title = 'Back to the Market'; rb.setAttribute('aria-label', 'Back to the Market'); rb.insertAdjacentHTML('beforeend', '<span>Market</span>'); return; }
+  hd.insertAdjacentHTML('afterbegin', `<button class="btn mk-ret" data-act="mk-ret" title="Back to the Market">${rg('back', 18)}<span>Market</span></button>`); }
+// the banner behind the title: a dark navy chart, all code (a faint grid, 30 candlesticks from a fixed seed and a glowing price line); built once
+const MK_BAN = (() => { let s = 0x2e1f3, y = 46, c = ''; const r = () => (s = (Math.imul(s, 1103515245) + 12345) >>> 0)/4294967296, pts = [];
+  for (let i = 0; i < 30; i++){ const x = 170 + i*14.5, o = y, cl = Math.max(14, Math.min(64, o + (r() - 0.53)*15)), hi = Math.min(o, cl) - 2 - r()*7, lo = Math.max(o, cl) + 2 + r()*7, col = cl < o ? '#4fd0de' : '#d0473c';
+    c += `<path d="M${x} ${hi.toFixed(1)}V${lo.toFixed(1)}" stroke="${col}"/><rect x="${x - 4}" y="${Math.min(o, cl).toFixed(1)}" width="8" height="${Math.max(1.5, Math.abs(cl - o)).toFixed(1)}" fill="${col}"/>`; pts.push(`${x},${((o + cl)/2).toFixed(1)}`); y = cl; }
+  return `<svg class="mk-bg" viewBox="0 0 620 76" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><defs><pattern id="mkgrid" width="20" height="19" patternUnits="userSpaceOnUse"><path d="M20 0H0V19" fill="none" stroke="rgba(150,200,230,.09)" stroke-width="1"/></pattern>
+    <linearGradient id="mkfade" x1="0" x2="1"><stop offset="0" stop-color="#0f1e33" stop-opacity="1"/><stop offset=".42" stop-color="#0f1e33" stop-opacity=".2"/><stop offset="1" stop-color="#0f1e33" stop-opacity="0"/></linearGradient></defs>
+    <rect width="620" height="76" fill="url(#mkgrid)"/><g opacity=".38" stroke-width="1">${c}</g><polyline points="${pts.join(' ')}" fill="none" stroke="#7fe8f2" stroke-width="6" stroke-linejoin="round" opacity=".16"/><polyline points="${pts.join(' ')}" fill="none" stroke="#8ff0f8" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/><rect width="620" height="76" fill="url(#mkfade)"/></svg>`; })();
+// our own glyphs: a cart (an arrow into it to buy, out of it to sell), a plus, a ledger
+const MK_CART = up => `<svg class="mk-gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 5h2.4l2.2 9.6a1.4 1.4 0 0 0 1.4 1.1h8.6a1.4 1.4 0 0 0 1.4-1.1L20.6 9H11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.6" cy="19.6" r="1.7" fill="currentColor"/><circle cx="16.6" cy="19.6" r="1.7" fill="currentColor"/><path d="${up ? 'M15 11V3.5m-3 3 3-3 3 3' : 'M15 3v7.5m-3-3 3 3 3-3'}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const MK_PLUS = '<svg class="mk-gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
+const MK_LEDGER = '<svg class="mk-gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z" fill="currentColor" opacity=".9"/><path d="M6 3v18" stroke="#1d4650" stroke-width="2"/><path d="M10 8h6M10 12h6M10 16h4" stroke="#1d4650" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const mkName = k => RES.find(r => r.k === k).name;
+// money in $M for the Market's cost lines: two decimals under $1M, one under $100M, whole millions above (fmt alone floors $14.8M to $14M)
+const mkM = v => v < 1 ? (Math.round(v*100)/100).toFixed(2) : v < 100 ? (Math.round(v*10)/10).toLocaleString('en-US', {maximumFractionDigits:1}) : fmt(Math.round(v));
+// a price per MKT_LOT units: two decimals, with a thousands separator from $1,000
+const mkP = p => p >= 1000 ? p.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) : p.toFixed(2);
+// a number typed in an amount or price field ("12,000", "1.5"): the separators are dropped
+const mkNum = v => +String(v == null ? '' : v).replace(/[^0-9.]/g, '') || 0;
+const mkDays = o => { const h = o.exp - S.hour; return h >= 24 ? `${Math.ceil(h/24)} d` : `${Math.max(1, Math.ceil(h))} h`; };
+// a place in the queue: 1 + the offers of that good and side ahead of it (cheaper sell offers, higher buy offers; the older first at one price)
+const mkRank = o => 1 + (S.book || []).filter(x => x !== o && x.res === o.res && isBid(x) === isBid(o) && x.qty > 0 && (isBid(o) ? byBid(x, o) < 0 : byAsk(x, o) < 0)).length;
+// the price chart of good k over the whole game (worldHistory): points scaled to a 1000 x 1000 box, kept until a new day's price arrives
+const MKC = new Map();
+// (ex: more prices the scale must hold, today's best offers on the unfolded chart; kept apart from the folded one's)
+function mkSeries(k, ex = []){ const h = worldHistory(k), M = mkt(), last = h.length ? h[h.length - 1] : null, key = `${h.length}:${last ? last.d + ':' + last.p : ''}:${ex.join()}`, mk = k + (ex.length ? '+' : ''), c = MKC.get(mk); if (c && c.key === key) return c;
+  const ps = h.length ? h.map(x => x.p) : [M.p[k]], b = MKT_BASE[k], lo0 = Math.min(b, ...ps, ...ex), hi0 = Math.max(b, ...ps, ...ex), pad = Math.max(0.04*b, (hi0 - lo0)*0.12), lo = lo0 - pad, hi = hi0 + pad;
+  const Y = p => 1000 - (p - lo)/(hi - lo)*1000, n = ps.length, X = i => n > 1 ? i/(n - 1)*1000 : 1000, xy = ps.map((p, i) => [+X(i).toFixed(1), +Y(p).toFixed(1)]);
+  const line = n > 1 ? 'M' + xy.map(q => q.join(',')).join('L') : `M0,${xy[0][1]}L1000,${xy[0][1]}`, C = {key, h, lo, hi, Y, xy, line, area:line + 'L1000,1000L0,1000Z', baseY:+Y(b).toFixed(1)};
+  MKC.set(mk, C); return C; }
+// the chart strip at the top of a tab: the world price, its change since yesterday, the slim line; tapped, it unfolds to a full chart (gridlines
+// with prices, the first day, the middle and today, the base price, today's best sell and buy offers, a readout under the finger or the pointer)
+function mkChart(k){ const ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOffers(PLAYER, k, 'bid', 1)[0], C = mkSeries(k, MK.chart ? [ask, bid].filter(Boolean).map(o => o.price) : []), M = mkt(), pr = M.p[k], ch = (pr - (M.prev[k] || pr))/pr*100, big = MK.chart, col = RCOL[k], last = C.xy[C.xy.length - 1];
+  const chs = Math.abs(ch) < 0.05 ? '<span class="fl">–</span>' : `<span class="${ch > 0 ? 'up' : 'dn'}">${ch > 0 ? '▲' : '▼'}${Math.abs(ch).toFixed(1)}%</span>`;
+  const tip = `${mkName(k)}: world reference price ${lotPriceTxt(k, pr)} (base $${MKT_BASE[k].toFixed(2)}M). The price the world market pays and charges; nations trade with each other at their own prices. ${big ? 'Tap to fold the chart.' : 'Tap to see the whole game.'}`;
+  if (big) MK_BIGC = C;   // (the readout under the finger uses the unfolded chart's scale)
+  let over = `<i class="mk-dot" style="left:${last[0]/10}%;top:${last[1]/10}%;--c:${col}"></i>`, grid = '';
+  if (big){ const step = (C.hi - C.lo)/4; for (let i = 1; i <= 3; i++){ const p = C.lo + step*i, y = C.Y(p)/10; grid += `<path d="M0,${(y*10).toFixed(1)}H1000" class="g"/>`; over += `<span class="yl" style="top:${y}%">$${p.toFixed(2)}</span>`; }
+    const h = C.h, d0 = h.length ? h[0].d : dayOf(S.hour), dn = dayOf(S.hour), dm = Math.round((d0 + dn)/2);
+    over += `<span class="xl" style="left:0">Day ${d0}</span>${dn - d0 > 4 ? `<span class="xl" style="left:50%;transform:translateX(-50%)">Day ${dm}</span>` : ''}<span class="xl" style="right:0">Today</span>${C.h.length < 2 ? '<span class="mk-c1">The price history starts tomorrow</span>' : ''}`;
+    const mark = (o, cls, t) => o ? `<i class="mk-mk ${cls}" style="top:${Math.max(0, Math.min(100, C.Y(o.price)/10))}%" title="${t} $${mkP(o.price)}M"></i>` : '';
+    over += mark(ask, 'ask', 'Best sell offer') + mark(bid, 'bid', 'Best buy offer') + `<span class="mk-ro" aria-live="polite"></span><i class="mk-cur"></i>`; }
+  return `<button class="mk-chart${big ? ' big' : ''}" data-act="mk-chart" aria-expanded="${big}" title="${tip}">
+    <span class="mk-chh"><span>World price <b>$${mkP(pr)}M</b> per ${fmt(MKT_LOT)}</span>${chs}</span>${big ? `<span class="mk-leg">${ask ? `<span><i class="ask"></i>best sell $${mkP(ask.price)}</span>` : ''}${bid ? `<span><i class="bid"></i>best buy $${mkP(bid.price)}</span>` : ''}<span><i class="base"></i>base $${mkP(MKT_BASE[k])}</span></span>` : ''}
+    <span class="mk-cv" data-k="${k}"><svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">${grid}<path d="M0,${C.baseY}H1000" class="b"/>${C.h.length < 2 ? '' : `<path d="${C.area}" fill="${col}" opacity=".16"/><path d="${C.line}" fill="none" stroke="${col}" class="l"/>`}</svg>${over}${!big && C.h.length < 2 ? '<span class="mk-c1">History starts tomorrow</span>' : ''}</span></button>`; }
+// your stock of the good, against storage, and your daily net
+function mkStock(k){ const N = S.nations[PLAYER], cap = stockCap(PLAYER), net = income(PLAYER).net[k], R = RES.find(r => r.k === k), pct = Math.min(100, Math.round(N[k]/cap*100));
+  return `<div class="mk-stock" title="You hold ${resFull(k, N[k])} of ${fmt(cap)} storage, ${net >= 0 ? '+' : '-'}${fmt(Math.abs(net))} a day. Used for ${R.use}. From ${R.src}.">${icon(k, 22)}<span class="mk-sl">You hold <b>${fmt(N[k])}</b><span class="muted"> / ${fmt(cap)}</span></span><span class="mk-net ${net < 0 ? 'neg' : 'pos'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}/day</span><i class="mk-fill" style="--f:${pct}%"></i></div>${noCityOf(k) ? `<div class="mk-note">No city of yours makes it. ${noCityTxt(k)}</div>` : ''}`; }
+// one offer row (top 3 and the Order Book): flag chip, goods, amount (green: you get it, red: you give it), price, and Buy (green) or Sell (yellow)
+// (the amount's sign and colour say what moves to or from you: + green you get the goods, − red you give them; your own offer the same way, as its
+// maker: your sell offer gives goods, your buy offer gets them)
+function mkRow(o, rank = 0){ const bid = isBid(o), N = S.nations[o.seller], enemy = atWar(PLAYER, o.seller), mine = o.seller === PLAYER, emb = !mine && embargoed(o.seller, PLAYER), op = MK.open && MK.open.id === o.id, give = mine ? !bid : bid;
+  const tip = mine ? `Your ${bid ? 'buy' : 'sell'} offer` : enemy ? `This offer is made by an enemy: ${N.name}. ${bid ? 'Selling to them supplies their war.' : 'Buying from them funds their war.'}` : emb ? `${mkt().emb[o.seller + '>' + PLAYER] ? N.name + ' has an embargo on you' : 'You have an embargo on ' + N.name} and no deals are made.` : `${bid ? 'Buy offer' : 'Sell offer'} by ${N.name}: ${resFull(o.res, o.qty)} at ${lotPriceTxt(o.res, o.price)}`;
+  const act = mine ? `<button class="mk-x" data-act="book-cancel" data-id="${o.id}">Cancel</button>` : emb ? '<span class="mk-emb-t">Embargo</span>'
+    : `<button class="mk-go ${bid ? 'sell' : 'buy'}" data-act="mk-open" data-id="${o.id}" aria-expanded="${!!op}" aria-label="${bid ? 'Sell' : 'Buy'} ${rlbl(o.res)} ${bid ? 'to' : 'from'} ${esc0(N.name)} at ${lotPriceTxt(o.res, o.price)}">${MK_CART(bid)}<span>${bid ? 'Sell' : 'Buy'}</span></button>`;
+  return `<div class="mk-row${enemy ? ' enemy' : ''}${emb ? ' mk-embr' : ''}${mine ? ' mine' : ''}${op ? ' open' : ''}${rank ? ' rk' : ''}" title="${tip}${o.priv ? ' · Private: only your coalition can see this offer.' : ''}">${rank ? `<span class="mk-rk">#${rank}</span>` : ''}${flagChip(o.seller)}<span class="mk-ic">${icon(o.res, 28)}</span>
+    <span class="mk-amt ${give ? 'neg' : 'pos'}"><b>${give ? '−' : '+'}${fmt(o.qty)}</b><small>${mkDays(o)} · ${enemy ? '<span class="etag">ENEMY</span> ' : ''}${o.priv ? '<span class="ptag">🔒 COALITION</span> ' : ''}${mine ? `Your ${bid ? 'buy' : 'sell'} offer` : esc0(N.name)}</small></span>
+    <span class="mk-pr" title="${lotPriceTxt(o.res, o.price)}">${icon('cash', 16)}<b>${mkP(o.price)}</b></span>${act}</div>${op ? mkPanel(o) : ''}`; }
+// what taking q units of offer o would do (the panel's cost line and its confirm button; also patched in place while the amount is typed)
+function mkDeal(o, q){ const bid = isBid(o), L = fillLimit(PLAYER, o.id), me = S.nations[PLAYER], v = lotCash(q, o.price), room = kFloor(stockCap(PLAYER) - me[o.res]);
+  const why = L.q >= o.qty ? '' : L.why === 'money' ? `your money pays for ${fmt(L.q)}` : L.why === 'storage' ? `your storage is nearly full (room for ${fmt(L.q)})` : L.why === 'stock' ? `you hold ${fmt(L.q)}` : L.why === 'room' ? `their storage takes only ${fmt(L.q)}` : '';
+  const cost = bid ? `You get <b>$${mkM(v)}M</b> · you hold ${fmt(me[o.res])}` : `Cost <b>$${mkM(v)}M</b> · you have $${fmt(me.cash)}M · room ${fmt(room)}`;
+  return {L, cost:`${cost}${why ? `<br><span class="mk-why">Max is ${fmt(L.q)}: ${why}.</span>` : ''}`, txt:`${bid ? 'Sell' : 'Buy'} ${fmt(q)} for $${mkM(v)}M`, ok:`<button class="btn mk-ok ${bid ? 'sell' : 'buy'}" data-act="book-buy" data-id="${o.id}" data-q="${q}" ${q > 0 ? '' : 'disabled'}>${bid ? 'Sell' : 'Buy'} ${fmt(q)} for $${mkM(v)}M</button>`}; }
+const mkQ = (o, L) => Math.max(0, Math.min(L.q, MK.open && MK.open.q != null ? MK.open.q : L.q));
+// the quantity panel under a row (one at a time): chips 10K / 50K / Max, a stepper of 1,000, what it costs and what limits it, the enemy warning, confirm
+function mkPanel(o){ const bid = isBid(o), N = S.nations[o.seller], L = fillLimit(PLAYER, o.id), q = mkQ(o, L), D = mkDeal(o, q), w = bid ? 'Sell' : 'Buy';
+  return `<div class="mk-pan ${bid ? 'sell' : 'buy'}" role="group" aria-label="${w} ${rlbl(o.res)}"><div class="mk-pt">${w} ${rlbl(o.res)} ${bid ? 'to' : 'from'} ${flagHTML(o.seller, 13)} <b>${esc0(N.name)}</b> at $${mkP(o.price)}M per ${fmt(MKT_LOT)}</div>
+    <div class="mk-qr"><span class="mk-chips">${[10, 50].map(t => `<button class="mk-chip${q === t*MKT_LOT ? ' on' : ''}" data-act="mk-q" data-v="${t*MKT_LOT}" ${L.q >= MKT_LOT ? '' : 'disabled'}>${fmtQ(t*MKT_LOT)}</button>`).join('')}<button class="mk-chip${q === L.q ? ' on' : ''}" data-act="mk-q" data-v="max" ${L.q >= MKT_LOT ? '' : 'disabled'}>Max</button></span>
+      <span class="mk-step"><button data-act="mk-q" data-d="${-MKT_LOT}" aria-label="1,000 less">−</button><input id="mk-q" type="text" inputmode="numeric" autocomplete="off" value="${fmt(q)}" aria-label="Amount"><button data-act="mk-q" data-d="${MKT_LOT}" aria-label="1,000 more">+</button></span></div>
+    <div class="mk-cost" id="mk-cost">${D.cost}</div>${atWar(PLAYER, o.seller) ? `<div class="mk-warn">${esc0(N.name)} is at war with you: ${bid ? 'selling to them supplies their war' : 'buying funds their war'}.</div>` : ''}
+    <div class="mk-pa"><span id="mk-okw">${D.ok}</span><button class="mk-link" data-act="mk-close">Cancel</button></div></div>`; }
+// a side of the top view: BUY (the sell offers you can buy from, cheapest first) or SELL (the buy offers you can sell to, highest first), 3 shown
+function mkSide(k, bid){ const L = topOffers(PLAYER, k, bid ? 'bid' : 'ask', 0), mine = (S.book || []).filter(o => o.seller === PLAYER && o.res === k && isBid(o) === bid), early = dayOf(S.hour) <= 5;
+  const head = `<div class="mk-sh ${bid ? 'sell' : 'buy'}"><b>${bid ? 'Sell' : 'Buy'} ${esc0(mkName(k))}</b><span class="mk-cnt">${L.length ? `${Math.min(3, L.length)} of ${L.length}` : ''}</span><span class="mk-ph">Price <small>$M per ${fmt(MKT_LOT)}</small></span></div>`;
+  const empty = bid ? `<p class="mk-empty">No nation is buying ${rlbl(k)} right now. <button class="mk-link" data-act="mk-view" data-v="create" data-t="sell">Create Offer</button> to sell yours: buyers take it when the price suits them.</p>`
+    : `<p class="mk-empty">No nation is selling ${rlbl(k)} right now.${early ? ' In the first days nobody has a surplus yet: sellers usually appear within a few days, and a buy offer posted before then may run out unfilled.' : ''} <button class="mk-link" data-act="mk-view" data-v="create" data-t="buy">Create Offer</button> to post a buy offer: sellers fill it when the price suits them.</p>`;
+  const own = mine.length ? `<div class="mk-own">Your ${bid ? 'buy' : 'sell'} offer${mine.length > 1 ? 's' : ''}: ${mine.map(o => `<b>#${mkRank(o)}</b> in line (${fmt(o.qty)} at $${mkP(o.price)})`).join(', ')} <button class="mk-link" data-act="mk-view" data-v="book">Order Book</button></div>` : '';
+  return `<section class="mk-sec ${bid ? 'sell' : 'buy'}">${head}${L.length ? L.slice(0, 3).map(o => mkRow(o)).join('') : empty}${own}</section>`; }
+function mkTop(k){ const emb = S.nations.filter(m => m.alive && mkt().emb[m.id + '>' + PLAYER]);
+  return `${mkChart(k)}${mkStock(k)}${emb.length ? `<div class="mk-embs">Embargoed by ${emb.map(m => `${flagChip(m.id, 14)} ${esc0(m.name)}`).join(', ')}: they will not trade with you.</div>` : ''}<div class="mk-cols">${mkSide(k, false)}${mkSide(k, true)}</div>`; }
+// the offer form (Create Offer): I sell / I buy, the good (the tab), the amount, the price; what it holds, its place in line, a warning when it
+// crosses the best offer on the other side (with one tap to take that one instead)
+function mkPrev(k){ const ty = BK_F.type, N = S.nations[PLAYER], pr = Math.round(mkPrice(k)*100)/100, q = kFloor(Math.max(0, +BK_F.qty || 0)), ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOffers(PLAYER, k, 'bid', 1)[0];
+  const room = kFloor(stockCap(PLAYER) - N[k]), have = ty === 'sell' ? kFloor(N[k]) : lotsFor(N.cash, Math.max(0.01, pr)), qq = Math.min(q, have);
+  const rank = 1 + (S.book || []).filter(o => o.res === k && isBid(o) === (ty === 'buy') && o.qty > 0 && (ty === 'buy' ? o.price >= pr : o.price <= pr)).length;
+  let s = !(pr >= BOOK_MIN_PRICE) ? `Set a price of at least $${BOOK_MIN_PRICE}M per ${fmt(MKT_LOT)}.` : !qq ? (ty === 'sell' ? `You hold no ${rlbl(k)} to sell.` : 'Not enough money for a buy offer at that price.')
+    : ty === 'sell' ? `Holds <b>${fmt(qq)}</b> ${rlbl(k)} for 3 days; nations can take part of it. You get up to <b>$${mkM(lotCash(qq, pr))}M</b>.` : `Holds <b>$${mkM(lotCash(qq, pr))}M</b> for 3 days to buy ${fmt(qq)} ${rlbl(k)}; nations can fill part of it.${qq > room ? ` Your storage has room for ${fmt(room)} now.` : ''}`;
+  if (qq && qq < q) s += ` <span class="mk-why">You asked for ${fmt(q)}: ${ty === 'sell' ? `you hold ${fmt(have)}` : `your money pays for ${fmt(have)}`}.</span>`;
+  if (qq && pr >= BOOK_MIN_PRICE) s += ` Your offer would be <b>#${rank}</b> in line.`;
+  const x = ty === 'sell' && bid && pr <= bid.price ? bid : ty === 'buy' && ask && pr >= ask.price ? ask : null;
+  if (x) s += `<span class="mk-cross">${ty === 'sell' ? `A buy offer already pays $${mkP(x.price)}M: sell into it now.` : `A sell offer already asks $${mkP(x.price)}M: buy it now.`} <button class="mk-link" data-act="mk-take" data-id="${x.id}">${ty === 'sell' ? 'Sell to' : 'Buy from'} ${esc0(S.nations[x.seller].name)}</button></span>`;
+  return s; }
+const mkPrice = k => BK_F.price != null && BK_F.price !== '' && +BK_F.price > 0 ? +BK_F.price : +mkt().p[k].toFixed(2);
+function mkCreate(k){ const ty = BK_F.type, M = mkt(), ask = topOffers(PLAYER, k, 'ask', 1)[0], bid = topOffers(PLAYER, k, 'bid', 1)[0], pr = mkPrice(k);
+  const chip = (v, t) => `<button class="mk-chip" data-act="mk-cp" data-v="${v.toFixed(2)}">${t} $${mkP(v)}</button>`;
+  return `<div class="mk-back"><button class="mk-link" data-act="mk-view" data-v="top">◀ Top offers</button></div>
+    <div class="mk-form"><div class="mk-seg" id="bk-type" data-v="${ty}" role="radiogroup" aria-label="Offer type"><button class="sell${ty === 'sell' ? ' on' : ''}" role="radio" aria-checked="${ty === 'sell'}" data-act="mk-type" data-v="sell">${MK_CART(true)}I sell</button><button class="buy${ty === 'buy' ? ' on' : ''}" role="radio" aria-checked="${ty === 'buy'}" data-act="mk-type" data-v="buy">${MK_CART(false)}I buy</button></div>
+    <label class="mk-fl"><span>Goods</span><select id="bk-res" aria-label="Goods">${MKT_K.map(g => `<option value="${g}" ${g === k ? 'selected' : ''}>${mkName(g)}</option>`).join('')}</select></label>
+    <div class="mk-fl"><span>Amount</span><span class="mk-step"><button data-act="mk-cq" data-d="${-MKT_LOT}" aria-label="1,000 less">−</button><input id="bk-qty" type="text" inputmode="numeric" autocomplete="off" value="${fmt(mkNum(BK_F.qty))}" aria-label="Quantity" title="Goods trade in lots of ${fmt(MKT_LOT)}"><button data-act="mk-cq" data-d="${MKT_LOT}" aria-label="1,000 more">+</button></span>
+      <span class="mk-chips">${[10, 50, 100].map(t => `<button class="mk-chip" data-act="mk-cq" data-v="${t*MKT_LOT}">${fmtQ(t*MKT_LOT)}</button>`).join('')}<button class="mk-chip" data-act="mk-cq" data-v="max">Max</button></span></div>
+    <div class="mk-fl"><span>Price <small>$M per ${fmt(MKT_LOT)}</small></span><span class="mk-step"><button data-act="mk-cp" data-d="-0.05" aria-label="5 cents less">−</button><input id="bk-price" type="text" inputmode="decimal" autocomplete="off" value="${mkP(Math.round(pr*100)/100)}" aria-label="Price per ${fmt(MKT_LOT)} units"><button data-act="mk-cp" data-d="0.05" aria-label="5 cents more">+</button></span>
+      <span class="mk-chips">${chip(M.p[k], 'World')}${bid ? chip(bid.price, 'Best buy') : ''}${ask ? chip(ask.price, 'Best sell') : ''}</span></div>
+    <div class="mk-prev" id="mk-prev">${mkPrev(k)}</div>
+    <button class="btn mk-post ${ty}" data-act="book-post">${MK_PLUS}<span class="mk-pt2">Post ${ty === 'buy' ? 'buy' : 'sell'} offer${pr ? ` at $${mkP(+pr)}` : ''}</span></button>
+    <div class="small muted">Offers run 3 days ${itip('A sell offer holds your goods and a buy offer holds your money until someone takes it or it expires; nations can take part of it. Every listing is public; coalition partners can also send each other supplies directly from Messages.')}</div></div>`; }
+// the Order Book: the whole queue of the good (or of every good), sell offers cheapest first and buy offers highest first, 20 a side until "Show
+// all"; then your own offers (every good) with their place in line and Cancel
+// (All goods: a heading per good with its count and its first 5 a side; the heading opens that good's own list. Your own offers always show)
+function mkBook(k){ const all = MK.all, L = (S.book || []).filter(o => o.qty > 0 && S.nations[o.seller].alive && canSee(o, PLAYER) && (all || o.res === k)), ko = o => MKT_K.indexOf(o.res), n = MK.more ? 1e9 : all ? 5 : 20;
+  const list = (bd, t, e) => { let h = `<div class="mk-bh">${t}</div>`, any = false, more = 0;
+    for (const g of all ? MKT_K : [k]){ const A = L.filter(o => o.res === g && isBid(o) === bd).sort(bd ? byBid : byAsk); if (!A.length) continue; any = true; more += Math.max(0, A.length - n);
+      if (all) h += `<button class="mk-gh" data-act="mk-filter" data-k="${g}" data-book="1" title="${mkName(g)}: the whole list">${icon(g, 20)}<b>${mkName(g)}</b><small>${A.length} ${bd ? 'buying' : 'selling'}</small><span class="mk-gha">All ›</span></button>`;
+      h += A.filter((o, i) => i < n || o.seller === PLAYER).map(o => mkRow(o, mkRank(o))).join(''); }   // (your own offer is always shown, at its place in line)
+    return h + (!any ? `<p class="mk-empty">${e}</p>` : more || MK.more ? `<button class="mk-link mk-more" data-act="mk-more">${MK.more ? 'Show fewer' : `Show all (${more} more)`}</button>` : ''); };
+  const mine = (S.book || []).filter(o => o.seller === PLAYER && o.qty > 0).sort((x, y) => ko(x) - ko(y) || x.id - y.id);
+  const myRows = mine.map(o => `<div class="mk-my"><span class="mk-ic">${icon(o.res, 24)}</span><span class="mk-myt"><b class="${isBid(o) ? 'buy' : 'sell'}">${isBid(o) ? 'Buying' : 'Selling'} ${rlbl(o.res)}</b><small>${fmt(o.qty)} of ${fmt(o.q0 || o.qty)} left · $${mkP(o.price)}M · ends in ${mkDays(o)} · <b>#${mkRank(o)}</b> in line</small></span><button class="mk-x" data-act="book-cancel" data-id="${o.id}" title="Withdraw it: ${isBid(o) ? `the $${mkM(lotCash(o.qty, o.price))}M held comes back` : `the ${fmt(o.qty)} ${rlbl(o.res)} come back to your stock`}">Cancel</button></div>`).join('');
+  return `<div class="mk-back"><button class="mk-link" data-act="mk-view" data-v="top">◀ Top offers</button><span class="mk-sw" role="group" aria-label="Show"><button data-act="mk-all" data-v="0" aria-pressed="${!all}">This good</button><button data-act="mk-all" data-v="1" aria-pressed="${all}">All goods</button></span></div>
+    ${list(false, `Sell offers <small>cheapest first: you buy from these</small>`, `No nation is selling ${all ? 'anything' : rlbl(k)} right now.`)}
+    ${list(true, `Buy offers <small>highest first: you sell to these</small>`, `No nation is buying ${all ? 'anything' : rlbl(k)} right now.`)}
+    <div class="mk-bh mine">Your offers <small>every good</small></div>${myRows || '<p class="mk-empty">You have no offers on the market. <button class="mk-link" data-act="mk-view" data-v="create">Create Offer</button></p>'}`; }
+function marketHTML(){ const N = S.nations[PLAYER], k = MKT_K.includes(BK_RES) ? BK_RES : (BK_RES = 'oil');
+  if (MK.open && !(S.book || []).some(o => o.id === MK.open.id && o.qty > 0)){ MK.open = null; setTimeout(() => toast('That offer is gone.', 'info', null), 0); }   // taken or run out while its panel was open
+  const nk = (S.book || []).filter(o => o.res === k && o.qty > 0 && canSee(o, PLAYER)).length, mine = (S.book || []).filter(o => o.seller === PLAYER && o.qty > 0).length, v = MK.view;
+  return `<div class="rhead mk-ban">${MK_BAN}<div class="mk-bt"><h1>Stock Market</h1><div class="mk-sub"><span class="eyebrow">Day ${dayOf(S.hour)} ${itip('Nations list what they want to sell or buy. Trades happen only between nations: your money goes to the seller, and selling pays you. Each good shows its 3 best offers on each side; the others wait in line and move up when one is filled, withdrawn or runs out. Offers from nations at war with you are marked red.')}</span><span class="chip res-cash">${icon('cash')}<b>$${fmt(N.cash)}M</b></span></div></div></div>
+    <div class="mk-tabs" role="tablist" aria-label="Goods">${MKT_K.map(g => { const R = RES.find(r => r.k === g), on = g === k, M = mkt(), p = M.p[g], d = p - (M.prev[g] || p), c = Math.abs(d) < p*0.0005 ? '' : d > 0 ? ' up' : ' dn';
+      return `<button class="mk-tab${on ? ' on' : ''}" role="tab" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-act="mk-filter" data-k="${g}" title="${R.name}: world price ${lotPriceTxt(g, p)}">${icon(g, 26)}<span class="tl"><span class="ab">${R.ab}</span><span class="fn">${R.name}</span><span class="tp${c}">$${mkP(p)}</span></span></button>`; }).join('')}</div>
+    <div class="mk-body v-${v}" role="tabpanel" aria-label="${esc0(mkName(k))}">${v === 'create' ? mkCreate(k) : v === 'book' ? mkBook(k) : mkTop(k)}</div>
+    <div class="row mk-foot"><button class="btn mk-fb cr${v === 'create' ? ' on' : ''}" data-act="mk-view" data-v="create" aria-pressed="${v === 'create'}">${MK_CART(true)}Create Offer</button><button class="btn mk-fb ob${v === 'book' ? ' on' : ''}" data-act="mk-view" data-v="book" aria-pressed="${v === 'book'}" title="${nk} offers for ${rlbl(k)}${mine ? `; ${mine} of them yours` : ''}">${MK_LEDGER}Order Book${nk ? ` <span class="mk-n">${nk}</span>` : ''}</button></div>`; }
+// the Market after a change (a tab, a view, a panel, a deal)
+const mkRender = () => { if (modalKind === 'market' && !$('modal').hidden) setHTML($('sheet'), marketHTML()); };
 
 
 /* ---------------- Diplomacy ---------------- */
@@ -6167,12 +6465,19 @@ function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
 // the hover text and the panel of an unidentified force: nothing about it but that it is there (and how it was found: spotted or an AWACS contact)
 const UNK_HOW = 'Nation, size and unit types unknown. Recon identifies it: a UAV or other drone over it, a satellite, Special Forces, a Phased-Array AWACS, or a battle with it.';
-const unkTipHTML = fa => `<b>Unidentified army</b><div class="small" style="color:#9fd8ff">${fa.some(a => armyVisible(a, visibleSet(PLAYER))) ? 'Spotted' : 'Detected by AWACS'}: unidentified</div><div class="small muted">${UNK_HOW}</div>`;
-function unkHTML(a){ const spotted = armyVisible(a, visibleSet(PLAYER));
+const unkTipHTML = fa => `<b>Unidentified army</b><div class="small" style="color:#9fd8ff">${fa.some(a => shownNow(a, visibleSet(PLAYER))) ? 'Spotted' : 'Detected by AWACS'}: unidentified</div><div class="small muted">${UNK_HOW}</div>`;
+function unkHTML(a){ const spotted = shownNow(a, visibleSet(PLAYER));
   return `<div class="abar unk"><div class="ab-top"><span class="unkq" aria-hidden="true">?</span><div class="ab-nm"><h2 class="aname">Unidentified army</h2><div class="ab-sub">${spotted ? 'Spotted' : 'Detected by AWACS'}</div></div></div></div>
     <p class="small muted" style="margin:6px 0">${UNK_HOW}</p><div class="row"><button class="btn" data-act="clear">Close</button></div>`; }
 // is foreign force a identified for the player (rules/vision.js armyKnown: own and allied always; others only by recon or in a battle with you)?
 // Everything that would tell its nation, size, types, name or health asks this first; a force only spotted is the '?' badge and 'Unidentified army'
+// is the drawn point (x, y) in the player's sight (own or allied land, a revealed province, or inside a sight range): a foreign wing shows where it
+// flies in sight, not from take-off because its target is in sight (owner 2026-11-25: nothing foreign outside your land and your units' sight)
+const visAt = (vis, x, y) => { const c = worldToCell(x, y), p = c >= 0 ? G.prov[c] : -1; return (p >= 0 && vis.whole.has(p)) || (vis.ids || []).some(s => s[5] !== VK.sea && visIn(s, x, y)); };
+// is force a on the screen now: armyShown, except a foreign column on the move whose leg touches your (or an ally's) land, which shows by the
+// province drawn under it (rules/vision.js armyVisibleAt): it appears as it is drawn crossing your border, not an hour or two later, deep inside
+const shownNow = (a, vis) => { if (a.owner === vis.n || a.air || a.fly || !(a.to !== null || a.sail) || !(vis.whole.has(a.at) || (a.to !== null && vis.whole.has(a.to)))) return armyShown(a, vis);
+  const [x, y] = armyPos(a); return fightsMe(a, vis) || armyVisibleAt(a, vis, provAtW(x, y)); };
 const knowA = (a, vis = visibleSet(PLAYER)) => !!a && (a.owner === PLAYER || armyKnown(a, vis));
 const foeLabel = a => knowA(a) ? armyLabel(a, PLAYER) : 'an unidentified army';
 // the '?' plate's dot: grey with a dark outline (owner's pick, 2026-11-19)
@@ -6537,6 +6842,9 @@ function layoutCompute(p, roles){
     let ux = 0, uy = 0; if (bat && cls === 'g' && BU){ const sg = ow === S.owner[p] ? -1 : 1; ux = BU[0]*sg; uy = BU[1]*sg; }
     for (let dy = -24; dy <= 12; dy += 2) for (let dx = -22; dx <= 22; dx += 2) cand.push([dx, dy, 0]);
     if (cls === 's' && !P.sea) for (const q of dockCands(p)) cand.push(q);   // a fleet docked in a port: on the water off the city's shore (the grid above rarely reaches it)
+    // a force's counter is anchored in its own holder's land whenever any spot there is left (a small province: the counters overlap inside the
+    // country rather than one standing over the border in a neighbour's land, or at sea; whatever the overlaps would cost)
+    if (cls === 'g' || cls === 'a'){ const home = cand.filter(([dx, dy]) => tmGround(p, cls, P.x + dx, P.y + dy, 1) < 2600); if (home.length && home.length < cand.length) cand.splice(0, cand.length, ...home); }
     if (pg) cand.unshift([pg.tx - P.x, pg.ty - P.y, -TM_KEEP]);   // where it stands now (its glide's end), while that is still a fair spot: a force coming or going leaves the others in place
     // a spot's cost (B: an optional breakdown, for the tests)
     const ev = (dx, dy, bonus, bc, B) => { let c = 0; const add = B ? (k, v) => { c += v; B[k] = Math.round((B[k] || 0) + v); } : (k, v) => { c += v; };
@@ -8957,7 +9265,7 @@ function renderPart(vis, lite, R, k, dx0, dy0, dx1, dy1, full){ const mx = layer
       c.fillStyle = `rgba(208,222,232,${(0.8*L.a).toFixed(3)})`; c.fill(L.path); c.strokeStyle = `rgba(150,170,182,${(0.7*L.a).toFixed(3)})`; c.stroke(L.path); } }
   // the fog, over everything on the overlay (ground, roads, rivers, borders, snow): its own cached canvas, redrawn with the layer (the layer is rebuilt when
   // what you see changes). Land outside sight gets a plain grey veil, sea outside sight a lighter plain one; a province wholly in sight (yours or an
-  // ally's, revealed, where a force of yours is going) stays clear, and every sight range (circles, a satellite's strip) is cut out with a soft edge,
+  // ally's, or revealed) stays clear, and every sight range (circles, a satellite's strip) is cut out with a soft edge,
   // on both sides of the map's east-west seam. Maritime patrol ranges (VK.sea) clear the sea only.
   { const fgc = auxC('fg');
     const g = fgc.getContext('2d'); g.save(); clipA(g); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(dx0 - ax, dy0 - ay, dw, dh); g.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*ox - ax, dpr*oy - ay);
@@ -9463,11 +9771,11 @@ function draw(now){ draw.now = now;
   const boxes0 = [];   // screen boxes claimed so far: counters and map controls first, then country and sea names, then city and province names
   const showNeutral = GS > 1 ? hexPx >= 49 : hexPx >= 11, items = [];   // (they fade in where they show)   // independent garrisons stay hidden until zoomed in (or selected / fighting)
   const unkA = [], ROLES = new Map(); LAY_R = ROLES; SIDEC.clear(); TMAS = tmArtSig();
-  for (const a of S.armies){ if (!armyVisible(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; }
+  for (const a of S.armies){ if (!shownNow(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; }
     if (!knowA(a, vis)){ if (!a.fly && !(a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at)){ unkA.push(a); tmRoleAdd(ROLES, a); } continue; }   // (its spot in the province is the one it would have identified: the '?' stands where it stands)   // spotted, not identified: only the '?' badge (no flag, count, type, name or 3D models)
     tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;
     if (a.fly) continue;
-    let [wx, wy] = armyPos(a); const mv = a.to !== null || !!a.sail || (a.path.length > 0 && GO.S === S && GO.has(a.id));
+    let [wx, wy] = armyPos(a); const mv = a.to !== null || (!!a.sail && (G.P[a.at].sea || !S.battles.includes(a.at))) || (a.path.length > 0 && GO.S === S && GO.has(a.id));   // (a walk held by a battle where it stands: standing, laid out with the other side's counter, not faded under it)
     let mvm = null; if (!a.air){ const m = mvm = movStep(a, wx, wy, mv, now); if (m){ wx = m.x; wy = m.y; } }   // marching or settling: the spring's spot
     // (standing forces off screen count too: the zoom bands are resolved over every force you can see, so a counter never shifts as others come
     // into view; a province not laid out yet waits for a frame with time to spare)
@@ -9815,7 +10123,7 @@ function draw(now){ draw.now = now;
   const dtV = Math.min(0.1, (now - (draw.lastT || now))/1000), airLbl = []; draw.lastT = now;
   for (const a of S.armies){ if (!a.air || !count(a)) continue; const v = wingVis(a, now, dtV); if (!v) continue; animFast();
     const pU = a.owner !== PLAYER && loWing(a) ? (c0 => c0 >= 0 ? G.prov[c0] : -1)(worldToCell(v.x, v.y)) : -1, lo = a.owner !== PLAYER && loHidden(a, PLAYER, pU), spot = pU >= 0 && !!a.fly && !lo;   // a foreign Stealth Bomber wing no SAM or jammer of yours is close to (spot: one is)
-    if ((!armyVisible(a, vis) && !vis.has(v.tgt) && !spot) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v)) || lo){   // stealthy UAVs (III+) only show near your air defence or under your AWACS; stealth bombers only near your SAMs and jammers
+    if ((!armyVisible(a, vis) && !visAt(vis, v.x, v.y) && !spot) || (a.owner !== PLAYER && a.u.drone && uavLv(a.owner) >= 3 && !uavSpotted(v)) || lo){   // stealthy UAVs (III+) only show near your air defence or under your AWACS; stealth bombers only near your SAMs and jammers
       /*@TEST*/(window.__airSeen || (window.__airSeen = {}))[a.id] = 'hidden';/*@ENDTEST*/
       if ((lo || (vis.locs && vis.locs.length)) && a.owner !== PLAYER){ const c0 = worldToCell(v.x, v.y), p0 = c0 >= 0 ? G.prov[c0] : -1; if (p0 >= 0 && (lo ? loLocated(PLAYER, p0, v.x, v.y) : visLocAt(vis, v.x, v.y)) && !(a.u.drone && uavLv(a.owner) >= 3)){   /* AWACS: a '?' contact; a stealth bomber only inside half the radar's range */ /*@TEST*/window.__airSeen[a.id] = 'contact';/*@ENDTEST*/ const [x, y] = toScreen(v.x, v.y); const r = unkPlate(x, y, k*0.8, now); hits.push({...r, ids:[a.id], cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }
       continue; }
@@ -9935,7 +10243,7 @@ function etaChip(a){ if (a.air || a.fly) return; const st = stopsOf(a); if (!st.
   ctx.save(); ctx.font = `700 11px ${BODY}`; const w = ctx.measureText(txt).width + 14; roundRect(ctx, x - w/2, y - 34, w, 19, 9.5); ctx.fillStyle = 'rgba(20,16,10,.9)'; ctx.fill(); ctx.strokeStyle = '#e2a23d'; ctx.lineWidth = 1.2; ctx.stroke();
   ctx.fillStyle = '#f6e7c4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y - 24.5); ctx.restore(); /*@TEST*/PATHDBG.eta = {txt, x:Math.round(x), y:Math.round(y)};/*@ENDTEST*/ }
 function routeChip(a, t, path){
-  const v0 = visibleSet(PLAYER), foes0 = stationaryAt(t).filter(b => armyVisible(b, v0) && atWar(PLAYER, b.owner)), foes = foes0.filter(b => knowA(b, v0)), [x, y] = toScreen(G.P[t].x, G.P[t].y), rn = routeNotes(a, t, path, sel.targetPt);
+  const v0 = visibleSet(PLAYER), foes0 = stationaryAt(t).filter(b => armyShown(b, v0) && atWar(PLAYER, b.owner)), foes = foes0.filter(b => knowA(b, v0)), [x, y] = toScreen(G.P[t].x, G.P[t].y), rn = routeNotes(a, t, path, sel.targetPt);
   const fw = a.air ? 0 : fightsOnWay(a, path), r = odds(a, t, foes, undefined, viaOf(a)), mx = a.air ? '' : mixText(routeMix(a, path)), txt = `${etaHours(a, path, tgtEnd(t))} h${mx ? ' · ' + mx : ''}${foes.length ? ' · ' + (r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even' : 'Likely defeat') : ''}${foes0.length > foes.length ? ' · ? unidentified army' : ''}${fw ? ` · ⚠ fights through ${fw} province${fw > 1 ? 's' : ''} on the way` : ''}${SUP && SUP[PLAYER] && !SUP[PLAYER][t] ? ' · No supply' : ''}${rn.length ? ' · ' + rn.join(' · ') : ''}`;
   ctx.font = `600 11px ${BODY}`; const w = ctx.measureText(txt).width + 14;
   roundRect(ctx, x - w/2, y - 38, w, 20, 4); ctx.fillStyle = !foes.length ? (fw ? '#4a3a1a' : '#1b2a2e') : r >= 1.5 ? '#24452a' : r >= 0.9 ? '#4a3a1a' : '#4a1d1a'; ctx.fill();
@@ -10012,6 +10320,7 @@ function dropUnit(x, y){ const a = armyById(udrag.id); udrag = null; if (!a) ret
   joinForces(a, b); }
 // a into b: at once when both stand in the same province, otherwise a marches to b and merges on arrival
 function joinForces(a, b){ if (!a || !b || a === b) return false;
+  if (a.fly || b.fly){ toast('Paratroopers in the air: orders once they land.', 'bad', null); return false; }   // (a drop in flight takes no one aboard and joins no one)
   const sp = stackPenaltyIf(b, a), warn = sp.over ? ` ${stackWarn(sp)}` : '';   // over the stack limit: say what it costs
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
@@ -10076,7 +10385,7 @@ function tap(x, y, shift = false, long = false){
       if (shift && !a.air){ stopTap(a, p, x, y); return; }   // Shift on a desktop, inside Move: one more stop
       if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; }   // (a spot in its own province or sea zone: it walks, or sails, there)
       setTarget(a, p);
-      if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => knowA(b) && armyVisible(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
+      if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => knowA(b) && armyShown(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
         if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
       if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
@@ -10223,7 +10532,7 @@ function intelHTML(){ const N = S.nations[PLAYER], ag = agentsOf(PLAYER), idle =
     return `<div class="irow m"><i class="fw">${o >= 0 ? flagHTML(o, 14) : ''}</i><span><b>${SPY_OPS[a.op.k].name}</b> <span class="muted">· ${P0.cityName || P0.name}</span></span><span class="small muted">${a.op.h} h left · ${Math.round(spyChance(PLAYER, a.op.p, a.op.k)*100)}%</span><button class="btn" data-act="goto" data-id="${a.op.p}">Show</button></div>`; }).join('');
   const ops = Object.values(SPY_OPS).map(O => `<div class="irow"><span><b>${O.name}</b><div class="small muted">${O.desc}</div></span><span class="small">$${O.cost}M · ${Math.round(O.base*100)}% base</span></div>`).join('');
   return `<div class="rhead"><div><div class="eyebrow">${N.name} · intelligence service</div><h1>Intelligence</h1></div><div class="chip">${idle} idle</div></div>
-    <div class="iagents"><span class="agslots">${slots}</span><span><b>${ag.length}/5 agents</b> <span class="muted">· ${idle} idle · ${busy.length} on missions</span></span><button class="btn primary" data-act="train-agent" ${canTrain ? '' : 'disabled'}>Train agent · $60M</button></div>
+    <div class="iagents"><span class="agslots">${slots}</span><span><b>${ag.length}/5 agents</b> <span class="muted">· ${idle} idle · ${busy.length} on missions</span></span><button class="btn${canTrain ? ' can' : ''}" data-act="train-agent" ${canTrain ? '' : 'disabled'}>Train agent · $60M</button></div>
     <div class="eyebrow">Missions under way</div>${miss || '<div class="muted small">No agent is on a mission. Open a foreign province on the map and pick an operation.</div>'}
     <div class="eyebrow">Operations</div>${ops}
     <div class="small muted">Each idle enemy agent lowers your chance by 8%. A caught agent is lost and costs relations.</div>`; }
@@ -10247,12 +10556,12 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
   if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
-  const nst = stopsOf(a).length;
-  return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, false, 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
-    + (wpMode || (a.wp && a.wp.length) ? b('cm-undo', '↶', 'Undo', '', false, !nst, `Remove the last stop${matchMedia('(pointer: fine)').matches ? ' (Backspace)' : ''}; with one stop left it cancels the order`) : '') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, false, 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
-    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2, 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2) + b('stop', '■', 'Halt', 'X', false, !a.path.length && a.to === null && !a.sail, 'Stop right now, where the force stands')
+  const nst = stopsOf(a).length, fl = !!a.fly, flt = 'Paratroopers in the air: orders once they land';   // (a drop in flight takes no ground orders)
+  return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move', fl, fl ? flt : '') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, fl, fl ? flt : 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
+    + (wpMode || (a.wp && a.wp.length) ? b('cm-undo', '↶', 'Undo', '', false, !nst, `Remove the last stop${matchMedia('(pointer: fine)').matches ? ' (Backspace)' : ''}; with one stop left it cancels the order`) : '') + b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack', fl, fl ? flt : '') + b('cm-delay', '⏱', a.delay ? `Wait ${a.delay}h` : 'Delay', 'L', !!a.delay, fl, fl ? flt : 'Wait before moving: cycles 0 / 3 / 6 / 12 hours')
+    + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2 || fl, fl ? flt : 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2 || fl, fl ? flt : '') + b('stop', '■', 'Halt', 'X', false, fl || (!a.path.length && a.to === null && !a.sail), fl ? flt : 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
-    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id) : ''); }   // no Close button: tap empty map (or Esc) to deselect
+    + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id, fl, fl ? flt : '') : ''); }   // no Close button: tap empty map (or Esc) to deselect
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || wpMode || dropFor !== null || !!aimMsl); }
 function sendToTarget(a, keep = false){
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
@@ -10362,7 +10671,7 @@ function tipShow(x, y){ tip.classList.remove('dugtip');
     tip.innerHTML = `<b>Headquarters</b><div class="small muted">${flagHTML(PLAYER, 12)} ${C.cityName || C.name} · your capital</div><div class="small" style="margin-top:2px">The seat of your government and high command.</div>`;
     tip.hidden = false; const tw = 230, th = tip.offsetHeight; let tx = x + 14, ty = y + 14; if (tx + tw > cw - 6) tx = x - tw - 14; if (ty + th > ch - 6) ty = y - th - 14; tip.style.left = Math.max(6, tx) + 'px'; tip.style.top = Math.max(6, ty) + 'px'; return; }
   const p = provAt(x, y); if (p < 0){ tipHide(); return; }
-  const P = G.P[p], vis = visibleSet(PLAYER), here0 = stationaryAt(p).filter(a => armyVisible(a, vis)), here = here0.filter(a => knowA(a, vis)), unkHere = here0.length > here.length;
+  const P = G.P[p], vis = visibleSet(PLAYER), here0 = stationaryAt(p).filter(a => armyShown(a, vis)), here = here0.filter(a => knowA(a, vis)), unkHere = here0.length > here.length;
   const foes = here.filter(a => a.owner !== PLAYER), mine = here.filter(a => a.owner === PLAYER);
   let h = `<b>${P.city ? `${P.cityName}${sameName(P.cityName, P.name) ? '' : ` <span class="muted" style="font-weight:400">· ${P.name}</span>`}` : P.name}</b><div class="small muted">${provFlagHTML(p, 12)} ${placeOwner(p)}</div>`;
   if (!P.sea){ const y = provYield(p), T0 = terr(p), tk = P.terrain || 'plains', [sg, wk] = terrUnitsText(tk); h += `<div class="r"><span style="white-space:nowrap">${ticon(tk, 13)} ${T0.name}</span><span>${T0.def > 1 ? 'defence +' + Math.round((T0.def - 1)*100) + '%' : 'open ground'}</span></div>`;
@@ -10511,11 +10820,11 @@ function cpSlots(p){ const c = S.cons[p], q = S.queue[p], QM = queueMax(PLAYER);
 function cpBldOpt(p, k){ const N = S.nations[PLAYER], B = BUILD[k], lv = S.bld[p][k] || 0, nl = Math.min(B.max, lv + 1), cc = buildCost(PLAYER, k, nl, p), why = buildWhy(p, k), miss = !why && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : '', w = why || miss;
   return `<div class="cpo${w ? ' blk' : ''}" data-bk="${k}"><span class="cpn">${bimg(k, Math.max(1, lv), 30, !lv)}<span><b>${B.name}${B.max > 1 ? ' ' + ROMAN[nl] : ''}</b><small>${lv ? (B.max > 1 ? `now level ${ROMAN[lv]}` : 'built') : 'not built'}</small></span></span>
     <span class="cpc">${lv >= B.max ? '' : `${costHTML(cc, N)}<i class="cpt" title="Build time">${cpTime(cc.h)}</i>`}</span>
-    <button class="btn cpb" data-act="cp-build" data-id="${p}" data-k="${k}" ${w ? 'aria-disabled="true"' : ''} title="${w || (lv ? 'Upgrade' : 'Build') + ' ' + B.name + ' in ' + cpName(p)}">${lv ? 'Upgrade' : 'Build'}</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
+    <button class="btn cpb${w ? '' : ' can'}" data-act="cp-build" data-id="${p}" data-k="${k}" ${w ? 'aria-disabled="true"' : ''} title="${w || (lv ? 'Upgrade' : 'Build') + ' ' + B.name + ' in ' + cpName(p)}">${lv ? 'Upgrade' : 'Build'}</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
 function cpUnitOpt(p, t){ const N = S.nations[PLAYER], U = UNITS[t], c = ucost(PLAYER, t), why = trainWhy(p, t), miss = !why && !hasC(N, c) ? 'Needs ' + missTxt(N, c) : '', w = why || miss;
   return `<div class="cpo${w ? ' blk' : ''}" data-ut="${t}"><span class="cpn">${unitPic(t, 'sm')}<span><b>${U.name}${U.pack ? ` ×${U.pack}` : ''}</b><small>${U.dr ? 'drone' : U.cls}</small></span></span>
     <span class="cpc">${costHTML(c, N)}<i class="cpt" title="Training time">${cpTime(trainH(p, t, PLAYER))}</i></span>
-    <button class="btn cpb" data-act="cp-train" data-id="${p}" data-t="${t}" ${w ? 'aria-disabled="true"' : ''} title="${w || 'Train ' + U.name + ' in ' + cpName(p)}">Train</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
+    <button class="btn cpb${w ? '' : ' can'}" data-act="cp-train" data-id="${p}" data-t="${t}" ${w ? 'aria-disabled="true"' : ''} title="${w || 'Train ' + U.name + ' in ' + cpName(p)}">Train</button>${w ? `<span class="cpw">${w}</span>` : ''}</div>`; }
 // the options expanded under a row
 function cpInlineHTML(p, kind){ let list;
   if (kind === 'bld') list = `<div class="cpl">${BK.map(k => cpBldOpt(p, k)).join('')}</div>`;
@@ -10537,7 +10846,7 @@ function cpBarHTML(ids){ const B = CP.bulk, N = S.nations[PLAYER], n = ids.lengt
       <div class="cptot"><span class="cptl">Total cost${full ? ` for ${full} ${full === 1 ? 'city' : 'cities'}` : ''}</span>${full ? costHTML(pl.total, N) : '<span class="muted">nothing to queue</span>'}${short && full ? '<span class="cpshort">Not enough for all: ' + missTxt(N, pl.total) + '</span>' : ''}</div>
       <div class="cpcols"><div><div class="cplh ok">Will queue (${pl.ok.length})</div><ul class="cplist">${pl.ok.map(x => line(x, false)).join('') || '<li class="none">None</li>'}</ul></div>
       <div><div class="cplh sk">Skipped (${pl.skip.length})</div><ul class="cplist">${pl.skip.map(x => line(x, true)).join('') || '<li class="none">None</li>'}</ul></div></div>
-      <div class="row"><button class="btn primary cpgo" data-act="cp-confirm" ${pl.ok.length ? '' : 'aria-disabled="true"'}>${pl.ok.length ? `Queue ${lbl} in ${pl.ok.length} ${pl.ok.length === 1 ? 'city' : 'cities'}` : 'Nothing to queue'}</button><button class="btn" data-act="cp-bulk-off">Cancel</button></div></div>`; }
+      <div class="row"><button class="btn${pl.ok.length ? ' can' : ''} cpgo" data-act="cp-confirm" ${pl.ok.length ? '' : 'aria-disabled="true"'}>${pl.ok.length ? `Queue ${lbl} in ${pl.ok.length} ${pl.ok.length === 1 ? 'city' : 'cities'}` : 'Nothing to queue'}</button><button class="btn" data-act="cp-bulk-off">Cancel</button></div></div>`; }
   return h + '</div>'; }
 const GOICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/></svg>';
 function citiesHTML(){ const N = S.nations[PLAYER], cities = cpCities(), QM = queueMax(PLAYER);
@@ -10777,7 +11086,7 @@ const RCNT = {}; let rcntRaf = 0;
 // compact like CoN's strip: below 1,000 the plain figure, then one decimal under 10 of the next unit ('3.2B', '4.5k'), whole numbers above ('53k', '249k')
 const RES_UNITS = {cash:['M', 'B', 'T'], mp:['k', 'M', 'B']};
 // a day's change as a chip shows it (+34K, -1.2K; money and manpower as before) and a resource chip's tooltip: the full amount with its unit
-const resDay = (k, d) => isGood(k) ? (d >= 0 ? '+' : '') + fmtQ(d) : (d >= 0 ? '+' : '') + fmt(d);
+const resDay = (k, d) => { if (isGood(k)) return (d >= 0 ? '+' : '') + fmtQ(d); const R = RES.find(x => x.k === k); return (d >= 0 ? '+' : '-') + R.pre + fmt(Math.abs(d)) + R.unit; };   // (money and manpower with their units, as the stock beside: +$278M, +56k)
 const resChipTip = (k, v, d) => { const R = RES.find(x => x.k === k); return isGood(k) ? `${resFull(k, v)}, ${d >= 0 ? '+' : '-'}${fmt(Math.abs(d))} a day` : `${R.name}: ${R.pre}${fmt(v)}${R.unit}${k === 'mp' ? ` (${resFull('mp', v)})` : ''}, ${d >= 0 ? '+' : ''}${fmt1(d)}${R.unit} a day`; };
 function resText(R, v){ if (isGood(R.k)) return fmtQ(v); const a = Math.abs(v); if (a < 1000) return R.pre + fmt(v) + R.unit; const U = RES_UNITS[R.k] || ['', 'k', 'M']; let q = v, i = 0;
   while (Math.abs(q) >= 1000 && i < U.length - 1){ q /= 1000; i++; }
@@ -10819,7 +11128,7 @@ function renderSide(force){
     const day = Math.floor(S.hour/24) + 1, lc = localClock(S.hour).split(' · ');
     setHTML($('hday'), `${HB_ICO.cal}<b>${day}</b>`); setTip($('hday'), `Day ${day} of the war\nThe war began on day 1; every game day is 24 game hours.`);
     setHTML($('clock'), `${HB_ICO.clk}<b><span class="cd">${lc[0]} </span>${lc[1]}</b>`); setTip($('clock'), `Capital local time\n${lc[0]}, ${lc[1]} in ${G.P[N.capital].cityName || G.P[N.capital].name} · day ${day} of the war`);
-    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}` : `${capsHeld(PLAYER)}/${WIN_CAPS}`}<small> VP</small></b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
+    setHTML($('vbar'), `${HB_ICO.cup}<span class="vm"><i style="width:${Math.min(100, best*100)}%"></i><b>${pl >= pc ? `${mine}/${landNeed(PLAYER)}<small> VP</small>` : `${capsHeld(PLAYER)}/${WIN_CAPS}<small> capitals</small>`}</b></span>`); setTip($('vbar'), vtip.replace(/&#10;/g, '\n'));
     $('vbar').setAttribute('aria-label', `Victory ${Math.round(Math.min(1, best)*100)}%`); }
   mslDDSync(N);
   $('seedlbl').textContent = '';
@@ -10874,7 +11183,7 @@ function renderSide(force){
   else if (rallyFor !== null) hint = rallyPick ? `Rally point for ${G.P[rallyFor].cityName}: ${rallyName(rallyPick.p)}. Tap it again or press <button class="hb" data-act="rally-set">Set</button> <button class="hb" data-act="rally-cancel">Cancel</button>` : `Tap the map to set the rally point for ${G.P[rallyFor].cityName} · <button class="hb" data-act="rally-cancel">Cancel</button>`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Press the mission button, then tap a province inside the blue ring. Tap empty map or press Esc to deselect.';
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
-  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
+  else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : targetPath && targetPath.length ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.` : `${embarkWhy(a, sel.target) || 'No route there.'} Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
   setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
 }
@@ -10898,7 +11207,7 @@ function prodHTML(){
     // queue buttons: the unit's picture and its price (full name and costs in the tooltip), not cryptic code chips
     // a full queue (a free seat's city: one unit in training) shows its reason once, on screen, in place of greyed buttons
     const qw = queueWhy(PLAYER, p), btns = qw ? '' : UT.filter(t => !canMobilize(PLAYER, p, t)).map(t => { const uc = ucost(PLAYER, t);   // the price you actually pay (doctrine-adjusted), same as the Recruit list
-      return `<button class="qb" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: ${costTxt(uc, ', ')}${queueMax(PLAYER) > 1 ? ' (shift-click: queue to the limit)' : ''}" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
+      return `<button class="qb${canRecruit(PLAYER, p, t) ? ' can' : ''}" data-act="qrec" data-n="1" data-p="${p}" data-t="${t}" title="Queue ${UNITS[t].name}: ${costTxt(uc, ', ')}${queueMax(PLAYER) > 1 ? ' (shift-click: queue to the limit)' : ''}" aria-label="Queue ${UNITS[t].name}" ${canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'md')}<span>$${uc.cash}</span></button>`; }).join('');
     const rp = S.repeat && S.repeat[p];
     return `<tr><td class="cty"><button class="lnk" data-act="goto" data-id="${p}" title="Show ${P.cityName} on the map">${P.cityName}${p === N.capital ? ' <span class="capst">★</span>' : ''}</button><div class="small muted"><span class="res-${cityMain(p)}" title="Main resource: ${MAIN_NAME[cityMain(p)]}">${icon(cityMain(p), 11)} ${cap1(MAIN_NAME[cityMain(p)])}</span> · ${BK.filter(k => S.bld[p][k]).map(k => (k === 'fac' ? 'Base' : k === 'arms' ? 'Industry' : BUILD[k].name.split(' ')[0]) + (BUILD[k].max > 1 ? ' ' + ROMAN[S.bld[p][k]] : '')).join(' · ') || 'No buildings'}</div></td>
       <td class="q" data-l="Training">${qtxt}</td><td class="q" data-l="Building">${c ? `${BUILD[c.k].name} ${BUILD[c.k].max > 1 ? ROMAN[c.lvl] : ''} · ${hoursTxt(c.h)}` : '<span class="muted">—</span>'}</td>
@@ -11413,7 +11722,7 @@ function rRender(keep = true){ const sc = keep && document.getElementById('rtscr
 function ctxHTML(){
   if (SPLIT && (sel.army !== SPLIT.id || sel.group.length > 1 || !armyById(SPLIT.id) || count(armyById(SPLIT.id)) < 2)) SPLIT = null;
   if (sel.army !== null){ const a = armyById(sel.army); if (!a){ sel.army = null; } else return sel.group.length > 1 ? groupHTML() : a.air ? wingHTML(a) : SPLIT ? splitHTML(a) : armyHTML(a); }
-  if (sel.foe !== null){ const f = armyById(sel.foe), v0 = visibleSet(PLAYER); if (f && count(f) && f.owner !== PLAYER && armyVisible(f, v0)) return knowA(f, v0) ? foeHTML(f) : unkHTML(f);
+  if (sel.foe !== null){ const f = armyById(sel.foe), v0 = visibleSet(PLAYER); if (f && count(f) && f.owner !== PLAYER && shownNow(f, v0)) return knowA(f, v0) ? foeHTML(f) : unkHTML(f);
     if (f && count(f) && f.owner !== PLAYER && (armyLocated(f, v0) || (f.fly && visLocAt(v0, ...armyXY(f))))) return unkHTML(f); sel.foe = null; }   // (an AWACS contact: the same 'Unidentified army')
   if (sel.prov !== null) return provHTML(sel.prov);
   const N = S.nations[PLAYER], mine = S.armies.filter(a => a.owner === PLAYER);
@@ -11422,7 +11731,7 @@ function ctxHTML(){
     <div class="sub">${flagHTML(PLAYER, 13)} Your nation · Capital: ${G.P[N.capital].cityName || G.P[N.capital].name} <button class="btn" data-act="home" style="padding:2px 7px;font-size:12px;margin-left:4px">Show me</button></div>
     ${checklist()}
     ${researchLine()}
-    <div class="status intel" style="border-left-color:#8a7ad8">Intelligence: ${agentsOf(PLAYER).length}/5 agents (${idleAgents(PLAYER).length} idle) <button class="btn" data-act="train-agent" ${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? '' : 'disabled'} style="padding:2px 7px;font-size:12px;margin-left:4px">Train agent · $60M</button> <button class="btn" data-act="intel" style="padding:2px 7px;font-size:12px">Open</button></div>
+    <div class="status intel" style="border-left-color:#8a7ad8">Intelligence: ${agentsOf(PLAYER).length}/5 agents (${idleAgents(PLAYER).length} idle) <button class="btn${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? ' can' : ''}" data-act="train-agent" ${S.nations[PLAYER].cash >= 60 && agentsOf(PLAYER).length < 5 ? '' : 'disabled'} style="padding:2px 7px;font-size:12px;margin-left:4px">Train agent · $60M</button> <button class="btn" data-act="intel" style="padding:2px 7px;font-size:12px">Open</button></div>
     ${N.cash > 300 && S.queue.every((q, p) => S.owner[p] !== PLAYER || !q.length) ? `<div class="nudge">You have $${fmt(N.cash)}M and nothing in training. Money only wins wars once it is spent. <button class="btn" data-act="prov" data-id="${N.capital}" style="padding:2px 7px;font-size:12px">Recruit in ${G.P[N.capital].cityName}</button></div>` : ''}
     <div class="eyebrow">Your forces · ${mine.length} ${itip('Tap a province to inspect it or recruit in your cities. Tap one of your counters to command that force. Forces cross water by boarding ships at a naval city (the anchor: a coastal city of yours) and come ashore at a naval city; Marines land on any coast.')}</div>
     <div class="armylist">${mine.slice(0, 40).map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span class="an"><b>${armyName(a)}</b><span class="muted">${(P => P.city ? P.cityName : P.name)(G.P[a.to !== null ? a.to : a.at])}</span></span></span><span class="muted">${pluN(count(a), 'unit')} · ${statusText(a).short}</span></button>`).join('') || '<span class="muted small">You have no forces in the field.</span>'}</div>`;
@@ -11497,27 +11806,27 @@ function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k
   return `<div class="eyebrow" style="margin-top:12px">Achievements · ${got} of ${keys.length}</div><div class="achs">${keys.map(k => `<div class="ach ${ACHS[k] ? 'on' : ''}" title="${ACH[k][1]}"><b>${ACHS[k] ? '★' : '☆'} ${ACH[k][0]}</b><span class="small muted">${ACH[k][1]}</span></div>`).join('')}</div>`; }
 function statusText(a){
   const P = G.P;
-  if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${P[a.at].name}`};
+  if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${cpName(a.at)}`};
   if (a.wp && a.wp.length && a.to === null && !a.path.length && !a.sail) return {cls:'move', short:'at a stop', long:`At a waypoint in ${P[a.at].cityName || P[a.at].name}: it sets off for the next stop within the hour (${pluN(a.wp.length, 'stop')} to go)`};
-  if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${P[a.at].name}, resupplied at sea by the convoys`}`}; }
-  if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${P[a.at].name}: it attacks any convoy within ${fleetKm(a)} km`}; }
+  if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${cpName(a.at)}, resupplied at sea by the convoys`}`}; }
+  if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${cpName(a.at)}: it attacks any convoy within ${fleetKm(a)} km`}; }
   if (a.blk){ const n = S.trade ? S.trade.routes.filter(r => r.bk === a.id) : [], cut = n.filter(r => r.f0 === 0).length, [x, y] = armyXY(a), ch = chokeAt(x, y, fleetKm(a)), here = ch ? chokeByKey(ch).name : P[a.at].name;
     if (a.to !== null || a.path.length || a.sail || !P[a.at].sea) return {cls:'move', short:'to blockade', long:`Blockade order: it blockades once it stands at sea${a.to !== null || a.path.length || a.sail ? `, about ${a.sail ? sailHours(a) : etaHours(a)} h` : ''}`};
     return {cls:'battle', short:'blockading', long:`Blockading ${here} (${fleetKm(a)} km)${n.length ? `: ${cut ? `${cut} enemy route${cut > 1 ? 's' : ''} cut` : ''}${cut && n.length > cut ? ', ' : ''}${n.length > cut ? `${n.length - cut} rerouted` : ''}` : ': no enemy convoys pass here now'}`}; }
   if (a.land > 0 && a.to === null) return {cls:'move', short:'landing', long:`Landing at ${P[a.at].cityName || P[a.at].name}: ${durTxt(a.land)} left before it is ashore. Until then it cannot move on or capture, and fights at ${Math.round(rLandF(a.owner)*100)}%.`};
-  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${P[a.at].name}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${P[a.at].name}, about ${sailHours(a)} h${capturable(a.owner, a.at) && ground(a) ? (a.sail.nx || Math.hypot(a.sail.to[0] - P[a.at].x, a.sail.to[1] - P[a.at].y) <= HEART_R ? ': it takes the province on reaching the city' : ': it stops short of the city, so it will not capture the province') : ''}`};
+  if (a.sail) return P[a.at].sea ? {cls:'move', short:'at sea', long:`Sailing to a new position in ${cpName(a.at)}, about ${sailHours(a)} h`} : {cls:'move', short:'marching', long:`Moving to a new position in ${cpName(a.at)}, about ${sailHours(a)} h${capturable(a.owner, a.at) && ground(a) ? (a.sail.nx || Math.hypot(a.sail.to[0] - P[a.at].x, a.sail.to[1] - P[a.at].y) <= HEART_R ? ': it takes the province on reaching the city' : ': it stops short of the city, so it will not capture the province') : ''}`};
   if (a.emb != null && a.to === null && a.path.length && !S.battles.includes(a.at)) return {cls:'move', short:'embarking', long:`Embarking at ${P[a.at].cityName || P[a.at].name}: ${durTxt(a.emb)} left, then it sails for ${P[a.path[a.path.length - 1]].name}. It cannot move until it is aboard.`};
   if (a.to !== null || a.path.length){ const dest = a.path.length ? a.path[a.path.length - 1] : a.to; const blocked = a.to === null && !canProceed(a);
-    if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${P[dest].name}, about ${etaHours(a)} h`}; }
-  if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${P[a.at].name}. Ground units take extra damage at sea.`};
+    if (!blocked) return {cls:'move', short:(P[a.at].sea || (a.to !== null && P[a.to].sea)) ? 'at sea' : 'marching', long:`Moving to ${cpName(dest)}, about ${etaHours(a)} h`}; }
+  if (P[a.at].sea) return {cls:'', short:'at sea', long:`Embarked in ${cpName(a.at)}. Ground units take extra damage at sea.`};
   if (a.to === null && !a.path.length && ground(a) && capturable(a.owner, a.at)){ const nm = P[a.at].cityName || P[a.at].name;   // (rules/movement.js atHeart: capture is at once at the heart)
-    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${P[a.at].name}: a province becomes yours the moment ground troops reach its centre point (${P[a.at].city ? nm : 'the crossroads in its middle'}, where its roads meet) with no defenders left, no timer. Tap the city to march there.`};
-    if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN === 1 ? 'a ground unit is' : CAP_MIN + ' ground units are'} needed to capture ${P[a.at].name}.`}; }
+    if (!atHeart(a)) return {cls:'cap', short:'reach the city', long:`Reach the city to capture ${cpName(a.at)}: a province becomes yours the moment ground troops reach its centre point (${P[a.at].city ? nm : 'the crossroads in its middle'}, where its roads meet) with no defenders left, no timer. Tap the city to march there.`};
+    if (S.armies.filter(b => b.owner === a.owner && b.at === a.at && b.to === null).reduce((s0, b) => s0 + groundN(b), 0) < CAP_MIN) return {cls:'cap', short:'too few', long:`At the city, but ${CAP_MIN === 1 ? 'a ground unit is' : CAP_MIN + ' ground units are'} needed to capture ${cpName(a.at)}.`}; }
   if (S.owner[a.at] !== a.owner && !ground(a)) return {cls:'', short:'airborne', long:'Air units cannot capture ground. Add ground units.'};
-  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${P[a.at].name}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct(P[a.at].city)}% defence (it takes ${Math.round((1 - digP(a.at))*100)}% less damage${P[a.at].city ? ', the city bonus' : ', in the open'}) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
+  if (dugIn(a)) return {cls:'dug', short:'dug in', long:`Dug in at ${cpName(a.at)}${a.stance === 'defend' ? ' (Defend stance)' : `: in position for ${S.hour - (a.still ?? S.hour)} h`}${digF(a) < 1 ? `: +${digPct(P[a.at].city)}% defence (it takes ${Math.round((1 - digP(a.at))*100)}% less damage${P[a.at].city ? ', the city bonus' : ', in the open'}) while it holds here. Moving cancels it.` : ': no defence bonus while it stands on ground held by an enemy.'}`};
   { const own = S.owner[a.at] === a.owner || (bunkerLv(a.at) > 0 && S.owner[a.at] >= 0 && friendly(a.owner, S.owner[a.at])), h = a.still != null ? S.hour - a.still : 0;
-    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${P[a.at].name}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
-  return {cls:'', short:'holding', long:`Holding ${P[a.at].name}`};
+    if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
+  return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}`};
 }
 function oddsHTML(a, t, foes){
   if (!foes.length) return G.P[t].sea || S.owner[t] === PLAYER ? '' : `<br><span class="small">No defenders seen${visibleSet(PLAYER).has(t) ? '' : ' (fog: there may be some)'}.</span>`;
@@ -11715,10 +12024,10 @@ function armyInfoHTML(a){
     <div class="row"><button class="btn primary" data-act="resume">Back to the map</button></div>`; }
 function armyHTML(a){
   const st0 = statusText(a), here = a.to === null ? S.armies.filter(b => b.owner === PLAYER && b.at === a.at && b.to === null && !b.air) : [a];
-  const enemies0 = a.to === null ? stationaryAt(a.at).filter(b => b.owner !== PLAYER && armyVisible(b, visibleSet(PLAYER))) : [], enemies = enemies0.filter(b => knowA(b)), unkE = enemies0.length > enemies.length;
+  const enemies0 = a.to === null ? stationaryAt(a.at).filter(b => b.owner !== PLAYER && armyShown(b, visibleSet(PLAYER))) : [], enemies = enemies0.filter(b => knowA(b)), unkE = enemies0.length > enemies.length;
   let plan = '';
   if (sel.target !== null){
-    const t = sel.target, foes0 = stationaryAt(t).filter(b => b.owner !== PLAYER && armyVisible(b, visibleSet(PLAYER))), foes = foes0.filter(b => knowA(b)), unkT = foes0.length > foes.length;
+    const t = sel.target, foes0 = stationaryAt(t).filter(b => b.owner !== PLAYER && armyShown(b, visibleSet(PLAYER))), foes = foes0.filter(b => knowA(b)), unkT = foes0.length > foes.length;
     const ok = targetPath && targetPath.length, fb = sel.chase != null ? armyById(sel.chase) : null, rk = rangedOf(a).length ? bombardInfo(a, t, fb) : null, rkOn = !!rk && (rk.seen || !!fb), bomb = rkOn && rk.ok;
     const rkHTML = rkOn ? `<div class="rngp ${bomb ? 'in' : 'out'}"><b>${bomb ? 'In range: bombard' : 'Out of range'}</b> · ${fmt(rk.km)} km, range ${rk.range} km${bomb ? ' · it fires from where it stands every 15 minutes, without moving in' : rk.moving ? ' · it is on the move: it fires once it stands' : !rk.seen ? ' · no enemy force seen there' : ' · move closer, or march in'}</div>` : '';
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned route</div>
@@ -11768,7 +12077,7 @@ function linksHTML(p){ const P = G.P[p]; if (P.sea) return ''; const mine = S.ow
     let act = '';
     if (r && r.bld){ const B = r.bld; act = `<div class="small muted">Building ${B.k === 'rail' ? RAIL_NAME[B.lv] : LINK_NAME[B.lv]} · ${B.h} h left${r.dmg > 0 ? ' (paused)' : ''}</div><div class="bar"><i style="width:${Math.round((1 - B.h/(B.h0 || 1))*100)}%"></i></div>`; }
     else if (canB){ const btn = k => { const ck = linkCheck(PLAYER, p, v, k); if (ck.max) return ''; const lv = ck.lv, nmk = k === 'rail' ? (lv === 1 ? 'Lay railway' : 'High-speed') : `${rd ? 'Upgrade to ' : 'Build '}${LINK_NAME[lv].toLowerCase()}`;
-        return `<button class="btn" data-act="link-build" data-a="${p}" data-b="${v}" data-k="${k}" ${ck.ok ? '' : 'disabled'} title="${(k === 'rail' ? RAIL_TIP(lv) : ROAD_TIP(lv)) + (ck.ok ? '' : ' ' + ck.why)}" style="padding:2px 7px;font-size:11.5px"><span class="bt">${nmk} · ${Math.round(ck.c.h/2.4)/10} d</span>${costHTML(ck.c, S.nations[PLAYER])}</button>`; };
+        return `<button class="btn${ck.ok ? ' can' : ''}" data-act="link-build" data-a="${p}" data-b="${v}" data-k="${k}" ${ck.ok ? '' : 'disabled'} title="${(k === 'rail' ? RAIL_TIP(lv) : ROAD_TIP(lv)) + (ck.ok ? '' : ' ' + ck.why)}" style="padding:2px 7px;font-size:11.5px"><span class="bt">${nmk} · ${Math.round(ck.c.h/2.4)/10} d</span>${costHTML(ck.c, S.nations[PLAYER])}</button>`; };
       act = `<div class="row" style="margin-top:3px;gap:4px">${btn('road')}${btn('rail')}</div>`; }
     rows.push(`<div class="lnk" style="padding:4px 0;border-top:1px solid rgba(243,234,210,.08)"><div style="display:flex;justify-content:space-between;gap:8px"><span>→ ${nm}</span><span class="small">${st}</span></div>${act}</div>`); }
   if (!rows.length) return '';
@@ -11834,12 +12143,12 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     const card = t => { const U = UNITS[t];
       const why = canMobilize(PLAYER, p, t) || queueWhy(PLAYER, p);
       const h = trainH(p, t, PLAYER);
-      return `<button class="btn unit hasp${why ? ' blk' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)}${queueMax(PLAYER) > 1 ? ' Shift-click to queue to the limit.' : ''}" ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why && why !== qOne ? why : costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
+      return `<button class="btn unit hasp${why ? ' blk' : canRecruit(PLAYER, p, t) ? ' can' : ''}" data-act="recruit" data-t="${t}" title="${why ? why + '. ' : ''}${U.role}${t === 'drone' ? ` Now UAV ${ROMAN[uavLv(PLAYER)]}: ${uavLv(PLAYER) >= 4 ? 'armed' : 'recon only, weapons unlock at UAV IV'}.` : ''} ${upkTxt(t)}${queueMax(PLAYER) > 1 ? ' Shift-click to queue to the limit.' : ''}" ${why ? 'aria-disabled="true"' : canRecruit(PLAYER, p, t) ? '' : 'disabled'}>${unitPic(t, 'lg')}<span class="nm">${U.name}${U.pack ? ` ×${U.pack}` : ''}</span><span class="cost">${why && why !== qOne ? why : costHTML(ucost(PLAYER, t), N)}</span><span class="st">${t === 'drone' ? `UAV ${ROMAN[uavLv(PLAYER)]} · ${uavLv(PLAYER) >= 4 ? 'ARMED' : 'RECON ONLY'} · ` : ''}${U.dr ? 'DRONE' : U.cls.toUpperCase()} · ATK ${+st(PLAYER, t, 'atk').toFixed(1)} DEF ${+st(PLAYER, t, 'def').toFixed(1)}${U.cls === 'air' ? ` · ${airRangeT(PLAYER, t)*KM_HEX} km` : (sp => U.cls === 'naval' ? ` · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>` : ` · <i class="cp">LAND ${fmtK(sp[0])}</i> · <i class="cp">SEA ${fmtK(sp[1])} km/d</i>`)(unitKmd(PLAYER, t))} · <i class="cp">${+(h/24).toFixed(1)} d</i></span></button>`; };
     const blk = t => mobBlock(PLAYER, p, t), near = k => !!k && (k.kind === 'ko' || (k.kind === 'bld' && canBuildHere(p, k.b)));
     const open = UT.filter(t => !blk(t)).concat(UT.filter(t => near(blk(t)))), locked = UT.filter(t => blk(t) && !near(blk(t)));
     { const k0 = mobBlock(PLAYER, p, 'inf'), c0 = S.cons[p];
       if (k0 && k0.kind === 'bld' && k0.b === 'fac' && canBuildHere(p, 'fac')){ const cc = buildCost(PLAYER, 'fac', 1, p), going = c0 && c0.k === 'fac';
-        html += `<div class="mobneed"><span>${going ? `<b>Army Base going up</b>: ready in ${dayTxt(c0.h)}. Infantry and the other ground units can be trained here once it stands.` : `<b>No Army Base in ${P.cityName} yet.</b> Infantry and every other ground unit train only in a city with an Army Base (level I: $${cc.cash}M, ${dayTxt(cc.h)}).`}</span>${going ? '' : c0 ? `<span class="small muted">Busy building ${BUILD[c0.k].name}</span>` : `<button class="btn primary" data-act="build" data-k="fac" ${hasC(N, cc) ? '' : `disabled title="Needs ${missTxt(N, cc)}"`}>Build Army Base</button>`}</div>`; } }
+        html += `<div class="mobneed"><span>${going ? `<b>Army Base going up</b>: ready in ${dayTxt(c0.h)}. Infantry and the other ground units can be trained here once it stands.` : `<b>No Army Base in ${P.cityName} yet.</b> Infantry and every other ground unit train only in a city with an Army Base (level I: $${cc.cash}M, ${dayTxt(cc.h)}).`}</span>${going ? '' : c0 ? `<span class="small muted">Busy building ${BUILD[c0.k].name}</span>` : `<button class="btn${hasC(N, cc) ? ' can' : ''}" data-act="build" data-k="fac" ${hasC(N, cc) ? '' : `disabled title="Needs ${missTxt(N, cc)}"`}>Build Army Base</button>`}</div>`; } }
     html += `<div class="eyebrow">Recruit<span class="rec-b"> · ${queueMax(PLAYER) > 1 ? `${queueUsed(p)}/${queueMax(PLAYER)} in training` : queueUsed(p) ? 'training' : 'one at a time'}</span>${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div>${qOne ? `<div class="small mobone" style="margin:2px 0 6px"><b>One unit at a time.</b> The next one can be mobilized here when ${(UNITS[q0.t] || MISSILES[q0.t]).name} is ready (${q0.h} h).</div>` : ''}<div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
     html += `<div class="small muted">${queueMax(PLAYER) > 1 ? `${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city).` : `One unit at a time in each city. With a membership: a queue of ${QUEUE_MAX} per city, trained side by side on the Army Base's training lines.`} <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
@@ -11848,7 +12157,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
     return html; }
 function citySiloHTML(p){ let html = ''; const st = mstock(p);
-    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.keys(MISSILES).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st[k]}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + RN[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
+    html += `<div class="eyebrow">Missile silo</div><div class="units">${Object.keys(MISSILES).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st[k]}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + RN[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn${canBuildMissile(PLAYER, p, k) ? ' can' : ''}" data-act="msl-build" data-k="${k}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${st[k] ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
 // the Arms Industry line of the build menu: what it raises in this city, now and with the next level
 function armsHere(p, lv){ const o = cityOut(p); if (!o) return ''; const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), mainOutTxt = x => x.k === 'cash' ? '$' + d1(x.y) + 'M' : d1(x.y) + ' ' + MAIN_NAME[x.k]; const nx = lv < BUILD.arms.max ? {...o, y:o.base*(1 + ARMS_PCT*(lv + 1))} : null;
   return `<b class="res-${o.k}">${icon(o.k, 11)} +${Math.round(ARMS_PCT*100)}% ${MAIN_NAME[o.k]} here per level</b> (now ${mainOutTxt(o)} a day${nx ? ', ' + mainOutTxt(nx) + ' at level ' + ROMAN[lv + 1] : ''}).`; }
@@ -11859,7 +12168,7 @@ function cityConsHTML(p, big = false){ const N = S.nations[PLAYER]; let html = '
     html += `<div>${BK.filter(k => canBuildHere(p, k)).map(k => { const B = BUILD[k], lv = S.bld[p][k], nl = lv + 1, cc = buildCost(PLAYER, k, nl, p);
       const maxed = lv >= B.max, ok = !maxed && !c && hasC(N, cc), need = k === 'fac' && !lv && G.P[p].city;
       return `<div class="bld${need ? ' need' : ''}" data-bk="${k}"><span class="bh">${big ? csPic(k, lv) : bimg(k, Math.max(1, lv), 34, !lv)}<span><span class="nm">${B.name}</span> <span class="lv">${lv ? (B.max > 1 ? 'Level ' + ROMAN[lv] + '/' + ROMAN[B.max] : 'Built') : ''}</span></span></span>
-        ${maxed ? '<span class="lv">Max</span>' : `<button class="btn" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${!ok && !c && !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${cc.h < 1 ? csTime(cc.h) : Math.round(cc.h/2.4)/10 + ' d'}</span>${costHTML(cc, N)}</button>`}
+        ${maxed ? '<span class="lv">Max</span>' : `<button class="btn${ok ? ' can' : ''}" data-act="build" data-k="${k}" ${ok ? '' : 'disabled'} title="${ok ? '' : c ? buildWhy(p, k) : !hasC(N, cc) ? 'Needs ' + missTxt(N, cc) : ''}"><span class="bt">${lv ? 'Upgrade' : 'Build'} · ${cc.h < 1 ? csTime(cc.h) : Math.round(cc.h/2.4)/10 + ' d'}</span>${costHTML(cc, N)}</button>`}
         <span class="ds">${need ? `<span class="needt">${c && c.k === 'fac' ? `Going up: ready in ${csTime(c.h)}.` : 'Start here: infantry and every other ground unit train only in a city with an Army Base.'}</span>` : ''}${k === 'arms' ? armsHere(p, lv) + ' Level I is half price. Each Arms Industry you already own in another province makes the next one cost 40% more.' : bldDesc(p, k)}</span></div>`; }).join('')}</div>`;
   return html; }
 function provHTML(p){
@@ -11867,7 +12176,7 @@ function provHTML(p){
   const kind = isCapital(p) ? 'Capital' : P.city ? 'City' : 'Province';
   const vis = visibleSet(PLAYER), here = stationaryAt(p);
   const own = here.filter(a => a.owner === PLAYER), foe = here.filter(a => a.owner !== PLAYER);
-  const foeKnown = foe.filter(a => armyVisible(a, vis) && knowA(a, vis)), foeUnk = foe.some(a => armyVisible(a, vis) && !knowA(a, vis));
+  const foeKnown = foe.filter(a => armyShown(a, vis) && knowA(a, vis)), foeUnk = foe.some(a => armyShown(a, vis) && !knowA(a, vis));
   const y = provYield(p);
   let html = `${CS.det && innerWidth <= 820 && !P.sea ? '<button class="btn cs-back" data-act="cs-back">‹ City view</button>' : ''}<div class="eyebrow">${kind} · ${P.sea ? '' : ticon(P.terrain || 'plains', 12) + ' '}${terr(p).name}${P.oil ? ' · Oil field' : ''}${P.ore ? ' · Ore' : ''}${navalCity(p) ? ' · Naval city' : P.coast ? ' · Coastal' : ''}</div><h2>${P.city ? P.cityName : P.name}</h2>${!P.sea && (P.river.size || linkSummary(p)) ? `<div class="small muted" style="margin:-4px 0 6px">${P.river.size ? `River line with ${[...P.river].map(v => G.P[v].cityName || G.P[v].name).slice(0, 3).join(', ')} (crossing +30% time, +10% on a bridge; attackers −20%)` : ''}${P.river.size && linkSummary(p) ? ' · ' : ''}${linkSummary(p)}</div>` : ''}
     <div class="sub">${P.city && !sameName(P.cityName, P.name) ? P.name + ' · ' : ''}${provFlagHTML(p, 13)} ${placeOwner(p)}</div>${P.sea ? '' : terrBoxHTML(p)}
@@ -11882,7 +12191,7 @@ function provHTML(p){
   if (!P.sea && (o === PLAYER && unrestOf(p) > 0 || o !== PLAYER && unrestOf(p) > 20)){ const u = Math.round(unrestOf(p));
     html += `<div class="status" style="border-left-color:${u > 60 ? 'var(--danger)' : u > 30 ? 'var(--accent)' : 'var(--ok)'}">Unrest ${u}%${u > 60 ? ' · revolt risk' : ''} · output −${Math.round(u/2)}% <div class="bar" style="margin-top:4px"><i style="width:${u}%;background:${u > 60 ? 'var(--danger)' : 'var(--accent)'}"></i></div>${o === PLAYER ? `<div class="row" style="margin-top:6px"><button class="btn" data-act="pacify" data-id="${p}" ${S.nations[PLAYER].cash >= 40 ? '' : 'disabled'} style="padding:3px 8px;font-size:12px">Pacify · $40M (−25%)</button><span class="small muted">Garrisons lower unrest every day.</span></div>` : ''}</div>`; }
   if (!P.sea && o !== PLAYER){ html += `<div class="eyebrow">Intelligence · ${idleAgents(PLAYER).length} idle agent${idleAgents(PLAYER).length === 1 ? '' : 's'}</div><div class="row">${Object.entries(SPY_OPS).map(([k, O]) => { const c = spyCheck(PLAYER, p, k); return `<button class="btn" data-act="spy" data-k="${k}" data-id="${p}" ${c.ok ? '' : 'disabled'} title="${O.desc}${c.ok ? ` ${Math.round(c.chance*100)}% chance.` : ' ' + c.why}" style="padding:4px 8px;font-size:11.5px">${O.name} · $${O.cost}M</button>`; }).join('')}</div>`; }
-  if (S.battles.includes(p)){ const B = S.bt && S.bt[p];
+  if (S.battles.includes(p) && here.some(a => count(a) && (a.owner === PLAYER || isAlly(PLAYER, a.owner) || armyShown(a, vis)))){ const B = S.bt && S.bt[p];   // (a battle you cannot see is not told: owner 2026-11-25, nothing of foreign forces outside your land and sight)
     html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${pluN(frontage(p), 'unit')}${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => o !== PLAYER && !isAlly(PLAYER, o) && !here.some(a => a.owner === o && knowA(a, vis)) ? '\u0001' : o).filter((o, i, A) => o !== '\u0001' || A.indexOf(o) === i).map(o => { if (o === '\u0001') return '<br><span style="color:#9fd8ff">?</span> Unidentified army'; const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${pluN(b.n, 'unit')}${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
   if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${armyName(a)} · ${count(a)}</span></span><span class="muted">Command</span></button>`).join('')}</div>`;
@@ -12037,12 +12346,29 @@ document.addEventListener('click', e => {
     case 'dp-bloc-rename': { const v = $('blocname') ? $('blocname').value : ''; if (!blocRename(PLAYER, v)) toast('Choose a name (up to 28 letters).', 'bad', null); else toast('Coalition renamed.', 'good', null); dpRender(); renderSide(true); break; }
     case 'dp-bloc-leave': if (b.dataset.v === 'no') DV.leaveAsk = false; else if (b.dataset.sure !== '1') DV.leaveAsk = true; else { DV.leaveAsk = false; if (blocLeave(PLAYER)) toast('You left your coalition.', 'info', null); renderSide(true); } dpRender(); break;
     case 'dp-me-save': { const ok = NET.setMe({name:($('dp-me-name') || {}).value, motto:($('dp-me-motto') || {}).value}); toast(ok ? 'Profile saved.' : 'Your name needs at least one letter.', ok ? 'good' : 'bad', null); dpRender(); break; }
-    case 'book-buy': { const o0 = (S.book || []).find(x => x.id === +b.dataset.id); if (!o0) break; const sel0 = o0.seller, res0 = o0.res, pr0 = o0.price, bid0 = isBid(o0); const q = fillOffer(PLAYER, +b.dataset.id, +b.dataset.q);
-      if (q){ const msg = bid0 ? `Sold ${resFull(res0, q)} to ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(lotCash(q, pr0))}M.` : `Bought ${resFull(res0, q)} from ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${fmt(lotCash(q, pr0))}M.`; toast(msg, atWar(PLAYER, sel0) ? 'bad' : 'good', null); log(msg, '', null); }
-      else toast(bid0 ? 'You do not have any to sell.' : 'Not enough money or storage.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
-    case 'mk-filter': { const k = b.dataset.k || null; BK_FILT = k && BK_FILT !== k ? k : null; if (BK_FILT){ BK_RES = BK_FILT; BK_F.price = null; } setHTML($('sheet'), marketHTML()); break; }
-    case 'book-cancel': { const o = (S.book || []).find(x => x.id === +b.dataset.id); if (o){ if (isBid(o)) S.nations[PLAYER].cash += lotCash(o.qty, o.price); else S.nations[PLAYER][o.res] += o.qty; S.book = S.book.filter(x => x !== o); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
-    case 'book-post': { const ty = $('bk-type').value, k = $('bk-res').value, q = Math.round(+$('bk-qty').value), pr = +$('bk-price').value; const got = postOffer(PLAYER, k, q, pr, ty); if (got) toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${fmt(got)} ${rlbl(k)} at ${lotPriceTxt(k, pr)} for 3 days${ty === 'buy' ? ` ($${fmt(lotCash(got, pr))}M held)` : ''}.${got < q ? (ty === 'buy' ? ` You asked for ${fmt(q)}: your money pays for ${fmt(got)}.` : ` You asked for ${fmt(q)}: ${got === kFloor(q) ? `goods trade in lots of ${fmt(MKT_LOT)}` : `you hold ${fmt(got)}`}.`) : ''}`, 'good', null); else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'book-buy': { const id = +b.dataset.id, o0 = (S.book || []).find(x => x.id === id); if (!o0){ MK.open = null; toast('That offer is gone.', 'info', null); mkRender(); break; }
+      const sel0 = o0.seller, res0 = o0.res, pr0 = o0.price, bid0 = isBid(o0), ask = Math.max(0, mkNum(b.dataset.q)), L0 = fillLimit(PLAYER, id), q = fillOffer(PLAYER, id, ask);
+      const why = q < kFloor(ask) ? (L0.why === 'money' ? 'your money' : L0.why === 'storage' ? 'storage full' : L0.why === 'stock' ? 'all you hold' : L0.why === 'room' ? 'their storage full' : 'all they had') : '';
+      if (q){ const amt = why ? `${fmt(q)} of ${fmt(kFloor(ask))} ${rlbl(res0)} (${why})` : resFull(res0, q), msg = bid0 ? `Sold ${amt} to ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${mkM(lotCash(q, pr0))}M.` : `Bought ${amt} from ${S.nations[sel0].name}${atWar(PLAYER, sel0) ? ' (enemy)' : ''} for $${mkM(lotCash(q, pr0))}M.`; toast(msg, atWar(PLAYER, sel0) ? 'bad' : 'good', null); log(msg, '', null); MK.open = null; }
+      else toast(bid0 ? (L0.why === 'room' ? `${S.nations[sel0].name} has no storage room left for it.` : 'You do not have any to sell.') : L0.why === 'storage' ? 'Your storage is full.' : 'Not enough money.', 'bad', null); mkRender(); renderSide(true); break; }
+    case 'mk-filter': { const k = b.dataset.k; if (MKT_K.includes(k) && k !== BK_RES){ BK_RES = k; BK_F.price = null; MK.open = null; MK.more = false; } if (b.dataset.book){ MK.all = false; MK.more = false; } mkRender(); if (b.dataset.book) $('sheet').scrollTop = 0; { const t = $('sheet').querySelector(`.mk-tab[data-k="${k}"]`); if (t && e.detail === 0 && !b.dataset.book) t.focus({preventScroll:true}); } break; }
+    case 'mk-chart': if (MK_DRAG > 8){ MK_DRAG = 0; break; } MK.chart = !MK.chart; mkRender(); break;
+    case 'mk-open': { const id = +b.dataset.id; if (!(S.book || []).some(o => o.id === id && o.qty > 0)){ MK.open = null; toast('That offer is gone.', 'info', null); } else MK.open = MK.open && MK.open.id === id ? null : {id, q:null}; mkRender(); break; }
+    case 'mk-close': MK.open = null; mkRender(); break;
+    case 'mk-q': { if (!MK.open) break; const L = fillLimit(PLAYER, MK.open.id); let q = MK.open.q != null ? MK.open.q : L.q; if (b.dataset.v === 'max') q = L.q; else if (b.dataset.v) q = +b.dataset.v; else q += +b.dataset.d; MK.open.q = Math.max(Math.min(MKT_LOT, L.q), Math.min(L.q, kFloor(q))); mkRender(); break; }
+    case 'mk-take': { const id = +b.dataset.id; MK.view = 'top'; MK.open = (S.book || []).some(o => o.id === id) ? {id, q:null} : null; mkRender(); $('sheet').scrollTop = 0; break; }
+    case 'mk-view': { const v = b.dataset.v; MK.view = v === 'top' || MK.view === v ? 'top' : v; if (b.dataset.t) BK_F.type = b.dataset.t === 'buy' ? 'buy' : 'sell'; MK.open = null; MK.more = false; mkRender(); $('sheet').scrollTop = 0; break; }
+    case 'mk-type': BK_F.type = b.dataset.v === 'buy' ? 'buy' : 'sell'; mkRender(); break;
+    case 'mk-cq': { const N = S.nations[PLAYER], pr = mkPrice(BK_RES), max = BK_F.type === 'sell' ? kFloor(N[BK_RES]) : Math.min(lotsFor(N.cash, pr), kFloor(stockCap(PLAYER) - N[BK_RES])); let q = Math.round(mkNum(BK_F.qty));
+      q = b.dataset.v === 'max' ? max : b.dataset.v ? +b.dataset.v : q + +b.dataset.d; BK_F.qty = Math.max(MKT_LOT, kFloor(q)); mkRender(); break; }
+    case 'mk-cp': { let pr = b.dataset.v ? +b.dataset.v : mkPrice(BK_RES) + +b.dataset.d; BK_F.price = Math.max(BOOK_MIN_PRICE, Math.round(pr*100)/100).toFixed(2); mkRender(); break; }
+    case 'mk-all': MK.all = b.dataset.v === '1'; MK.more = false; mkRender(); break;
+    case 'mk-more': MK.more = !MK.more; mkRender(); break;
+    case 'mk-nat': mkNation(+b.dataset.id); break;
+    case 'mk-ret': { const t = MK_BACK ? MK_BACK.top : 0; MK_BACK = null; openModal(marketHTML(), 'market'); $('sheet').scrollTop = t; break; }
+    case 'book-cancel': { const id = +b.dataset.id, o = (S.book || []).find(x => x.id === id), got = o ? cancelOffer(PLAYER, id) : 0;
+      if (got){ const over = !isBid(o) && S.nations[PLAYER][o.res] > stockCap(PLAYER); toast(isBid(o) ? `Buy offer withdrawn: the $${mkM(lotCash(got, o.price))}M held for it is back in your treasury.` : `Sell offer withdrawn: ${resFull(o.res, got)} back in your stock${over ? ', which is now over your storage limit: use or sell them before the next day, or the excess is lost' : ''}.`, over ? 'bad' : 'info', null); } if (MK.open && MK.open.id === id) MK.open = null; mkRender(); renderSide(true); break; }
+    case 'book-post': { const ty = BK_F.type === 'buy' ? 'buy' : 'sell', k = $('bk-res') && MKT_K.includes($('bk-res').value) ? $('bk-res').value : BK_RES, q = Math.round(mkNum($('bk-qty') ? $('bk-qty').value : BK_F.qty)), pr = Math.round(mkNum($('bk-price') ? $('bk-price').value : mkPrice(k))*100)/100; if (!(pr >= BOOK_MIN_PRICE)){ toast(`Set a price of at least $${BOOK_MIN_PRICE}M per ${fmt(MKT_LOT)}.`, 'bad', null); break; } const got = postOffer(PLAYER, k, q, pr, ty); if (got){ toast(`${ty === 'buy' ? 'Buy' : 'Sell'} offer posted: ${fmt(got)} ${rlbl(k)} at ${lotPriceTxt(k, pr)} for 3 days${ty === 'buy' ? ` ($${mkM(lotCash(got, pr))}M held)` : ''}.${got < q ? (ty === 'buy' ? ` You asked for ${fmt(q)}: your money pays for ${fmt(got)}.` : ` You asked for ${fmt(q)}: ${got === kFloor(q) ? `goods trade in lots of ${fmt(MKT_LOT)}` : `you hold ${fmt(got)}`}.`) : ''}`, 'good', null); MK.view = 'book'; MK.all = false; } else toast(ty === 'buy' ? 'Not enough money for that buy offer.' : 'You do not have those goods.', 'bad', null); mkRender(); renderSide(true); break; }
     case 'stance-set': if (a){ a.stance = b.dataset.k; a.home = null; renderSide(true); } break;
     case 'next-idle': if (!$('modal').hidden) closeModal(); nextIdle(); break;
     case 'rename': { renaming = +b.dataset.id; renderSide(true); const el = document.querySelector('input.rn'); if (el){ el.focus(); el.select(); } break; }
@@ -12062,7 +12388,7 @@ document.addEventListener('click', e => {
     case 'ovl': ovlToggle(b.dataset.k, b.dataset.v == null ? undefined : b.dataset.v === 'true'); break;   // (Settings > Map: On / Off)
     case 'mode': mapModeSet(b.dataset.k); break;
     case 'mapstyle': mapModeSet(mapMode === 'terrain' ? 'political' : 'terrain'); break;   // (the More menu: Political <-> Terrain)
-    case 'trade': { const k = b.dataset.k, q = +b.dataset.q, done = trade(PLAYER, k, q); if (done){ toast(`${done > 0 ? 'Bought' : 'Sold'} ${resFull(k, Math.abs(done))} on the anonymous exchange (no nation involved).`, 'info', null); } setHTML($('sheet'), marketHTML()); renderSide(true); break; }
+    case 'trade': { const k = b.dataset.k, q = +b.dataset.q, done = trade(PLAYER, k, q); if (done){ toast(`${done > 0 ? 'Bought' : 'Sold'} ${resFull(k, Math.abs(done))} on the anonymous exchange (no nation involved).`, 'info', null); } mkRender(); renderSide(true); break; }
     case 'market-open': openModal(marketHTML(), 'market'); break;
     case 'trade-escort': { const r = routeById(+b.dataset.id), f = r ? escortPick(r) : null; if (!f) toast('No idle fleet with warships: build frigates at a Naval Yard, or free a fleet.', 'bad', null); else escortSet(f, r.id); dpRender(); renderSide(true); break; }
     case 'trade-close': tradeClose(PLAYER, +b.dataset.id); dpRender(); renderSide(true); break;
@@ -12111,14 +12437,36 @@ document.addEventListener('input', e => { if (e.target.id === 'pickq'){ pickQ = 
     if (r && q(`[data-ss="${k}"]`)) q(`[data-ss="${k}"]`).textContent = `${r.n - spTaken(k, -1)} stay`; if (q(`[data-mc="${k}:${SPLIT.g}"]`)) q(`[data-mc="${k}:${SPLIT.g}"]`).textContent = v; if (r && q(`[data-mc="${k}:s"]`)) q(`[data-mc="${k}:s"]`).textContent = r.n - spTaken(k, -1); return; } });
 // market offer form: remember what the player picked or typed, and mark the sheet as current so the 4-a-second refresh does not rebuild it and reset the form
 function bkSync(){ if (modalKind === 'market' && !$('modal').hidden) lastSig.sheet = marketHTML(); }
-function bkForm(el){ if (el.id === 'bk-type') BK_F.type = el.value === 'buy' ? 'buy' : 'sell'; else if (el.id === 'bk-qty') BK_F.qty = String(el.value).replace(/[^0-9.]/g, ''); else if (el.id === 'bk-price') BK_F.price = String(el.value).replace(/[^0-9.]/g, ''); bkSync(); }
-document.addEventListener('input', e => { const el = e.target; if (el && (el.id === 'bk-qty' || el.id === 'bk-price')) bkForm(el); });
+// (what the form shows below the fields, its preview and the Post button, follows the typing at once; the quantity panel's cost line and its
+// confirm button follow its amount the same way)
+// (a press on a button that blurs the field fires 'change' before its click: nothing here replaces a button or a link, the confirm button and the
+// Post button are patched in place, and the preview, which holds the "Sell to X" link, is rewritten only when its text changed)
+const mkSet = (el, h) => { if (el && el.dataset.h !== h){ el.dataset.h = h; el.innerHTML = h; } };
+function bkForm(el){ if (el.id === 'bk-qty') BK_F.qty = String(el.value).replace(/[^0-9.]/g, ''); else if (el.id === 'bk-price') BK_F.price = String(el.value).replace(/[^0-9.]/g, '');
+  else if (el.id === 'mk-q' && MK.open){ const o = (S.book || []).find(x => x.id === MK.open.id); if (o){ const L = fillLimit(PLAYER, o.id); MK.open.q = Math.max(0, Math.min(L.q, kFloor(mkNum(el.value)))); const D = mkDeal(o, MK.open.q), w = $('mk-okw'), ob = w && w.querySelector('.mk-ok');
+      mkSet($('mk-cost'), D.cost); if (ob){ ob.dataset.q = MK.open.q; ob.disabled = !(MK.open.q > 0); if (ob.textContent !== D.txt) ob.textContent = D.txt; }
+      for (const c of $('sheet').querySelectorAll('.mk-pan .mk-chip')) c.classList.toggle('on', c.dataset.v === 'max' ? MK.open.q === L.q : +c.dataset.v === MK.open.q); } }
+  const pv = $('mk-prev'); if (pv && (el.id === 'bk-qty' || el.id === 'bk-price')){ mkSet(pv, mkPrev(BK_RES)); const pb = $('sheet').querySelector('.mk-post .mk-pt2'); if (pb){ const t = `Post ${BK_F.type === 'buy' ? 'buy' : 'sell'} offer at $${mkP(+mkPrice(BK_RES))}`; if (pb.textContent !== t) pb.textContent = t; } }
+  bkSync(); }
+document.addEventListener('input', e => { const el = e.target; if (el && (el.id === 'bk-qty' || el.id === 'bk-price' || el.id === 'mk-q')) bkForm(el); });
+// the Market's tabs: the arrow keys move between them; the expanded price chart: a readout of the day and the price under the pointer or the finger
+document.addEventListener('keydown', e => { const t = e.target; if (!t || !t.classList || !t.classList.contains('mk-tab') || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return; e.preventDefault();
+  const i = MKT_K.indexOf(t.dataset.k), k = MKT_K[(i + (e.key === 'ArrowRight' ? 1 : MKT_K.length - 1)) % MKT_K.length]; const nb = $('sheet').querySelector(`.mk-tab[data-k="${k}"]`); if (nb) nb.click(); });
+let MK_PX = null, MK_BIGC = null;
+function mkRead(e){ if (modalKind !== 'market' || !MK.chart) return; const cv = e.target && e.target.closest && e.target.closest('.mk-chart.big .mk-cv'); if (!cv) return; const k = cv.dataset.k, h = worldHistory(k); if (!h.length) return;
+  const r = cv.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left)/r.width)), i = Math.round(f*(h.length - 1)), C = MK_BIGC && MK_BIGC.h.length === h.length ? MK_BIGC : mkSeries(k), x = h.length > 1 ? i/(h.length - 1)*100 : 100;
+  if (MK_PX != null) MK_DRAG = Math.max(MK_DRAG, Math.abs(e.clientX - MK_PX));
+  const ro = cv.querySelector('.mk-ro'), cu = cv.querySelector('.mk-cur'); if (ro){ ro.textContent = `Day ${h[i].d} · $${h[i].p.toFixed(2)}M`; ro.style.left = Math.min(78, Math.max(0, x - 11)) + '%'; ro.classList.add('on'); }
+  if (cu){ cu.style.left = x + '%'; cu.style.top = C.Y(h[i].p)/10 + '%'; cu.classList.add('on'); } }
+document.addEventListener('pointermove', mkRead);
+document.addEventListener('pointerdown', e => { if (e.target && e.target.closest && e.target.closest('.mk-chart.big .mk-cv')){ MK_PX = e.clientX; MK_DRAG = 0; mkRead(e); } else MK_PX = null; });
+document.addEventListener('pointerup', () => { MK_PX = null; });
 document.addEventListener('change', e => { const el = e.target; if (!el) return;
   if (el.dataset && el.dataset.act === 'raid-set'){ const a = sel.army != null ? armyById(sel.army) : null; if (a && a.owner === PLAYER){ if (!raidSet(a, el.value ? +el.value : null)) toast('No sea route to that lane from here.', 'bad', null); } el.blur(); renderSide(true); return; }
   if (el.dataset && el.dataset.act === 'escort-set'){ const a = sel.army != null ? armyById(sel.army) : null; if (a && a.owner === PLAYER) escortSet(a, el.value ? +el.value : null); el.blur(); renderSide(true); return; }
   if (el.classList && el.classList.contains('sp-rng')){ el.blur(); renderSide(true); return; }
-  if (el.id === 'bk-res' && MKT_K.includes(el.value)){ BK_RES = el.value; BK_F.price = null; const pr = $('bk-price'); if (pr) pr.value = mkt().p[el.value].toFixed(1); bkSync(); return; }
-  if (el.id === 'bk-type' || el.id === 'bk-qty' || el.id === 'bk-price'){ bkForm(el); return; }
+  if (el.id === 'bk-res' && MKT_K.includes(el.value)){ BK_RES = el.value; BK_F.price = null; MK.open = null; el.blur(); mkRender(); return; }   // (the good of the form is the tab: both follow)
+  if (el.id === 'bk-qty' || el.id === 'bk-price' || el.id === 'mk-q'){ bkForm(el); const v = mkNum(el.value); if (v > 0) el.value = el.id === 'bk-price' ? mkP(Math.round(v*100)/100) : fmt(el.id === 'mk-q' && MK.open && MK.open.q != null ? MK.open.q : v); return; }   // (left: the number as the rest of the Market writes it)
   if (el.id === 'sp-n' && SPLIT){ SPLIT.n = +el.value; el.blur(); const a = armyById(SPLIT.id); if (a) spUse(a, evenPlan(a, Math.min(SPLIT.n, count(a)))); } });
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.act === 'dp-tv'){ dpTv(e.target); return; } if (e.target.id === 'dp-q'){ dpFilter(e.target.value); return; } if (e.target.id === 'volume'){ SET.vol = +e.target.value/100; saveSet(); if (master && !muted) master.gain.value = SET.vol; const sp = e.target.nextElementSibling; if (sp) sp.textContent = e.target.value + '%'; e.target.style.setProperty('--v', e.target.value + '%'); } });
 let renaming = null, dropFor = null;
@@ -12276,6 +12624,9 @@ function openModal(html, kind = ''){ if (kind !== 'cities' && openModal.kind ===
 new MutationObserver(() => { const sh = $('sheet'), m = $('modal'); if (!sh || m.hidden || !m.classList.contains('ingame') || !S || !S.started) return;
   const hd = sh.firstElementChild; if (!hd || !(hd.classList.contains('rhead') || hd.classList.contains('hhead')) || hd.querySelector(':scope > .mx')) return;
   hd.classList.add('hasx'); hd.insertAdjacentHTML('beforeend', `<button class="rs-x mx" data-act="resume" aria-label="Close" title="Back to the map (Esc)">${rg('x', 18)}</button>`); }).observe($('sheet'), {childList:true});
+// the Market's way back from a nation window opened by a flag (mkBackBtn), on every render of that window; closed, the way back is forgotten
+new MutationObserver(() => mkBackBtn()).observe($('sheet'), {childList:true});
+new MutationObserver(() => { if ($('modal').hidden) MK_BACK = null; }).observe($('modal'), {attributes:true, attributeFilter:['hidden']});   // (closed: the way back is forgotten)
 // the closing sheet: a lifeless copy (no ids, no actions) slides out while the real one is already hidden, so closing stays instant for the game and the tests
 function sheetGhost(){ const m = $('modal'), sh = $('sheet'); if (m.hidden || afxReduced() || m.classList.contains('menu')) return; const r = sh.getBoundingClientRect(); if (r.width < 10) return;
   const g = sh.cloneNode(true); g.removeAttribute('id'); g.querySelectorAll('[id],[data-act],[name],[for]').forEach(e => { e.removeAttribute('id'); e.removeAttribute('data-act'); e.removeAttribute('name'); e.removeAttribute('for'); });
@@ -12295,7 +12646,8 @@ const TIP_ICO = {
 };
 const tipIco = k => `<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TIP_ICO[k]}</svg>`;
 // the three briefing tips (6 words at most each). The win line follows the real rule: land provinces OR starting capitals.
-const briefTips = () => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]];
+// (win false: the Continue panel, shown before the save is loaded, when WIN_CAPS and landNeed still describe this build's default game, not the save's)
+const briefTips = (win = true) => [['recruit', 'Recruit and research in your cities'], ['move', 'Tap a force, press Move, tap a destination'], ...(win ? [['win', `Win: ${WIN_CAPS} capitals or ${landNeed(PLAYER)} provinces`]] : [])];
 // keys, for the small Controls link on the briefing (desktop only) and the manual
 const KEYS_TXT = 'Space pauses, 1–3 set speed (8× from the bar), P production, R research, D diplomacy, T market, A army, S statistics, N newspaper, O settings, V map mode, M sound, H home, ? field manual.';
 // the full text of the old briefing, kept in the Field Manual ("Getting started")
@@ -12332,7 +12684,7 @@ const HELP_SEC = [
     <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry). No city starts with one: build level I in your capital first (cheap, ready in 30 minutes, the same price in every city; for levels II\u2013V your first two cost the base price, each later one 40% more); units take a day or more to train. A city trains one unit at a time; with a membership it holds a queue of ${QUEUE_MAX}, and each Army Base level adds a training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
     <li><b>Capture</b>: a province is yours the moment your ground units reach its centre point, the city (or, without a city, the crossroads in its middle where its roads meet), with no defenders left: there is no capture timer, and ${CAP_MIN === 1 ? 'one ground unit is enough' : CAP_MIN + ' ground units are needed'}. Every province's roads meet at that point, and a march into a province ends on it. Crossing the border or stopping anywhere else in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
-    <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more.</li>
+    <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more. Enemy columns on the move that come into the same province or sea zone stop where they meet and fight; a force that meets the enemy in the province it was going to walks on to its point once it has won.</li>
     <li><b>Supply</b> reaches about 4,800 km over land from your cities (half across sea). Cut-off troops lose strength daily and get a red dashed outline.</li>
     <li><b>Occupation</b>: conquered land grows unrest unless garrisoned; above 60% partisans may hand it back. Pacify it or keep troops there.</li></ul>`],
   ['cmd', 'Commanding forces', `<ul>
@@ -12386,7 +12738,7 @@ const HELP_SEC = [
     <li><b>Market</b> (T): nations list goods for sale or wanted; you can post your own offers. Embargoes worsen your prices.</li></ul>`],
   ['intel', 'Intelligence and missiles', `<ul>
     <li><b>Agents</b>: train up to 5 ($60M) and send them from any foreign province to scout, sabotage, stir unrest or steal technology. Failed agents are lost.</li>
-    <li><b>Fog of war</b>: you see everything on your own and allied land; beyond it, about 50 km around your forces (Special Forces 100), 80 km around your cities and 100 km around your airbases; aircraft, UAVs, satellites and AWACS see further (see Drones).</li>
+    <li><b>Fog of war</b>: you see everything on your own and allied land; beyond it, only what your units see: about 50 km around your forces (Special Forces 100); aircraft, UAVs, satellites and AWACS see further (see Drones). Your cities and airbases do not see past your border: an enemy army outside your land shows only once it crosses into it or comes into your units' sight.</li>
     <li><b>Strategic missiles</b>: research Cruise Missiles (Strategic Weapons), build a Missile Silo, produce Cruise or Ballistic missiles and launch them at any province in range. SAMs and frigates near the target can intercept.</li></ul>`],
 ];
 function helpHTML(){ const me = S && S.nations ? S.nations[PLAYER] : null;
@@ -12437,7 +12789,7 @@ function showBriefing(first, hasSave){
   const sv = hasSave ? loadSaved() : null, me = sv ? sv.nations[0] : S.nations[PLAYER];
   openModal(`${LOGO}
     <p class="bline">${flagHTML(me.name, 28, 'big')}<span>You command <b style="color:${me.color}">${me.name}</b>. Win the war.</span></p>
-    <ul class="btips">${briefTips().map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
+    <ul class="btips">${briefTips(!sv).map(([k, t]) => `<li>${tipIco(k)}<span>${t}</span></li>`).join('')}</ul>
     <div class="bbtns">${first
       ? (hasSave ? `<button class="btn primary" data-act="continue">Continue campaign</button><button class="btn" data-act="newgame">New campaign</button>` : `<button class="btn primary" data-act="start">Start campaign</button>`)
       : `<button class="btn primary" data-act="resume">Back to the map</button><button class="btn" data-act="newgame">New campaign</button>`}</div>

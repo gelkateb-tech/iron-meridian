@@ -324,8 +324,7 @@ const AI_CTR = new Set(['jam', 'sam', 'int', 'asf', 'mpa', 'frig', 'bomb', 'awac
 function aiBookBuy(n, k, q){ const N = S.nations[n], M = mkt(); let got = 0;
   const asks = (S.book || []).filter(o => !isBid(o) && o.res === k && o.qty > 0 && o.seller !== n && S.nations[o.seller].alive && !atWar(n, o.seller) && !embargoed(o.seller, n) && canSee(o, n) && o.price <= M.p[k]*1.15).sort((x, y) => x.price - y.price);
   for (const o of asks){ const r = Math.min(q - got, o.qty, lotsFor(N.cash, o.price), kFloor(stockCap(n) - N[k])); if (r <= 0) break;
-    N.cash -= lotCash(r, o.price); N[k] += r; S.nations[o.seller].cash += lotCash(r, o.price); o.qty -= r; got += r;
-    if (isSeat(o.seller)) tell(o.seller, `${N.name} bought ${fmt(r)} ${rlbl(k)} from your offer for $${fmt(lotCash(r, o.price))}M.`, 'good', null);
+    N.cash -= lotCash(r, o.price); N[k] += r; S.nations[o.seller].cash += lotCash(r, o.price); o.qty -= r; got += r; bookNote(o, n, r);   // (a seat is told; a computer seller's step-down resets)
     if (got >= q) break; }
   if (got) S.book = S.book.filter(o => o.qty > 0); return got; }
 // AI market thresholds: buys when a stock is below AI_LOW (and tops up what is below AI_SHORT, AI_BUYQ at most); never a hoard
@@ -522,7 +521,7 @@ function aiTurn0(n, N){
       for (const k of MKT_K){ const px = M.p[k]/MKT_BASE[k];
         if (mains.has(k) && inc.net[k] >= 0){ const res = aiReserve(n, k), upk = Math.max(0, inc.upkeep[k]), over = N[k] - AI_XKEEP[k] - res - 25*upk, E = AI_XEARLY[k], early = E && inc.net[k] >= E.net ? N[k] - E.keep - res - 10*upk : 0;
           const q = over >= 15*RES_K ? kFloor(Math.min(over, 120*RES_K)) : early >= 10*RES_K ? kFloor(Math.min(early, E.lot)) : 0; if (!q || px < AI_XPX) continue;
-          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ N[k] -= q; (S.book || (S.book = [])).push({id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:+(M.p[k]*0.98).toFixed(2), exp:S.hour + 72}); } }
+          if (!(S.book || []).some(o => o.seller === n && o.res === k && !isBid(o)) && (S.book || []).filter(o => o.seller === n).length < 5){ N[k] -= q; const o = {id:S.nid++, type:'sell', seller:n, res:k, qty:q, price:ownPx(n, k, false, +(M.p[k]*0.98).toFixed(2)), exp:S.hour + 72}; (S.book || (S.book = [])).push(o); bookCross(o); } }   // (a buy offer it crosses fills at once: bookCross, rules/economy.js)
         else { const want = AI_SHORT[k] + aiReserve(n, k) + 10*Math.max(0, inc.upkeep[k]); if (N[k] >= want || px > 1.5) continue;
           const q = kFloor(Math.min(want - N[k], AI_IMP[k] - (N.xB[k] || 0), (N.cash - 120)/buyPrice(n, k)*MKT_LOT)); if (q >= 5*RES_K){ const got = aiBookBuy(n, k, q); N.xB[k] = (N.xB[k] || 0) + got + (q - got >= 5*RES_K ? trade(n, k, q - got) : 0); } } } }
     // hoarded cash buys the scarce resources on the world market (up to 1.4× the going price)
@@ -597,7 +596,7 @@ function aiTurn0(n, N){
   const idleBy = new Map();
   for (const a of armiesOf(n)){ if (a.to !== null || a.path.length || a.air || S.owner[a.at] !== n || !count(a)) continue;
     let list = idleBy.get(a.at); if (!list) idleBy.set(a.at, list = []);
-    const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries)
+    const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries, fleets stay fleets)
   removeEmpty();
   for (const list of idleBy.values()){ for (const a of list.slice()) list.push(...aiSplitToLimit(a)); }
   const idleAll = () => [...idleBy.values()].flat().filter(a => count(a) && !a.path.length && a.to === null);
@@ -621,13 +620,28 @@ function aiTurn0(n, N){
   // three times its start, along paths given before)
   if (sated) for (const a of armiesOf(n)) if (a.path.length && !a.air && !a.forced && !G.P[a.at].sea){ const last = a.path[a.path.length - 1];
     if (S.owner[last] !== n && S.home[last] !== n){ a.path = []; a.dest = null; targeted.delete(last); } }
+  // (and its forces left standing in enemy land it may no longer take, rules/tick.js capture, and may not march on from, canProceed, head home
+  // instead of standing there until the peace: forced, like sendHome, but only along a route, never a jump)
+  // (a route it already has, to its own land after the clearing above, is made forced; an idle force gets one to its nearest own province)
+  if (sated) for (const a of armiesOf(n)){ if (a.air || a.fly || a.to !== null || a.sail || a.forced || !count(a) || !ground(a) || shipsN(a) || G.P[a.at].sea) continue;
+    const o = S.owner[a.at]; if (o === n || S.home[a.at] === n || !atWar(n, o) || S.battles.includes(a.at)) continue;   // (independent land too: atWar(n, -1))
+    if (a.path.length){ a.forced = true; continue; }
+    const seen = new Set([a.at]), q = [a.at]; let dest = -1;
+    for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
+    const pth = dest >= 0 ? pathFor(a, a.at, dest) : []; if (pth.length){ a.path = pth; a.dest = null; a.forced = true; } }
   const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   // NAVAL CITIES: ground forces left idle at sea (a landing refused on the way, a route planned again to none: rules/tick.js) are in no own province,
   // so the stacks above never hold them: they head for the nearest own province over the water, coming ashore at a naval city (landOk)
-  if (NAVAL_CITIES) for (const a of armiesOf(n)){ if (a.air || a.to !== null || a.path.length || a.sail || !G.P[a.at].sea || !ground(a) || !count(a)) continue;
+  // (a force with no way home at all, the nation holding no naval city it can reach, through friends' land included, waits 72 h at sea, a.seaIdle,
+  // in case one opens, then disbands: it would otherwise sit at sea for good, paying upkeep)
+  if (NAVAL_CITIES) for (const a of armiesOf(n)){ if (a.air || !ground(a) || !count(a)) continue;
+    if (a.to !== null || a.path.length || a.sail || !G.P[a.at].sea){ if (a.seaIdle != null) delete a.seaIdle; continue; }
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0 && h < 4000; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v) || !canEnter(n, v) || (G.P[q[h]].sea && !G.P[v].sea && !landOk(a, v))) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
-    if (dest >= 0) a.path = pathFor(a, a.at, dest); }
+    if (dest >= 0) a.path = pathFor(a, a.at, dest);
+    if (a.path.length){ if (a.seaIdle != null) delete a.seaIdle; }
+    else if (a.seaIdle == null) a.seaIdle = S.hour;
+    else if (S.hour - a.seaIdle >= 72){ for (const t of UT) if (UNITS[t].cls !== 'naval'){ a.u[t] = 0; a.w[t] = 0; } delete a.seaIdle; } }
   const ready = [];   // stacks free for an offensive of their own
   for (const a of idleAll()){
     if (planned.has(a) || enemiesAt(a.at, n) || a.air) continue;

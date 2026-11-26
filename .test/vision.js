@@ -1,6 +1,6 @@
 // Fog of war by km (the owner's vision ranges), checked in plain Node with no browser: node .test/vision.js
-// 1. a city sees a force 70 km away but not 90 km; an airbase 100 km
-// 2. a ground force sees 50 km, Special Forces 100 km; the province a force is moving to is seen whole
+// 1. a city or an airbase sees nothing past the border (owner 2026-11-25: a foreign force outside your land shows only to your units' sight)
+// 2. a ground force sees 50 km, Special Forces 100 km; the province a force is moving to is NOT seen whole (owner 2026-11-25)
 // 3. aircraft in flight 150 km, a fighter patrol 200 km; UAV I on station 250 km (UAV V 500 km)
 // 4. AWACS orbit 500 km: location only ('?'), never identified; a stealth bomber is located only within 250 km
 // 5. maritime patrol 400 km, sea only; a satellite's strip 150 km to each side of its track
@@ -31,17 +31,17 @@ const foeAt = ([x, y], u = {inf:3}) => { const p = provAt(x, y), a = R.addArmy(F
 const drop = (...as) => { S.armies = S.armies.filter(a => !as.includes(a)); };
 const view = () => { R.clearVis(); return R.visibleSet(ME); };
 const seen = a => R.armyVisible(a, view());
-// 1. a city (any level): 80 km; an airbase: 100 km
-{ const T = spot([70, 90, 95], true); ok(!!T, 'found a foreign city to test with');
-  if (T){ const {P, pts} = T, o0 = S.owner[P.id]; S.owner[P.id] = ME; const near = foeAt(pts[0]), far = foeAt(pts[1]);
-    ok(seen(near), 'a city sees a force 70 km away'); ok(!seen(far), 'a city does not see a force 90 km away');
-    const b0 = S.bld[P.id].air; S.bld[P.id].air = 1; const f95 = foeAt(pts[2]); ok(seen(f95) && seen(far), 'an airbase sees 95 km'); S.bld[P.id].air = b0; drop(near, far, f95); S.owner[P.id] = o0; } }
+// 1. a city and an airbase: nothing past the border (the 80 / 100 km rings of VIS-1 are gone, owner 2026-11-25)
+{ const T = spot([70, 95], true); ok(!!T, 'found a foreign city to test with');
+  if (T){ const {P, pts} = T, o0 = S.owner[P.id]; S.owner[P.id] = ME; const near = foeAt(pts[0]);
+    ok(!seen(near), 'a city sees no foreign force past its border (70 km away)');
+    const b0 = S.bld[P.id].air; S.bld[P.id].air = 1; const f95 = foeAt(pts[1]); ok(!seen(f95) && !seen(near), 'an airbase sees nothing past the border either'); S.bld[P.id].air = b0; drop(near, f95); S.owner[P.id] = o0; } }
 // 2. ground forces 50 km; Special Forces 100 km; the province a force is moving to
 { const T = spot([45, 60, 95]);
   if (T){ const {P, pts} = T, me = R.addArmy(ME, P.id, {inf:2}); me.pos = [P.x, P.y]; const a45 = foeAt(pts[0]), a60 = foeAt(pts[1]), a95 = foeAt(pts[2]);
     ok(seen(a45) && !seen(a60), 'a ground force sees 45 km, not 60 km', info.g = {a45:seen(a45), a60:seen(a60)});
     me.u.spec = 1; ok(seen(a60) && seen(a95), 'with Special Forces in it: 100 km'); me.u.spec = 0;
-    const p60 = a60.at; me.to = p60; me.t = 0; me.path = []; me.pos = null; me.at = P.id; ok(seen(a60) && view().has(p60), 'the province it is moving to is seen whole');
+    const p60 = a60.at; me.to = p60; me.t = 0; me.path = []; me.pos = null; me.at = P.id; ok(!seen(a60) && !view().whole.has(p60), 'the province it is moving to is not seen whole (a force 60 km away in it stays hidden)');
     me.to = null; drop(me, a45, a60, a95); } }
 // 3. aircraft: a strike wing in flight 150 km, a patrol 200 km; UAV I on station 250 km, UAV V 500 km
 { const T = spot([140, 170, 190, 240, 260, 480, 520]);

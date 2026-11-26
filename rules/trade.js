@@ -227,7 +227,7 @@ const TR_WHY = {war:'war broke out', embargo:'an embargo', refused:'they no long
 function trMake(a, b, kind, nc = null){ const T = trS(), r = {id:T.nid++, a, b, nc:b === NEUTRAL ? nc : null, kind, key:trKey(a, b, nc), t0:S.hour, f:1, why:'', by:-1, bz:-1, raid:-1e9, raidZ:-1, acc:0, accN:0, va:null, vb:null, sunk:0};
   if (trInvalid(r) || !trPlace(r)) return null; T.routes.push(r); T.ver = (T.ver || 0) + 1; trStatus(r); return r; }
 function trEnded(r, why){ const T = trS(); T.ver = (T.ver || 0) + 1;
-  for (const a of S.armies) if (a.escort === r.id) delete a.escort;
+  for (const a of S.armies){ if (a.escort === r.id) delete a.escort; if (a.raid && a.raid.r === r.id) delete a.raid; }   // (escort and raid orders on it end with it)
   if (why !== 'closed') for (const me of [r.a, r.b]) if (isSeat(me)) tell(me, `The ${trName(r, me)} trade route has ended: ${TR_WHY[why] || why}.`, 'info', r.path[Math.floor(r.path.length/2)]); }
 // pre-trade money income: the economy that drives a route's value
 const trGdp = n => { const i = income(n); return Math.max(40, i.gross.cash - (i.trade ? i.trade.cash : 0)); };
