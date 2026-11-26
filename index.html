@@ -7870,9 +7870,11 @@ function cityLotStreets(P, om, I){ if (!P.stc) P.stc = new Map(); let o = P.stc.
   // side out on the grass): an access street from the middle of its side nearest the town's point to the nearest point of a street or avenue
   // where the town is built up (a street the footprint thins out is no way in), or of a map highway or main road if that is nearer
   const pts = lotWays(P, I, ST, av), FC = P.LT.find(l => l.st === 'fc');
-  for (const o2 of own){ if (o2.reach || (FC && o2.l.q[0] < FC.q[2] + 1 && o2.l.q[2] > FC.q[0] - 1 && o2.l.q[1] < FC.q[3] + 1 && o2.l.q[3] > FC.q[1] - 1)) continue; /* (a lot on the paved square round the point, where the town's streets meet, is reached) */ const [x0, y0, x1, y1] = o2.l.q, cx = (x0 + x1)/2, cy = (y0 + y1)/2, D = [[cx, y0], [cx, y1], [x0, cy], [x1, cy]].reduce((b, q) => Math.hypot(q[0], q[1]) < Math.hypot(b[0], b[1]) ? q : b);
-    let bq = null, bd = 160; for (let i = 0; i < pts.length; i += 2){ const d = Math.hypot(pts[i] - D[0], pts[i + 1] - D[1]); if (d < bd){ bd = d; bq = [pts[i], pts[i + 1]]; } }
-    if (!bq || bd < 0.5) continue; acc.push(...clip([D[0], D[1], bq[0], bq[1]])); }
+  for (const o2 of own){ if (o2.reach || (FC && o2.l.q[0] < FC.q[2] + 1 && o2.l.q[2] > FC.q[0] - 1 && o2.l.q[1] < FC.q[3] + 1 && o2.l.q[3] > FC.q[1] - 1)) continue; /* (a lot on the paved square round the point, where the town's streets meet, is reached) */ const [x0, y0, x1, y1] = o2.l.q, cx = (x0 + x1)/2, cy = (y0 + y1)/2;
+    // (from the side nearest the town's point first; a way that another lot beside it cuts off at once is no way in: the next side)
+    for (const D of [[cx, y0], [cx, y1], [x0, cy], [x1, cy]].sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]))){
+      let bq = null, bd = 160; for (let i = 0; i < pts.length; i += 2){ const d = Math.hypot(pts[i] - D[0], pts[i + 1] - D[1]); if (d < bd){ bd = d; bq = [pts[i], pts[i + 1]]; } }
+      if (!bq || bd < 0.5) break; const W = clip([D[0], D[1], bq[0], bq[1]]); if (W.length && Math.hypot(W[0][0] - D[0], W[0][1] - D[1]) < 0.6){ acc.push(...W); break; } } }
   o = {ST, av, acc}; /*@TEST*/o.dbg = own.map(o2 => o2.l.k + (o2.reach ? '+' : '-'));/*@ENDTEST*/ P.stc.set(om, o); return o; }
 // the points a lot's access street may lead to (km from the point): the town's streets and avenues where its footprint is built up, and the
 // map's highways and main roads over its square
