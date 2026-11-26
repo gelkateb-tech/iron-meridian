@@ -455,7 +455,7 @@ function nucImpact(m){ const p = m.to, n = m.owner, W = MSL_WMD.nuc, P = G.P[p],
   // 12% next door (armour and ships 8%)
   const by = new Map(), add = (o, r) => { const x = by.get(o) || {d:0, k:0}; x.d += r.dmg; x.k += r.lost; by.set(o, x); };
   for (const a of forcesIn(p, true)) add(a.owner, wmdShare(a, W.soft, W.hard, W.bunker));
-  const nbs = P.nbs.filter(q => G.P[q]); for (const q of nbs) for (const a of forcesIn(q, true)) add(a.owner, wmdShare(a, W.nbSoft, W.nbHard, W.bunker));
+  const nbs = P.nbs.filter(q => G.P[q]), nbD = new Map(); for (const q of nbs) for (const a of forcesIn(q, true)){ const r = wmdShare(a, W.nbSoft, W.nbHard, W.bunker); add(a.owner, r); nbD.set(q, (nbD.get(q) || 0) + r.dmg); }   // (nbD: the damage next door, for the client's numbers)
   let wrecked = [];
   if (!sea){ // two building hits (the Bunker shields as for any hit), then every building knocked out 48 h; roads and rails cut 96 h; radiation 48 h
     const hits = []; for (let i = 0; i < W.hits; i++){ const ks = BK.filter(k => S.bld[p][k] > 0); if (!ks.length) break; const k = ks[Math.floor(rng()*ks.length)], h = bldHit(p, k); hits.push(h); if (h.lost && !h.bunker) wrecked.push(BUILD[k].name); }
@@ -468,7 +468,7 @@ function nucImpact(m){ const p = m.to, n = m.owner, W = MSL_WMD.nuc, P = G.P[p],
   for (const o2 of third) addMem(o2, n, W.fallout);   // (fallout on a third nation's land: no war, DIP-1)
   removeEmpty();
   const dealt = Math.round([...by.values()].reduce((s0, r) => s0 + r.d, 0)), killed = [...by.values()].reduce((s0, r) => s0 + r.k, 0), own = by.get(n);
-  IM.emit('fxMissile', {m, hit:true, dealt, owner:S.owner[p]});
+  IM.emit('fxMissile', {m, hit:true, dealt, owner:S.owner[p], nb:[...nbD]});
   const bt = sea ? '' : `; every building there knocked out for ${W.ko} h${wrecked.length ? `, ${wrecked.join(' and ')} wrecked` : ''}; radiation for ${W.zone} h`;
   if (isSeat(n)){ tell(n, `Tactical Nuclear Missile hit ${where}: ${dealt} damage${killed ? `, ${pluN(killed, 'unit')} destroyed` : ''}${bt}.${own && own.d >= 0.5 ? ` Your own forces there and next door were hit too (${Math.round(own.d)} damage).` : ''}`, 'good', p); bump(n, 'unitsKilled', killed - (own ? own.k : 0)); }
   for (const me of seatsBut(n)){ const r = by.get(me);

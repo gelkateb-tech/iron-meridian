@@ -1172,6 +1172,25 @@ header .tbi .badge{top:-7px; right:-7px}
 .mcell.lock > svg:first-child{filter:grayscale(1) brightness(.85) drop-shadow(0 1px 1px rgba(0,0,0,.7)); opacity:.7} .mcell.lock b{color:#9fb0b5}
 .mcell .lk{position:absolute; top:6px; right:7px}
 
+.rk-nopic{position:absolute; inset:0; display:grid; place-items:center; color:rgba(200,230,255,.55)} .rk-nopic svg{filter:drop-shadow(0 0 18px rgba(120,190,255,.35))}
+/* chemical and nuclear missiles (docs/MISSILES.md 11): the launch card over the map, the zone lines in the panels, the army bar, the silo rows, the icons' signs */
+#mslcf{position:absolute; top:64px; right:14px; z-index:6; width:min(400px, calc(100% - 28px)); max-height:calc(100% - 120px); overflow:auto; padding:12px 14px 12px; border-radius:6px;
+  background:linear-gradient(180deg, rgba(40,48,52,.97), rgba(30,37,40,.97)); border:1px solid rgba(255,255,255,.14); border-top:3px solid #e8483c; box-shadow:0 12px 30px rgba(0,0,0,.55); color:var(--fg); font-size:12.5px; line-height:1.45}
+#mslcf.lf{right:auto; left:14px}
+#mslcf .mcf-k{font:700 10.5px/1.2 var(--body); letter-spacing:.12em; text-transform:uppercase; color:#ff9c8c}
+#mslcf h3{margin:3px 0 6px; font:800 21px/1.1 var(--display); letter-spacing:.02em; text-transform:uppercase; color:#fff}
+#mslcf p{margin:0 0 6px} #mslcf ul{margin:0 0 10px; padding-left:18px} #mslcf li{margin:0 0 4px} #mslcf .bad{color:#ff9c8c}
+#mslcf .mcf-b{display:flex; gap:8px} #mslcf .mcf-b .btn{min-height:36px; padding:4px 18px; font-weight:700}
+#mslcf .mcf-go{background:linear-gradient(180deg, #b8382d, #8e241c); border-color:#e8786c; color:#fff}
+@media (max-width:820px){ #mslcf, #mslcf.lf{top:auto; bottom:10px; left:8px; right:8px; width:auto; max-height:52%} #mslcf h3{font-size:19px} }
+.status.haz, .cs-haz, .ab-haz{display:flex; align-items:flex-start; gap:7px} .hzi{flex:none; margin-top:1px}
+.status.haz.gas{border-left-color:#b9dc3a; background:rgba(150,190,30,.12)} .status.haz.rad{border-left-color:#f2c418; background:rgba(242,196,24,.12)}
+.status.haz.gas .hzi{color:#b9dc3a}
+.cs-haz{padding:6px 10px; font:600 12px/1.35 var(--body); border-bottom:1px solid rgba(0,0,0,.25)} .cs-haz.gas{background:#e3f2a8; color:#26330a} .cs-haz.rad{background:#fbe8a0; color:#2e2606} .cs-haz.gas .hzi{color:#5a7a0c}
+.ab-haz{margin:6px 0 0; padding:5px 8px; border-radius:3px; font-size:12px; line-height:1.35} .ab-haz.gas{background:rgba(150,190,30,.16); box-shadow:inset 3px 0 0 #b9dc3a} .ab-haz.rad{background:rgba(242,196,24,.14); box-shadow:inset 3px 0 0 #f2c418} .ab-haz.gas .hzi{color:#b9dc3a}
+.msl-row .msl-note{display:block; margin-top:3px; font-size:11px; color:#9fb0b5} .msl-row.off .nm{opacity:.75} .msl-row .btn.primary.wmd:not(:disabled){background:linear-gradient(180deg, #b8382d, #8e241c); border-color:#e8786c}
+.msi-w{position:relative; display:inline-grid; place-items:center; flex:none; max-width:100%; max-height:100%} .mcell .mpic > .msi-w{width:86% !important; height:86% !important} .mcell.lock .mpic > .msi-w > svg{filter:saturate(.45) brightness(.92)}
+.mcell small{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap} .mcell .mtx{display:flex; flex-direction:column; align-items:center; gap:3px; max-width:100%; min-width:0} .msi-w > svg{width:100%; height:100%} .msi-b{position:absolute; right:-6%; bottom:-4%; line-height:0; filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))} .msi-b.chem .hzi{color:#b9dc3a}
 /* ---- bottom nav (all sizes): equal tabs, white line icons over labels, red count badges ---- */
 #dock{grid-column:1; grid-row:3; flex-direction:row; justify-content:stretch; align-items:stretch; gap:0; height:auto; min-height:0; padding:0 0 env(safe-area-inset-bottom, 0px);
   background:var(--cn-bar); border:0; border-top:1px solid #253339; box-shadow:0 -3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08); z-index:8}
@@ -1473,7 +1492,7 @@ h2{color:#fff; text-shadow:var(--cn-num)}
   #res .chip > svg, #res .chip > img{width:22px; height:22px; margin-top:0} #res .chip b{font-size:13.5px} #res .chip .d{display:none}
   .mslc .crate{width:28px; height:28px}
   .mslmenu{width:37.5%; min-width:0; max-width:none}
-  .mcell{height:62px}
+  .mcell{height:62px} .mcell small{letter-spacing:0; font-size:9px}
   .rail{top:8px; right:6px}
   .rail{gap:2px} .shd{width:40px; height:45px} .shd .si{width:18px; height:18px; margin-top:8px}
   .tlegend, .ilegend{right:58px}
@@ -3024,6 +3043,7 @@ span.fchip{cursor:default} span.fchip::before{display:none}
       <div id="globe" aria-label="Globe view"><div class="ghint">Drag to turn · scroll to zoom · double-click to land there · Esc for the flat map</div></div>
       <div id="hint"></div>
       <div id="cmdbar" hidden></div>
+      <div id="mslcf" hidden role="dialog" aria-modal="false" aria-labelledby="mslcf-h"></div>
       <div id="chooser" hidden role="dialog" aria-label="Select city or troops"></div>
       <div id="tip" hidden></div>
       <div id="toasts" aria-live="polite"></div>
@@ -5602,6 +5622,56 @@ function drawBlockZones(now){ if (!S.armies.some(a => a.blk)) return; const vis 
     const [x, y] = armyXY(a), foe = a.owner !== PLAYER && !friendly(PLAYER, a.owner), R = km*KM_W; ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2);
     ctx.fillStyle = foe ? 'rgba(224,72,60,.10)' : 'rgba(236,182,90,.09)'; ctx.fill(); ctx.setLineDash([5*px, 4*px]); ctx.lineDashOffset = -((now/120) % 9)*px; ctx.lineWidth = 1.6*px; ctx.strokeStyle = foe ? 'rgba(240,96,80,.85)' : 'rgba(236,182,90,.85)'; ctx.stroke(); ctx.restore(); }
   animAmb(); }
+// ---- chemical and nuclear missiles on the map (docs/MISSILES.md 11; owner point 12, M13 with the owner's change): a gas zone and a radiation zone
+// on the province's own outline for as long as they last (S.haz, rules/air.js), each with a dashed hazard rim and a chip counting the hours down;
+// the launch picker's shading (the target; a nuclear strike's neighbours too). Drawn over the night tint, so they read by day and by night; static
+// (no frame of their own: the chip changes with the game hour, which redraws anyway; Battery saver friendly)
+// gas: a sickly green tint with a fine hatch (it stays visible on green land) and a lime and black dashed rim; it thins over its last 2 hours.
+// radiation: a faint yellow tint, a yellow and black hazard rim; the tint weakens as the radiation does
+const HAZ_LOOK = {gas:{fill:'168,214,36', fa:0.34, hatch:'rgba(26,40,4,.42)', band:'#b8e03a', dash:'#141c04', chip:'#b9dc3a', ink:'#1a2404', word:'GAS'},
+  rad:{fill:'246,210,36', fa:0.2, hatch:null, band:'#f2c418', dash:'#151208', chip:'#f2c418', ink:'#1a1606', word:'RAD'}};
+const hazLeft = z => Math.max(0, z.until - S.hour);
+// the zones the player knows of: a nuclear strike's (every nation heard of it), and any other on its land, where its forces stand, that it made, or in sight
+function hazShown(vis){ const out = []; if (!S.haz) return out;
+  for (const k in S.haz){ const p = +k, z = hazAt(p); if (!z || !G.P[p]) continue;
+    if (z.k === 'rad' || z.by === PLAYER || S.owner[p] === PLAYER || vis.has(p) || stationaryAt(p).some(b => b.owner === PLAYER)) out.push([p, z]); }
+  return out; }
+let HAZ_PAT = null;
+function hazPattern(){ if (HAZ_PAT) return HAZ_PAT; const c = document.createElement('canvas'); c.width = c.height = 10; const g = c.getContext('2d');
+  g.strokeStyle = HAZ_LOOK.gas.hatch; g.lineWidth = 1.3; g.beginPath(); for (const o of [-10, 0, 10]){ g.moveTo(o, 10); g.lineTo(o + 10, 0); } g.stroke(); return (HAZ_PAT = ctx.createPattern(c, 'repeat')); }
+// one zone's rim: a dark edge, the coloured band, black dashes over it (css px widths at any zoom)
+function hazRim(O, L, px, a){ ctx.globalAlpha = a; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(6,8,4,.55)'; ctx.lineWidth = 7*px; ctx.stroke(O);
+  ctx.strokeStyle = L.band; ctx.lineWidth = 4.4*px; ctx.stroke(O); ctx.setLineDash([6*px, 6*px]); ctx.lineCap = 'butt'; ctx.strokeStyle = L.dash; ctx.stroke(O); ctx.setLineDash([]); ctx.lineCap = 'round'; ctx.globalAlpha = 1; }
+function drawMslMap(now, vis){ const Z = hazShown(vis), am = aimMsl, aimT = am ? (am.to != null ? am.to : lastPT === 'mouse' && hoverProv >= 0 ? hoverProv : -1) : -1; if (!Z.length && aimT < 0) return;
+  const px = 1/view.s, hexPx = view.s*HS0, clipL = p => { const P = G.P[p]; if (P && !P.sea && GEO.coastV && (P.nbs.some(q => G.P[q].sea) || (GEO.coastOf && GEO.coastOf[p] && GEO.coastOf[p].length))) ctx.clip(GEO.coastV, 'evenodd'); };
+  const ck = aimT >= 0 ? missileCheck(PLAYER, am.from, aimT, am.k) : null;
+  wrapEach(() => { ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y);
+    for (const [p, z] of Z){ const L = HAZ_LOOK[z.k], O = provOutline(p); if (!O) continue; const left = hazLeft(z), fade = z.k === 'gas' ? Math.min(1, left/2) : 0.55 + 0.45*left/Math.max(1, z.until - z.h0), nt = Math.max(0, Math.min(1, (0.02 - sunSinEl(p))/0.16));
+      ctx.save(); clipL(p); ctx.fillStyle = `rgba(${L.fill},${(L.fa*fade*(1 - 0.3*nt)).toFixed(3)})`; ctx.fill(O, 'evenodd');
+      if (L.hatch){ const H = hazPattern(); H.setTransform(new DOMMatrix().scale(px)); ctx.globalAlpha = fade; ctx.fillStyle = H; ctx.fill(O, 'evenodd'); ctx.globalAlpha = 1; }
+      hazRim(O, L, px, Math.min(1, 0.35 + fade)); ctx.restore(); }
+    // the launch picker: the province it would hit outlined (red: it can be hit; grey: it cannot, the reason is told on a tap); a nuclear strike's
+    // neighbours shaded orange (12% of the health of every force there)
+    if (aimT >= 0){ const ok = ck.ok, O = provOutline(aimT);
+      if (ok && am.k === 'nuc') for (const q of G.P[aimT].nbs){ const Q = provOutline(q); if (!Q) continue; ctx.save(); clipL(q); ctx.fillStyle = 'rgba(240,138,40,.3)'; ctx.fill(Q, 'evenodd'); ctx.strokeStyle = 'rgba(255,170,80,.75)'; ctx.lineWidth = 1.4*px; ctx.stroke(Q); ctx.restore(); }
+      if (O){ ctx.save(); clipL(aimT); if (ok){ ctx.fillStyle = am.k === 'nuc' ? 'rgba(232,56,40,.5)' : 'rgba(232,72,60,.28)'; ctx.fill(O, 'evenodd'); }
+        ctx.strokeStyle = 'rgba(6,8,10,.6)'; ctx.lineWidth = 5*px; ctx.stroke(O); ctx.strokeStyle = ok ? '#ff6a58' : 'rgba(200,206,210,.85)'; ctx.lineWidth = 2.4*px; if (!ok) ctx.setLineDash([5*px, 4*px]); ctx.stroke(O); ctx.setLineDash([]); ctx.restore(); } } });
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+// the zones' chips: "GAS 9 h" with the hazard triangle, "RAD 40 h" with the radiation sign, just over the zone's top edge (over the counters, so a
+// force standing there never hides it; not at world zoom)
+function drawHazChips(vis){ if (!S.haz) return; const Z = hazShown(vis), hexPx = view.s*HS0; if (!Z.length || hexPx < 5) return; const f = Math.round(11*Math.max(0.9, Math.min(1.25, hexPx/18)));
+  ctx.save(); ctx.font = `800 ${f}px ${BODY}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (const [p, z] of Z){ const L = HAZ_LOOK[z.k], P = G.P[p], b = P.vbox, txt = `${L.word} ${Math.max(1, hazLeft(z))} h`, tw = ctx.measureText(txt).width, ic = f + 2, w = tw + ic + 14, h = f + 9;
+    wrapX(P.x, (sx) => { const top = toScreen(P.x, b ? b[1] : P.y - 2*HS0)[1], sy = Math.max(toScreen(P.x, P.y)[1] - 3*h, top - h/2 - 3), x0 = sx - w/2, y0 = sy - h/2; if (x0 > cw || x0 + w < 0 || y0 > ch || y0 + h < 0) return;
+      roundRect(ctx, x0, y0, w, h, h/2); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(4,6,4,.5)'; ctx.stroke(); ctx.fillStyle = L.chip; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(10,12,6,.9)'; ctx.stroke();
+      const ix = x0 + 6 + ic/2; if (z.k === 'rad') FXM.radSign(ctx, ix, sy, ic*0.45, L.ink); else hazTri(ctx, ix, sy, ic*0.48, L.ink, L.chip);
+      ctx.fillStyle = L.ink; ctx.fillText(txt, x0 + 9 + ic, sy + 0.5); }); }
+  ctx.restore(); }
+// the hazard triangle (an exclamation mark in a triangle), radius r, ink col, the mark cut out in bg
+function hazTri(g, x, y, r, col, bg){ g.save(); g.fillStyle = col; g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r*1.05, y + r*0.8); g.lineTo(x - r*1.05, y + r*0.8); g.closePath(); g.fill();
+  g.fillStyle = bg; g.fillRect(x - r*0.11, y - r*0.42, r*0.22, r*0.66); g.fillRect(x - r*0.11, y + r*0.36, r*0.22, r*0.2); g.restore(); }
+// the screen x of world x on every copy of the world on screen (fn called once per copy)
+function wrapX(wx, fn){ const W0 = WRAP_W*view.s, x = wx*view.s + view.x; let a = x - Math.ceil((x + 200)/W0)*W0; for (let i = 0; i < 4 && a < cw + 200; i++, a += W0) if (a > -200) fn(a); }
 // chokepoint names at play zoom (screen space) while routes show (a fleet selected, the Trade mode); one closed by a blockade, always and in red. Closure is worked out when the trade picture changes
 var CHKD = {ver:-1, S:null, m:new Map()};
 function drawChokes(now){ const hexPx = view.s*HS0; if (hexPx < 8 || !G) return; const T = S.trade;
@@ -9854,6 +9924,7 @@ function draw(now){ draw.now = now;
   /*@TEST*/if (window.__groundOnly) return;/*@ENDTEST*/   // (tests: the ground and the light alone, for colour measurements)
   { const pend = CITY_PEND; CITY_PEND = false; wrapEach(() => drawCityLights(hexPx)); if (CITY_PEND){ if (CWANT.size) animIn(250); else animFast(); } CITY_PEND = pend; }   // city lights over the night tint (lights still to make: asked of the bake pump, which asks for a frame as each lands)
   drawLightning(now);
+  drawMslMap(now, vis);   // gas and radiation zones with their chips, the launch picker's target shading (over the night tint: docs/MISSILES.md 11)
 
   // ---- screen space
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -10267,6 +10338,7 @@ function draw(now){ draw.now = now;
     if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
   if (PROJ.length || PART.length){ ctx.save(); plateClipOn(); drawParticlesOver(now); ctx.restore(); }   // tracers, shells, sparks: over the map, never over a plate
   // missiles in flight (fx.js: the trail, the weave or the tall arc, the launch plume) and the missile warnings on their targets
+  drawHazChips(vis);   // the gas and radiation zones' chips (over the counters)
   drawMissiles(now, vis); drawWarn(now);
   if (sel.army !== draw.selA){ draw.selA = sel.army; if (sel.army != null) tapCombat(armyById(sel.army)); }   // tapping a force in combat: its range ring and its target, briefly (fx.js)
   drawMarks(now);   // the attack order's target marker and dashed line (fx.js)
@@ -10390,7 +10462,7 @@ cv.addEventListener('pointermove', e => {
     zoomAt(pinch.s*(d/pinch.d)/view.s, (a.x + b.x)/2, (a.y + b.y)/2); return; }
   if (boxSel){ boxSel.x1 = x; boxSel.y1 = y; showBox(); return; }
   if (drag){ if (Math.hypot(x - drag.x, y - drag.y) > drag.slop) drag.moved = true; if (drag.moved && drag.unit != null){ closeChooser(); tipHide(); udrag = {id:drag.unit, x, y}; return; } if (drag.moved){ closeChooser(); view.x = drag.vx + x - drag.x; view.y = drag.vy + y - drag.y; tipHide(); } return; }
-  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; if (rallyFor !== null) redraw(); const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && cmdMode && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } if (rallyFor === null) tipShow(x, y); else tipHide(); }
+  if (e.pointerType === 'mouse'){ mouse = {x, y}; if ($('chooser') && !$('chooser').hidden){ tipHide(); return; } const p = provAt(x, y); if (p !== hoverProv){ hoverProv = p; if (rallyFor !== null || aimMsl) redraw(); const a = sel.army !== null ? armyById(sel.army) : null; hoverPath = a && cmdMode && p >= 0 && !a.air ? pathFor(a, a.to !== null ? a.to : a.at, p) : null; } if (rallyFor === null) tipShow(x, y); else tipHide(); }
 });
 function endPointer(e){
   const [x, y] = localXY(e);
@@ -10501,7 +10573,7 @@ function tap(x, y, shift = false, long = false){
       break;
     } }
   const p = mk ? mk.p : provAt(x, y);
-  if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
+  if (aimMsl && p >= 0){ if (MSL_WMD[aimMsl.k]){ mslPick(p); return; } const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }   // (chemical and nuclear: picked, then confirmed)
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
   if (p < 0 || G.P[p].sea){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
@@ -10696,10 +10768,12 @@ function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (id !== sel.army) wpMode = false; sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
 function selectFoe(id){ wpMode = false; if (tab !== 'cmd') setTab('cmd'); sel.group = []; sel.army = null; sel.prov = null; sel.target = null; sel.foe = id; targetPath = null; hoverPath = null; renderSide(true); }
 function selectProv(p){ if (tab !== 'cmd') setTab('cmd'); wpMode = false; sel.group = []; sel.foe = null; CS.det = false; if (rallyFor !== null){ rallyFor = null; rallyPick = null; }
+  if (aimMsl && MSL_WMD[aimMsl.k] && p !== aimMsl.from){ mslPick(p); return; }
   if (aimMsl){ const am = aimMsl; aimMsl = null; if (p !== am.from && launchMissile(PLAYER, am.from, p, am.k)){ sel.prov = am.from; renderSide(true); return; } } sel.prov = p; sel.army = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); if (G.P[p].city) ftipAsk('city'); if (window.innerWidth <= 820){ const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; } }
 let sideOpen = false;   // phones: the command panel opened by hand (advisor shield, dispatches), until closed or the selection clears
 function sideSync(){ const phone = innerWidth <= 820, b = document.body; if (!phone){ if (b.classList.contains('side-on')) b.classList.remove('side-on'); return; }
-  const auto = sel.army !== null || sel.foe !== null || (sel.prov !== null && (CS.det || csWanted() < 0)), on = !!S && S.started && (auto || sideOpen);
+  const auto = !aimMsl && (sel.army !== null || sel.foe !== null || (sel.prov !== null && (CS.det || csWanted() < 0))), on =   // (aiming a missile: the map stays clear; the hint and the launch card say the rest)
+    !!S && S.started && (auto || sideOpen);
   if (b.classList.contains('side-on') !== on){ b.classList.toggle('side-on', on); if (on) $('side').scrollTop = 0; }
   { const ar = on && (sel.army !== null || sel.foe !== null) && !sideOpen; if (b.classList.contains('side-army') !== ar) b.classList.toggle('side-army', ar); }   // a selected force: the short sheet { const rs = $('railside'); if (rs) rs.setAttribute('aria-pressed', String(on)); }
   sideH(); }
@@ -10839,7 +10913,7 @@ const HB_ICO = {
   cup:'<svg class="hi cup" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 3.5h10v5.2a5 5 0 0 1-10 0z" fill="#dfe6e9" stroke="#33454c" stroke-width=".9"/><path d="M7 5.2H4.2v1.6A3.2 3.2 0 0 0 7.6 10M17 5.2h2.8v1.6A3.2 3.2 0 0 1 16.4 10" fill="none" stroke="#dfe6e9" stroke-width="1.6"/><path d="M10.6 13.4h2.8l.5 3.6h-3.8z" fill="#c5d2d6"/><path d="M7.6 17h8.8v3.4H7.6z" fill="#dfe6e9" stroke="#33454c" stroke-width=".9"/><path d="M9.6 5.6v3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".8"/></svg>'};
 /* missile pictures for the strip's dropdown (drawn here, original): side-view cruise missile, upright ballistic missile, silo hatch */
 function mslIcon(k, sz = 30){ const w = `width="${sz}" height="${sz}"`;
-  if (k === 'chem' || k === 'nuc') k = 'bm';   // (chemical and nuclear missiles: names only, the ballistic missile's icon until the screens are made, AIR-6)
+  if (k === 'chem' || k === 'nuc') return `<span class="msi-w" style="width:${sz}px;height:${sz}px">${mslIcon('bm', sz)}<span class="msi-b ${k}" aria-hidden="true">${HZ_ICO[k === 'chem' ? 'gas' : 'rad'](Math.round(sz*0.46))}</span></span>`;   // (names only, no pictures of their own, AIR-6: the ballistic missile's icon with the sign)
   if (UICON_D[k]) return uiconSVG(k, sz, 'msi');   // cruise and ballistic missiles (and the ICBM): the drawn unit icons
   if (k === 'cm') return `<svg ${w} viewBox="0 0 32 32" aria-hidden="true"><g transform="rotate(-38 16 16)"><path d="M5 14.6h18.5l4.2 1.4-4.2 1.4H5z" fill="#c9d6de" stroke="#33454c" stroke-width=".8"/><path d="M23.5 14.6l4.2 1.4-4.2 1.4z" fill="#d42a2a"/><path d="M12 14.6 9.6 10h2.2l3.6 4.6zM12 17.4 9.6 22h2.2l3.6-4.6z" fill="#8fa3aa"/><path d="M5 14.6 2.6 12.2h1.8L7 14.6zM5 17.4 2.6 19.8h1.8L7 17.4z" fill="#8fa3aa"/><path d="M6 15.4h15" stroke="#fff" stroke-width=".7" opacity=".7"/></g><path d="M6.5 25.5c-1.6.8-3 1.2-4.5 1.2" stroke="#e8b923" stroke-width="1.6" stroke-linecap="round" opacity=".9"/></svg>`;
   if (k === 'bm') return `<svg ${w} viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.2c2.2 2 3.2 4.6 3.2 7.6v13.4h-6.4V9.8c0-3 1-5.6 3.2-7.6z" fill="#e3ecf1" stroke="#33454c" stroke-width=".8"/><path d="M16 2.2c2.2 2 3.2 4.6 3.2 7.6h-6.4c0-3 1-5.6 3.2-7.6z" fill="#d42a2a"/><path d="M12.8 13.5h6.4" stroke="#33454c" stroke-width=".8"/><path d="M12.8 18.5 9.4 23.4v2.2h3.4zM19.2 18.5l3.4 4.9v2.2h-3.4z" fill="#8fa3aa" stroke="#33454c" stroke-width=".6"/><path d="M14 23.2h4l.8 2.4h-5.6z" fill="#465c62"/><path d="M14.6 25.8c.3 1.8.8 3 1.4 4 .6-1 1.1-2.2 1.4-4z" fill="#e8b923"/><path d="M14.4 10.5v10" stroke="#fff" stroke-width=".8" opacity=".6"/></svg>`;
@@ -10851,11 +10925,14 @@ function mslDDSync(N){ const mm = $('mslmenu'); if (!mm) return; const tot = {},
     if (S.bld[p].silo){ silos++; siloP.push(p); } }
   const MN = {cm:'Cruise', bm:'Ballistic', chem:'Chemical', nuc:'Nuclear', silo:'Silos'};
   const cell = (k, ico, v, sub, lock, tip) => `<button class="mcell${lock ? ' lock' : ''}" role="menuitem" data-act="msl-cell" data-k="${k}" title="${tip}"><span class="mpic">${ico}${lock ? '<span class="lk" aria-hidden="true"><svg viewBox="0 0 12 14" width="10" height="12"><rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="#2b2006"/><path d="M3.6 6V4.4a2.4 2.4 0 0 1 4.8 0V6" fill="none" stroke="#2b2006" stroke-width="1.6"/></svg></span>' : ''}</span><span class="mtx"><span class="mn">${MN[k] || k}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
-  const html = Object.keys(MISSILES).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => { const lock = !has(PLAYER, M0.tech);
-      return cell(k, mslIcon(k, 44), tot[k], bld0[k] ? `+${bld0[k]} building` : lock ? 'Locked' : silos ? 'Ready to launch' : 'Needs a silo', lock, `${M0.name}: ${tot[k]} ready${bld0[k] ? `, ${bld0[k]} in production` : ''}&#10;${lock ? `Locked: research ${RN[M0.tech].name}` : silos ? 'Tap to go to a silo and launch or build more' : 'Build a Missile Silo in a city to produce and launch them'}&#10;Range ${M0.range*KM_HEX} km · ${M0.desc}`); }).join('')
+  const N0 = S.nations[PLAYER], sites = k => siloP.concat(MISSILES[k].silo ? [] : cpCities().map(P => P.id).filter(q => !S.bld[q].silo && mslHost(q))).filter(q => mslSite(q, k)).length;
+  const html = Object.keys(MISSILES).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => { const lock = !has(PLAYER, M0.tech), ns = lock ? 0 : sites(k), W = MSL_WMD[k], L = W && N0.wmdT ? N0.wmdT[k] : null, cd = L != null ? Math.max(0, W.cd - (S.hour - L)) : 0;
+      const need = M0.silo > 1 ? `Needs Silo ${ROMAN[M0.silo]}` : M0.silo ? 'Needs a silo' : 'Needs a base', sub = bld0[k] ? `+${bld0[k]} building` : lock ? 'Locked' : !ns && !tot[k] ? need : tot[k] && cd ? `Next in ${cd} h` : tot[k] ? 'Ready to launch' : 'None built';
+      const tip = lock ? `Locked: research ${RN[M0.tech].name}` : !ns && !tot[k] ? (M0.silo > 1 ? `Built only in a Missile Silo ${ROMAN[M0.silo]} or higher` : M0.silo ? 'Build a Missile Silo in a city to produce and launch them' : 'Build an Army Base, Airbase, Naval Yard or Missile Silo in a city to produce and launch them') : tot[k] ? 'Tap to go to a city that holds them' : 'Tap to go to a city that can build them';
+      return cell(k, mslIcon(k, 44), tot[k], sub, lock || (!ns && !tot[k]), `${M0.name}: ${tot[k]} ready${bld0[k] ? `, ${bld0[k]} in production` : ''}${W ? ` (at most ${W.perNation} in all, ${W.perSilo} a silo; one launch every ${W.cd} h${cd ? `: the next in ${cd} h` : ''})` : ''}&#10;${tip}&#10;Range ${M0.range*KM_HEX} km · ${M0.desc}`); }).join('')
     + cell('silo', mslIcon('silo', 44), silos, silos ? 'Tap to go there' : 'None built', false, `Missile Silos: ${silos}&#10;${silos ? 'Tap to go to your silo' : 'Build one in a city (Construction) to produce and launch missiles'}`);
   setHTML(mm, html); mslDDSync.silos = siloP;
-  const any = Object.values(tot).reduce((a, b) => a + b, 0), bt = $('mslbtn'); bt.classList.toggle('has', any > 0); bt.setAttribute('aria-label', `Missiles: ${tot.cm} cruise, ${tot.bm} ballistic`); }
+  const any = Object.values(tot).reduce((a, b) => a + b, 0), bt = $('mslbtn'); bt.classList.toggle('has', any > 0); bt.setAttribute('aria-label', `Missiles: ${tot.cm} cruise, ${tot.bm} ballistic${tot.chem ? `, ${tot.chem} chemical` : ''}${tot.nuc ? `, ${tot.nuc} nuclear` : ''}`); }
 function mslDD(open){ const mm = $('mslmenu'), bt = $('mslbtn'); if (!mm) return; open = open == null ? mm.hidden : open; if (open) mslDDSync(S.nations[PLAYER]); mm.hidden = !open; bt.setAttribute('aria-expanded', String(open)); bt.classList.toggle('on', open); }
 function morePop(open){ const mp = $('morepop'), bt = $('morebtn'); if (!mp) return; open = open == null ? mp.hidden : open; mp.hidden = !open; bt.setAttribute('aria-expanded', String(open)); bt.classList.toggle('on', open); }
 document.addEventListener('pointerdown', e => { const t = e.target;
@@ -11191,7 +11268,8 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   const cards = (mine && axShow(p) ? axCard(p) : '') + (isCapital(p) && o >= 0 ? hqCard() : '') + (first ? card(first, 0, {btn:true}) : '') + built.map(k => card(k, B[k], {btn:mine})).join('') + can.map(k => card(k, 0, {btn:true})).join('');
   const rl = mine && P.city ? (rallyOf(p) != null ? `<div class="cs-rl"><span class="cs-rt" title="New units from ${name} walk to ${rallyName(rallyOf(p))}">${CS_ICO.flag}<span>Rally point: <b>${rallyName(rallyOf(p))}</b></span></span><button data-act="rally" data-id="${p}">Change</button><button data-act="rally-clear" data-id="${p}">Clear</button></div>` : `<div class="cs-rl"><button class="cs-rb" data-act="rally" data-id="${p}" title="New units from ${name} will walk to a spot you pick on the map">${CS_ICO.flag}<span>Rally point</span></button><span class="cs-rn">New units stay in the city</span></div>`) : '';
   const mf = mine ? (mfo ? mfHTML(p, F) : '') : mfForeign(p, F);
-  return `${acts}<div class="cs-body">${ban}${stat}${mf}${rl}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
+  const hz = hazLineHTML(p);
+  return `${acts}<div class="cs-body">${ban}${stat}${hz ? `<div class="cs-haz ${hz.k}">${hz.html}</div>` : ''}${mf}${rl}${cards ? `<div class="cs-blds">${cards}</div>` : `<div class="cs-empty">No buildings${mine ? '' : ' known'} here.</div>`}</div>`; }
 function csSync(){ const el = $('csheet'); if (!el || !S) return; const p = csWanted(), phone = innerWidth <= 820, on = p >= 0 && !(CS.det && phone);
   document.body.classList.toggle('cs-on', on); document.body.classList.toggle('cs-det', p >= 0 && CS.det && phone);
   if (!on){ CS.p = -1; if (!el.hidden && !el.classList.contains('out')){ el.classList.add('out'); clearTimeout(CS.t); CS.t = setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, afxReduced() ? 0 : 170); } return; }
@@ -11381,13 +11459,13 @@ function renderSide(force){
   { const mb = $('mutebtn'); mb.setAttribute('aria-pressed', String(!muted)); mb.classList.toggle('off', muted); const ln = mb.querySelector('.ln'); if (ln) ln.textContent = muted ? 'Sound off' : 'Sound on'; }
   let hint = '';
   const a = sel.army !== null ? armyById(sel.army) : null;
-  if (aimMsl) hint = `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${mslOf(PLAYER, aimMsl.k).range*KM_HEX} km). Esc to cancel.`;
+  if (aimMsl) hint = MSL_WMD[aimMsl.k] ? (aimMsl.to != null ? `${MISSILES[aimMsl.k].name} aimed at ${placeOf(aimMsl.to)}: Launch or Cancel, or tap another target.` : `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${mslOf(PLAYER, aimMsl.k).range*KM_HEX} km): you confirm before it flies. Esc to cancel.`) : `Tap a target for the ${MISSILES[aimMsl.k].name} (range ${mslOf(PLAYER, aimMsl.k).range*KM_HEX} km). Esc to cancel.`;
   else if (rallyFor !== null) hint = rallyPick ? `Rally point for ${G.P[rallyFor].cityName}: ${rallyName(rallyPick.p)}. Tap it again or press <button class="hb" data-act="rally-set">Set</button> <button class="hb" data-act="rally-cancel">Cancel</button>` : `Tap the map to set the rally point for ${G.P[rallyFor].cityName} · <button class="hb" data-act="rally-cancel">Cancel</button>`;
   else if (a && a.air) hint = sel.target !== null ? `Tap ${G.P[sel.target].cityName || G.P[sel.target].name} again or press the mission button to launch.` : 'Press the mission button, then tap a province inside the blue ring. Tap empty map or press Esc to deselect.';
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
   else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : targetPath && targetPath.length ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.` : `${embarkWhy(a, sel.target) || 'No route there.'} Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
-  setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
+  setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync(); mslCfSync();
 }
 // nation n has an Army Base (built, or going up) in one of its cities: the first step of First steps and the tutorial
 const hasBase = n => ownedBy(n).some(p => S.bld[p].fac >= 1 || (S.cons[p] && S.cons[p].k === 'fac'));
@@ -11691,11 +11769,14 @@ const RK_BASE = {
   link:'<path d="M5.4 18.2 12 6.2l6.6 12z" fill="none" stroke="currentColor" stroke-width="2.3"/><circle cx="12" cy="5.6" r="3.5"/><circle cx="5" cy="18.4" r="3.5"/><circle cx="19" cy="18.4" r="3.5"/>',
   sat:'<g transform="rotate(-45 12 11)"><rect x="9.1" y="7.6" width="5.8" height="6.8" rx="1"/><rect x=".8" y="8.6" width="6.8" height="4.8" rx=".5"/><rect x="16.4" y="8.6" width="6.8" height="4.8" rx=".5"/><path d="M7.4 11h1.9M14.7 11h1.9" stroke="currentColor" stroke-width="1.4"/></g><path d="M14.6 19.6a5.4 5.4 0 0 0 4.4-4.4M14.6 23a8.8 8.8 0 0 0 7.8-7.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   wrench:'<path d="M21 6.4l-3.4 3.4-3-.4-.4-3 3.4-3.4a5.8 5.8 0 0 0-7.3 7.3L2.6 18a2.5 2.5 0 0 0 3.5 3.5l7.7-7.7A5.8 5.8 0 0 0 21 6.4z"/>',
+  gas:'<path d="M12 1.6 23.2 21.4H.8z"/><path d="M10.7 8.2h2.6l-.4 7.4h-1.8zM10.7 17h2.6v2.6h-2.6z" fill="#24363d"/>',
+  rad:'<circle cx="12" cy="12" r="2.4"/><path d="M9.9 8.4 6.2 2a11.4 11.4 0 0 0-5.7 9.9h7.4a4.2 4.2 0 0 1 2-3.5zM15.9 11.9h7.4A11.4 11.4 0 0 0 17.8 2l-3.7 6.4a4.2 4.2 0 0 1 1.8 3.5zM12 16.1a4.2 4.2 0 0 1-2.1-.6L6.2 21.9a11.4 11.4 0 0 0 11.6 0l-3.7-6.4a4.2 4.2 0 0 1-2.1.6z"/>',
+  cbrn:'<path d="M12 1.6l9 3.3v6.8c0 5.4-3.8 9.5-9 11.1-5.2-1.6-9-5.7-9-11.1V4.9z"/><g fill="#24363d"><circle cx="12" cy="11.8" r="1.5"/><path d="M10.6 9.4 8.6 6a6.6 6.6 0 0 0-3.2 5.7h3.9a2.8 2.8 0 0 1 1.3-2.3zM14.7 11.7h3.9A6.6 6.6 0 0 0 15.4 6l-2 3.4a2.8 2.8 0 0 1 1.3 2.3zM12 14.6a2.8 2.8 0 0 1-1.4-.4l-2 3.4a6.6 6.6 0 0 0 6.8 0l-2-3.4a2.8 2.8 0 0 1-1.4.4z"/></g>',
   anchor:'<circle cx="12" cy="4.6" r="2.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10.8 7.2h2.4v13.4h-2.4z"/><path d="M7 10h10v2H7z"/><path d="M2.8 13.2c.4 4.8 4.1 8.2 9.2 8.2s8.8-3.4 9.2-8.2l-2.6 1.7c-.7 2.8-3.3 4.3-6.6 4.3s-5.9-1.5-6.6-4.3z"/>',
 };
 // symbol kinds: [base, badge]
 const RK_SYM = {fire:['fire'], fireUp:['fire', 'up'], shield:['shield'], shieldUp:['shield', 'up'], health:['plus', 'up'], speed:['chev', 'up'], vision:['eye', 'plus'], terrain:['terr'],
-  range:['range'], airlift:['airlift'], amphib:['amphib'], jam:['jam'], stealth:['stealth'], link:['link'], sat:['sat'], wrench:['wrench'], anchor:['anchor']};
+  range:['range'], airlift:['airlift'], amphib:['amphib'], jam:['jam'], stealth:['stealth'], link:['link'], sat:['sat'], wrench:['wrench'], anchor:['anchor'], gas:['gas'], gasUp:['gas', 'up'], rad:['rad'], cbrn:['cbrn']};
 const rkSym = (k, px = 26) => { const d = RK_SYM[k] || RK_SYM.fireUp, base = RK_BASE[d[0]];
   return `<svg class="rk-sym s-${RK_SYM[k] ? k : 'fireUp'}" width="${px}" height="${px}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${d[1] ? `<g transform="translate(.4 .4) scale(.74)">${base}</g>${d[1] === 'up' ? RK_UP : RK_PLUS}` : base}</svg>`; };
 // category silhouettes (64 x 32, side views, nose to the right)
@@ -11737,14 +11818,16 @@ const rkEmb = (g, px = 40) => { const G = NGROUP_BY[g] || NGROUP_BY.export; retu
 // the symbol of an upgrade node: a few by name, the rest by what they improve (an attack, a defence, speed, range)
 const RK_SYM_ID = {inf_terr:'terrain', spec_terr:'terrain', tank_terr:'terrain', ifv_terr:'amphib', at_eye:'vision', spec_eye:'vision', drone_sens:'vision', awacs_radar:'vision',
   mpa_sonar:'vision', frig_sonar:'vision', spec_airlift:'airlift', para_airlift:'airlift', jam_band:'jam', bomb_ecm:'jam', jet_lo:'stealth', sub_quiet:'stealth', awacs_link:'link',
-  sat1:'sat', log1:'speed', log2:'wrench', nav3:'anchor', log3:'health', msl3:'shieldUp', inf_kit:'health'};
+  sat1:'sat', log1:'speed', log2:'wrench', nav3:'anchor', log3:'health', msl3:'shieldUp', inf_kit:'health', msl_chem:'gas', chem_long:'gasUp', msl_nuc:'rad', cbrn:'cbrn'};
 const rkSymOf = nd => { if (RK_SYM_ID[nd.id]) return RK_SYM_ID[nd.id]; if (nd.kind === 'eng') return nd.eng === 'fp' ? 'fire' : 'shield'; const f = nd.lv[0].fx || {};
   return f.rng || /Range|Bombardment/.test(nd.name) ? 'range' : (f.spd || 0) > (f.atk || 0) || /Speed/.test(nd.name) ? 'speed' : f.def && !f.atk ? 'shieldUp' : 'fireUp'; };
 // what a diamond holds: a unit (unlock, generation) its side-view cut-out whole inside the diamond, or until that picture exists its research scene
 // filling the diamond; the missile lines' unlocks their scene; every other node its white symbol. {in: inside the turned square, over: on top of it}
+// unlocks with no research scene (names only, no pictures: AIR-6, owner point 12): their sign, as an upgrade's symbol
+const RK_NOPIC = {msl_chem:1, msl_nuc:1};
 function rkFace(nd, K){ const scn = k => ({in:`<span class="rk-in"><span class="dmi"><i class="rk-scn" style="background-image:url('assets/art/ri-${k}.webp')"></i></span></span>`, over:''});   // (inset: the state colour shows round it)
   if (nd.u && rkSpine(nd)){ const A = (K || rkLook(nd)).art; return A.side ? {in:'', over:`<span class="rk-face">${ulImg(A.side, 'rk-cut')}</span>`} : scn('u_' + riUnit(nd.u)); }
-  if (nd.kind === 'unlock') return scn(rKey(nd));
+  if (nd.kind === 'unlock' && !RK_NOPIC[nd.id]) return scn(rKey(nd));
   return {in:'', over:`<span class="rk-face">${rkSym(rkSymOf(nd), 28)}</span>`}; }
 // the banner's colour sweep by nation group (docs/DOCTRINES.md section 1 colours): dark, main, light
 const RK_BAN = {nato:['#0b2350', '#2861c4', '#7fb0ff'], east:['#3a0610', '#b21d31', '#ff5d5d'], china:['#463004', '#bd8716', '#ffd56b'], europe:['#05333a', '#21909c', '#86e6ee'], export:['#33270f', '#917447', '#e4c78f']};
@@ -11883,7 +11966,7 @@ function rCardHTML(nd){ if (!nd) return '';
   const missR = s.nx && !s.slot && N.rare < c.rare ? `<span class="rc-miss">${fmt(Math.ceil(c.rare - N.rare))} rare materials short${inc.net.rare > 0.05*RES_K ? `: about ${Math.ceil((c.rare - N.rare)/inc.net.rare)} d of income` : ''}</span>` : '';
   const need = s.nx || nd.std ? `<div class="rc-need">${nd.std ? `<span class="rs-dr ok">${rg('check', 11)} Known from day one</span>` : dayRow + reqs}${outs}</div>` : outs ? `<div class="rc-need">${outs}</div>` : '';
   // the one-line note under the header, the unit box and the description
-  const note = nd.kind === 'unlock' ? 'Starting level military unit or technology.' : nd.kind === 'gen' ? `<b>${nd.name}</b>: a new generation${U ? ' of the ' + U.name : ''}.` : `<b>${step}</b>${U ? ` for every ${U.name}` : ''}.`;
+  const note = RK_NOPIC[nd.id] ? 'A new warhead for the Missile Silo.' : nd.kind === 'unlock' ? 'Starting level military unit or technology.' : nd.kind === 'gen' ? `<b>${nd.name}</b>: a new generation${U ? ' of the ' + U.name : ''}.` : `<b>${step}</b>${U ? ` for every ${U.name}` : ''}.`;
   const box = U ? U.name : RK_MSL[nd.line] ? nd.line : nd.cat === 'cmd' ? C.name : rLineName(nd);
   const desc = nd.kind === 'unlock' && U ? `${U.role}${nd.elite ? ' Elite unit.' : ''}` : `${rTxt(nd, lvN)}.`;
   const tagIc = U ? uiconSVG(nd.u, 20) : RK_MSL[nd.line] ? uiconSVG(RK_MSL[nd.line], 20) : rkCat(nd.cat, 10);
@@ -11904,7 +11987,7 @@ function rCardHTML(nd){ if (!nd) return '';
       <span class="rk-unl">${rkUi('lock', 22)}Unlocks</span></div>
     <div class="rk-cp"><div class="rk-ub"><b>${box}</b>${rkRank(K.k, 34)}</div>
       <div class="rk-gs">${stripe}</div>
-      <div class="rk-scene${U && !K.art.own ? ' old' : ''}">${ulImg(scene)}<i class="rk-tint"></i><i class="rk-scan"></i>
+      <div class="rk-scene${U && !K.art.own ? ' old' : ''}">${RK_NOPIC[nd.id] ? `<span class="rk-nopic">${rkSym(rkSymOf(nd), 150)}</span>` : ulImg(scene)}<i class="rk-tint"></i><i class="rk-scan"></i>
         <span class="rk-tag">${model} ${tagIc}</span><span class="rk-tag lv">Level ${lvl}</span>${U ? `<button class="rk-i" data-act="rstats" data-u="${nd.u}" aria-label="Full stats of the ${U.name}" title="Full stats: health, speed, vision, range, attack and defence, by research level">i</button>` : ''}</div>
       <div class="rk-desc"><p>${desc}</p>${ba ? `<div class="rc-bas">${ba}</div>` : ''}${lvRows}${need}${missR}</div></div>
     <div class="rk-cf rc-pay">${pay ? `<span class="rk-cost">${cost}</span><span class="td rk-time" title="Research time${h0 !== X.c.days*24 ? ', with your doctrine' : ''}">${rkUi('watch', 30)}<b>${rkDur(h0)}</b></span>` : ''}<div class="rs-db">${btn}</div></div>
@@ -12180,7 +12263,7 @@ function armyBarHTML(a, ro = false){
     <div class="ab-hp" role="img" aria-label="Health ${hp.cur} of ${hp.max}" title="Health of the whole force: ${hp.cur} of ${hp.max} health points"><i style="width:${Math.round(hf*100)}%;background:${col}"></i><b>${ro ? Math.round(hf*100) + '%' : hp.cur + '/' + hp.max}</b></div>
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
     ${a.land > 0 && a.to === null ? `<div class="ab-emb" title="Troops coming ashore from the sea: they cannot move on or capture until they have landed, and fight at ${Math.round(rLandF(o)*100)}% on their first day ashore">⚓ <b>Landing</b> · ${durTxt(a.land)} left</div>` : a.emb != null && a.to === null && a.path.length ? `<div class="ab-emb" title="Ground forces board ships only at a naval city. The force stays in the port until it is aboard, then sails.">⚓ <b>Embarking</b> · ${durTxt(a.emb)} left</div>` : ''}
-    ${abDugHTML(a)}
+    ${abDugHTML(a)}${abHazHTML(a)}
     <div class="ab-stats">${abDugCell(a, cell)}${knownMorale ? cell('Morale', mor + '%', 'Morale: it drops in a fight and recovers when supplied. Broken forces retreat.', mor < 30 ? 'warn' : '') : ''}${cell('Speed', abSpd(a) + '<small> km/d</small>', ro ? 'Marching speed on open ground' : 'Marching speed on open ground without roads (km a day). ' + speedHTML(a).replace(/<[^>]+>/g, ''))}${cell('Strength', (ro ? '≈ ' : '') + Math.round(power(a)), 'Total strength: attack and defence of every unit, health and morale included')}${(rr => rr.length ? cell('Range', Math.max(...rr.map(e => e[1])) + '<small> km</small>', `Attack range: ${rr.map(([t, km]) => `${UNITS[t].name} ${km} km`).join(', ')}. Fires at enemy forces its side can see within range, without moving in.`, 'arng') : '')(rangeRows(a, ro))}${sw}</div>
     <div class="ab-dias">${types.map(t => diaHTML(a, t, ro)).join('')}</div>
     ${!ro && a.owner === PLAYER && shipsOnly(a) && !a.air && !a.fly ? fleetOrdersHTML(a) : ''}
@@ -12359,8 +12442,51 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
     return html; }
 const cityMslOn = p => S.bld[p].silo > 0 || (mslHost(p) && has(PLAYER, 'msl1')) || Object.keys(MISSILES).some(k => mslStored(p, k) > 0);   // (cruise missiles from Army Base, Airbase and Naval Yard cities: owner point 12)
-function citySiloHTML(p){ let html = ''; const st = mstock(p), sl = S.bld[p].silo > 0;
-    html += `<div class="eyebrow">${sl ? 'Missile silo' : 'Missiles'}</div><div class="units">${Object.keys(MISSILES).filter(k => sl || !MISSILES[k].silo || mslStored(p, k) > 0).map(k => [k, mslOf(PLAYER, k)]).map(([k, M0]) => `<div class="btn unit" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${mslStored(p, k)}</b></span></span><span class="cost">${has(PLAYER, M0.tech) ? `${costHTML(mslCost(M0), S.nations[PLAYER])} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Research ' + RN[M0.tech].name}</span><span class="row" style="margin-top:4px"><button class="btn${canBuildMissile(PLAYER, p, k) ? ' can' : ''}" data-act="msl-build" data-k="${k}" title="${mslWhy(PLAYER, p, k)}" ${canBuildMissile(PLAYER, p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary" data-act="msl-aim" data-k="${k}" ${mslStored(p, k) ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`).join('')}</div>`;  return html; }
+function citySiloHTML(p){ let html = ''; const sl = S.bld[p].silo > 0, N0 = S.nations[PLAYER];
+    const row = (k, M0) => { const W = MSL_WMD[k], st = mslStored(p, k), on = has(PLAYER, M0.tech), why = on ? mslWhy(PLAYER, p, k) : '', can = canBuildMissile(PLAYER, p, k), L = W && N0.wmdT ? N0.wmdT[k] : null, cd = L != null ? Math.max(0, W.cd - (S.hour - L)) : 0;
+      const note = !on ? `Research ${RN[M0.tech].name}` : why && !/^At most/.test(why) ? why : W ? `${st} of ${W.perSilo} here · ${mslNation(PLAYER, k)} of ${W.perNation} in all · one launch every ${W.cd} h${cd ? ` (next in ${cd} h)` : ''}` : '';
+      return `<div class="btn unit msl-row${W ? ' wmd ' + k : ''}${on ? '' : ' off'}" style="cursor:default"><span class="nm" style="display:flex; align-items:center; gap:6px">${mslIcon(k, 30)}<span>${M0.name} <b class="cost">×${st}</b></span></span><span class="cost">${on ? `${costHTML(mslCost(M0), N0)} · ${Math.round(mslH(p, k)/2.4)/10}d · range ${M0.range}` : 'Locked'}</span>${note ? `<span class="msl-note">${note}</span>` : ''}<span class="row" style="margin-top:4px"><button class="btn${can ? ' can' : ''}" data-act="msl-build" data-k="${k}" title="${why || (can ? 'Build one' : 'Not enough money or materials')}" ${can ? '' : 'disabled'} style="padding:3px 8px;font-size:11.5px">Build</button><button class="btn primary${W ? ' wmd' : ''}" data-act="msl-aim" data-k="${k}" ${st && !cd ? '' : 'disabled'} title="${!st ? 'None stored here' : cd ? `One ${M0.name} launch every ${W.cd} h: the next in ${cd} h` : 'Pick a target on the map'}" style="padding:3px 8px;font-size:11.5px">Launch…</button></span></div>`; };
+    html += `<div class="eyebrow">${sl ? `Missile silo ${ROMAN[S.bld[p].silo]}` : 'Missiles'}</div><div class="units">${Object.keys(MISSILES).filter(k => sl || !MISSILES[k].silo || mslStored(p, k) > 0).map(k => row(k, mslOf(PLAYER, k))).join('')}</div>`;  return html; }
+// ---- chemical and nuclear missiles in the panels (docs/MISSILES.md 11) ----
+// the hazard signs as small inline icons: gas (a hazard triangle), radiation (the radiation sign)
+const HZ_ICO = {gas:(px = 14, c = 'currentColor') => `<svg class="hzi" width="${px}" height="${px}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 23 21.4H1z" fill="${c}"/><path d="M10.8 8.4h2.4l-.4 7.2h-1.6zM10.8 17.2h2.4v2.4h-2.4z" fill="#1a2404"/></svg>`,
+  rad:(px = 14, c = 'currentColor') => { let d = ''; for (let i = 0; i < 3; i++){ const a = -Math.PI/2 + i*Math.PI*2/3, P = (r, t) => `${(12 + Math.cos(t)*r).toFixed(2)} ${(12 + Math.sin(t)*r).toFixed(2)}`; d += `M${P(3.6, a - 0.52)}L${P(10.6, a - 0.52)}A10.6 10.6 0 0 1 ${P(10.6, a + 0.52)}L${P(3.6, a + 0.52)}A3.6 3.6 0 0 0 ${P(3.6, a - 0.52)}Z`; }
+    return `<svg class="hzi" width="${px}" height="${px}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.6" fill="#f2c418"/><path d="${d}" fill="#151208"/><circle cx="12" cy="12" r="2" fill="#151208"/></svg>`; }};
+const pct1 = v => { const x = v*100; return (x >= 10 || Math.abs(x - Math.round(x)) < 0.05 ? Math.round(x) : Math.round(x*10)/10) + '%'; };
+// the zone line of province p for the province panel and the city sheet ({k, html}, or null)
+function hazLineHTML(p){ const z = hazAt(p); if (!z || !hazShown(visibleSet(PLAYER)).some(e => e[0] === p)) return null; const left = hazLeft(z), W = MSL_WMD[z.k === 'gas' ? 'chem' : 'nuc'];
+  if (z.k === 'gas') return {k:'gas', html:`${HZ_ICO.gas(15)}<span><b>Gas: ${left} h left.</b> Forces here lose ${pct1(W.rate)} health an hour (armour half) and fight ${Math.round((1 - W.fight)*100)}% worse; no healing.</span>`};
+  return {k:'rad', html:`${HZ_ICO.rad(15)}<span><b>Radiation: ${left} h left.</b> Forces lose up to ${pct1(W.rate)} health an hour (now ${pct1(hazRate(z))}, armour half) and fight ${Math.round((1 - W.fight)*100)}% worse; buildings knocked out; output halved.</span>`}; }
+// a ground force standing in a zone: a line in its army bar (its own rate, with CBRN Defence)
+function abHazHTML(a){ if (a.air || a.fly || shipsOnly(a) || G.P[a.at].sea) return ''; const z = hazAt(a.at); if (!z || !hazShown(visibleSet(PLAYER)).some(e => e[0] === a.at)) return '';
+  const W = MSL_WMD[z.k === 'gas' ? 'chem' : 'nuc'], r = hazRate(z)*rCbrn(a.owner), cb = rCbrn(a.owner) < 1;
+  return `<div class="ab-haz ${z.k}" title="${z.k === 'gas' ? 'Gas' : 'Radiation'} for ${hazLeft(z)} more hours: ground forces here lose health every hour and fight worse; they cannot heal here. Walk out to stop it.${cb ? ' CBRN Defence lessens it.' : ''}">${HZ_ICO[z.k](14)}<span><b>${z.k === 'gas' ? 'In gas' : 'Radiation'}</b> · −${pct1(r)} health an hour (armour half) · fights ${Math.round((1 - W.fight)*100)}% worse · ${hazLeft(z)} h left</span></div>`; }
+// ---- the launch picker for chemical and nuclear missiles: a tap picks the target (shaded on the map), a card says what it does, Launch or Cancel
+function mslPick(p){ const am = aimMsl; if (!am) return; const c = missileCheck(PLAYER, am.from, p, am.k);
+  if (!c.ok){ toast(c.why, 'bad', null); return; }
+  am.to = p; if (innerWidth <= 820){ const [, sy] = toScreen(G.P[p].x, G.P[p].y); if (sy > ch*0.42){ view.y -= sy - ch*0.3; redraw(); } }   // (a phone: the card covers the lower map; the target stays above it)
+  renderSide(true); redraw(); }
+function mslFire(){ const am = aimMsl; if (!am || am.to == null) return; aimMsl = null; if (launchMissile(PLAYER, am.from, am.to, am.k)) sel.prov = am.from; renderSide(true); redraw(); }
+function mslCfSync(){ const el = $('mslcf'); if (!el) return; const h = aimMsl && aimMsl.to != null && S && !S.over ? mslCfHTML() : ''; if (!h){ if (!el.hidden){ el.hidden = true; el.innerHTML = ''; } return; }
+  if (el.dataset.h !== h){ el.dataset.h = h; el.innerHTML = h; } el.hidden = false;
+  const [sx] = toScreen(G.P[aimMsl.to].x, G.P[aimMsl.to].y); el.classList.toggle('lf', sx > cw*0.5); }
+// what the card says: the strike, what else it hits, the opinion it costs, the cooldown and the stock left
+function mslCfHTML(){ const am = aimMsl, k = am.k, to = am.to, M0 = mslOf(PLAYER, k), W = MSL_WMD[k], c = missileCheck(PLAYER, am.from, to, k); if (!c.ok) return '';
+  const P = G.P[to], nm = placeOf(to), nuc = k === 'nuc', v = wmdVictim(PLAYER, to), vn = v >= 0 ? nationName(v) : '', nbs = nuc ? P.nbs.filter(q => G.P[q]) : [];
+  const ownAt = q => forcesIn(q, nuc).filter(a => a.owner === PLAYER).length, ownT = ownAt(to), ownN = nbs.reduce((s0, q) => s0 + ownAt(q), 0);
+  const third = new Map(); for (const q of nbs){ const o = S.owner[q]; if (!G.P[q].sea && o >= 0 && o !== PLAYER && o !== v && !atWar(PLAYER, o)) third.set(o, (third.get(o) || 0) + 1); }
+  const thirdTxt = [...third].map(([o, n]) => `${pluN(n, 'province')} of ${nationName(o)} (not at war)`).join(', '), mineN = nbs.filter(q => S.owner[q] === PLAYER).length;
+  const lo = W.mem[2] + W.mark.v, hi = W.mem[1] + W.mark.v, vic = W.mem[0] + W.mark.v, left = mslStored(am.from, k) - 1, hrs = nuc ? W.zone : has(PLAYER, 'chem_long') ? W.zoneLong : W.zone;
+  const li = [];
+  if (nuc) li.push(`<b>${nm}</b>: every force loses half its health (armour and ships 40%)${P.sea ? '' : `; every building knocked out for ${W.ko} h, two levels wrecked; ${Math.round(W.pop*100)}% of the people; radiation for ${W.zone} h`}.`);
+  else li.push(`<b>${nm}</b>: a small blast on every force there, then gas for ${hrs} h: forces lose ${pct1(W.rate)} health an hour (armour half) and fight ${Math.round((1 - W.fight)*100)}% worse; ${Math.round(W.pop*100)}% of the people.`);
+  if (nuc) li.push(`Also hit (${Math.round(W.nbSoft*100)}% of health): ${pluN(nbs.length, 'neighbouring province')}${mineN || thirdTxt ? ` (${[mineN ? `${mineN} of them yours` : '', thirdTxt].filter(Boolean).join('; ')})` : ''}, ${ownN ? pluN(ownN, 'of your forces', 'of your forces') : 'none of your forces'}.`);
+  if (ownT) li.push(`<span class="bad">${pluN(ownT, 'of your forces', 'of your forces')} stand${ownT === 1 ? 's' : ''} in ${nm}: ${nuc ? 'the blast' : 'the blast and the gas'} hit${ownT === 1 ? 's' : ''} ${ownT === 1 ? 'it' : 'them'} too.</span>`);
+  li.push(`<span class="bad">Every nation will think less of you (${hi} to ${lo}${vn ? `; ${vn} ${vic}` : ''}): "${W.mark.name}" weighs on every opinion of you for ${W.mark.days} days${nuc && vn ? `; ${vn}'s allies join the war` : ''}.</span>`);
+  li.push(`Next ${nuc ? 'nuclear' : 'chemical'} launch: ${W.cd} h after this one. Stored here after it: ${Math.max(0, left)} of ${W.perSilo}.`);
+  return `<div class="mcf-k">${M0.name} · from your ${S.bld[am.from].silo ? 'silo' : 'base'} in ${placeOf(am.from)}</div><h3 id="mslcf-h">${nuc ? 'Nuclear' : 'Chemical'} strike on ${nm}?</h3>
+    <p>Impact in ${c.hours} h at the earliest.${nuc ? ' Every nation sees the launch at once.' : ''}</p><ul>${li.map(t => `<li>${t}</li>`).join('')}</ul>
+    <div class="mcf-b"><button class="btn mcf-go" data-act="msl-fire">Launch</button><button class="btn primary" data-act="msl-cancel">Cancel</button></div>`; }
 // the Arms Industry line of the build menu: what it raises in this city, now and with the next level
 function armsHere(p, lv){ const o = cityOut(p); if (!o) return ''; const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), mainOutTxt = x => x.k === 'cash' ? '$' + d1(x.y) + 'M' : d1(x.y) + ' ' + MAIN_NAME[x.k]; const nx = lv < BUILD.arms.max ? {...o, y:o.base*(1 + ARMS_PCT*(lv + 1))} : null;
   return `<b class="res-${o.k}">${icon(o.k, 11)} +${Math.round(ARMS_PCT*100)}% ${MAIN_NAME[o.k]} here per level</b> (now ${mainOutTxt(o)} a day${nx ? ', ' + mainOutTxt(nx) + ' at level ' + ROMAN[lv + 1] : ''}).`; }
@@ -12398,6 +12524,7 @@ function provHTML(p){
   if (S.battles.includes(p) && here.some(a => count(a) && (a.owner === PLAYER || isAlly(PLAYER, a.owner) || armyShown(a, vis)))){ const B = S.bt && S.bt[p];   // (a battle you cannot see is not told: owner 2026-11-25, nothing of foreign forces outside your land and sight)
     html += `<div class="status battle"><b>Battle in progress</b>${B ? ` · ${S.hour - B.h0} h` : ''} · front ${pluN(frontage(p), 'unit')}${B ? Object.keys(B.s).map(Number).filter(o => B.s[o].n).map(o => o !== PLAYER && !isAlly(PLAYER, o) && !here.some(a => a.owner === o && knowA(a, vis)) ? '\u0001' : o).filter((o, i, A) => o !== '\u0001' || A.indexOf(o) === i).map(o => { if (o === '\u0001') return '<br><span style="color:#9fd8ff">?</span> Unidentified army'; const b = B.s[o], l = Object.values(b.lost).reduce((x, y) => x + y, 0); return `<br>${o >= 0 ? flagHTML(o, 11) : `<span style="color:${shade(colorOf(o), 0.35)}">■</span>`} ${o === PLAYER ? 'You' : nationName(o)}: ${pluN(b.n, 'unit')}${b.n > b.F ? ` (${b.F} engaged)` : ''}${(b.dcur ?? b.dirs) > 1 ? ` · ${b.dcur ?? b.dirs} directions +${Math.round((flankF(b.dcur ?? b.dirs) - 1)*100)}%` : ''} · lost ${l}`; }).join('') : ''}</div>`; }
   if (BLOCK.has(p)) html += `<div class="status battle">Blockaded by enemy ships: output −25%</div>`;
+  { const hz = hazLineHTML(p); if (hz) html += `<div class="status haz ${hz.k}">${hz.html}</div>`; }   // a gas or radiation zone (docs/MISSILES.md 11)
   if (own.length) html += `<div class="armylist">${own.map(a => `<button data-act="army" data-id="${a.id}"><span class="al">${leadT(a) ? unitPic(leadT(a), 'sm') : ''}<span>${armyName(a)} · ${count(a)}</span></span><span class="muted">Command</span></button>`).join('')}</div>`;
   if (mine && P.city) html += cityRecruitHTML(p);
   if (mine && (S.bld[p].silo || p === S.nations[PLAYER].capital) && has(PLAYER, 'sat1')){ const nS = (S.sats || []).filter(x => x.owner === PLAYER).length;
@@ -12429,7 +12556,9 @@ document.addEventListener('click', e => {
     case 'spy': startSpy(PLAYER, +b.dataset.id, b.dataset.k); if (modalKind === 'intel' && !$('modal').hidden) setHTML($('sheet'), intelHTML()); renderSide(true); break;
     case 'train-agent': if (trainAgent(PLAYER)) log('A new intelligence agent is ready.', 'good', null); if (modalKind === 'intel' && !$('modal').hidden) setHTML($('sheet'), intelHTML()); renderSide(true); break;
     case 'msl-build': if (sel.prov !== null && buildMissile(PLAYER, sel.prov, b.dataset.k)) renderSide(true); break;
-    case 'msl-aim': if (sel.prov !== null){ if (modalKind === 'cbld' && !$('modal').hidden) closeModal(); aimMsl = {from:sel.prov, k:b.dataset.k}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
+    case 'msl-aim': if (sel.prov !== null){ if (modalKind === 'cbld' && !$('modal').hidden) closeModal(); aimMsl = {from:sel.prov, k:b.dataset.k, to:null}; toast(`Tap a target inside the red ring for the ${MISSILES[b.dataset.k].name}.`, 'info', null); renderSide(true); } break;
+    case 'msl-fire': mslFire(); break;
+    case 'msl-cancel': aimMsl = null; renderSide(true); redraw(); break;
     case 'rally': rallyStart(+b.dataset.id); break;
     case 'rally-clear': clearRally(+b.dataset.id); break;
     case 'rally-set': if (rallyFor !== null && rallyPick) setRally(rallyFor, rallyPick.p); break;
@@ -13430,6 +13559,7 @@ if (location.protocol === 'file:' && window.__im) Object.defineProperties(window
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {pics:() => ({nodes:RNODES.map(n => ({id:n.id, kind:n.kind, name:n.name, u:n.u, eng:n.eng, key:rKey(n)})), cats:RCATS.map(c => c.id)}), can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), look:(t, n, lv) => unitLookArt(t, n, lv), lookNode:id => rkLook(RN[id]), ulFiles:() => UL_CELL, group:n => ulGroup(n), model:(u, g, k) => unitModel(u, g, k), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.nc = {hits:() => NCHIT.map(q => q.slice()), names:() => cityNames.map(c => ({p:c.p, b:c.b.slice(0, 4)})), boxes:() => (window.__dbgBoxes || null), tip:NC_TIP, cityPts:() => cityPts.map(m => ({p:m.p, x:m.x, y:m.y, r:m.r})), tipHide:() => tipHide(), closeSide:() => { sideOpen = false; if (sel.army !== null || sel.prov !== null) clearSel(); else renderSide(true); }};   // naval-city anchors (.test/naval-cities.js)
+if (location.protocol === 'file:' && window.__im) window.__im.msl = {pick:p => mslPick(p), fire:() => mslFire(), get aim(){ return aimMsl; }, cf:() => mslCfHTML(), haz:() => hazShown(visibleSet(PLAYER)), hazLine:p => hazLineHTML(p), abHaz:a => abHazHTML(a), renderSide:() => renderSide(true)};   // chemical and nuclear missiles' screens (.test/missiles-page.js)
 if (location.protocol === 'file:' && window.__im) window.__im.mob = {can:(n, p, t) => canMobilize(n, p, t), block:(n, p, t) => mobBlock(n, p, t), canRecruit:(n, p, t) => canRecruit(n, p, t), reqs:t => reqsOf(t), startRecs:n => startRecs(n), html:p => cityRecruitHTML(p), UT:() => UT.slice(), migrate:() => mobMigrate()};   // mobilization rules (.test/mob.js)
 if (location.protocol === 'file:' && window.__im) window.__im.gfx = {get n(){ return GFX.n; }, get lost(){ return GFX.lost; }, reset:() => gfxReset(), mem:() => cityMem(), caches:() => ({cities:G.P.filter(P => P.city && !P.sea).length, CBAKE:CBAKE.size, CLOW:CLOW.size, CLOWN:CLOWN.size, CLGL:CLGL.size, CGEO:CGEO.size, CINFO:CINFO.size, GTILE:GTILE.size, DT:DT.cache.size, FADEP:FADEP.length, FADEPmp:+(FADEP.reduce((a, c) => a + c.width*c.height, 0)/1e6).toFixed(1), UCC:UCC.size, FLAGC:FLAGC.size, BNC:BNC.size, FIGSH:FIGSH.size})};   // a lost graphics context and its recovery (.test/black-map.js)
 if (location.protocol === 'file:' && window.__im) window.__im.zoomRender = () => { const d0 = dpr; dpr = d0*ZRES; ZRND = true; try { renderLayer(visibleSet(PLAYER), true); } finally { dpr = d0; ZRND = false; } };   // a layer as a live zoom renders it (.test/map-zoom-look.js)
@@ -13535,12 +13665,16 @@ IM.on('fxAD', E => { if (!booted) return; const vis = visibleSet(PLAYER), P = G.
     setTimeout(() => intercept(A, [P.x + (Math.random() - 0.5)*6, P.y + (Math.random() - 0.5)*4], {kind, from:!!b, aid:b ? b.id : null, dir:dir + (Math.random() - 0.5)*0.7}), i*260); } });
 IM.on('fxStrike', E => { if (!(E.by === PLAYER || visibleSet(PLAYER).has(E.p))) return; if (E.bnote && booted){ afxMark(E.p, E.T === 'bomb' ? 40 : E.T === 'stealth' ? 30 : 20); if (isBmb(E.T)){ const P = G.P[E.p]; bigShake(P.x, P.y, E.T); } }   // (fx.js bigShake)
   STRIKEQ.set(E.a.id, {p:E.p, t:performance.now(), dealt:E.dealt, owner:E.owner, bnote:!!E.bnote, T:E.T, ids:E.ids, killed:E.killed}); });
-IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || visibleSet(PLAYER).has(m.to))) return;
+IM.on('fxMissile', E => { const m = E.m, P = G.P[m.to]; if (!booted || !(m.owner === PLAYER || E.owner === PLAYER || m.all || visibleSet(PLAYER).has(m.to))) return;   // (a nuclear missile: every map saw it fly, every map sees it land)
   if (!E.hit){ const ia = E.by != null ? armyById(E.by) : null, seeI = ia && (ia.owner === PLAYER || armyVisible(ia, visibleSet(PLAYER))), F = G.P[m.from];   // (fx.js: the interceptor's streak meets the missile over its target; both burst)
     intercept(seeI ? dispPos(ia) : [P.x + 4, P.y + 3], [P.x, P.y], {kind:m.k, from:!!seeI, aid:seeI ? ia.id : null, dir:Math.atan2(F.y - P.y, wdx(P.x, F.x))}); return; }
   const dealt = E.dealt, [ex, ey] = fxOff(P.x + (Math.random() - 0.5)*6, P.y + (Math.random() - 0.5)*4, 6);
   wfxStrike({bm:'bm', chem:'chem', nuc:'tac'}[m.k] || 'cm', ex, ey, {p:m.to});   // the blast, its crater, the burning city, the shake and the boom (fx.js: chemical, tactical nuclear)
-  if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', wx:ex, wy:ey, dy:-20}); });   // (the number over the blast itself; no wreck fire: the burning city's smoke is enough)
+  if (dealt > 0) fx('dmg', m.to, {text:`−${dealt}`, color:'#ffb27a', wx:ex, wy:ey, dy:-20});   // (the number over the blast itself; no wreck fire: the burning city's smoke is enough)
+  if (E.nb){ const vis = visibleSet(PLAYER); for (const [q, d] of E.nb) if (d >= 0.5 && (vis.has(q) || S.owner[q] === PLAYER || stationaryAt(q).some(b => b.owner === PLAYER))) fx('dmg', q, {text:`−${Math.round(d)}`, color:'#ffc98a', dy:-14}); } });   // (a nuclear strike: the number over each neighbouring province hit)
+IM.on('fxHaz', E => { if (!booted || !G.P[E.p] || !(S.owner[E.p] === PLAYER || stationaryAt(E.p).some(b => b.owner === PLAYER) || visibleSet(PLAYER).has(E.p))) return;   // each hour of a zone: the damage over the forces in it
+  fx('dmg', E.p, {text:`−${E.dealt}`, color:E.k === 'gas' ? '#d4ef6a' : '#ffe27a', dy:-16}); });
+IM.on('mslGone', E => { const m = E.m, P = G.P[m.to]; if (!booted || !P || !(m.owner === PLAYER || m.all || visibleSet(PLAYER).has(m.to))) return; FXM.airBurst(P.x, P.y - 9, 1.2); });   // (a chemical or nuclear missile that self-destructs: a small burst high over its target)
 // warheads the rules do not have yet (chemical, tactical nuclear, ICBM) and cruise or ballistic ones by kind: IM.emit('fxWarhead', {kind, p, by})
 // shows the strike at province p (or at E.x, E.y) where the player struck or can see; IM.emit('fxBlast', {size:'S'|'M'|'L', p}) a combat blast
 IM.on('fxWarhead', E => { const P = G.P[E.p]; if (!booted || !P || !FXW_K[E.kind] || !(E.by === PLAYER || S.owner[E.p] === PLAYER || visibleSet(PLAYER).has(E.p))) return; FXW[FXW_K[E.kind]](E.x ?? P.x, E.y ?? P.y, {p:E.p}); });
