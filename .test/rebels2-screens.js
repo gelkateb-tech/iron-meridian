@@ -99,6 +99,10 @@ async function perfPhone(b){ const ctx = await b.newContext({viewport:{width:440
     await p.waitForTimeout(300); await p.click('[data-act="cities-sort"][data-v="mor"]'); await p.waitForTimeout(200);
     const CL = await p.evaluate(() => { const rows = [...document.querySelectorAll('#sheet .cw')]; return {n:rows.length, first:rows[0] ? rows[0].innerText.split('\n')[0] : '', fire:!!document.querySelector('#sheet .oc-chip.fire'), occ:/Occupied/.test(document.getElementById('sheet').innerText)}; });
     ok(CL.n > 0 && /Dresden|Nürnberg/.test(CL.first) && CL.fire && CL.occ, dev + ' Cities list: Morale sort puts the burning city first, flame and status chips ' + JSON.stringify(CL));
+    // the chips are never cut: each shows its whole text inside its row (look review: "8" and "Occupie" on a phone, "R" and "Occ" on a desktop)
+    const cut = await p.evaluate(() => [...document.querySelectorAll('#sheet .oc-chip')].filter(e => { const r = e.getBoundingClientRect(), row = e.closest('.cn') || e.parentElement, q = row.getBoundingClientRect();
+      return e.scrollWidth > e.clientWidth + 1 || r.width < 30 || r.right > q.right + 0.5 || r.left < q.left - 0.5; }).map(e => e.textContent.trim()));
+    ok(!cut.length && await p.evaluate(() => document.querySelectorAll('#sheet .oc-chip').length >= 2), dev + ' Cities list: no chip cut ' + JSON.stringify(cut));
     await p.click(`[data-act="cp-open"][data-kind="bld"][data-id="${why}"]`); await p.waitForTimeout(200);
     ok(await p.evaluate(() => !!document.querySelector('#cpi .cpo[data-bk="annex"]')), dev + ' Cities list: Annex City among the build options');
     await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); await p.waitForTimeout(150);
