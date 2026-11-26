@@ -300,6 +300,18 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## Owner's answers, 2026-11-26 (verbatim)
+
+> Answers:
+> - R1–R17 (rebels plan): all your suggested answers, OK. Start REBELS.
+> - M1–M15 (missiles plan): all OK, except M13: send me the gas and radiation zone mockup first.
+> - D4–D13, K1–K8, U1–U4, E1–E8, F1–F6: all your defaults, except D10: fix it, so a computer nation refuses deals where it gets nothing back.
+> - Merge Market, Fog-clash and UI-fixes.
+> - Merge auto-test/fixes (the playtest's 16 bug fixes) after re-running the checks on top of today's merges, and go with your defaults on Q1–Q31.
+> - Keep the rules from before: at most 2 polish rounds per job, Sonnet for interface follow-ups.
+
+So: R1-R17, M1-M12, M14, M15, D4-D9, D11-D13, K1-K8, U1-U4, E1-E8, F1-F6 and Q1-Q31 are answered with the defaults written above. D10 is answered "fix it" (job D10-FIX). M13 waits: the zone mockup was sent again on 2026-11-26.
+
 ## Questions from the owner notes of 2026-11-25
 
 Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their questions here (each with the default used) as they report.
