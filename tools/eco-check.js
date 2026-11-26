@@ -40,7 +40,8 @@ if (process.argv.includes('--scenarios')){ const out = [], chk = (name, c, d) =>
     chk('a stock that would go negative stops at zero and is marked short', net < 0 && N.oil === 0 && N.short && N.short.oil, `net oil a day with 60 more tanks ${(net/K).toFixed(1)}K; oil now ${N.oil}, short ${JSON.stringify(N.short)}`); }
   // 4. Arms Industry raises its city's main resource by ARMS_PCT a level
   { const n = 13, N = T.nations[n], P = Gq.P.find(q => T.owner[q.id] === n && q.city && Q.cityMain(q.id) !== 'cash' && !T.cons[q.id] && !(T.bld[q.id].arms > 0)); N.cash += 1000; for (const k of Q.GOODS) N[k] = Math.max(N[k], 200*K);
-    const k = Q.cityMain(P.id), y0 = Q.provYield(P.id)[k], ok2 = a2.build(n, P.id, 'arms'), c = T.cons[P.id]; let h = 0; for (; h < 24*30 && T.cons[P.id]; h++) a2.tick(); const y1 = Q.provYield(P.id)[k];
+    const k = Q.cityMain(P.id), y0 = Q.provYield(P.id)[k], m0 = T.mor ? T.mor[P.id] : null, ok2 = a2.build(n, P.id, 'arms'), c = T.cons[P.id]; let h = 0; for (; h < 24*30 && T.cons[P.id]; h++) a2.tick();
+    let y1; { const m1 = T.mor ? T.mor[P.id] : null; if (T.mor) T.mor[P.id] = m0; y1 = Q.provYield(P.id)[k]; if (T.mor) T.mor[P.id] = m1; }   // (at the morale it had before: a city's morale moves at each day change, and its output with it)
     chk(`Arms Industry I in ${P.cityName} (${k}) is built in its time and raises its output by ${Q.ARMS_PCT*100}%`, ok2 && c && T.bld[P.id].arms === 1 && Math.abs(h - c.h0) <= 1 && near(y1, y0*(1 + Q.ARMS_PCT), 2e-3), `built ${ok2}, ${h} h of ${c && c.h0}, ${k} ${y0.toFixed(2)} -> ${y1.toFixed(2)}`); }
   // 5. trade: a route's income, and closing it takes that income away
   if (Q.tradeIncome){ const r = T.trade.routes.find(x => x.b >= 0 && x.f > 0), n = r.a, i0 = Q.tradeIncome(n).cash, mine = r.va ? r.va.cash : null; a2.tradeClose(n, r.id); const i1 = Q.tradeIncome(n).cash;
