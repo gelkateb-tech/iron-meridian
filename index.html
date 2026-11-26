@@ -9294,11 +9294,13 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ HTAG.clear(); if (!S || 
   for (const a of unkA) if (!a.air && heartCity(a.at) && heartOn(a)) add(a.at, 'unk', -9);
   for (const [p, L] of on){ const h = L.findIndex(q => q.o === S.owner[p]); if (h > 0) L.unshift(L.splice(h, 1)[0]); }
   /*@TEST*/HMDBG.length = 0;/*@ENDTEST*/
-  const hd = heartHd(hexPx), R = heartRingR(hexPx), ga = ctx.globalAlpha, M = R + 6, NB = names.map(q => [q[0] + 3, q[1] + 1, q[2] - 3, q[3] - 2]).concat(NCHIT.map(q => [q[0], q[1], q[2], q[3]]));   // (a name's lettering: its box less the padding round it)
+  const hd = heartHd(hexPx), R = heartRingR(hexPx), ga = ctx.globalAlpha, M = R + 6;   // (a name's lettering: its box less the padding round it: below)
   const fin = hexPx >= 12 ? 1 : smooth01((hexPx - 8)/4);   // (out at the world view only the capitals and the held points show; the other cities' marks come in from hex 8 to 12)
-  const GC = 64, grid = new Map(); for (const q of NB) for (let gx = Math.floor(q[0]/GC); gx <= Math.floor(q[2]/GC); gx++) for (let gy = Math.floor(q[1]/GC); gy <= Math.floor(q[3]/GC); gy++){ const k = gx*4096 + gy; let L = grid.get(k); if (!L) grid.set(k, L = []); L.push(q); }
-  const onName = b => { for (let gx = Math.floor(b[0]/GC); gx <= Math.floor(b[2]/GC); gx++) for (let gy = Math.floor(b[1]/GC); gy <= Math.floor(b[3]/GC); gy++){ const L = grid.get(gx*4096 + gy); if (L && L.some(q => ovlB(q, b))) return true; } return false; };   // (the names near a box, by a coarse grid: a frame tests only its own few)
-  const one = (p, cap) => { const P = G.P[p], sy = P.y*view.s + view.y; if (sy < -M || sy > ch + M) return; const [x, y] = toScreen(P.x, P.y); if (x < -M || x > cw + M) return;
+  const GC = 64, grid = new Map(), put = (a, b, c, d) => { const q = [a, b, c, d]; for (let gx = Math.floor(a/GC), g1 = Math.floor(c/GC); gx <= g1; gx++) for (let gy = Math.floor(b/GC), h1 = Math.floor(d/GC); gy <= h1; gy++){ const k = gx*4096 + gy; let L = grid.get(k); if (!L) grid.set(k, L = []); L.push(q); } };
+  for (const q of names) put(q[0] + 3, q[1] + 1, q[2] - 3, q[3] - 2); for (const q of NCHIT) put(q[0], q[1], q[2], q[3]);
+  const onName = b => { for (let gx = Math.floor(b[0]/GC), g1 = Math.floor(b[2]/GC); gx <= g1; gx++) for (let gy = Math.floor(b[1]/GC), h1 = Math.floor(b[3]/GC); gy <= h1; gy++){ const L = grid.get(gx*4096 + gy); if (L) for (let i = 0; i < L.length; i++) if (ovlB(L[i], b)) return true; } return false; };
+  let spP = null, spN = null;   // (the marker pictures: looked up once a frame, not per city)   // (the names near a box, by a coarse grid: a frame tests only its own few)
+  const one = (p, cap) => { const P = G.P[p], sy = P.y*view.s + view.y; if (sy < -M || sy > ch + M) return; const x = wrapSX(P.x*view.s + view.x), y = sy; if (x < -M || x > cw + M) return;
     const L = on.get(p), held = !!(L && L.length), own = names.lab.get(p), far = held || cap || (own && own.city) ? 1 : fin; if (far <= 0.01) return;
     // the names stay where they are (owner: "City names stay where they are"; the label pass never moves a city's name or its anchor for a marker):
     // a plain city's marker that would lie on a name or an anchor is left out; a capital's and a held point's always show (drawn over the name),
@@ -9308,7 +9310,7 @@ function heartMarks(clusters, unkA, hexPx, vis, names){ HTAG.clear(); if (!S || 
     if (onN && !held && !cap) return;
     const dim = vis.has(p) ? 1 : 0.6;
     if (held){ const rs = heartRing(R, L.map(q => q.s === 'unk' ? '#b9c3c8' : sideHi(q.s))), RW = rs.W; ctx.drawImage(rs, x - RW/2, y - RW/2, RW, RW); }   // (the ring: one picture per size and sides, made once)
-    const sp = heartSprite(hd, !held), W = sp.W; ctx.globalAlpha = ga*dim*far; ctx.drawImage(sp, x - W/2, y - W/2, W, W); ctx.globalAlpha = ga;
+    const sp = held ? (spN || (spN = heartSprite(hd, false))) : (spP || (spP = heartSprite(hd, true))), W = sp.W; const al = ga*dim*far; if (al !== ga) ctx.globalAlpha = al; ctx.drawImage(sp, x - W/2, y - W/2, W, W); if (al !== ga) ctx.globalAlpha = ga;   // (the state is set only when it changes: a call each)
     if (held && hexPx >= 8){ const nb = own && own.city ? own : null, f = 10, nearOwn = nb && Math.hypot(Math.max(nb[0] - x, 0, x - nb[2]), Math.max(nb[1] - y, 0, y - nb[3])) <= R + 1.5*(nb[3] - nb[1]);
       if (!nearOwn){ const t = P.cityName || P.name, fnt = `600 ${f}px ${BODY}`; ctx.font = fnt; const w = mtw(t, fnt) + 4;
         const C = [[x + R + 3, y - f/2 - 1], [x - R - 3 - w, y - f/2 - 1], [x - w/2, y + R + 2], [x + R + 1, y + R - 2], [x - R - 1 - w, y + R - 2]];
