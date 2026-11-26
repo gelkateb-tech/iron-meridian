@@ -152,6 +152,7 @@ province**. Rules: `rangedStep`, `rangedTargets`, `bombardInfo`, `orderBombard` 
 | Submarine | **40 km** | warships at sea only (torpedoes) | not embarked troops, not land |
 | Aircraft Carrier | none | | its air wings strike |
 | Cruise / Ballistic Missile | own range (`MISSILES` range, research) | | the launch picker shows its range circle |
+| Chemical / Tactical Nuclear Missile | 70 / 90 hexes (+12 a Ballistic Missile Range level) | land only / land or sea; never your own land | `docs/MISSILES.md`: the blast, then a gas (12 h) or radiation (48 h) zone on every force there, whoever's |
 
 **Why these values.** They are scaled to the km sight ranges (`VIS_KM`, rules/vision.js): forces see 50 km, recon (Special Forces) 100,
 UAVs 250-500 (cities and airbases see nothing past the border since 2026-11-25). Artillery reaches a little past its own sight (80 vs 50),

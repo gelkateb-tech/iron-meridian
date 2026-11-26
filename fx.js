@@ -1125,23 +1125,23 @@ function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0
 const MSL = {seen:new Map()};   // missile id -> when first drawn (its launch plume, the alert)
 function drawMissiles(now, vis){ MSL.on = 0; const L = S.inflight; if (!L || !L.length){ if (MSL.seen.size) MSL.seen.clear(); return; } const g = PG.ctx, s = PG.view.s, lv = fxLv();
   for (const m of L){ const B = G.P[m.to], mine = S.owner[m.to] === PG.PLAYER || stationaryAt(m.to).some(b => b.owner === PG.PLAYER);
-    if (!(m.owner === PG.PLAYER || mine || vis.has(m.to) || vis.has(m.from))) continue;
+    if (!(m.owner === PG.PLAYER || mine || m.all || vis.has(m.to) || vis.has(m.from))) continue;   // (m.all: a nuclear missile, seen by every nation)
     const q0 = PG.missilePos(m), A = q0.A, first = !MSL.seen.has(m.id); if (first){ MSL.seen.set(m.id, now); if (MSL.seen.size > 200) MSL.seen.delete(MSL.seen.keys().next().value);
-      if (lv && q0.t < 0.15 && (m.owner === PG.PLAYER || vis.has(m.from))){ for (let i = 0; i < (lv < 2 ? 2 : 4); i++) bsmPuff(A.x + (Math.random() - 0.5)*0.8, A.y, {delay:i*150, r0:0.6, r1:m.k === 'bm' ? 2.4 : 1.4, dur:4000, vy:-(0.8 + i*0.5), tone:'grey', a:0.8}); snd('fire', m.k === 'bm' ? 'launch' : 'rocket', A.x, A.y); }
+      if (lv && q0.t < 0.15 && (m.owner === PG.PLAYER || vis.has(m.from))){ for (let i = 0; i < (lv < 2 ? 2 : 4); i++) bsmPuff(A.x + (Math.random() - 0.5)*0.8, A.y, {delay:i*150, r0:0.6, r1:m.k !== 'cm' ? 2.4 : 1.4, dur:4000, vy:-(0.8 + i*0.5), tone:'grey', a:0.8}); snd('fire', m.k !== 'cm' ? 'launch' : 'rocket', A.x, A.y); }
       if (mine && m.owner !== PG.PLAYER){ snd('alert', 'alert', B.x, B.y, true); if (PG.missileAlert) PG.missileAlert(m); } }
     const [x, y] = PG.toScreen(q0.x, q0.y), t = q0.t, d = Math.hypot(B.x - A.x, B.y - A.y), hpx = PG.HOURS_PER_SEC[S.speed] || 0, left = hpx > 0 ? (1 - t)/m.dt/hpx*1000 : Infinity;
     const at = tt => { tt = Math.max(0, Math.min(1, tt)); let px = A.x + (B.x - A.x)*tt, py = A.y + (B.y - A.y)*tt - Math.sin(tt*Math.PI)*q0.arc; if (m.k !== 'bm'){ const w = Math.sin(tt*Math.PI*9 + m.id)*Math.min(1.2, d*0.01)*Math.sin(tt*Math.PI); px += -(B.y - A.y)/(d || 1)*w; py += (B.x - A.x)/(d || 1)*w; } return [x + (px - q0.x)*s, y + (py - q0.y)*s]; };
     const [hx, hy] = at(t);
-    if (onScr(hx, hy, 60)){ MSL.on++; if (lv){ const span = m.k === 'bm' ? Math.min(t, 0.3) : 0.12, n = lv < 2 ? 6 : 12; g.lineCap = 'round'; let [px, py] = [hx, hy];   // the trail (no particles: a fading line back along the path)
-        for (let j = 1; j <= n; j++){ const [qx, qy] = at(t - span*j/n), f = 1 - j/n; g.globalAlpha = (m.k === 'bm' ? 0.6 : 0.45)*f; g.strokeStyle = 'rgb(226,224,218)'; g.lineWidth = Math.max(1, (m.k === 'bm' ? 0.35 : 0.14)*s*(1 + 1.5*(1 - f))); g.beginPath(); g.moveTo(px, py); g.lineTo(qx, qy); g.stroke(); px = qx; py = qy; } g.globalAlpha = 1; }
+    if (onScr(hx, hy, 60)){ MSL.on++; if (lv){ const span = m.k !== 'cm' ? Math.min(t, 0.3) : 0.12, n = lv < 2 ? 6 : 12; g.lineCap = 'round'; let [px, py] = [hx, hy];   // the trail (no particles: a fading line back along the path)
+        for (let j = 1; j <= n; j++){ const [qx, qy] = at(t - span*j/n), f = 1 - j/n; g.globalAlpha = (m.k !== 'cm' ? 0.6 : 0.45)*f; g.strokeStyle = 'rgb(226,224,218)'; g.lineWidth = Math.max(1, (m.k !== 'cm' ? 0.35 : 0.14)*s*(1 + 1.5*(1 - f))); g.beginPath(); g.moveTo(px, py); g.lineTo(qx, qy); g.stroke(); px = qx; py = qy; } g.globalAlpha = 1; }
       const [nx, ny] = at(t + 0.01), ang = Math.atan2(ny - hy, nx - hx);
       g.save(); g.translate(hx, hy); g.rotate(ang); g.globalCompositeOperation = 'lighter'; g.drawImage(GLOW(), -22, -9, 22, 18); g.globalCompositeOperation = 'source-over';
-      const L0 = m.k === 'bm' ? 16 : 11, MQ = L0*1.5/0.95, mp = PG.ART.sprite(m.k === 'bm' ? 'u-ballistic-missile' : 'u-cruise-missile', Math.round(MQ*PG.dpr));   // the owner's missile picture (nose up: turned along the flight) once loaded, else the drawn arrowhead
+      const L0 = m.k !== 'cm' ? 16 : 11, MQ = L0*1.5/0.95, mp = PG.ART.sprite(m.k !== 'cm' ? 'u-ballistic-missile' : 'u-cruise-missile', Math.round(MQ*PG.dpr));   // the owner's missile picture (nose up: turned along the flight) once loaded, else the drawn arrowhead
       if (mp){ g.rotate(Math.PI/2); g.drawImage(mp, -MQ/2, -MQ/2, MQ, MQ); } else { g.fillStyle = '#e8e4da'; g.strokeStyle = '#1a1c1b'; g.lineWidth = 1; g.beginPath(); g.moveTo(L0/2, 0); g.lineTo(-L0/2, -2.2); g.lineTo(-L0/2, 2.2); g.closePath(); g.fill(); g.stroke(); }
       g.restore(); }
     // the target: a pulsing red marker when it is the player's (all through the flight, INCOMING for the first 4 s), and for any missile in the last seconds
     if (mine && m.owner !== PG.PLAYER){ MSL.on++; const [tx, ty] = PG.toScreen(B.x, B.y); if (!onScr(tx, ty, -10)) edgeArrow(tx, ty, now); }
-    if ((mine && m.owner !== PG.PLAYER) || left < 4000){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)){ MSL.on++; } if (onScr(tx, ty)) warnMark(tx, ty, now, m.k === 'bm' ? 1 : 0.6, left < 4000, mine && m.owner !== PG.PLAYER && now - MSL.seen.get(m.id) < 4000 ? 'INCOMING' : ''); } }
+    if ((mine && m.owner !== PG.PLAYER) || left < 4000){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)){ MSL.on++; } if (onScr(tx, ty)) warnMark(tx, ty, now, m.k !== 'cm' ? 1 : 0.6, left < 4000, mine && m.owner !== PG.PLAYER && now - MSL.seen.get(m.id) < 4000 ? 'INCOMING' : ''); } }
   if (MSL.on) PG.animFast(); else if (L.length) PG.animAmb(); }
 
 // ---- sound: each effect has three slots, fire, flight and impact, played by synthesized placeholders (WebAudio noise and oscillator envelopes,
