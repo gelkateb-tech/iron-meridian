@@ -12,6 +12,7 @@ function* tickHourG(){
   /*@DEV*/if (DEV.instant || DEV.research || DEV.res) for (const me of seats()) devHour(me);/*@ENDDEV*/
   // production
   for (let p = 0; p < G.P.length; p++) if (S.queue[p].length) prodHour(p);
+  for (const me of seats()) repeatHour(me);   // (a seat's Repeat production: rules/production.js)
   // construction
   for (let p = 0; p < G.P.length; p++) if (S.cons[p]) consHour(p);
   // a Mark upgrade left running by a save from before the research redesign (it ends as Firepower and Protection levels)
@@ -117,7 +118,7 @@ function* tickHourG(){
 // One 15-minute step of game time. S.q counts the battle steps already run this hour (0..3, saved; old saves have none = 0): three steps are battle-only,
 // the fourth is the hour's tick. The game loop and tools/headless.js call tickQ; tick() plays a whole game hour (what the tests and tools use).
 function tickQ(){ if (TQP !== null){ tickFinish(); return; }   // (an hour the page left half run is this step: it is finished)
-  tickDepth++; tickSess++; try { const q = S.q || 0; if (q + 1 < BATTLE_Q){ S.q = q + 1; rangedStep(false); battleStep(false); return; } S.q = 0; tickHour(); } finally { tickDepth--; } }
+  tickDepth++; tickSess++; try { const q = S.q || 0; if (q + 1 < BATTLE_Q){ S.q = q + 1; consQuarter(); rangedStep(false); battleStep(false); return; } S.q = 0; tickHour(); } finally { tickDepth--; } }
 // the page's game loop: one tickQ step, run a part at a time while more() says the frame has time left (the quarter-hour battle steps run whole; the
 // hour pauses between its steps, tickHourG). Returns true when the step is done; false: the hour goes on at the next call (tickPending()).
 // Anything else that runs game time, saves or loads first finishes it (tickQ, tick, saveJSON, newGame, restore)

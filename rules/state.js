@@ -103,7 +103,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
     n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
-    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
+    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
     // compact powers (Germany, Japan, Britain...) start with a denser home army (their border guards had level I forts until the start-forts rule)
@@ -111,6 +111,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     // power may attack them (graceFor), so the compact, dug-in powers next door do not pick them off in the second week
     n.mid = !n.small && GS > 1 && np <= 55; if (n.mid) addArmy(n.id, n.capital, {inf:3, art:1});
     S.bld[n.capital].fort = START_FORT;   // only the capital starts with Fortifications (every power)
+    startAir(n.id);   // and an Airbase with one fighter wing
     if (n.small){ addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) addArmy(n.id, P.id, {inf:2}); }
   }
@@ -124,7 +125,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   IM.emit('newGame');
 }
 // ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
-// Every nation: its tier's stocks, Fortifications I and a Recruiting Office in the capital (no Army Base: level I is cheap and takes a day, and the
+// Every nation: its tier's stocks, Fortifications I, an Airbase I with one fighter (startAir) and a Recruiting Office in the capital (no Army Base: level I is cheap and takes 30 minutes, and the
 // computer builds one in its capital on its first turn; infantry trains only where one stands), more
 // offices in its biggest cities, the capital force, 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest
 // neighbour first (no forts: only the capital starts with them), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards).
@@ -136,9 +137,10 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     for (const k of ['cash', 'mp', 'oil', 'metal', 'iron', 'elec']) N[k] = kit[k];
     N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40*RES_K : 60*RES_K;   // no rare-earth city: a little more in stock for the first weeks
     { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
-    for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES)
+    for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25)
     S.bld[N.capital].fort = START_FORT;   // only the capital starts with Fortifications, in every tier
     addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
+    startAir(n);   // the capital's Airbase and its fighter wing
     cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
     let guards = kit.guards;
     if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
@@ -161,6 +163,9 @@ function tierCatchUp(mode){ const mult = (raw, trade, T, floor) => { const home 
   for (const N of S.nations){ N.boost = 1; N.boostM = 1; } INCC.v = -1;
   const raw = S.nations.map(N => income(N.id).gross), tr = S.nations.map(N => tradeIncome(N.id).cash);
   for (const N of S.nations){ const kit = tierKit(N.tier, mode); N.boost = mult(raw[N.id].cash, tr[N.id], kit.day, kit.floor); N.boostM = mult(raw[N.id].mp, 0, kit.mpDay, kit.floor); } }
+// the capital's Airbase at the start (START_AIR, rules/data.js; owner 2026-11-25): Airbase I and one Air Superiority Fighter based there, beside its
+// Fortifications, for every nation (seats and computer nations alike), so each can patrol and scout from day one. New games only (old saves keep their start)
+function startAir(n){ const cap = S.nations[n].capital; S.bld[cap].air = Math.max(S.bld[cap].air || 0, START_AIR); const a = addArmy(n, cap, {[START_AIR_UNIT]:1}); a.air = {base:cap, cd:0}; return a; }
 // where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
 function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)

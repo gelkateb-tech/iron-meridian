@@ -67,10 +67,14 @@ const bad = [], errs = [], ok = (c, m) => { if (!c) bad.push(m); };
     ok(await p.evaluate(A => /left/.test(document.querySelector(`.cw[data-id="${A}"] #cpi .cpq`).innerText), A), dev + ' queued countdown');
     ok(await view() === v0 && await p.evaluate(() => JSON.stringify(window.__im.sel)) === sel0, dev + ' view or selection moved after queueing');
     if (dev === 'desk') await p.screenshot({path:__dirname + '/cp-inline-train.png'}).catch(() => {});
-    // fill the queue: the other units show the full-queue reason
-    await p.evaluate(A => { const im = window.__im; while (im.S.queue[A].length < 2) im.S.queue[A].push({t:im.S.queue[A][0].t, h:30, h0:30}); }, A); await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.waitForTimeout(200);
-    ok(/Training queue full/.test(await p.evaluate(() => document.querySelector('#cpi').innerText)), dev + ' queue full reason');
-    await p.evaluate(A => { window.__im.S.queue[A].length = 0; }, A);
+    // a free seat (no membership, owner point 7) trains one unit at a time: with one in training the other units show that reason
+    const reopen = async () => { await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.waitForTimeout(200); };
+    await reopen();
+    ok(/One unit at a time/.test(await p.evaluate(() => document.querySelector('#cpi').innerText)), dev + ' one-at-a-time reason (free seat)');
+    // a member's city queues 2: fill it and the other units show the full-queue reason
+    await p.evaluate(A => { const im = window.__im; im.S.nations[0].member = true; while (im.S.queue[A].length < 2) im.S.queue[A].push({t:im.S.queue[A][0].t, h:30, h0:30}); }, A); await reopen();
+    ok(/Training queue full/.test(await p.evaluate(() => document.querySelector('#cpi').innerText)), dev + ' queue full reason (member)');
+    await p.evaluate(A => { window.__im.S.queue[A].length = 0; delete window.__im.S.nations[0].member; }, A);
     await p.keyboard.press('Escape');
     // 3. go to city moves the map and leaves the panel
     await p.evaluate(() => window.__im.cp.render()); await p.click(`.cw[data-id="${A}"] [data-act="goto"]`); await p.waitForTimeout(900);
@@ -120,7 +124,9 @@ const bad = [], errs = [], ok = (c, m) => { if (!c) bad.push(m); };
     // 6. units in bulk: skipped for research / buildings / full queue with the reason
     await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(); for (const i of ids) S.cons[i] = null; S.bld[ids[0]].fac = 1; S.queue[ids[0]].push({t:'inf', h:20, h0:20}, {t:'inf', h:20, h0:20}); });   // (the capital has built its Army Base: no city starts with one, START-RULES)
     const un = await p.evaluate(() => { const im = window.__im, cp = im.cp, ids = cp.cities(), t = cp.units().find(k => cp.trainWhy(ids[1], k) === '') || null; const P = t ? cp.plan('trn', t, ids) : null; return t ? {t, ok:P.ok.length, skip:P.skip.map(x => x.why)} : {t:null}; });
-    ok(!un.t || (un.ok >= 1 && un.skip.some(w => /queue full/i.test(w))), dev + ' unit plan ' + JSON.stringify(un));
+    ok(!un.t || (un.ok >= 1 && un.skip.some(w => /One unit at a time/.test(w))), dev + ' unit plan ' + JSON.stringify(un));   // (the capital, training: a free seat's one at a time)
+    const unm = await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(); S.nations[0].member = true; const t = cp.units().find(k => cp.trainWhy(ids[1], k) === '') || null; const P = t ? cp.plan('trn', t, ids) : null; delete S.nations[0].member; return t ? {t, ok:P.ok.length, skip:P.skip.map(x => x.why)} : {t:null}; });
+    ok(!unm.t || (unm.ok >= 1 && unm.skip.some(w => /queue full/i.test(w))), dev + ' unit plan, member ' + JSON.stringify(unm));
     // infantry in bulk: the cities without an Army Base are skipped with "Needs Army Base level 1"
     const ib = await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(), P = cp.plan('trn', 'inf', ids); return {noab:ids.filter(i => !S.bld[i].fac).length, why:P.skip.filter(x => x.why === 'Needs Army Base level 1').length}; });
     ok(ib.noab >= 1 && ib.why === ib.noab, dev + ' bulk infantry skips the cities without an Army Base ' + JSON.stringify(ib));

@@ -47,7 +47,8 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
 { const n = 0, cs = G.P.filter(P => S.owner[P.id] === n && P.city).map(P => P.id), c1 = R.buildCost(n, 'arms', 1, cs[0]), c2 = R.buildCost(n, 'arms', 2, cs[0]), c5 = R.buildCost(n, 'arms', 5, cs[0]);
   ok(c1.cash === 20 && c1.metal === 6*K && c1.iron === 3*K && c2.cash === 64 && c2.metal === 19*K && c2.iron === 10*K && c5.cash === 262 && c5.elec === 26*K, 'Arms Industry prices (level I at half price) ' + JSON.stringify([c1, c2, c5]));
   S.bld[cs[1]].arms = 1; const d1 = R.buildCost(n, 'arms', 1, cs[0]); ok(d1.cash === 28 && d1.metal === 8*K && d1.iron === 4*K, 'second Arms Industry price ' + JSON.stringify(d1));
-  const f0 = R.buildCost(n, 'fac', 1, cs[2]).cash; ok(f0 === Math.round(25*1.4), 'an Arms Industry must not raise the Army Base price: ' + f0); S.bld[cs[1]].arms = 0;   // (the capital's Army Base raises it once)
+  const facP = () => [1, 2].map(l => R.buildCost(n, 'fac', l, cs[2]).cash), fA = facP(); S.bld[cs[1]].arms = 0; const f0 = facP();
+  ok(JSON.stringify(fA) === JSON.stringify(f0), 'an Arms Industry must not raise the Army Base price (levels I and II, with and without one): ' + JSON.stringify([fA, f0]));
   ok(cs.every(p => R.canBuildHere(p, 'arms')) && !R.canBuildHere(G.P.find(P => S.owner[P.id] === n && !P.city).id, 'arms'), 'Arms Industry: cities only');
   const cap = S.nations[n].capital, rec0 = S.bld[cap].rec; S.bld[cap].fac = 2; S.bld[cap].rec = 0; ok(near(R.trainF(cap, 'tank'), 0.6) && near(R.trainF(cap, 'inf'), 0.6) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: ground units 40% faster, aircraft and ships not');
   S.bld[cap].rec = 2; ok(near(R.trainF(cap, 'tank'), 0.48) && near(R.trainF(cap, 'jet'), 0.8) && near(R.trainF(cap, 'frig'), 0.8), 'Recruiting Office II: every unit 20% faster on top'); S.bld[cap].rec = rec0; S.bld[cap].fac = 1; }

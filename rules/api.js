@@ -13,8 +13,8 @@ IM.api = {
   // the maps (0 world.js; mapNew the nations world's, with the province split): a map's provinces without switching to it, or the switch itself
   mapOf, useMap, get mapNew(){ return MAP_NEW; },
   get S(){ return S; }, get G(){ return G; }, get BATTLE_Q(){ return BATTLE_Q; },
-  // seats and what a seat sees
-  seats, isSeat, desk, visibleSet, armyVisible, armyKnown, armyView,
+  // seats and what a seat sees; a seat's membership (the mobilization queue: rules/production.js; no payment in the rules)
+  seats, isSeat, desk, isMember, setMember, visibleSet, armyVisible, armyKnown, armyView,
   // orders (first argument: the nation, or its force)
   recruit, build, buildMissile, startResearch, buildLink,
   orderMove, haltArmy, splitArmy, splitPlan, merge, addStop, undoStop, stopsOf, stopsEta,

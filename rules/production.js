@@ -15,21 +15,28 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   if (U.coastal && !navalCity(p)) return {kind:'coast', why:`${U.name} train only in a coastal city (a naval city)`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
-    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
+    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${hoursTxt(c.h)}` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
   return null; }
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
 function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
 const reqText = (p, t, n) => canMobilize(n, p, t);
-// ---------- training queue limit: at most QUEUE_MAX units waiting or training per city, for everyone (the AI too). A future premium pass gives
-// extra slots (LATER.md): ask queueMax(n), not the constant. Old saves with longer queues keep them but cannot add more until below the limit.
-// Missiles (silo) are not unit training and do not count.
-const QUEUE_MAX = 2;
-const queueMax = n => QUEUE_MAX;
+// a time left in game hours, in words: minutes under an hour (a quick build: "30 min", "15 min"), else whole hours ("24 h")
+const hoursTxt = h => h > 0 && h < 1 ? `${Math.max(1, Math.round(h*60))} min` : `${Math.ceil(h)} h`;
+// ---------- training queue limit: how many units may wait or train in one city at once. The mobilization queue is a membership feature (owner,
+// 2026-11-25): a seat (a nation a person plays) without a membership trains one unit at a time per city (QUEUE_FREE: the unit in training, nothing
+// waiting); a member's city queues QUEUE_MAX. Computer nations keep QUEUE_MAX (their strength and every all-computer balance baseline as before).
+// The flag is S.nations[n].member (true, or absent: no membership), saved with the nation; there is no payment here: a host (the page's developer
+// tools today, a store later) sets it with setMember. Ask queueMax(n), not the constants. Old saves have no flag (no membership) and keep the
+// queues they hold, but cannot add to a city until it is below the limit. Missiles (silo) are not unit training and do not count.
+const QUEUE_MAX = 2, QUEUE_FREE = 1;
+const isMember = n => n >= 0 && !!(S.nations[n] && S.nations[n].member);
+function setMember(n, on){ const N = S.nations[n]; if (!N) return false; if (on) N.member = true; else delete N.member; return true; }
+const queueMax = n => isSeat(n) && !isMember(n) ? QUEUE_FREE : QUEUE_MAX;
 const queueUsed = p => S.queue[p].reduce((c, it) => c + (it.msl ? 0 : 1), 0);
 const queueFull = (n, p) => queueUsed(p) >= queueMax(n);
 // '' when city p can take another unit, else the reason in words
-const queueWhy = (n, p) => queueFull(n, p) ? `Training queue full (${queueMax(n)}/${queueMax(n)})` : '';
+const queueWhy = (n, p) => !queueFull(n, p) ? '' : queueMax(n) < QUEUE_MAX ? `One unit at a time (members queue ${QUEUE_MAX})` : `Training queue full (${queueMax(n)}/${queueMax(n)})`;
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // ---------- Recruiting Office (levels I-V): every unit trained in its city trains 10% faster per level, and the city gives 3k manpower a day at level I
 // and 1.5k more per level. recPct / recMp are per level (the page words its tooltips from them), recSpeed is the city's training-time factor
@@ -53,16 +60,19 @@ function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i]
 const trainResBefore = n => ownedBy(n).filter(p => S.queue[p] && S.queue[p].length).map(p => [p, S.queue[p].map(it => it.msl || !UNITS[it.t] ? 1 : rTrainF(n, it.t))]);
 function trainResRetime(n, f0){ for (const [p, f] of f0) S.queue[p].forEach((it, i) => { if (it.msl || !UNITS[it.t] || !(f[i] > 0)) return; const r = rTrainF(n, it.t)/f[i]; if (r < 1) retimeIt(it, r); }); }
 // Army Base and Arms Industry prices rise 40% for every OTHER province of the nation that already has one of the same kind (built, or under construction),
-// cash, materials and iron alike; the two do not raise each other's price. RISE_FREE: that many other provinces raise nothing (the Army Base: the first
-// two cost the base price, the third 40% more, the fourth 96% more...), so every nation opens its first bases cheaply (owner, START-RULES 2026-11-15)
+// cash, materials and iron alike; the two do not raise each other's price. RISE_FREE: that many other provinces raise nothing. RISE_FROM: the level
+// from which the price rises, and the level another province needs to count (default 1). The Army Base: level I costs the same everywhere and counts
+// for nothing, so a nation can open one in every city (owner, 2026-11-25); levels II-V: the first two cost the base price, the third 40% more, the
+// fourth 96% more..., counting the other provinces with level II or higher (built, or going up to it)
 const FAC_RISE = 1.4;
 const RISE_K = {fac:1, arms:1};
 const RISE_FREE = {fac:1};
-function facOthers(n, p, k = 'fac'){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
-const riseOf = (n, k, p) => RISE_K[k] ? Math.pow(FAC_RISE, Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0))) : 1;
-const riseCnt = (n, k, p) => Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0));   // how many of the others raise the price (the page's words)
+const RISE_FROM = {fac:2};
+function facOthers(n, p, k = 'fac', l = 1){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= l || (S.cons[q] && S.cons[q].k === k && S.cons[q].lvl >= l))) c++; return c; }
+const riseCnt = (n, k, p, lvl = 1) => !RISE_K[k] || Math.max(1, lvl) < (RISE_FROM[k] || 1) ? 0 : Math.max(0, facOthers(n, p == null ? -1 : p, k, RISE_FROM[k] || 1) - (RISE_FREE[k] || 0));   // how many of the others raise the price of level lvl (the page's words)
+const riseOf = (n, k, p, lvl = 1) => Math.pow(FAC_RISE, riseCnt(n, k, p, lvl));
 function buildCost(n, k, lvl, p){ if (BUILD[k].lv){ const c = lvCost(k, lvl); if (k === 'fort' && has(n, 'log2')){ c.cash = Math.round(c.cash/2); c.metal = kRound(c.metal/2); c.iron = kRound(c.iron/2); c.elec = kRound(c.elec/2); } return c; }   // (a table's price; Combat Engineers: a Bunker at half price)
-  const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
+  const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p, lvl), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:B.hours != null ? B.hours : Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }   // (B.hours: a level's own time, a fraction allowed)
 // training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
 // (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
 const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
@@ -112,11 +122,22 @@ function prodHour(p){ const q = S.queue[p];
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
     if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
-      const o = S.owner[p]; if (isSeat(o)){ const RP = desk(o).repeat; fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
-        if (RP && RP[p] && !q.length && !recruit(o, p, RP[p])){ const why = canMobilize(o, p, RP[p]); tell(o, `Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[RP[p]].name}.`, 'info', p); } } } }
+      const o = S.owner[p]; if (isSeat(o)){ fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p); } } }   // (Repeat production: repeatHour)
+// Repeat production (a seat's per-city order, desk(n).repeat: city -> unit type): every hour, after the production step, a ticked city of n with an
+// empty queue starts the next unit itself: right after one finishes, when it was ticked on an idle city, and again once a pause for resources is
+// over. A pause is told once (desk(n).repP marks it) and the restart is told too
+function repeatHour(n){ const D = desk(n), RP = D.repeat; if (!RP) return; const PS = D.repP || (D.repP = {});
+  for (const k in RP){ const p = +k, t = RP[k]; if (S.owner[p] !== n || S.queue[p].length || !UNITS[t]) continue; const nm = G.P[p].cityName || G.P[p].name;
+    if (recruit(n, p, t)){ if (PS[p]){ delete PS[p]; tell(n, `Repeat production resumed in ${nm}: ${UNITS[t].name}.`, 'info', p); } }
+    else if (!PS[p]){ PS[p] = 1; const why = canMobilize(n, p, t); tell(n, `Repeat production paused in ${nm}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[t].name}. It starts again by itself.`, 'info', p); } }
+  for (const k in PS) if (!RP[k]) delete PS[k]; }
+// a construction of under an hour (h0 < 1: Army Base I, 30 minutes) counts down a quarter hour at each 15-minute step (consQuarter at the three
+// battle steps, consHour at the hour's own step), so it stands exactly on time; every other construction counts whole hours at the hour's step
+const consStep = c => c.h0 < 1 ? 0.25 : 1;
+function consQuarter(){ for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (c && c.h0 < 1) consHour(p); } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
-    if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
+    if ((c.h -= consStep(c)) <= 1e-9){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
       if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
@@ -127,7 +148,7 @@ function devDone(n){ const N = S && S.nations[n]; if (!N || !N.alive) return 0; 
   if (DEV.instant){
     if (N.eng){ N.eng.h = 1; engHour(N); k++; }
     for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue;
-      if (S.cons[p]){ S.cons[p].h = 1; consHour(p); k++; }
+      if (S.cons[p]){ S.cons[p].h = consStep(S.cons[p]); consHour(p); k++; }
       const q = S.queue[p]; for (let i = q.length; i > 0 && q.length; i--){ const L = q.length, it = q[0]; it.h = 1; prodHour(p); if (q.length === L && q[0] === it) break; k++; } } }   // (a knocked-out line waits; repeat orders run once per pass)
   if (k) visCache = null; return k; }
 function devHour(n){ const N = S.nations[n]; if (!N || !N.alive) return; if (DEV.res) devFill(N); devDone(n); }
