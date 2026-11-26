@@ -6923,6 +6923,9 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
     for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++){ const c = worldToCell(P.x + q[0] + (q[2] - q[0])*i/4, P.y + q[1] + (q[3] - q[1])*j/4), v = c >= 0 ? G.prov[c] : -1; if (v >= 0 && !G.P[v].sea && G.P[v].country !== P.country) return false; } return true; };
   const lines = (g, rl) => { const i = [g[0] + BN_LOTM, g[1] + BN_LOTM, g[2] - BN_LOTM, g[3] - BN_LOTM]; return RA.riv(i) ? 2 : (rl ? RA.rdo(i) : RA.road(i)) ? 1 : 0; };   // (0: off the roads, railways and rivers; 1: on a road or railway; 2: over a river)
   const dry = (pics, x, y, m, f) => pics.every(([nm, F0]) => { const s = sz(F0)*f, A = bnFoot(nm).all, b = bnFootRect(nm, P.x + x, P.y + y, s, m); if (bnDryRect(b[0], b[1], b[2], b[3])) return true; return bnWet(nm, A, P.x + x, P.y + y, s, m, 0) <= 0 && bnWet(nm, A, P.x + x, P.y + y, s*0.72, m, 0) <= 0; });
+  // (a yard on a dock basin, no shore near its town: its anchor within 3 world px of the water, so the basin reaches it; round 3,
+  // Arish's moved inland with the lots' new order)
+  const nearW = (x, y) => { for (const rr of [1, 2, 3]) for (let j = 0; j < 16; j++) if (bnWater(P.x + x + Math.cos(j*Math.PI/8)*rr, P.y + y + Math.sin(j*Math.PI/8)*rr)) return true; return false; };
   const inSq = (q, e = E*0.97) => q[0] > -e && q[2] < e && q[1] > -e && q[3] < e;
   const pt = out.fc, freeH = q => !placed.some(b => ov(q, b, BN_LOTG)) && !(nb && ov(q, nb));   // (pt: the square round the town's point, which no lot takes (ring's FB) but the HQ's, which meets it: freeH)
   const put = (k, x, y, m, f, q, ex) => { const l = Object.assign({k, x, y, m, f, q, c:k === 'yard' ? 0 : BN_LOTCH*Math.min(q[2] - q[0], q[3] - q[1]), st:BN_LOTSTY[k], bit:BN_LOTB(k)}, ex || {}); if (!l.g) l.g = [q[0] + BN_LOTM, q[1] + BN_LOTM, q[2] - BN_LOTM, q[3] - BN_LOTM];
@@ -6943,7 +6946,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
         if ((nc += 1) >= 24){ nc = 0; yield; }
         const q = at(rl, x, y); if ((dq && densQ(q) < dq) || (dm < 2 && densQ(q) > dm)) continue; const bq = at(br, x, y), lv = Math.max(lines(q, rlk), (rlk ? RA.rdo(bq) : RA.road(bq)) || (fld && RA.rdo([bq[0] - BN_LOTRD, bq[1] - BN_LOTRD, bq[2] + BN_LOTRD, bq[3] + BN_LOTRD])) ? 1 : 0); if ((lv === 1 && o[1]) || (lv === 2 && (o[1] || o[2]))) continue;   // (dq: among the town's blocks, dm: a field's out of them; every picture's whole box off the map's roads, a road behind a building not under its picture: look critic, polish 1)
         nc += 3; if ((rx < 2 && !(rx ? mineR(q) : mine(q))) || !ctry(q) || !ctry([bq[0] - BN_LOTBD, bq[1] - BN_LOTBD, bq[2] + BN_LOTBD, bq[3] + BN_LOTBD]) || wetIn(q) > 0.12) continue;   // (its pictures clear of the border's ribbon)
-        nc += 6; if (!dry(pics, x, y, m, f)) continue;   // (nc: the work done since the last yield, the footprint tests counted heavier)
+        nc += 6; if (!dry(pics, x, y, m, f) || (k === 'yard' && !nearW(x, y))) continue;   // (nc: the work done since the last yield, the footprint tests counted heavier)
         o[lv] = [k, x, y, m, f, q, {ln:lv, ov:wide ? 1 : 0}]; o['r' + lv] = rho; if (!lv) return o; } }
     return o; }
   // the sizes tried and in which order the spots they found are taken ([size, lines]): full size off the map's lines first, then a size smaller,
