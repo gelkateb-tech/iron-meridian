@@ -146,6 +146,7 @@ How it works from now on:
 - Dev Build v68, Build buttons: Build, Upgrade and Train are blue when you can afford them and grey when you can't; the infantry picture fits its research diamond.
 - Dev Build v68, the playtest's 16 fixes: fleets sail only over water, carrier wings rearm and repair, paratroopers in the air can't be given orders, the move hint explains a missing route, partisans hold a province 24 h before it flips, the header counts capitals, and more.
 - Dev Build v68, deals: a computer nation refuses a deal where it gives something and gets nothing back ("We give nothing for nothing."), and the trade screen's prediction agrees.
+- Dev Build v69 (2026-11-26), deals: a friendly computer nation no longer gives money for almost nothing. A friend accepts at most about 16% less value than it gives; after two such favours in 3 days its next deals must pay their way; trades at the world price still always go through; no counter-offers where it gives nothing; leaving an alliance means no new one with that nation for 20 days; a signed deal raises its opinion at most once a day.
 
 ## Released
 - v3.12 (commit 5b47dd8, public 2026-11-11):

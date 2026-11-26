@@ -300,6 +300,11 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## D10 tighten questions, 2026-11-26 (merged in v69; my default in brackets)
+- DT1. Is 20 days the right wait before a nation you left will ally with you again? (yes)
+- DT2. Counter-offers ask for extra money in $10M steps, so on a tiny deal a counter can ask several times the goods' worth (as before). Step small deals in $1M? (yes, small interface follow-up)
+- DT3. Show the "favours" reason in the trade screen's footer too, not only in the chat reply? (yes, small interface follow-up)
+
 ## UNITS IN CITIES questions, 2026-11-26 (units-in-cities 398a749, sheets in shots/2026-11-26/units-in-cities/; my default in brackets)
 - UC1. Zoomed out (hex 12), an army just outside a city joins the city's counter; only its dot outside the ring shows it is outside. OK? (yes)
 - UC2. The outside army's dot gives way to borders, names and the city's counter, so at mid and play zoom it is often drawn on another side of the city than its real one. OK? (yes: the ring is what says in or out)
