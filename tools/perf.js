@@ -5,6 +5,9 @@
 // see the load average). The phase table is the time spent in each listed rules function, exclusive of the other listed functions it calls
 // in CPU time of the main thread (every function is wrapped with a clock in a copy of the rules source; the rules themselves are not changed), plus "tickHour (own)": the hour's
 // movement, clashes, merges, dug-in marks and captures, written inline in tickHour. The state hash is the one tools/headless.js prints.
+//   node tools/perf.js --watch [--days 60] [--world nations]   (auto-test) the playtest harness's run: the same game played with the observers of
+//                            tools/headless.js (--invariants --stats) and without: ms per game day of the rules and of the observers (each pass),
+//                            CPU time, and whether the state hash is the same (it must be: observation changes nothing)
 'use strict';
 const fs = require('fs'), path = require('path'), os = require('os'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : d; };
@@ -49,6 +52,13 @@ function play(world, timed){
   const o = JSON.parse(api.saveJSON()); delete o.savedAt;
   return {world, nations:S.nations.length, units:Math.round(units), forces:S.armies.length, hours, wall, cpu:cp, worstH, hash:hash(JSON.stringify(o)), acc, calls}; }
 const worlds = ONLY ? [ONLY] : ['nations', 'classic'], out = [];
+if (process.argv.includes('--watch')){ const H = require('./headless.js');
+  console.log(`rules speed with the playtest observers, seed ${SEED}, ${DAYS} days, load average ${os.loadavg().map(x => x.toFixed(2)).join(' ')}`);
+  for (const w of ONLY ? [ONLY] : ['nations']){ const c0 = cpu(), A = H.playWatched(SEED, DAYS, {inv:true, stats:true, classic:w === 'classic'}), c1 = cpu(), B = H.playWatched(SEED, DAYS, {classic:w === 'classic', watch:false}), c2 = cpu(), d = A.hours/24;
+    console.log(`\n${w.padEnd(8)} watched: rules ${A.ms.perDay} ms CPU per game day (wall ${A.ms.perDayWall}), observers ${Math.round(A.ms.watch/d)} ms CPU per game day (${Object.entries(A.ms.part).map(([k, v]) => k + ' ' + Math.round(v/d)).join(', ')}; save/load round trips ${Math.round(A.ms.roundtrip/d)}), CPU ${((c1 - c0)/d).toFixed(0)} ms per game day in all`);
+    console.log(`${''.padEnd(8)} plain:   rules ${B.ms.perDay} ms CPU per game day (wall ${B.ms.perDayWall}), CPU ${((c2 - c1)/d).toFixed(0)} ms per game day in all;  state hash ${A.hash === B.hash ? 'the same with and without the observers (' + A.hash + ')' : 'DIFFERENT: ' + A.hash + ' watched, ' + B.hash + ' plain'}`);
+    if (A.hash !== B.hash) process.exitCode = 1; }
+  return; }
 console.log(`rules speed, seed ${SEED}, ${DAYS} days, load average ${os.loadavg().map(x => x.toFixed(2)).join(' ')}${PHASES ? '' : ' (no phase clocks)'}${SLICED ? ', every hour run a step at a time with reads between the steps (--sliced)' : ''}`);
 for (const w of worlds){ const r = play(w, false), d = r.hours/24, rt = PHASES ? play(w, true) : null; out.push(r);
   console.log(`\n${w.padEnd(8)} ${r.nations} nations, ${r.units} units in ${r.forces} forces at the end   ${(r.wall/d).toFixed(0)} ms per game day (wall), ${(r.cpu/d).toFixed(0)} ms (CPU)   worst hour ${r.worstH.toFixed(0)} ms   state hash ${r.hash}`);

@@ -28,9 +28,9 @@ const { chromium } = require('playwright');
   // market: make Russia an enemy with an offer
   await p.evaluate(ids => { const S = window.__im.S; S.rel[[0, ids.pl].sort((a, b) => a - b).join(',')] = { st: 'war', since: 0, until: null }; S.book = [{ id: 9001, seller: ids.pl, res: 'oil', qty: 60*RES_K, price: 3.1, exp: S.hour + 72 }, { id: 9002, seller: ids.fr, res: 'metal', qty: 40*RES_K, price: 2.2, exp: S.hour + 72 }]; }, ids);
   await p.keyboard.press('Escape'); await p.keyboard.press('t'); await p.waitForTimeout(200);
-  await p.evaluate(() => document.querySelector('.ptab.book').scrollIntoView()); await p.screenshot({ path: __dirname + '/dip-market.png' });
-  console.log('enemy row title:', await p.evaluate(() => document.querySelector('.ptab.book tr.enemy') && document.querySelector('.ptab.book tr.enemy').title));
-  await p.click(`[data-act="book-buy"][data-id="9001"][data-q="${await p.evaluate(() => 10*MKT_LOT)}"]`); await p.waitForTimeout(100);
+  await p.click('[data-act="mk-filter"][data-k="oil"]'); await p.screenshot({ path: __dirname + '/dip-market.png' });
+  console.log('enemy row title:', await p.evaluate(() => document.querySelector('.mk-row.enemy') && document.querySelector('.mk-row.enemy').title));
+  await p.click('[data-act="mk-open"][data-id="9001"]'); console.log('panel warning:', await p.evaluate(() => (document.querySelector('.mk-warn') || {}).textContent)); await p.click('[data-act="mk-q"][data-v="10000"]'); await p.click('.mk-ok'); await p.waitForTimeout(100);
   console.log('bought:', await p.evaluate(() => window.__im.S.book.find(o => o.id === 9001).qty));
   console.log(errs); await b.close();
 })();

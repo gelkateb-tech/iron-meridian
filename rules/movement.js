@@ -107,8 +107,10 @@ function routeMix(a, path){ const m = {rail:0, road:0, track:0, off:0, sea:0}; l
   if (tot) for (const k in m) m[k] /= tot; return m; }
 const mixText = m => [m.rail >= 0.05 ? `rail ${Math.round(m.rail*100)}%` : '', m.road >= 0.05 ? `road ${Math.round(m.road*100)}%` : ''].filter(Boolean).join(' · ');
 const dominant = a => UT.reduce((b, t) => a.u[t]*UNITS[t].hp > a.u[b]*UNITS[b].hp ? t : b, 'inf');
-function merge(into, from){   // (display: a column absorbed on arrival hands no drawn motion to the stack, which stays put; its models glide into the stack's group)
-  if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if ((from.land || 0) > (into.land || 0)) into.land = from.land; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; } }
+function merge(into, from){ if ((into.fly && !into.air) || (from.fly && !from.air)) return false;   // (paratroopers in the air merge with no one: FLY_WHY)
+  // (display: a column absorbed on arrival hands no drawn motion to the stack, which stays put; its models glide into the stack's group)
+  if (from.cmd != null && into.cmd == null){ into.cmd = from.cmd; const c = cmdOf(into); if (c) c.army = into.id; } from.cmd = null; if ((from.land || 0) > (into.land || 0)) into.land = from.land; if (into.at === from.at){ const f = new Set([...(into.froms || (into.from != null ? [into.from] : [])), ...(from.froms || (from.from != null ? [from.from] : []))]); into.froms = [...f]; } const hi = armyHP(into), hf = armyHP(from); if (hi + hf > 0) into.m = ((into.m ?? 80)*hi + (from.m ?? 80)*hf)/(hi + hf); for (const t of UT){ into.u[t] += from.u[t]; into.w[t] += from.w[t]; from.u[t] = 0; from.w[t] = 0; }
+  if (!shipsOnly(into)){ delete into.blk; delete into.raid; } }   // (a force that is no longer a fleet alone blockades and raids no more: rules/trade.js)
 /* ---------------- Flexible splitting ----------------
    A force's rows: each unit type, with its damaged units (below 60% health) as a row of their own. A type's wounds are pooled (a.w) and sit on as
    few units as possible: nd = ceil(w/hp) units carry them; when those are below 60% they form the damaged row, otherwise the wounds are spread
@@ -148,6 +150,10 @@ function splitPlan(a, plan, spot = null){
   if (pk){ const all = [a, ...out]; for (const x of all) x.peak = h0 > 0 ? pk*effHP(x)/h0 : pk/all.length; }
   // the commander stays with the largest group
   const c = cmdOf(a); if (c){ const big = [a, ...out].reduce((x, y) => effHP(y) > effHP(x) + 1e-6 ? y : x, a); if (big !== a){ big.cmd = a.cmd; a.cmd = null; c.army = big.id; } }
+  // ships never go on land (MOV-4): a group of ships alone that got the troops' route, a leg or a next leg from land to land, stays where it is
+  // and plans its own route over the water (or none: it stays in port)
+  for (const x of [a, ...out]) if (shipsOnly(x) && !G.P[x.at].sea && (x.to !== null ? !G.P[x.to].sea : x.path.length > 0 && !G.P[x.path[0]].sea)){
+    const dest = x.path.length ? x.path[x.path.length - 1] : x.to; x.to = null; x.t = 0; x.legFrom = null; x.path = dest !== x.at ? pathFor(x, x.at, dest) : []; if (!x.path.length){ x.dest = null; if (x.wp) delete x.wp; } }
   return out; }
 // the classic halving (also used by the AI): half of every unit type leaves, HP in proportion; one unit if nothing would move
 function halfPlan(a){ const g = {}; for (const r of splitRows(a)){ const k = Math.floor(r.n/2); if (k) g[r.k] = k; }
@@ -193,9 +199,10 @@ function fpPatch(recs){ const inv = 1/(HS0*SQ3);
 const pathMT = a => a && ground(a) ? moveType(a) : 'none';
 // emb (ground forces): emb(u) says whether the force may embark in land province u, asked only for legs from land onto water (rules: a naval port);
 // lnd (ground forces, NAVAL CITIES): lnd(v) says whether it may come ashore in land province v, asked only for legs from water onto land (a naval city)
+// wet (ships): no leg from land to land (a fleet sails port to sea to port, never over the land between two ports)
 // memo (a Map, optional): only for a route whose answer depends on nothing but the map and the leg costs (ok and emb fixed by the caller, no
 // owner: no rails), such as a sea route between two sea zones: kept per (from, to, the heuristic's floor), handed out as a copy
-function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = null, lnd = null){
+function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = null, lnd = null, wet = false){
   if (a === b) return [];
   const n = G.P.length;
   if (!FP || FP.G !== G){ FP = {G, d:new Float64Array(n), prev:new Int32Array(n), gen:new Uint32Array(n), hc:new Float64Array(n), hg:new Uint32Array(n), g:0, hk:new Float64Array(1 << 16), hv:new Int32Array(1 << 16),
@@ -205,7 +212,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = n
     else { FP.w = {};                                  // otherwise rebuild leg costs lazily per movement type
       FP.q = G.P.map(P => { if (P.sea || !P.lk.size) return null; let any = false; const Q = Float64Array.from([...P.nb].map(([v, w0]) => { const rl = railLv(P.lk.get(v)); if (!rl) return 0; any = true; return w0/RAIL_SPD[rl]; })); return any ? Q : null; }); } }
   const Wm = fpWeights(PATH_MT.includes(mt) ? mt : 'foot'), useRail = owner >= 0 && mt !== 'none';
-  let mk = null; if (memo){ if (memo.G !== G || memo.size > 20000){ memo.clear(); memo.G = G; } mk = a + ',' + b + ',' + mt + ',' + (useRail ? Wm.kq : Wm.k); const r = memo.get(mk); if (r) return r.slice(); }
+  let mk = null; if (memo){ if (memo.G !== G || memo.size > 20000){ memo.clear(); memo.G = G; } mk = a + ',' + b + ',' + mt + ',' + (useRail ? Wm.kq : Wm.k) + (wet ? ',w' : ''); const r = memo.get(mk); if (r) return r.slice(); }
   let fr = null; if (useRail){ fr = new Uint8Array(S.nations.length + 1); for (let i = 0; i < S.nations.length; i++) fr[i] = i === owner || allyOf(owner, i) ? 1 : 0; }
   const isFr = v => { const o = S.owner[v]; return o >= 0 && fr[o] === 1; };
   const d = FP.d, prev = FP.prev, gen = FP.gen, g = ++FP.g, B = G.P[b], inv = (useRail ? Wm.kq : Wm.k)/(HS0*SQ3);
@@ -220,6 +227,7 @@ function findPath(a, b, ok = null, mt = 'foot', owner = -1, emb = null, memo = n
   while (hn){ const key = hk[0], u = pop(); if (u === b){ found = true; break; } const du = d[u]; if (key > du + h(u) + 1e-9) continue;   // stale heap entry
     const A = FP.adj[u], Wt = Wm[u], Qt = useRail ? FP.q[u] : null, ru = Qt && isFr(u), SEA0 = FP.sea, eL = emb && !SEA0[u], sL = lnd && SEA0[u]; let eu = -1;
     for (let j = 0; j < A.length; j++){ const v = A[j]; if (ok && v !== b && !ok(v)) continue;
+      if (wet && !SEA0[u] && !SEA0[v]) continue;   // (ships: no leg from land to land, not even between two ports: MOV-4)
       if (eL && SEA0[v]){ if (eu < 0) eu = emb(u) ? 1 : 0; if (!eu) continue; }   // (a leg onto water from land: only where the force may embark)
       if (sL && !SEA0[v] && !lnd(v)) continue;   // (a leg from water onto land: only where the force may come ashore, a naval city)
       let c = Wt[j]; if (ru && Qt[j] && Qt[j] < c && isFr(v)) c = Qt[j];
@@ -240,7 +248,7 @@ const landOk = (a, v) => !NAVAL_CITIES || navalCity(v) || amphib(a);
 const pathFor = (a, from, to, anyCoast = false) => { const so = shipsOnly(a), n = a.owner, ce = [], enter = v => { if (G.P[v].sea) return true; const o = S.owner[v]; if (o === n || o < 0) return true; if ((o | 0) !== o) return canEnter(n, v);
     let r = ce[o]; if (r === undefined) r = ce[o] = atWar(n, o) || friendly(n, o); return r; }, ok = v => enter(v) && (!so || portOk(a.owner, v)); if (!ok(to)) return [];
   const mt = pathMT(a);
-  if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner);   // ships sail over water only: a port is where a route ends, never a way through land
+  if (so) return findPath(from, to, v => (G.P[v].sea || v === to) && ok(v), mt, a.owner, null, null, null, true);   // ships sail over water only: a port is where a route ends, never a way through land (nor a leg from one port to the next)
   if (so || a.air) return findPath(from, to, ok, mt, a.owner);
   const am = amphib(a), pe = [], emb = anyCoast === true || am ? null : u => { let r = pe[u]; if (r === undefined) r = pe[u] = portOk(n, u); return r; };
   const lnd = !NAVAL_CITIES || anyCoast || am ? null : navalCity;
@@ -278,7 +286,8 @@ const nextLegH = a => { const [p1, p2] = nextLegEnds(a); return legHours(a, a.at
 const legSpot = a => { const [p1, p2] = legEnds(a); return lerpPt(p1, p2, Math.max(0, Math.min(1, a.t))); };
 // pt: the exact point to go to ([x, y], or omitted for the province centre). A ship's point is water (in a sea zone); a ship sent to a port docks
 // at the quay. A point in the force's own province is a walk inside it (orderSpot).
-function orderMove(a, target, pt = null){ delete a.tgt; if (a.wp) delete a.wp; if (a.oldLand) delete a.oldLand;   // (a move ends a Bombard order, rules/combat.js orderBombard, and drops planned stops: waypoints below)
+const FLY_WHY = 'Paratroopers in the air: orders once they land.';   // (a drop in flight, a.fly: rules/air.js dropTick puts it down)
+function orderMove(a, target, pt = null){ if (a.fly && !a.air){ refuse(a.owner, FLY_WHY); return; } delete a.tgt; if (a.wp) delete a.wp; if (a.oldLand) delete a.oldLand;   // (a move ends a Bombard order, rules/combat.js orderBombard, and drops planned stops: waypoints below)
   const q = pt && !a.air && G.P[target] && !(shipsOnly(a) && !G.P[target].sea) ? ptIn(target, pt[0], pt[1]) : null;
   if (q && a.to === null && target === a.at){ a.dest = null; orderSpot(a, q[0], q[1]); IM.emit('ordered', a); return; }
   if (a.sail){ a.pos = sailXY(a); delete a.sail; }   // (a force walking or sailing inside its province sets off from where it is now)
@@ -297,6 +306,7 @@ function orderMove(a, target, pt = null){ delete a.tgt; if (a.wp) delete a.wp; i
 // (it holds its zone or its dock). Also cancels queued legs and chase/join/escort.
 function haltArmy(a){
   if (a.air){ if (a.fly) return false; a.path = []; return true; }
+  if (a.fly){ refuse(a.owner, FLY_WHY); return false; }
   if (a.to !== null){
     const A = G.P[a.at], B = G.P[a.to], t = Math.max(0, Math.min(1, a.t)), spot = legSpot(a), same = !!B.sea === !!A.sea, inP = provOfPt(spot[0], spot[1]);
     const near = !same ? a.at : inP === a.at || inP === a.to ? inP : t >= 0.5 ? a.to : a.at;
@@ -382,7 +392,7 @@ function sailHour(a, hr = 1){ const s = a.sail; if (!s) return; if (a.to !== nul
   if (s.t >= 1 - 1e-9){ a.pos = [s.to[0], s.to[1]]; if (s.nx) a.sail = {f:a.pos, to:s.nx, t:0, h:Math.max(1e-6, s.h2)}; else delete a.sail; } }   // (sailTo: on from the heart to the point)
 // the end of a leg (rules/tick.js movement): the force reaches the province it was heading for and stands at its exact point on the final leg
 // (troops coming ashore from the sea start their landing here: a.land, the time in hours, 0.75 = 45 minutes, before they can move on or capture)
-function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); if (ground(a)) a.land = landH(a, a.to); if (a.oldLand) delete a.oldLand; }
+function legArrive(a, cross = false){ const f0 = legEnds(a)[0]; if (G.P[a.at].sea && !G.P[a.to].sea){ if (ground(a)){ a.landed = S.hour; a.m = Math.max(0, (a.m ?? 80) - 5); a.land = landH(a, a.to); } if (a.oldLand) delete a.oldLand; }   // (only troops come ashore: a fleet docking in a port takes no landing stamp, EMB-4)
   a.from = a.at; a.froms = [a.at]; atMove(a, a.to); a.to = null; a.t = 0; a.legFrom = null; delete a.hrt;
   if (!a.path.length && a.dest && a.dest.p === a.at){ a.pos = shipsOnly(a) && !G.P[a.at].sea ? null : [a.dest.x, a.dest.y]; a.dest = null;
     if (!cross && a.pos && heartVia(a, a.at, f0, a.pos)) a.hrt = a.at; }   // (a leg done within the hour went by the heart on its way to the point beyond it; cross: legCross walks on)
@@ -536,14 +546,17 @@ function armyUpkeep(prevBattles){
     a.m = Math.max(0, Math.min(100, a.m));
     // broken morale: retreat to the nearest supplied own province, or surrender
     const limit = here && S.owner[a.at] === a.owner && G.P[a.at].city ? 15 : 25;
+    // (a force marked retreating that stands still with no route, e.g. from a save made before routes were checked, is looked at again)
+    if (inBattle && a.retreating && !(a.path && a.path.length)) a.retreating = false;
     if (inBattle && moraleEff(a) < limit && !a.retreating && !risingHold(a)){   // (a Bunker's garrison breaks later: moraleEff; a garrison holding its city against a rising never breaks: risingHold)
-      const seen = new Set([a.at]), q = [[a.at, 0]]; let dest = -1;
+      // the nearest supplied own province the force has a route to (a fleet: an own naval city by sea; troops in an enemy port do not board there)
+      const seen = new Set([a.at]), q = [[a.at, 0]]; let dest = -1, rp = null;
       for (let h = 0; h < q.length && dest < 0; h++){ const [u, du] = q[h]; if (du >= 6) continue;
         for (const v of G.P[u].nbs){ if (seen.has(v) || !canEnter(a.owner, v)) continue; seen.add(v);
-          if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ dest = v; break; } q.push([v, du + 1]); } }
-      if (dest >= 0){ a.path = pathFor(a, a.at, dest); if (a.dest) a.dest = null; if (a.wp) delete a.wp; a.forced = true; a.retreating = true;
-        if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].name} and is retreating to ${G.P[dest].name}.`, 'bad', a.at); }
-      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
+          if (S.owner[v] === a.owner && SUP[a.owner] && SUP[a.owner][v] && !S.battles.includes(v)){ const pth = pathFor(a, a.at, v); if (pth.length){ dest = v; rp = pth; break; } } q.push([v, du + 1]); } }
+      if (dest >= 0){ a.path = rp; if (a.dest) a.dest = null; if (a.wp) delete a.wp; a.forced = true; a.retreating = true;
+        if (isSeat(a.owner)) tell(a.owner, `${armyName(a)} broke at ${G.P[a.at].cityName || G.P[a.at].name} and is retreating to ${G.P[dest].cityName || G.P[dest].name}.`, 'bad', a.at); }
+      else if (!supplied(a) && a.m < 10 && (() => { const mine = S.armies.filter(b => b.at === a.at && b.to === null && b.owner === a.owner).reduce((s0, b) => s0 + effHP(b), 0), foe = S.armies.filter(b => b.at === a.at && b.to === null && atWar(a.owner, b.owner)).reduce((s0, b) => s0 + effHP(b), 0); return mine < foe*0.5; })()){ if (isSeat(a.owner)) tell(a.owner, `Your encircled force at ${G.P[a.at].cityName || G.P[a.at].name} surrendered.`, 'bad', a.at); for (const t of UT) a.u[t] = 0; }
     }
     if (!inBattle && a.retreating && a.m >= 40) a.retreating = false;
   }

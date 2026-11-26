@@ -300,6 +300,13 @@ forces you fight are now identified for the whole battle (P3-01, fixed in 14efd6
 **Until you answer.** Only the prototype branch `idea/phone-group` (4ac62da) has A. Nothing is merged.
 
 
+## REBELS questions, 2026-11-26 (rebels-2 776769e, phone sheets sent; my default in brackets)
+- RB1. Is "a garrison fights rebels to the end and never retreats" the right reading of "rebels attack them, the city stays mine"? (yes)
+- RB2. Should poor computer nations keep a smaller cash reserve before annexing, so they annex too (Vietnam never does)? (yes: reserve = half the price instead of $150M)
+- RB3. Keep the extra "Mobilisation (homeland only)" row in the morale list (−5 per mobilisation level, homeland)? (yes)
+- RB4. Old saves: is a 24 h grace with no risings enough, or should converted cities also get a 34% floor? (24 h grace only)
+- RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes)
+
 ## Owner's answers, 2026-11-26 (verbatim)
 
 > Answers:
@@ -332,7 +339,7 @@ Jobs FOG-CLASH, ECON-START, PROPOSALS, CITY BUILDING LOTS and UI-FIXES log their
 - **D7. Pop-up notes on a phone while Diplomacy is open** cover the tabs for a few seconds. → Done (be33bed): below the tabs and sort bar, taps pass through.
 - **D8. Province details and price aids in the land picker** (value, floor, suggested price, locator map). → Kept.
 - **D9. Keep the Neighbours sort and the Border row on the nation page?** → Yes.
-- **D10. A computer nation that likes you keeps giving money for nothing** (already so before this work). → Unchanged for now; one option is that it refuses deals where it gets nothing.
+- **D10. A computer nation that likes you keeps giving money for nothing** (already so before this work). → Unchanged for now; one option is that it refuses deals where it gets nothing. **Owner 2026-11-26: fix it. Done (merge-1126):** in rules/dealings.js dealAnswer, a computer nation declines any New Trade deal in which it gives money, goods, land or a treaty that costs it and gets nothing of value back (no money or goods, no land it wants, no treaty worth something to it), whatever its opinion, with the answer "We give nothing for nothing." and no counter-offer. The trade builder's footer reads "Will not: We give nothing for nothing". Deals where it gets something back are judged as before; its own gifts (coalition aid, its trade proposals) are unchanged. Test: .test/d10.js.
 - **D11. Invented leader names:** a few share a surname with a real minister (higher risk: Syria's Nabil Sabbagh, Yemen's Tawfiq al-Mikhlafi; lower: Japan's Tadokoro, Spain's Valcárcel, Norway's Haugland, Mali's Tangara). → Done (be33bed): Syria Rafiq Dabbouri, Yemen Jalal Samawati, Japan Itsuki Moriwaki, Spain Inés Montalbetti, Norway Sigrid Vollaneset, Mali Moussa Kébalou. Please skim them once.
 - **D12. The computer's own alliance check can wrongly say "coalition is full"** (already so before this work). → Unchanged, so computer-only games stay identical.
 - **D13. Known Army Size** compares the forces you have seen with their whole military, so Russia with one force seen reads "8 units, weaker military". → Done (be33bed): "8 units seen"; the comparison shows only when all their forces are known.

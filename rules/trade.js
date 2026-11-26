@@ -227,7 +227,7 @@ const TR_WHY = {war:'war broke out', embargo:'an embargo', refused:'they no long
 function trMake(a, b, kind, nc = null){ const T = trS(), r = {id:T.nid++, a, b, nc:b === NEUTRAL ? nc : null, kind, key:trKey(a, b, nc), t0:S.hour, f:1, why:'', by:-1, bz:-1, raid:-1e9, raidZ:-1, acc:0, accN:0, va:null, vb:null, sunk:0};
   if (trInvalid(r) || !trPlace(r)) return null; T.routes.push(r); T.ver = (T.ver || 0) + 1; trStatus(r); return r; }
 function trEnded(r, why){ const T = trS(); T.ver = (T.ver || 0) + 1;
-  for (const a of S.armies) if (a.escort === r.id) delete a.escort;
+  for (const a of S.armies){ if (a.escort === r.id) delete a.escort; if (a.raid && a.raid.r === r.id) delete a.raid; }   // (escort and raid orders on it end with it)
   const lost = why === 'war' && r.b >= 0; if (lost) (T.lost || (T.lost = {}))[r.key] = {a:r.a, b:r.b, kind:r.kind, h:S.hour, va:r.va ? {...r.va} : null, vb:r.vb ? {...r.vb} : null};
   if (why !== 'closed') for (const me of [r.a, r.b]) if (isSeat(me)) tell(me, `The ${trName(r, me)} trade route has ended: ${TR_WHY[why] || why}.${lost ? ` Its slot stays empty while you are at war with ${trName(r, me)} or hold its cities without annexing them; holding them also costs you 25% on your other routes.` : ''}`, 'info', r.path[Math.floor(r.path.length/2)]); }
 /* ---- point 11 (owner question 15, option C): occupying a trade partner. A route that ended in a war (trEnded 'war') is kept in S.trade.lost

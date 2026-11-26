@@ -370,7 +370,7 @@ function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m
 function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return false;
   a.path = []; a.chase = null; a.dest = null; if (a.wp) delete a.wp; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
-function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a)) continue; const b = armyById(a.join);
+function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a) || a.fly) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
     if (a.to !== null || a.path.length) continue;
     if (a.at === b.at && b.to === null){ delete a.join; merge(b, a); any = true; if (isSeat(a.owner)){ const sp = stackPenalty(b); tell(a.owner, `${armyName(a)} joined ${armyName(b)} at ${G.P[b.at].cityName || G.P[b.at].name}: ${pluN(count(b), 'unit')}.${sp.over ? ` ${stackText(sp)}.` : ''}`, sp.over ? 'bad' : 'good', b.at); IM.emit('merged', a.id, b.id); } continue; }
@@ -399,10 +399,14 @@ function capture(p, O){
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
   morCaptured(p, O);   // (morale 25, or 55 for land of the captor's homeland; an annexed status is lost: rules/economy.js)
   geoChanged();
-  const nm = G.P[p].name;
+  const nm = G.P[p].cityName || G.P[p].name;
   if (isSeat(O)){ const D = desk(O); (D.tut || (D.tut = {})).capture = true; bump(O, 'taken'); cue(O, 'capture'); }
   wingsFlee(p, O);   // (air wings based here escape: rules/economy.js)
   if (cons && cons.k === 'annex' && isSeat(prev)) tell(prev, `The annexing of ${G.P[p].cityName || nm} was lost with the city.`, 'bad', p);
+  // ground forces of nations at peace with the new holder (neither at war with it nor its friend) may not stand in its land: they go home now, as
+  // strandedHour would send them in a few hours (rules/diplomacy.js sendHome: along a route, or a jump when there is none). MOV-6
+  for (const w of S.armies){ const m = w.owner; if (w.at !== p || w.air || w.fly || w.to !== null || m < 0 || m === O || shipsN(w) || !count(w) || atWar(m, O) || friendly(m, O)) continue;
+    if (sendHome(w) && isSeat(m)) tell(m, `${armyName(w)} leaves ${nm}: ${nationName(O)} took it, and you are not at war with them.`, 'info', w.at); }
   if (isSeat(prev)){ bump(prev, 'lost'); cue(prev, 'lose'); }
   tellAll(me => O === me ? `You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.` : prev === me ? `${nationName(O)} captured ${nm}.` : wasCap ? `${nationName(O)} took ${nm}, capital of ${nationName(prev)}.` : null, me => O === me ? 'good' : prev === me ? 'bad' : '', p);
   if (prev >= 0) checkNation(prev, O);
