@@ -5,7 +5,8 @@
 //    want is still a patrol; refused on its own land with no enemy there, on a nation it is not at war with, out of range; an Interceptor or an
 //    AWACS cannot Attack; a Strike Fighter's own strike is unchanged
 // 3. the damage (the real resolveStrike, 300 sorties each on one infantry, one tank, one artillery in the open): the ASF hits weakly, between
-//    10% and 40% of a Strike Fighter on infantry and under 25% on tanks, and never cuts road or rail links nor adds war damage (ASF_ATTACK.links)
+//    10% and 40% of a Strike Fighter on infantry and under 25% on tanks, and never cuts road or rail links nor adds war damage (ASF_ATTACK.links);
+//    3b: on a sea zone it records no convoy raid (S.trade.air), where a Strike Fighter does
 // 4. a whole Attack sortie through the hours (tick): out, the strike, the hour over the target, back, 6 h rearming; the foe lost health
 // 5. Return (recallAir): a wing flying out turns back from where it is, one on patrol heads home at once, both land and rearm
 // 6. Split and Merge for wings (splitWing, mergeWings): half the aircraft leave with the same base, rearm hours and wear; wings of one type
@@ -75,6 +76,16 @@ const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w
   ok(r('art') > 0.1 && r('art') < 0.45, 'artillery: 10-45% of a Strike Fighter', {asf:out.art.asf.hp, jet:out.art.jet.hp});
   ok(out.inf.asf.cutShare === 0 && out.tank.asf.cutShare === 0 && out.inf.asf.warDmg === 0, 'the ASF never cuts roads or rails and adds no war damage (ASF_ATTACK.links false)', out.inf.asf);
   ok(out.inf.jet.cutShare > 0.5, 'a Strike Fighter still cuts them', out.inf.jet); }
+
+// ---- 3b. a sea Attack is no convoy raid (polish 1): an ASF striking ships in a sea zone records no trade raid there (S.trade.air, rules/trade.js
+//      trRaidMap), where a Strike Fighter's strike does (one ASF's raid weight, power(a), was 11.2 against a Strike Fighter's 7.9)
+{ const R = load(), E = setup(R), S = E.S, G = E.G; S.armies = S.armies.filter(a => !a.air);
+  const z = G.P.filter(q => q.sea && R.hexDist(G.P[E.base].cc, q.cc) <= 5).sort((a, b) => R.hexDist(G.P[E.base].cc, a.cc) - R.hexDist(G.P[E.base].cc, b.cc))[0];
+  if (!z || !S.trade){ ok(false, 'a sea zone within reach and trade state for the sea Attack check', {z:!!z, trade:!!S.trade}); }
+  else { const raid = T => { S.armies = S.armies.filter(a => !a.air && a.owner !== 1); delete S.trade.air[z.id]; const D = R.addArmy(1, z.id, {frig:1}); D.still = S.hour;
+      R.resolveStrike(wingAt(R, E.base, T), z.id); return S.trade.air[z.id] ? S.trade.air[z.id].pw : 0; };
+    const ra = raid('asf'), rj = raid('jet');
+    ok(ra === 0 && rj > 0, 'an ASF Attack on ships records no convoy raid; a Strike Fighter strike still does', {asf:ra, jet:rj}); } }
 
 // ---- 4. a whole Attack sortie, hour by hour
 { const R = load(), E = setup(R), S = E.S; S.armies = S.armies.filter(a => !a.air && a.owner !== 1);

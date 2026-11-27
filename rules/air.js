@@ -104,10 +104,11 @@ function recallAir(a){ const f = a && a.air ? a.fly : null; if (!f || f.kind ===
 function splitWing(a){ if (!a || !a.air || a.fly || count(a) < 2) return null; const t = wingT(a), n = a.u[t], k = Math.floor(n/2); if (!k || k >= n) return null;
   const b = addArmy(a.owner, a.at, {}); b.air = {base:a.air.base, cd:a.air.cd || 0}; for (const f of ['wear', 'car', 'mnt']) if (a.air[f] != null) b.air[f] = a.air[f];
   b.u[t] = k; b.w[t] = (a.w[t] || 0)*k/n; a.u[t] -= k; a.w[t] = Math.max(0, (a.w[t] || 0) - b.w[t]); b.m = a.m; return b; }
-// wings of a's type parked where it is (same base or carrier, on the ground) join it: the longer rearm time, the wear averaged by aircraft
-function mergeWings(a){ if (!a || !a.air || a.fly) return 0; const t = wingT(a); let n = 0;
-  for (const b of S.armies){ if (b === a || b.owner !== a.owner || !b.air || b.fly || b.at !== a.at || (b.air.car ?? null) !== (a.air.car ?? null) || !count(b) || wingT(b) !== t || !AIR_T.every(u => u === t || !b.u[u])) continue;
-    const na = count(a), nb = count(b), wr = ((a.air.wear || 0)*na + (b.air.wear || 0)*nb)/(na + nb); a.air.cd = Math.max(a.air.cd || 0, b.air.cd || 0); if (wr > 1e-4) a.air.wear = wr; else delete a.air.wear; if (b.air.mnt) a.air.mnt = b.air.mnt;
+// the wings Merge would join to a: yours, of a's one type, parked where it is (same base or carrier, on the ground); the page's Merge button reads it too
+const mergeMates = a => !a || !a.air || a.fly ? [] : S.armies.filter(b => b !== a && b.owner === a.owner && b.air && !b.fly && b.at === a.at && (b.air.car ?? null) === (a.air.car ?? null) && count(b) && wingT(b) === wingT(a) && AIR_T.every(u => u === wingT(a) || !b.u[u]));
+// they join it: the longer rearm time, the wear averaged by aircraft
+function mergeWings(a){ let n = 0;
+  for (const b of mergeMates(a)){ const na = count(a), nb = count(b), wr = ((a.air.wear || 0)*na + (b.air.wear || 0)*nb)/(na + nb); a.air.cd = Math.max(a.air.cd || 0, b.air.cd || 0); if (wr > 1e-4) a.air.wear = wr; else delete a.air.wear; if (b.air.mnt) a.air.mnt = b.air.mnt;
     merge(a, b); n++; }
   if (n) removeEmpty(); return n; }
 const PARA_RANGE = 9;
@@ -227,9 +228,9 @@ function loiterHour(a){ const f = a.fly, p = f.tgt, o = a.owner, n0 = count(a);
   if (lost > 0){ if (isSeat(o)) tell(o, `${armyName(a)} lost ${lost} aircraft over ${G.P[p].cityName || G.P[p].name}${cap.length ? ' to enemy fighters' : ' to air defence'}.`, 'bad', p);
     for (const me of seatsBut(o)) if (cap.some(b => b.owner === me) || stationaryAt(p).some(b => b.owner === me)) tell(me, `Your ${cap.some(b => b.owner === me) ? 'fighters' : 'air defence'} shot down ${lost} ${nationName(o)} ${UNITS[wingT(a)].name}${lost > 1 ? 's' : ''} near ${G.P[p].cityName || G.P[p].name}.`, 'good', p); } }
 function resolveStrike(a, p){
-  const o = a.owner, T = wingT(a);
+  const o = a.owner, T = wingT(a), asfA = asfStrike(a) && !ASF_ATTACK.links;   // (an Air Superiority Fighter's Attack hits the forces only: ASF_ATTACK, rules/data.js)
   if (isDrone(a)) return;
-  if (G.P[p].sea) tradeAirRaid(o, p, power(a)*0.8);   // strikes on a sea zone also hit the convoys on its trade routes
+  if (G.P[p].sea && !asfA) tradeAirRaid(o, p, power(a)*0.8);   // strikes on a sea zone also hit the convoys on its trade routes
   const where = G.P[p].cityName || G.P[p].name, n00 = count(a);
   // enemy fighters patrolling over the target (Air Superiority Fighters and fighters under AWACS also over its neighbours) intercept first
   const cap = capOver(p, o);
@@ -253,7 +254,6 @@ function resolveStrike(a, p){
       if (!count(a)){ if (isSeat(o)) tell(o, `Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
   // (checked again over the target: the land is hurt only where it is hostile, an enemy's or nobody's, or where enemy forces stand)
   const landHit = S.owner[p] < 0 || (S.owner[p] !== o && atWar(o, S.owner[p])) || defs.length > 0;
-  const asfA = T === 'asf' && !ASF_ATTACK.links;   // (an Air Superiority Fighter's Attack hits the forces only: ASF_ATTACK, rules/data.js)
   if (landHit && !asfA) warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
   const enemyLand = S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]);
   let bnote = '';
