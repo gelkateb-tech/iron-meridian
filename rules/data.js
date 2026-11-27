@@ -26,6 +26,15 @@ const INF_NEEDS = ['fac'];
    any coast). NAVAL_CITIES is the one switch: false gives the game exactly as it was before (no Marines, landings on any coast). */
 const NAVAL_CITIES = true;
 const INF_T = ['inf', 'at', 'spec', 'para', ...(NAVAL_CITIES ? ['mar'] : [])];   // the infantry units (their req and req2 are set from INF_NEEDS below the table)
+/* ASF ATTACK ORDER (owner playtest 2026-11-27, item 2a; PROPOSED NUMBERS, the owner OKs them before merge). The Air Superiority Fighter keeps its
+   job of winning the air (vs air 3.0, unchanged) and may also be sent to attack enemy ground forces and ships (the Attack button: orderAir with
+   want 'strike', rules/air.js asfStrike). These are its damage multipliers against each class on such a strike (its attack 9 x these: 2.25 soft,
+   1.8 armoured, 2.7 naval; a Strike Fighter does 9.6 / 12.8 / 8), the same numbers the unit had before, so nothing else changes. Measured with the
+   real resolveStrike (one aircraft, open plains, morale 80): about 2.3 HP a sortie on a 10 HP infantry unit (a Strike Fighter 9.4), 1.6 on a tank
+   (11.5), 2.3 on artillery (8.8). links: whether its strike also hurts the land under it as a Strike Fighter's does (cuts the road and rail
+   links for LINK_DMG.strike hours, adds war damage); false: the forces only. No research needed. Option B, a little stronger: soft 0.3,
+   armored 0.3, naval 0.3. */
+const ASF_ATTACK = {soft:0.25, armored:0.2, naval:0.3, links:false};
 const UNITS = {
   inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:{b:'fac', l:1},          tech:null,  role:'Line infantry that holds ground and captures provinces.'},
   at:   {name:'Anti-Tank Infantry',short:'ATI', cls:'soft',    cost:32, oil:0, metal:3, iron:3, elec:0, rare:0, mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{armored:3.5}, role:'Infantry armed with anti-tank missiles.'},
@@ -51,7 +60,7 @@ const UNITS = {
   bomb: {name:'Heavy Bomber', short:'HBR', cls:'air', bmb:1, cost:132, oil:20, metal:24, iron:6, elec:14, rare:0, mp:6, atk:10, def:2, hp:14, spd:9, build:96, upk:7, fuel:3, req:{b:'air', l:2}, tech:'bomb1', vs:{soft:1.2, armored:0.8, naval:0.6, air:0.3}, role:'Long-range bomber that strikes cities and buildings.'},
   mpa:  {name:'Maritime Patrol Aircraft', short:'MPA', cls:'air', cost:74, oil:10, metal:12, iron:0, elec:11, rare:0, mp:5, atk:6, def:2, hp:10, spd:14, build:66, upk:4, fuel:2, req:{b:'air', l:1}, tech:'mpa1', vs:{naval:1.3, soft:0.2, armored:0.1, air:0.1}, vsU:{sub:2.5}, role:'Patrol aircraft that searches the sea for ships and submarines.'},
   awacs:{name:'AWACS',              short:'AEW', cls:'air',     cost:96, oil:10, metal:14, iron:0, elec:18, rare:5, mp:5, atk:0, def:2, hp:10, spd:15, build:72, upk:5, fuel:2, req:{b:'air', l:2}, tech:'awacs1', vs:{soft:0, armored:0, air:0, naval:0}, role:'Airborne radar that spots enemy forces from afar.'},
-  asf:  {name:'Air Superiority Fighter', short:'ASF', cls:'air', cost:78, oil:11, metal:12, iron:0, elec:12, rare:2, mp:5, atk:9, def:5, hp:10, spd:22, build:72, upk:6, fuel:2, req:{b:'air', l:2}, tech:'asf1', vs:{air:3.0, soft:0.25, armored:0.2, naval:0.3}, vsU:{bomb:3.0, awacs:3.0, mpa:3.0, drone:2.4, sdrone:2.6, swarm:1.8}, role:'Fighter built to win control of the air.'},
+  asf:  {name:'Air Superiority Fighter', short:'ASF', cls:'air', cost:78, oil:11, metal:12, iron:0, elec:12, rare:2, mp:5, atk:9, def:5, hp:10, spd:22, build:72, upk:6, fuel:2, req:{b:'air', l:2}, tech:'asf1', vs:{air:3.0, soft:ASF_ATTACK.soft, armored:ASF_ATTACK.armored, naval:ASF_ATTACK.naval}, vsU:{bomb:3.0, awacs:3.0, mpa:3.0, drone:2.4, sdrone:2.6, swarm:1.8}, role:'Fighter built to win control of the air; it can also attack ground forces, weakly.'},
   // bmb: bomb load as a share of the Heavy Bomber's (bombers wreck cities, buildings and roads); lo: low-observable airframe, the share of hits that find it
   // (ad: Mobile SAMs, frigates and cruisers; air: fighters and other aircraft), each measured against what the same shooter does to a Heavy Bomber
   stealth:{name:'Stealth Bomber', short:'STB', cls:'air', bmb:0.6, lo:{ad:0.35, air:0.4}, cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, atk:8, def:4, hp:12, spd:10, build:168, upk:14, fuel:3.5, req:{b:'air', l:3}, tech:'bomb3', vs:{soft:1.0, armored:0.7, naval:0.6, air:0.2}, role:'Long-range bomber that is hard to detect.'},

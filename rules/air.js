@@ -22,6 +22,8 @@ const swarmPad = (a, p) => a.u.swarm > 0 && UT.every(t => t === 'swarm' || !a.u[
 const AIR_T = UT.filter(t => UNITS[t].cls === 'air');
 // a wing's aircraft type (wings hold one type; mixed old wings report the most numerous)
 const wingT = a => { let b = null; for (const t of AIR_T) if (a.u[t] && (!b || a.u[t] > a.u[b])) b = t; return b || 'jet'; };
+// a wing of Air Superiority Fighters alone: besides its patrols it may be sent to attack (want 'strike': airCheck), with ASF_ATTACK's numbers (rules/data.js)
+const asfStrike = a => a.u.asf > 0 && AIR_T.every(t => t === 'asf' || !a.u[t]);
 // a wing's flight speed (hexes an hour): the slowest of its types, each AIR_SPEED times its share (AIR_SPF) times its research speed bonus (rAirSpdF:
 // Fourth-Generation Interceptor +10%, Supersonic Bomber +33%), read every hour, so a wing in flight speeds up the hour the step is done
 const airSpdT = (n, t) => AIR_SPEED*(AIR_SPF[t] || 1)*rAirSpdF(n, t);
@@ -61,7 +63,8 @@ function fixWings(){
   removeEmpty();
 }
 const carrierAt = (n, p) => armiesOf(n).find(b => b.at === p && b.to === null && b.u.carr > 0) || null;
-function airMissionKind(a, p){
+function airMissionKind(a, p, want = null){
+  if (want === 'strike' && asfStrike(a)) return 'strike';   // (the Attack button: airCheck says where it may)
   if (G.P[p].sea && carrierAt(a.owner, p)) return 'rebase';
   if (isDrone(a)) return S.owner[p] === a.owner && S.bld[p].air && p !== a.air.base ? 'rebase' : 'recon';
   { const T = wingT(a); if (T === 'awacs' || T === 'mpa'){ const o0 = S.owner[p]; return (o0 === a.owner || (o0 >= 0 && friendly(a.owner, o0))) && S.bld[p].air && p !== a.air.base ? 'rebase' : T === 'awacs' ? 'orbit' : 'hunt'; } }
@@ -72,8 +75,9 @@ function airMissionKind(a, p){
   return 'patrol';
 }
 // may wing a fly to p, and on what mission. surprise: the nations this order is allowed to attack without a war (the client passes the ones
-// its player is about to confirm a surprise attack on); a strike on any other nation's land needs a war
-function airCheck(a, p, surprise = null){
+// its player is about to confirm a surprise attack on); a strike on any other nation's land needs a war. want 'strike': the Attack order of an
+// Air Superiority Fighter wing (asfStrike), allowed on hostile land or where hostile forces stand
+function airCheck(a, p, surprise = null, want = null){
   { const w = stormAt(p) || stormAt(a.air.base); if (w && !a.fly) return {ok:false, why:`Grounded: ${w.kind === 'blizzard' ? 'a blizzard' : 'a storm'} over ${stormAt(p) ? (G.P[p].cityName || G.P[p].name) : 'the airbase'}. Wait for it to pass.`}; }
   const d = Math.max(p === a.air.base ? 0 : 1, hexDist(G.P[a.air.base].cc, G.P[p].cc)), r = wingRange(a);
   if (a.fly) return {ok:false, why:'This wing is already on a mission.'};
@@ -81,15 +85,31 @@ function airCheck(a, p, surprise = null){
   if (!G.P[a.air.base].sea && bdis(a.air.base, 'air') && a.air.car == null) return {ok:false, why:`Grounded: the airbase was knocked out by a strike (${bdisH(a.air.base, 'air')} h).`};
   if (p === a.air.base && isStriker(a) && !stationaryAt(p).some(b => atWar(a.owner, b.owner))) return {ok:false, why:'That is its home airbase.'};
   if (d > r) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km, this wing reaches ${r*KM_HEX} km.`};
-  const k = airMissionKind(a, p), o = S.owner[p];
+  const k = airMissionKind(a, p, want), o = S.owner[p];
+  if (want === 'strike' && !isStriker(a) && !asfStrike(a)) return {ok:false, why:'This wing does not attack ground targets.'};
   if (k !== 'rebase' && wingCond(a) < WEAR_GROUND) return {ok:false, why:`Grounded for maintenance: airframes at ${Math.round(wingCond(a)*100)}% condition. Repairs run at an airbase of yours or a carrier; rebasing is still possible.`};
   if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(surprise && surprise.includes(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
+  if (k === 'strike' && want === 'strike' && !(!G.P[p].sea && o >= 0 && o !== a.owner) && !stationaryAt(p).some(b => b.owner !== a.owner && count(b) > 0 && (atWar(a.owner, b.owner) || (surprise && surprise.includes(b.owner))))) return {ok:false, why:'No enemy forces there to attack.'};
   return {ok:true, kind:k, d, hours:Math.max(1, Math.ceil(d/wingSpd(a)))};
 }
-function orderAir(a, p){
-  const c = airCheck(a, p); if (!c.ok){ refuse(a.owner, c.why); return false; }
+function orderAir(a, p, want = null){
+  const c = airCheck(a, p, null, want); if (!c.ok){ refuse(a.owner, c.why); return false; }
   a.fly = {tgt:p, kind:c.kind, ph:'out', t:0, hrs:0}; return true;
 }
+// Return to base: a wing flying out turns back from where it is (as a storm abort does), one on station (patrol, orbit, watch, hunt, its hour over
+// a strike) heads home now; then it lands and rearms as after any mission (airTick 'back'). A wing already on its way back is left as it is
+function recallAir(a){ const f = a && a.air ? a.fly : null; if (!f || f.kind === 'drop' || f.ph === 'back') return false;
+  f.t = f.ph === 'out' ? Math.max(0, 1 - f.t) : 0; f.ph = 'back'; visCache = null; return true; }
+// a wing on the ground splits in two (half its aircraft, rounded down, form a new wing at the same base, with the same rearm hours, wear and morale)
+function splitWing(a){ if (!a || !a.air || a.fly || count(a) < 2) return null; const t = wingT(a), n = a.u[t], k = Math.floor(n/2); if (!k || k >= n) return null;
+  const b = addArmy(a.owner, a.at, {}); b.air = {base:a.air.base, cd:a.air.cd || 0}; for (const f of ['wear', 'car', 'mnt']) if (a.air[f] != null) b.air[f] = a.air[f];
+  b.u[t] = k; b.w[t] = (a.w[t] || 0)*k/n; a.u[t] -= k; a.w[t] = Math.max(0, (a.w[t] || 0) - b.w[t]); b.m = a.m; return b; }
+// wings of a's type parked where it is (same base or carrier, on the ground) join it: the longer rearm time, the wear averaged by aircraft
+function mergeWings(a){ if (!a || !a.air || a.fly) return 0; const t = wingT(a); let n = 0;
+  for (const b of S.armies){ if (b === a || b.owner !== a.owner || !b.air || b.fly || b.at !== a.at || (b.air.car ?? null) !== (a.air.car ?? null) || !count(b) || wingT(b) !== t || !AIR_T.every(u => u === t || !b.u[u])) continue;
+    const na = count(a), nb = count(b), wr = ((a.air.wear || 0)*na + (b.air.wear || 0)*nb)/(na + nb); a.air.cd = Math.max(a.air.cd || 0, b.air.cd || 0); if (wr > 1e-4) a.air.wear = wr; else delete a.air.wear; if (b.air.mnt) a.air.mnt = b.air.mnt;
+    merge(a, b); n++; }
+  if (n) removeEmpty(); return n; }
 const PARA_RANGE = 9;
 const paraOnly = a => dropOnly(a);   // (Paratroopers, and Special Forces once they are Air-Transportable: rules/research.js)
 function canDrop(a, p){ if (!paraOnly(a) || a.to !== null || a.fly) return {ok:false, why:'Only an idle force of Paratroopers (or air-transportable Special Forces) can be air-dropped.'};
@@ -233,11 +253,12 @@ function resolveStrike(a, p){
       if (!count(a)){ if (isSeat(o)) tell(o, `Your bombers were all shot down over ${where} before they could drop.`, 'bad', p); if (S.owner[p] !== o && isSeat(S.owner[p])) tell(S.owner[p], `Your air defence shot down ${artA(nationName(o))} bomber raid on ${where} before it could drop.`, 'good', p); removeEmpty(); return; } } }
   // (checked again over the target: the land is hurt only where it is hostile, an enemy's or nobody's, or where enemy forces stand)
   const landHit = S.owner[p] < 0 || (S.owner[p] !== o && atWar(o, S.owner[p])) || defs.length > 0;
-  if (landHit) warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
+  const asfA = T === 'asf' && !ASF_ATTACK.links;   // (an Air Superiority Fighter's Attack hits the forces only: ASF_ATTACK, rules/data.js)
+  if (landHit && !asfA) warDamage(p, BF ? (city ? 6 : 3)*BF*a.u[T] : 5);
   const enemyLand = S.owner[p] >= 0 && S.owner[p] !== o && atWar(o, S.owner[p]);
   let bnote = '';
   if (enemyLand){ if (BF) bnote = bombBuildings(p, a.u[T], BF); else if (T === 'sdrone') bnote = preciseHit(p, a.u.sdrone >= 2 ? 0.35 : 0.15, rKoHours(a.owner)); if (bnote) noteHit(S.owner[p], T, p); }
-  const cut = landHit && S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
+  const cut = landHit && !asfA && S.owner[p] !== o && !(S.owner[p] >= 0 && rel(o, S.owner[p]).st === 'ally') ? damageLinks(p, LINK_DMG.strike) : 0;
   if (cut && !defs.length) for (const me of new Set([o, S.owner[p]])) if (isSeat(me)) tell(me, o === me ? `Strike on ${G.P[p].cityName || G.P[p].name} cut ${cut} road and rail link${cut > 1 ? 's' : ''} for ${LINK_DMG.strike} h.` : `${nationName(o)} bombed the roads and railways at ${G.P[p].cityName || G.P[p].name}: ${cut} link${cut > 1 ? 's' : ''} out for ${LINK_DMG.strike} h.`, o === me ? 'good' : 'bad', p);
   const label = T === 'stealth' ? 'Stealth raid' : BF ? 'Bombing raid' : T === 'swarm' ? 'Swarm attack' : T === 'sdrone' ? 'Drone strike' : 'Air strike';
   if (!defs.length){ if (isSeat(o) && (bnote || !cut)) tell(o, bnote ? `${label} on ${where}: ${bnote}${adLost ? `; ${adLost} drones lost to air defence` : ''}.` : `Strike on ${where} found no targets.`, bnote ? 'good' : 'info', p);
