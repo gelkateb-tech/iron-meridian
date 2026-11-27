@@ -7180,7 +7180,8 @@ function cityLotHoles(c, wx0, wy0, wx1, wy1, hexPx){ if (hexPx < BN_LOTH || !S) 
 const cityRingPath = (Pp, R, x, y) => { const a = x + R[0], b = y + R[1], c = x + R[2], d = y + R[3], r = R[4]; Pp.moveTo(a + r, b); Pp.arcTo(c, b, c, d, r); Pp.arcTo(c, d, a, d, r); Pp.arcTo(a, d, a, b, r); Pp.arcTo(a, b, c, b, r); Pp.closePath(); };
 // the stretches of an HQ's ring road the map's roads take round the HQ (polish 1 of round 3, look critic: the whole ring read as a frame
 // round it): a road that runs through the ring goes round it on its line from where it meets it to where it leaves it, the shorter way; two
-// that end on one point inside it (a junction there) are joined the same way; one that ends alone inside it ends on the ring. Worked out
+// that end on one point inside it (a junction there) are joined the same way; one that ends alone inside it goes round to the nearest other
+// road and joins it (polish 2 of round 3: Berlin's from the south, no end on the grass). Worked out
 // once from the roads' kept runs (roadsT 2 and 3), world px from the town's point: {rd, hw: [[x, y, x, y, ...]]}
 function cityRingArcs(P, l){ if (l.rgA) return l.rgA; const R = l.rg, r = R[4], LN = loadWorld.lines, o = {rd:[], hw:[]}; if (!LN || !Array.isArray(LN.roadsT)) return o;
   const ins = (x, y) => { if (x <= R[0] || x >= R[2] || y <= R[1] || y >= R[3]) return false; const qx = Math.max(R[0] + r - x, x - (R[2] - r), 0), qy = Math.max(R[1] + r - y, y - (R[3] - r), 0); return qx*qx + qy*qy < r*r; };
@@ -7200,7 +7201,7 @@ function cityRingArcs(P, l){ if (l.rgA) return l.rgA; const R = l.rg, r = R[4], 
     const q = (o, p0, c, p1) => { for (let k = 1; k <= 8; k++){ const t = k/8, u = 1 - t; o.push(u*u*p0[0] + 2*u*t*c[0] + t*t*p1[0], u*u*p0[1] + 2*u*t*c[1] + t*t*p1[1]); } };
     const [i1, y1x, y1y] = at(s), [i2, y2x, y2y] = at(Lt - s), o = [a[0], a[1]]; q(o, a, [a[0] + (a[3] || 0)*0.6*s, a[1] + (a[4] || 0)*0.6*s], [y1x, y1y]);
     for (let i = i1; i < i2; i++) o.push(A[2*i], A[2*i + 1]); o.push(y2x, y2y); q(o, [y2x, y2y], [b[0] + (b[3] || 0)*0.6*s, b[1] + (b[4] || 0)*0.6*s], b); return o; };
-  const x0 = P.x + R[0] - KM_W, y0 = P.y + R[1] - KM_W, x1 = P.x + R[2] + KM_W, y1 = P.y + R[3] + KM_W, cr = [];
+  const JM = 10*KM_W, x0 = P.x + R[0] - JM, y0 = P.y + R[1] - JM, x1 = P.x + R[2] + JM, y1 = P.y + R[3] + JM, cr = [], CH = [];   // (the roads round it to 10 km: a lone road's join, below)
   for (const c of [2, 3]){ const T = LN.roadsT[c]; if (!T || !T.tiles) continue; const runs = [];
     for (const t of T.tiles){ if (!t.runs || t.x1 < x0 || t.x0 > x1 || t.y1 < y0 || t.y0 > y1) continue; for (const q of t.runs) if (!(q[3] < x0 || q[1] > x1 || q[4] < y0 || q[2] > y1)) runs.push(q[0]); }
     // (the runs stitched back into their roads: a run whose end is the start of exactly one other)
@@ -7208,14 +7209,14 @@ function cityRingArcs(P, l){ if (l.rgA) return l.rgA; const R = l.rg, r = R[4], 
     const nxt = f => { const a = byS.get(kE(f)), b = byE.get(kE(f)); return a && a.length === 1 && b.length === 1 ? a[0] : null; }, seen = new Set(), chains = [];
     const walk = f0 => { const pts = []; for (let f = f0; f && !seen.has(f); f = nxt(f)){ seen.add(f); for (let i = pts.length ? 2 : 0; i < f.length; i++) pts.push(f[i]); } chains.push(pts); };
     for (const f of runs){ const a = byE.get(kS(f)), b = byS.get(kS(f)); if (!(a && a.length === 1 && b.length === 1)) walk(f); } for (const f of runs) if (!seen.has(f)) walk(f);
-    for (const A of chains){ let pin = ins(A[0] - P.x, A[1] - P.y);
+    for (const A of chains){ let pin = ins(A[0] - P.x, A[1] - P.y); CH.push([c, A]);
       for (let i = 2; i < A.length; i += 2){ const bx = A[i] - P.x, by = A[i + 1] - P.y, cin = ins(bx, by); if (cin === pin) continue; let ax = A[i - 2] - P.x, ay = A[i - 1] - P.y, ex = bx, ey = by;
         for (let j = 0; j < 14; j++){ const mx = (ax + ex)/2, my = (ay + ey)/2; if (ins(mx, my) === pin){ ax = mx; ay = my; } else { ex = mx; ey = my; } }   // (where it crosses the line)
         const dl = Math.hypot(bx - A[i - 2] + P.x, by - A[i - 1] + P.y) || 1, sg = cin ? 1 : -1, X = [(ax + ex)/2, (ay + ey)/2, c, sg*(bx - A[i - 2] + P.x)/dl, sg*(by - A[i - 1] + P.y)/dl];   // (its direction into the ring there)
-        X.s = CL[near(X[0], X[1])]; cr.push(X); pin = cin; } } }
+        X.s = CL[near(X[0], X[1])]; X.ch = A; cr.push(X); pin = cin; } } }
   // (the roads that meet the ring, round it in order (two within a km of each other one), each joined to the one beside it, by twos, the
   // pairing that takes the least of the ring: a road meets the ring and goes on round it to the next road out, never round the whole of it;
-  // an odd one joined to its nearer neighbour; a road that meets it alone round it to the front of the HQ's grounds and a drive in to its forecourt)
+  // an odd one joined to its nearer neighbour; a road that meets it alone: below)
   const L = CL[nB]; cr.sort((a, b) => a.s - b.s); const C = []; for (const X of cr){ const Y = C[C.length - 1]; if (Y && X.s - Y.s < KM_W){ if (X[2] === 3) Y[2] = 3; continue; } C.push(X); }
   if (C.length > 1 && C[0].s + L - C[C.length - 1].s < KM_W){ if (C[0][2] === 3) C[C.length - 1][2] = 3; C.shift(); }
   // (roads that meet the ring close together merge just before it into one, which goes on round it: no small loop of ring between them)
@@ -7226,8 +7227,16 @@ function cityRingArcs(P, l){ if (l.rgA) return l.rgA; const R = l.rg, r = R[4], 
           for (const X of g){ const d = Math.hypot(M[0] - X[0], M[1] - X[1]); if (d < 1) continue; const W = [X[0], X[1]], cx = X[0] + X[3]*0.45*d, cy = X[1] + X[4]*0.45*d; for (let k = 1; k <= 8; k++){ const t = k/8, u = 1 - t; W.push(u*u*X[0] + 2*u*t*cx + t*t*M[0], u*u*X[1] + 2*u*t*cy + t*t*M[1]); } o[X[2] === 3 ? 'hw' : 'rd'].push(W); }
           C.push(M); } } } }
   const n = C.length, gap = i => (C[(i + 1) % n].s - C[i].s + L) % L || L, add = (a, b, dr) => { const W = way(a, b, dr); if (W) o[a[2] === 3 && b[2] === 3 ? 'hw' : 'rd'].push(W); };
-  if (n === 1 && !C[0].mg){ const X = C[0], g = l.g || l.q, F = [(g[0] + g[2])/2, g[3] + 0.4*KM_W], Bc = [F[0], R[3], X[2], 0, -1], rr = 0, ia = near(X[0], X[1]), ib = near(Bc[0], Bc[1]), f = (CL[ib] - CL[ia] + L) % L;   // (round the ring the shorter way to the front of the HQ's grounds, then in to its forecourt)
-    if (ia !== ib) add(X, Bc, f <= L - f ? 1 : -1); o.rd.push([Bc[0], Bc[1], F[0], F[1] + rr]); }   // (a merged pair, a road through one corner of the ring, needs none)
+  // (a road that meets the ring alone (Berlin's from the south): round the ring the shorter way past the front of the HQ's grounds to the
+  // ring's point nearest the nearest other road there (within 10 km of the front), and on out to join it: it carries on, no end on the grass;
+  // with no road near enough (Manila's, from the north, ends inside its grounds) round to the front of the grounds and in up to the HQ, its end under the picture: the road leads to its door)
+  if (n === 1 && !C[0].mg){ const X = C[0], g = l.g || l.q, Fx = (g[0] + g[2])/2, Fy = R[3], ia = near(X[0], X[1]); let T = null, bd = 10*KM_W;
+    for (const [c, A] of CH){ if (A === X.ch) continue; for (let i = 2; i < A.length; i += 2){ const ax = A[i - 2] - P.x, ay = A[i - 1] - P.y, bx = A[i] - P.x, by = A[i + 1] - P.y, m = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)/(0.25*KM_W)));
+        for (let k = 0; k <= m; k++){ const x = ax + (bx - ax)*k/m, y = ay + (by - ay)*k/m, d = Math.hypot(x - Fx, y - Fy); if (d < bd && !ins(x, y)){ bd = d; T = [x, y, c]; } } } }
+    if (!T){ const F = [Fx, g[3] - 0.4*(g[3] - g[1])], Bc = [Fx, Fy, X[2], 0, 1], ib = near(Bc[0], Bc[1]), f = (CL[ib] - CL[ia] + L) % L;   // (none: round to the front and in up to the HQ itself, under its picture, turning in, not a curl)
+      const W = ib !== ia ? way(X, Bc, f <= L - f ? 1 : -1) : [X[0], X[1]]; if (W){ W.push(F[0], F[1]); o[X[2] === 3 ? 'hw' : 'rd'].push(W); } }
+    else { const it = near(T[0], T[1]), bx = B[2*it], by = B[2*it + 1], dl = Math.hypot(bx - T[0], by - T[1]) || 1, Bt = [bx, by, T[2], (bx - T[0])/dl, (by - T[1])/dl], f = (CL[it] - CL[ia] + L) % L, k = X[2] === 3 && T[2] === 3 ? 'hw' : 'rd';
+      const W = it !== ia ? way(X, Bt, f <= L - f ? 1 : -1) : [X[0], X[1]]; if (W){ if (dl > 0.2*KM_W) W.push(T[0], T[1]); o[k].push(W); } } }   // (a merged pair, a road through one corner of the ring, needs none)
   else if (n > 1){ let best = null, bt = Infinity; for (let st = 0; st < (n & 1 ? n : 2); st++){ let t = 0; const pr = []; for (let k = 0; k + 1 < n; k += 2){ const i = (st + k) % n; pr.push(i); t += gap(i); }
       if (n & 1){ const u = (st + n - 1) % n, gb = gap((u + n - 1) % n), gf = gap(u); t += Math.min(gb, gf); pr.push(gf <= gb ? u : -1 - u); } if (t < bt){ bt = t; best = pr; } }
     for (const i of best){ if (i >= 0) add(C[i], C[(i + 1) % n], 1); else { const u = -1 - i; add(C[u], C[(u + n - 1) % n], -1); } } }
