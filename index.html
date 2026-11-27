@@ -6289,28 +6289,75 @@ function trailWalk(tr, x, y){ const ox = x - tr[0][0], oy = y - tr[0][1], pts = 
   let ex = 0, ey = 0; for (let i = pts.length - 1; i > 0; i--){ const dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1], dl = Math.hypot(dx, dy); if (dl > 0.5){ ex = dx/dl; ey = dy/dl; break; } }
   return {at:d => { if (d <= 0) return pts[0]; if (d >= L){ const e = pts[pts.length - 1]; return [e[0] + ex*(d - L), e[1] + ey*(d - L)]; }
     let i = 1; while (cum[i] < d) i++; const f = (d - cum[i - 1])/Math.max(1e-6, cum[i] - cum[i - 1]); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0])*f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1])*f]; }}; }
+/* PATROL TRACK (owner playtest 2026-11-27, item 2c: "a slow, wide racetrack or loop inside the area at a believable speed, turning smoothly").
+   On station (a patrol, an AWACS orbit, a UAV watching, a sea hunt, the hour over a strike) the drawn aircraft flies a racetrack centred on its
+   target point: two straight legs of L world px joined by half circles of radius R (1 world px is about 8.7 km), the long axis across the line
+   from its base (a barrier facing the threat), each wing a little turned and sized by its id so two wings over one point fly apart. It moves
+   at the rules' own flight speed (wingSpd, as on its way out: 2.5 hexes, 450 km an hour of game time for a fighter, about 3.5 world px a real
+   second at 1x), helicopters and drones slower (PTRK_SPF), never above PTRK_CAP px/s at the fast speeds, and stands still while the game is
+   paused, as everything else on the map. Arriving, it joins the track along a smooth curve (a cubic from its position and heading onto the
+   track, tangent at both ends); its heading is the path's tangent and its bank comes from the path's curvature. Display only: the rules keep
+   the patrol on its province (rules/vision.js flightPos, capOver), so nothing in a save changes. */
+const PTRK = {jet:[14, 4.5], uav:[5, 3.5], heli:[3, 2.2]}, PTRK_SPF = {heli:0.55, drone:0.6, sdrone:0.6, swarm:0.6}, PTRK_CAP = 8;
+function trackOf(a, v){ if (v.trk && v.trk.tgt === v.tgt) return v.trk; const t = wingT(a), g = PTRK[t === 'heli' ? 'heli' : UNITS[t].dr ? 'uav' : 'jet'], T = G.P[v.tgt], B = G.P[a.air.base];
+  const bx = wdx(B.x, T.x), by = T.y - B.y, bl = Math.hypot(bx, by), rot = (((a.id*0.618) % 1) - 0.5)*0.6, k0 = 0.85 + 0.3*((a.id*0.382) % 1), b0 = (bl > 1 ? Math.atan2(by, bx) : 0) + Math.PI/2 + rot;
+  return (v.trk = {tgt:v.tgt, cx:T.x, cy:T.y, ax:Math.cos(b0), ay:Math.sin(b0), L:g[0]*k0, R:g[1]*k0, P:2*g[0]*k0 + 2*Math.PI*g[1]*k0}); }
+// the track at arc length s (dir 1 or -1: which way round): [x, y, heading, curvature (signed, 1/px)]
+function trackAt(k, s, dir){ const L = k.L, R = k.R, h = L/2, P = k.P; s = ((s % P) + P) % P; let u, w, hd, cu;
+  if (s < L){ u = -h + s; w = -R; hd = 0; cu = 0; }
+  else if (s < L + Math.PI*R){ const th = (s - L)/R; u = h + R*Math.sin(th); w = -R*Math.cos(th); hd = th; cu = 1/R; }
+  else if (s < 2*L + Math.PI*R){ u = h - (s - L - Math.PI*R); w = R; hd = Math.PI; cu = 0; }
+  else { const th = (s - 2*L - Math.PI*R)/R; u = -h - R*Math.sin(th); w = R*Math.cos(th); hd = Math.PI + th; cu = 1/R; }
+  if (dir < 0){ w = -w; hd = -hd; cu = -cu; }
+  return [k.cx + u*k.ax - w*k.ay, k.cy + u*k.ay + w*k.ax, Math.atan2(Math.sin(hd)*k.ax + Math.cos(hd)*k.ay, Math.cos(hd)*k.ax - Math.sin(hd)*k.ay), cu]; }
+// its speed on station (world px a real second): the rules' flight speed on the game clock, capped; 0 while paused
+const trackSpd = a => !S || !(S.speed > 0) || S.over ? 0 : Math.min(PTRK_CAP, wingSpd(a)*HS0*SQ3*HOURS_PER_SEC[S.speed]*(PTRK_SPF[wingT(a)] || 1));
+// the join: which way round (the one its heading already points along), where (ahead of the nearest point), and the cubic onto it
+function trackJoin(a, v){ const k = trackOf(a, v), h0 = v.hd ?? 0; let sN = 0, dN = Infinity;
+  for (let s0 = 0; s0 < k.P; s0 += 0.4){ const q = trackAt(k, s0, 1), d = Math.hypot(wdx(q[0], v.x), v.y - q[1]); if (d < dN){ dN = d; sN = s0; } }
+  const qN = trackAt(k, sN, 1), dir = Math.cos(qN[2] - h0) >= 0 ? 1 : -1;
+  if (dir < 0){ dN = Infinity; for (let s0 = 0; s0 < k.P; s0 += 0.4){ const q = trackAt(k, s0, -1), d = Math.hypot(wdx(q[0], v.x), v.y - q[1]); if (d < dN){ dN = d; sN = s0; } } }
+  const sJ = sN + Math.max(6, Math.min(18, dN*1.4 + 4)), Q = trackAt(k, sJ, dir), x0 = k.cx - wdx(v.x, k.cx), y0 = v.y, ch = Math.max(3, Math.hypot(Q[0] - x0, Q[1] - y0)), m = ch*1.1;
+  const P0 = [x0, y0], M0 = [Math.cos(h0)*m, Math.sin(h0)*m], P1 = [Q[0], Q[1]], M1 = [Math.cos(Q[2])*m, Math.sin(Q[2])*m];
+  const at = u => { const u2 = u*u, u3 = u2*u, a0 = 2*u3 - 3*u2 + 1, a1 = u3 - 2*u2 + u, a2 = -2*u3 + 3*u2, a3 = u3 - u2, d0 = 6*u2 - 6*u, d1 = 3*u2 - 4*u + 1, d2 = -6*u2 + 6*u, d3 = 3*u2 - 2*u;
+    return [a0*P0[0] + a1*M0[0] + a2*P1[0] + a3*M1[0], a0*P0[1] + a1*M0[1] + a2*P1[1] + a3*M1[1], Math.atan2(d0*P0[1] + d1*M0[1] + d2*P1[1] + d3*M1[1], d0*P0[0] + d1*M0[0] + d2*P1[0] + d3*M1[0])]; };
+  const cum = [0]; let prev = at(0); for (let i = 1; i <= 48; i++){ const q = at(i/48); cum.push(cum[i - 1] + Math.hypot(q[0] - prev[0], q[1] - prev[1])); prev = q; }
+  v.dir = dir; v.join = {at, cum, len:cum[48], sJ, d:0}; }
+// one frame on station: along the join curve, then round the track
+function trackFly(a, v, dt){ const k = trackOf(a, v), sp = trackSpd(a); if (v.dir == null || (!v.join && v.s == null)) trackJoin(a, v); if (!(sp > 0) || !(dt > 0)) return false;
+  const hd0 = v.hd ?? 0; let q;
+  if (v.join){ const J = v.join; J.d += sp*dt; if (J.d >= J.len){ v.s = J.sJ + (J.d - J.len); v.join = null; q = trackAt(k, v.s, v.dir); }
+    else { let i = 1; while (i < 48 && J.cum[i] < J.d) i++; const u = (i - 1 + (J.d - J.cum[i - 1])/Math.max(1e-6, J.cum[i] - J.cum[i - 1]))/48; q = J.at(u); } }
+  else { v.s += sp*dt; q = trackAt(k, v.s, v.dir); }
+  v.x = q[0]; v.y = q[1]; v.hd = q[2]; v.turn = v.join || q[3] == null ? Math.atan2(Math.sin(q[2] - hd0), Math.cos(q[2] - hd0))/dt : q[3]*sp; return true; }
 function wingVis(a, now, dt){
   const f = a.fly; let v = VW.get(a.id);
-  if (f && (!v || v.stage === 'done' || v.tgt !== f.tgt || v.mid !== f.mid)){ const B = G.P[a.air.base]; v = {x:v && v.stage !== 'done' ? v.x : B.x, y:v && v.stage !== 'done' ? v.y : B.y, stage:'out', tgt:f.tgt, base:a.air.base, kind:f.kind, mid:f.mid, tOver:0}; VW.set(a.id, v); }
+  if (f && (!v || v.stage === 'done' || v.tgt !== f.tgt || v.mid !== f.mid)){ const B = G.P[a.air.base], fresh = !v || v.stage === 'done'; v = {x:!fresh ? v.x : B.x, y:!fresh ? v.y : B.y, stage:'out', tgt:f.tgt, base:a.air.base, kind:f.kind, mid:f.mid, tOver:0}; VW.set(a.id, v);
+    // first drawn while already on station (a save loaded, the page opened, the wing out of the fog): it is on its track at once, no dash from its base
+    if (fresh && (f.ph === 'patrol' || f.ph === 'over')){ const k = trackOf(a, v); v.dir = a.id % 2 ? 1 : -1; v.s = ((a.id*0.37) % 1)*k.P; const q = trackAt(k, v.s, v.dir); v.x = q[0]; v.y = q[1]; v.hd = q[2]; v.stage = 'over'; v.tOver = now; } }
   if (!v || v.stage === 'done') return null;
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1)), heli = wingT(a) === 'heli';
   // the drawn flight (fx.js flightStep): it flies along its heading and steers towards its goal at a capped turn rate, so it follows smooth
   // curves with its nose along the path; it speeds up after take-off and slows down to land; behind the rules' position it catches up, never
   // more than 7 world px (about 60 km) behind (a steady pull, no jump)
   const go = (tx, ty) => flightStep(v, tx, ty, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y]});
-  const follow = (wx, wy) => { flightStep(v, wx, wy, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y], chase:true, lim:7}); };
+  const follow = (wx, wy, lim = 7) => { flightStep(v, wx, wy, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y], chase:true, lim}); };
   const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); const w = weaponOf(q.T || 'jet'), tb = q.ids && q.ids.length ? armyById(q.ids[0]) : null, B = tb ? dispPos(tb) : [T.x, T.y];
       if (booted){ cfxFire(w, [v.x, v.y], B, {bid:tb ? tb.id : null, kill:q.killed > 0, img:airImg(q.T), sea:G.P[q.p].sea});   // (fx.js)
         if (w === 'fighter'){ const nm = 1 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], fxOff(T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10, 6), {dur:450 + i*80, arc:4, big:0.9}); } }
       if (w === 'bomber' || w === 'swarm' || w === 'drone') afxMark(q.p, 24); else strikeFX(q.p, v, q.bnote); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
   if (v.stage === 'out'){ const simOut = f && f.ph === 'out' && f.tgt === v.tgt;
-    if (simOut){ const [wx, wy] = wingPos(a); follow(wx, wy); }                    // follow the simulated flight, catching up if behind
+    if (f && f.ph === 'back' && f.tgt === v.tgt) v.stage = 'back';                     // called back (Return) or a storm abort on the way out: it turns for home
+    else if (simOut){ const [wx, wy] = wingPos(a);                                       // follow the simulated flight, catching up if behind;
+      if (v.kind !== 'rebase' && Math.hypot(wdx(wx, T.x), wy - T.y) < 0.5 && Math.hypot(wdx(v.x, T.x), v.y - T.y) < 14){ v.stage = 'over'; v.tOver = now; }   // its flight out done (the rules turn the hour): it joins the track at once, no circling on the point
+      else follow(wx, wy); }
+    else if (v.kind !== 'rebase' && f && f.tgt === v.tgt && Math.hypot(wdx(v.x, T.x), v.y - T.y) < 14){ v.stage = 'over'; v.tOver = now; }   // at its station: it joins the track (PATROL TRACK)
     else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; v.tr = null; return null; } v.stage = 'over'; v.tOver = now; } }
-  else if (v.stage === 'over'){ const R = heli ? 7 : 16, ph = Math.atan2((v.y - T.y)/0.55, wdx(T.x, v.x)); flightStep(v, T.x + Math.cos(ph + 0.55)*R, T.y + Math.sin(ph + 0.55)*R*0.55, dt, {spd:spd*(heli ? 0.35 : 0.55)}); strikeNow();   // on station: an oval loop round the patrol point (steered: no jump onto the loop)
+  else if (v.stage === 'over'){ trackFly(a, v, dt); strikeNow();   // on station: the calm racetrack round the patrol point (PATROL TRACK)
     const simDone = !f || f.ph === 'back' || f.tgt !== v.tgt; if (simDone && now - v.tOver > (v.kind === 'strike' ? 1500 : 600) && !STRIKEQ.has(a.id)) v.stage = 'back'; }
-  else if (v.stage === 'back'){ if (f && f.ph === 'back'){ const [wx, wy] = wingPos(a); follow(wx, wy); } else if (go(B.x, B.y)){ v.stage = 'done'; v.tr = null; return null; } }
+  else if (v.stage === 'back'){ if (f && f.ph === 'back'){ const [wx, wy] = wingPos(a); if (v.limB == null) v.limB = Math.max(7, Math.hypot(wdx(v.x, wx), v.y - wy) + 1); v.limB = Math.max(7, v.limB - 4*dt); follow(wx, wy, v.limB); } else if (go(B.x, B.y)){ v.stage = 'done'; v.tr = null; return null; } }   // (leaving its track it turns for home: the 7 px leash on the rules' position tightens gradually, no sideways jump)
   // the wing banks into the turn: by its turn rate (rad/s), eased
-  v.bank = (v.bank || 0) + (Math.max(-1, Math.min(1, (v.turn || 0)/2.2)) - (v.bank || 0))*Math.min(1, dt*8);
+  if (v.stage !== 'over' || trackSpd(a) > 0) v.bank = (v.bank || 0) + (Math.max(-1, Math.min(1, (v.turn || 0)/2.2)) - (v.bank || 0))*Math.min(1, dt*(v.stage === 'over' ? 2.5 : 8));   // (eased gently on station; held while paused)
   // contrail history (world units): up to 36 samples [x, y, heading, ms], one every 60 ms
   if (!v.tr) v.tr = []; if (!v.trT || now - v.trT >= 60){ v.trT = now; v.tr.push([v.x, v.y, v.hd ?? 0, now]); if (v.tr.length > 36) v.tr.shift(); }
   const dB = Math.hypot(v.x - B.x, v.y - B.y), dT = Math.hypot(v.x - T.x, v.y - T.y);
@@ -6334,7 +6381,7 @@ function wingPos(a){
   const dist = Math.max(1, hexDist(B.cc, T.cc)), dt = wingSpd(a)/dist;
   if (f.ph === 'out'){ const t = Math.min(1, f.t + live*dt); return [B.x + (T.x - B.x)*t, B.y + (T.y - B.y)*t]; }
   if (f.ph === 'back'){ const t = Math.min(1, f.t + live*dt); return [T.x + (B.x - T.x)*t, T.y + (B.y - T.y)*t]; }
-  const ang = performance.now()/(f.ph === 'over' ? 450 : 700) + a.id, R = f.ph === 'over' ? 18 : 22; return [T.x + Math.cos(ang)*R, T.y + Math.sin(ang)*R*0.55];
+  const v = VW.get(a.id); return v && v.stage === 'over' && v.tgt === f.tgt ? [v.x, v.y] : [T.x, T.y];   // on station: where it is drawn on its track (PATROL TRACK)
 }
 
 
@@ -10379,7 +10426,7 @@ function draw(now){ draw.now = now;
   const drawSelPaths = ph => { if (!sa) return;
     if (sa.air){ if (ph !== 1) return; const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS0*SQ3*view.s;
       ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
-      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target, sel.surprise);
+      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target, sel.surprise, sel.want);
         ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); animAmb(); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
         ctx.font = `600 11px ${BODY}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
         roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
@@ -10666,11 +10713,11 @@ function draw(now){ draw.now = now;
       if (banked) ctx.restore(); }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreenFrom(v.x, x, T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreenFrom(v.x, x, B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }   // (from the wing's own copy: the line keeps to its flight)
     // strength in a small pill edged in the owner's colour; pills of wings flying side by side are nudged apart so '6' and '1' never read as '61'
-    { const sl = Math.min(sc, 1.25); ctx.font = `700 ${Math.round(10*sl)}px ${BODY}`; const lb = String(count(a)), lw = ctx.measureText(lb).width + 7*sl, lh = 12*sl; let ly = y + Lf*0.45 + 8*sl;
+    let pillB = y + 22; { const sl = Math.min(sc, 1.25); ctx.font = `700 ${Math.round(10*sl)}px ${BODY}`; const lb = String(count(a)), lw = ctx.measureText(lb).width + 7*sl, lh = 12*sl; let ly = y + Lf*0.45 + 8*sl;
       for (let t = 0; t < 4; t++){ const hit0 = airLbl.find(q => Math.abs(q[0] - x) < (q[2] + lw)/2 + 2 && Math.abs(q[1] - ly) < lh + 1); if (!hit0) break; ly = hit0[1] + (ly >= hit0[1] ? 1 : -1)*(lh + 2); }
       airLbl.push([x, ly, lw]); roundRect(ctx, x - lw/2, ly - lh/2, lw, lh, lh/2); ctx.fillStyle = 'rgba(8,12,14,.86)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = col; ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f2eee2'; ctx.fillText(lb, x, ly + 0.5); }
-    if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f2eee2'; ctx.fillText(lb, x, ly + 0.5); pillB = Math.max(pillB, ly + lh/2 + 2); }
+    if (a.owner === PLAYER) hits.push({x:x - 22, y:y - 22, w:44, h:pillB - y + 22, ids:[a.id], cx:x, cy:y, spread:false, wing:true}); }   // (a finger-sized box over the plane and its count; a tap also finds it along its recent track: flyingWingAt)
   for (const a of S.armies){ if (!a.fly || a.fly.kind !== 'drop' || (!armyVisible(a, vis) && a.owner !== PLAYER)) continue;
     if (!knowA(a, vis)){ const [ux, uy] = toScreen(...armyPos(a)); const r = unkPlate(ux, uy, k*0.8, now); hits.push({...r, ids:[a.id], cx:ux, cy:uy, spread:false, unk:true}); continue; }   // an air drop spotted, not identified: a '?' plate
     const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy), B = G.P[a.fly.tgt], A = G.P[a.fly.from], ang = Math.atan2(B.y - A.y, B.x - A.x), sc = Math.max(0.9, Math.min(k, 1.25));
@@ -10789,6 +10836,7 @@ cv.addEventListener('pointerdown', e => {
   cv.setPointerCapture(e.pointerId); const [x, y] = localXY(e); pointers.set(e.pointerId, {x, y}); lastPT = e.pointerType || 'mouse';
   if (pointers.size === 1 && e.shiftKey && e.pointerType === 'mouse'){ boxSel = {x0:x, y0:y, x1:x, y1:y}; drag = null; return; }
   if (pointers.size === 1){ drag = {x, y, vx:view.x, vy:view.y, moved:false, t0:performance.now(), slop:TAP_SLOP[e.pointerType] || 8}; ZTW = null;
+    { const fw = S && S.started ? flyingWingAt(x, y) : null; downWing = fw ? {id:fw.id, x, y} : null; }   // (your aircraft under the finger as it touches down: flyingWingAt)
     // pressing on your own force's counter (with a mouse, or a selected one by touch) drags that force: drop it on another force to merge
     const h = hitAt(x, y, true), own = h && !h.spread && !h.unk ? h.ids.map(armyById).filter(b => b && b.owner === PLAYER && !b.air && !b.fly && count(b)) : [];
     if (own.length && e.button === 0 && !cmdMode && !aimMsl && dropFor === null && (e.pointerType === 'mouse' || own.some(b => b.id === sel.army || sel.group.includes(b.id)))) drag.unit = (own.find(b => b.id === sel.army) || own[0]).id; }
@@ -10876,12 +10924,24 @@ function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ cons
 // theirs (HITX, sat) on top, then the counters (hits), then the pictures close in (HITX, art), which their own tags and counters overlap
 function tapList(){ if (!HITX.length) return hits; const A = [], B = []; for (const h of HITX) (h.art ? A : B).push(h); return A.concat(hits, B); }
 function hitAt(x, y, noArt = false){ const L = tapList(); for (let i = L.length - 1; i >= 0; i--){ const h = L[i]; if (noArt && h.art) continue; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }   // (noArt: not the pictures: a drag that starts on one pans the map)
+// one of your aircraft in the air under a tap (owner playtest 2026-11-27, item 2d): the plane keeps moving while the finger is down, so the tap
+// is tested against where it was drawn over the last 600 ms (its trail samples, VW .tr) as well as where it is now, within a fingertip's radius;
+// the nearest wins (and the one under the finger as it touched down, downWing). It is tried before the counters and cities under it: the plane is drawn over them
+let downWing = null;   // {id, x, y}: your aircraft in the air under the last touch-down (the plane flies on while the finger rests)
+function flyingWingAt(x, y){ const now = performance.now(), R = 24; let best = null, bd = R;
+  for (const a of S.armies){ if (a.owner !== PLAYER || !a.air || !a.fly || !count(a)) continue; const v = VW.get(a.id); if (!v || v.stage === 'done') continue;
+    const [sx, sy] = toScreen(v.x, v.y); let d = Math.hypot(x - sx, y - sy);
+    if (v.tr) for (let i = v.tr.length - 1; i >= 0; i--){ const q = v.tr[i]; if (now - q[3] > 600) break; const [qx, qy] = toScreenFrom(v.x, sx, q[0], q[1]); d = Math.min(d, Math.hypot(x - qx, y - qy)); }
+    if (d < bd){ bd = d; best = a; } }
+  return best; }
 function tap(x, y, shift = false, long = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   if (tip.classList.contains('dugtip')) tipHide();
   { const dh = dugHitAt(x, y); if (dh && !cmdMode && !aimMsl && dropFor === null && rallyFor === null && (sel.army === null || dh.own)){ closeChooser(); dugTip(x, y, true); return; } }   // a tap (or a long press) on the dug-in shield explains it; the rest of the badge still opens the army bar
   if (rallyFor !== null){ closeChooser(); rallyTap(x, y); return; }   // setting a rally point: a tap picks the spot (a second tap on it, or Set, confirms)
   closeChooser(); lastClickW = screenToWorld(x, y); const TL = tapList();   // (the counters, the stacked ones beside them and the pictures)
+  if (!cmdMode && !aimMsl && dropFor === null){ const dw = downWing && Math.hypot(x - downWing.x, y - downWing.y) < 16 ? armyById(downWing.id) : null, fw = flyingWingAt(x, y) || (dw && dw.fly && count(dw) ? dw : null); downWing = null;   // your aircraft in the air (under the finger now, or as it touched down): selected as any force of yours (a second tap releases it)
+    if (fw){ if (shift && sel.army !== null) selectArmy(fw.id, true); else if (fw.id === sel.army && !sel.group.length) clearSel(); else selectArmy(fw.id); return; } }
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
   const core = !hs && coreAt(x, y);   // (a counter's own square drawn over a city's point: the counter is what was tapped)
@@ -10889,14 +10949,14 @@ function tap(x, y, shift = false, long = false){
   const mk = hs || core ? null : cityAtTap(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null && long) return;   // (a resting finger is no order: Move stays armed)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
-      for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
-      const p = provAt(x, y); if (p < 0) return;
+      let foeP = -1; for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } if (foe && a.air && foe.to === null && !foe.air) foeP = foe.at; break; } }
+      const p = foeP >= 0 ? foeP : provAt(x, y); if (p < 0) return;   // (an aircraft sent at a foe's counter: the province it stands in)
       if (shift && !a.air){ stopTap(a, p, x, y); return; }   // Shift on a desktop, inside Move: one more stop
       if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; }   // (a spot in its own province or sea zone: it walks, or sails, there)
-      setTarget(a, p);
+      setTarget(a, p, a.air && mode === 'attack' ? 'strike' : null);   // (an aircraft's Attack: the strike of an Air Superiority Fighter wing, rules/air.js asfStrike)
       if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => knowA(b) && armyShown(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
         if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
-      if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
+      if ((a.air && airCheck(a, p, sel.surprise, sel.want).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
@@ -11016,11 +11076,11 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
 const PIN_CITY = 26*KM_W;   // (about 3 world units)
 function byCity(p, w){ const P = G.P[p]; if (!P || P.sea || !w) return false; const [hx, hy] = toScreen(P.x, P.y), [tx, ty] = toScreen(w[0], w[1]);
   return Math.hypot(tx - hx, ty - hy) < 16 && Math.hypot(wdx(P.x, w[0]), w[1] - P.y) <= PIN_CITY; }
-function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
+function setTarget(a, p, want = null){ sel.target = p; sel.want = a.air ? want : null; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
   if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea && byCity(p, sel.targetPt)) sel.targetPt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
-  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
+  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && (isStriker(a) || (sel.want === 'strike' && asfStrike(a))) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
 // the exact end of the route being planned to province t (rules/movement.js etaHours: the last leg's time by its real length)
 const tgtEnd = t => sel.targetPt && t === sel.target ? {p:t, x:sel.targetPt[0], y:sel.targetPt[1]} : null;
@@ -11067,7 +11127,15 @@ function armiesHTML(){
 let cmdMode = null, wpMode = false;   // wpMode: the Waypoint button is on (each tap on the map adds a stop: stopTap)
 function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER) return '';
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
-  if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
+  // an air wing: its mission, Attack (Air Superiority Fighters: weak strikes on forces, rules/air.js asfStrike), Rebase; Split and Merge on the
+  // ground; Return (to base) while it flies. The other ground orders (Waypoint, Delay, Halt, Stance) mean nothing to a wing flying a mission
+  if (a.air){ const fl = !!a.fly, mates = fl ? 0 : wingMates(a).length, flt = 'In the air: press Return to call it back';
+    return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', fl, fl ? flt : '')
+      + (asfStrike(a) ? b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack', fl, fl ? flt : `Attack: tap enemy forces or ships to strike them. Its job is the air: on the ground it hits weakly (about a quarter of a Strike Fighter against infantry, a seventh against tanks)`) : '')
+      + b('cm-move', '⇄', 'Rebase', '', false, fl, fl ? flt : 'Tap an airbase or carrier')
+      + '<span class="sep"></span>' + b('wing-split', '⑂', 'Split', '', false, fl || count(a) < 2, fl ? flt : 'Split: half the aircraft form a new wing at the same base')
+      + b('wing-merge', '⊕', 'Merge', '', false, !mates, fl ? flt : mates ? `Merge the ${UNITS[wingT(a)].name} wings parked here into this one` : `No other ${UNITS[wingT(a)].name} wing parked here`)
+      + b('wing-return', '↩', 'Return', '', false, !fl || a.fly.ph === 'back', !fl ? 'On the ground' : a.fly.ph === 'back' ? 'Already flying back' : 'Return to base now: it turns back and rearms on landing'); }   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
   const nst = stopsOf(a).length, fl = !!a.fly, flt = 'Paratroopers in the air: orders once they land';   // (a drop in flight takes no ground orders)
   return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move', fl, fl ? flt : '') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, fl, fl ? flt : 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
@@ -11075,6 +11143,8 @@ function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; 
     + '<span class="sep"></span>' + b('split-open', '⑂', 'Split', '', !!SPLIT, count(a) < 2 || fl, fl ? flt : 'Split: choose which units leave') + b('merge', '⊕', 'Merge', '', false, here < 2 || fl, fl ? flt : '') + b('stop', '■', 'Halt', 'X', false, fl || (!a.path.length && a.to === null && !a.sail), fl ? flt : 'Stop right now, where the force stands')
     + '<span class="sep"></span>' + b('cm-stance', ({hold:'⛨', defend:'⚑', retreat:'↩'})[a.stance || 'hold'], STANCES[a.stance || 'hold'][0], '', false, shipsOnly(a), STANCES[a.stance || 'hold'][1] + ' Click to change.')
     + (paraOnly(a) ? b('drop', '⬇', 'Air drop', '', dropFor === a.id, fl, fl ? flt : '') : ''); }   // no Close button: tap empty map (or Esc) to deselect
+// the other wings of a's type parked where it is, on the ground (what Merge would join: rules/air.js mergeWings)
+const wingMates = a => S.armies.filter(b => b !== a && b.owner === a.owner && b.air && !b.fly && b.at === a.at && (b.air.car ?? null) === (a.air.car ?? null) && count(b) && wingT(b) === wingT(a) && UT.every(u => u === wingT(a) || !b.u[u]));
 function renderCmdBar(){ const el = $('cmdbar'); if (!el) return; const h = S && S.started && $('modal').hidden ? cmdBarHTML() : ''; el.hidden = !h; setHTML(el, h); cv.classList.toggle('aiming', !!cmdMode || wpMode || dropFor !== null || !!aimMsl); }
 function sendToTarget(a, keep = false){
   if (sel.target !== null && sel.surprise && sel.surprise.some(n => !atWar(PLAYER, n))){ const viol = sel.surprise.filter(n => !atWar(PLAYER, n)); confirmSurprise(viol, () => { for (const n of viol) surpriseWar(PLAYER, n); sel.surprise = null; targetPath = pathFor(a, a.to !== null ? a.to : a.at, sel.target); sendToTarget(a, keep); }); return; }
@@ -11083,8 +11153,8 @@ function sendToTarget(a, keep = false){
   if (sel.target !== null){ g = groupArmies(); const T = sel.target, P0 = sel.targetPt;
     // the exact point (rules/movement.js orderMove): a group's forces stand round it, each on its own spot (the first on the point itself)
     const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
-    g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
-  sel.target = null; targetPath = null;
+    g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T, sel.want)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
+  sel.target = null; sel.want = null; targetPath = null;
   // as in Conflict of Nations the force (or the whole group) stays selected once the order is given, its route drawn to the point with the ETA:
   // another tap on the map changes the order; a tap on the force, on its destination, or Esc releases it. Its route stays brighter for a few seconds
   if (ok){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; hoverPath = null; cmdMode = null; }
@@ -12477,7 +12547,7 @@ function groupHTML(){
   const g = groupArmies(); sel.group = g.map(a => a.id); if (g.length < 2) return armyHTML(g[0]);
   const units = g.reduce((s0, a) => s0 + count(a), 0), pw = g.reduce((s0, a) => s0 + power(a), 0);
   let plan = '';
-  if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target), tgtEnd(sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
+  if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise, sel.want).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target), tgtEnd(sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise, sel.want).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Group order</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br><span class="small">${reach} of ${g.length} forces can get there · slowest arrives in about ${eta} h</span></div>
       <div class="row"><button class="btn primary" data-act="send" ${reach ? '' : 'disabled'}>Send all</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
@@ -12494,33 +12564,34 @@ function condHTML(a){ const c = wingCond(a), pc = Math.round(c*100), mr = maintR
 function wingHTML(a){
   const f = a.fly, B = G.P[a.air.base];
   const status = !f ? ((a.air.cd || 0) > 0 ? `Rearming at ${B.cityName || B.name}: ready in ${a.air.cd} h` : `Ready at ${B.cityName || B.name}`)
-    : f.ph === 'out' ? `${f.kind === 'strike' ? 'Striking' : f.kind === 'patrol' ? 'Flying to patrol' : f.kind === 'recon' ? 'Flying to watch' : f.kind === 'orbit' ? 'Flying to orbit over' : f.kind === 'hunt' ? 'Flying to hunt around' : 'Rebasing to'} ${G.P[f.tgt].cityName || G.P[f.tgt].name}`
+    : f.ph === 'out' ? `${f.kind === 'strike' ? (asfStrike(a) ? 'Attacking forces at' : 'Striking') : f.kind === 'patrol' ? 'Flying to patrol' : f.kind === 'recon' ? 'Flying to watch' : f.kind === 'orbit' ? 'Flying to orbit over' : f.kind === 'hunt' ? 'Flying to hunt around' : 'Rebasing to'} ${G.P[f.tgt].cityName || G.P[f.tgt].name}`
     : f.ph === 'patrol' ? `Patrolling ${G.P[f.tgt].cityName || G.P[f.tgt].name}${a.u.asf ? ' and its neighbours' : ''}: ${f.hrs} h left`
     : f.ph === 'over' && f.kind === 'recon' ? `Watching ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left${f.salvo ? ` · ${f.salvo} salvo left` : ''}` : f.ph === 'over' && f.kind === 'orbit' ? `Radar orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left`
     : f.ph === 'over' && f.kind === 'hunt' ? `Hunting ships around ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left` : f.ph === 'over' ? `Over ${G.P[f.tgt].cityName || G.P[f.tgt].name}` : `Returning to ${B.cityName || B.name}`;
   const T = wingT(a), L0 = uavOf(a.owner);
   let plan = '';
-  if (sel.target !== null){ const c = airCheck(a, sel.target, sel.surprise);
+  if (sel.target !== null){ const c = airCheck(a, sel.target, sel.surprise, sel.want);
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned mission</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br>
       <span class="small">${c.ok ? (c.kind === 'strike' ? (T === 'stealth' ? `Stealth raid: fly out ${c.hours} h, wreck building levels and roads (60% of a Heavy Bomber's load), hit troops there (25% harder in a city). SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often; in flight the enemy sees it only from a SAM or jammer in or next to the province under it. A raid that loses half turns back.`
         : T === 'bomb' ? `Bombing raid: fly out ${c.hours} h (bombers are slow), wreck building levels and roads, hit troops there (50% harder in a city). Fighter patrols and SAMs are its bane: a raid that loses half turns back.`
         : T === 'swarm' ? `Swarm attack in ${c.hours} h: jammers and SAMs down some drones first and jamming blunts the rest; survivors saturate the air defence for hours and shred infantry, guns and SAMs.`
         : T === 'sdrone' ? `Precision strike in ${c.hours} h: hits units hard and knocks out the most valuable building for 24 h (sometimes a whole level). SAMs, fighters and jammers fire first.`
+        : asfStrike(a) ? `Attack: fly out ${c.hours} h and fire on the enemy forces there, then return and rearm 6 h. A fighter's guns and missiles are weak against the ground: about a quarter of a Strike Fighter's damage on infantry and guns, a seventh on tanks, a third on ships; buildings, roads and the land are not hit. Enemy fighters and air defence fire back.`
         : `Strike: fly out ${c.hours} h, hit everything hostile there with ${STRIKE}× firepower, then return and rearm 6 h. Air defence (SAMs, Interceptors, Frigates) fires back.`)
         : c.kind === 'patrol' ? `Patrol for 12 h: intercepts enemy strikes, bombers and drones over this province${a.u.asf ? ' and its neighbours, and hunts loitering UAVs, AWACS and patrol planes there' : ' (and its neighbours under your AWACS)'}.`
         : c.kind === 'recon' ? `Loiter ${L0.loiter} h after ${c.hours} h: identifies every enemy force within ${L0.vis} km (type, size, level, health)${L0.salvos ? `; fires ${L0.salvos} missile salvo${L0.salvos > 1 ? 's' : ''} at hostile forces there` : '; recon only, no weapons'}. Jammers and SAMs nearby can shoot it down.`
         : c.kind === 'orbit' ? `Radar orbit for 16 h after ${c.hours} h: every enemy force within ${Math.round(visAewKm(PLAYER)/10)*10} km shows as an unidentified contact (?); your fighters under it cover neighbouring provinces and fight 25% better. Keep it away from enemy fighters.`
         : c.kind === 'hunt' ? `Patrol the sea for ${rMpaH(PLAYER)} h after ${c.hours} h: spots every ship and submerged submarine within ${Math.round(visMpaKm(PLAYER)/10)*10} km and attacks hostile ships (subs first) every 3 h. Frigates fire back.`
         : `Move this wing to the airbase here.`) : c.why}</span></div>
-      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (isBmb(T) ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
-  return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div></div>${plan}
+      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (isBmb(T) ? 'Launch raid' : asfStrike(a) ? 'Launch attack' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
+  return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>${plan}
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${T === 'drone' ? `<div>${uavBadge(a.owner)}</div><div class="small muted">Vision ${L0.vis} km · loiter ${L0.loiter} h · stealth ${Math.round((1 - L0.stealth)*100)}%</div>` : ''}
     ${!G.P[a.air.base].sea && bdis(a.air.base, 'air') ? `<div class="status battle">Airbase knocked out: grounded for ${bdisH(a.air.base, 'air')} h</div>` : ''}
     ${unitRows(a)}${stackLine(a)}
     ${condHTML(a)}
     <dl class="kv">${stackHTML(a)}<dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
-    <p class="small muted" style="margin:0">Press the mission button, then tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; pressing Rebase and tapping one of your airbases rebases the wing.</p>
+    <p class="small muted" style="margin:0">Press the mission button, then tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol (Air Superiority Fighters can also Attack forces, weakly); UAVs watch, AWACS orbit, patrol planes hunt ships; pressing Rebase and tapping one of your airbases rebases the wing. Return calls a wing in the air back to its base.</p>
     <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button></div>`;
 }
 // ---- split panel: every unit row (damaged units apart), a slider and +/- per row for the group being edited, quick plans, several groups at once
@@ -12889,6 +12960,9 @@ document.addEventListener('click', e => {
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty();
         { const sp = stackPenalty(a); toast(`Merged into ${armyName(a)}: ${pluN(count(a), 'unit')}.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); } renderSide(true); } break;
     case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
+    case 'wing-split': if (a && a.air){ const n0 = count(a), w2 = splitWing(a); if (w2){ sfx('order'); toast(`Split ${n0} aircraft into two wings: ${count(a)} · ${count(w2)}.`, 'info', null); } renderSide(true); } break;
+    case 'wing-merge': if (a && a.air && mergeWings(a)){ const sp = stackPenalty(a); sfx('order'); toast(`Merged into ${armyName(a)}: ${count(a)} aircraft.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); renderSide(true); } break;
+    case 'wing-return': if (a && a.air && recallAir(a)){ cmdMode = null; sel.target = null; sel.want = null; sfx('order'); toast(`${armyName(a)} turns back to ${G.P[a.air.base].cityName || G.P[a.air.base].name}.`, 'info', null); redraw(); renderSide(true); } break;
     case 'fleet-escort': case 'fleet-raid': case 'fleet-blockade': { const f = armyById(+b.dataset.id); if (!f || f.owner !== PLAYER) break; let done = true;
       if (act === 'fleet-escort'){ if (f.escort != null) escortSet(f, null); else { const r = fleetEscortPick(f); if (r) escortSet(f, r.id); else done = false; } }
       else if (act === 'fleet-raid'){ if (f.raid) raidSet(f, null); else { const t = raidTargets(f)[0]; done = !!t && raidSet(f, t.r.id); if (!done) toast(t ? 'No sea route to that lane from here.' : 'No enemy trade routes to raid.', 'bad', null); } }
