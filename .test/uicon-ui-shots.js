@@ -14,7 +14,7 @@ const OUT = process.argv[2] || __dirname;
       N.cash += 5000; N.rare += 500; N.metal += 500; N.elec += 500; N.oil += 500; N.iron += 500;
       Object.assign(S.bld[cap], { fac: 3, air: 3, yard: 2, rec: 2, silo: 1 });
       document.querySelectorAll('.toast').forEach(t => t.remove());
-      const a = im.addArmy(0, cap, { inf: 3, at: 2, tank: 4, art: 2, mlrs: 1, sam: 1, ifv: 2, spec: 1, jam: 1 });
+      const a = im.addArmy(0, cap, { inf: 5, tank: 4, art: 2, mlrs: 1, sam: 1, ifv: 2, spec: 1, jam: 1 });
       return { cap, id: a.id }; });
     const shot = async k => { await p.waitForTimeout(500); await p.screenshot({ path: `${OUT}/uicon-${name}-${k}.png` }); };
     await p.evaluate(q => window.__im.selectProv(q), info.cap); await p.waitForTimeout(500);

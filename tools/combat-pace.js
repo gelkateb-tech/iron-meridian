@@ -16,7 +16,7 @@ let SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f),
 if (process.env.PACE) SRC = SRC.replace(/BATTLE_PACE = [0-9.]+,/, `BATTLE_PACE = ${+process.env.PACE},`);
 SRC += '\nreturn {IM, get S(){ return S; }, get G(){ return G; }, setRel, addArmy, count, armyHP, effHP, orderMove, etaHours, tick:typeof tickQ === "function" ? tickQ : tick, quarters:typeof BATTLE_Q === "number" ? BATTLE_Q : 1, pace:typeof BATTLE_PACE === "number" ? BATTLE_PACE : 1, removeEmpty};';
 const JSON_OUT = process.argv.includes('--json');
-const MIX = {inf:4, tank:2, at:2, art:1, ifv:1}, INF = {inf:10};
+const MIX = {inf:6, tank:2, art:1, ifv:1}, INF = {inf:10};   // (Anti-Tank Infantry is gone, BUILD-REQS: its places are infantry)
 const scale = (m, n) => { const o = {}; let left = n; const ks = Object.keys(m), tot = ks.reduce((s0, k) => s0 + m[k], 0); for (const k of ks){ o[k] = Math.round(m[k]*n/tot); left -= o[k]; } o[ks[0]] += left; return o; };
 const stacks = (m, n) => { const out = []; for (let left = n; left > 0; left -= 10) out.push(scale(m, Math.min(10, left))); return out; };
 

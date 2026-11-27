@@ -219,7 +219,7 @@ let AIPC = {v:-1, S:null, m:[]};
 function aiCountsOf(n){ const kp = keep(); if (kp && (AIPC.v !== tickVer || AIPC.S !== S)) AIPC = {v:tickVer, S, m:[]}; let c = AIPC.v === tickVer && AIPC.S === S ? AIPC.m[n] : undefined; if (c) return c;
   let ships = 0, allU = 0, jamN = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } c = {ships, allU, jamN}; if (kp) AIPC.m[n] = c; return c; }
 function aiPickUnit(n, p){
-  const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4, at:1 + 6*mix.armored, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.2, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
+  const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4.5, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.7 + 3*mix.armored, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
   // terrain counter-pick: rough fronts (forest, hills, mountains, marsh, ice) want infantry and special forces, open ones armor
   { const rg = frontRough(n); w.tank *= 1 - 0.5*rg; w.ifv *= 1 - 0.5*rg; w.inf *= 1 + 0.5*rg; w.art *= 1 - 0.2*rg; w.spec = 0.3 + 2.2*rg; }
   // trade war: convoys sunk lately want frigates (escorts); enemy trade routes in the world invite submarines (raiders)
@@ -237,7 +237,7 @@ function aiPickUnit(n, p){
     w.int += 3*mix.bomb + 2*mix.drone + 2*mix.sup;
     w.asf = 2 + 6*am + 6*mix.bomb + 4*mix.drone + 3*mix.sup + 1.2*Math.min(4, H.bomb + H.air);
     w.swarm = wars ? 1.2 + 9*mix.ad + 1.5*mix.soft : 0.2;
-    w.sdrone = wars ? 0.7 + 1.5*mix.armored + 5*mix.ad : 0.2;
+    w.sdrone = wars ? 0.7 + 3*mix.armored + 5*mix.ad : 0.2;   // (Anti-Tank Infantry is gone: its anti-armour weight went to the tank, the strike drone and, above, infantry's share; BUILD-REQS)
     w.drone = (mine.drone || 0) < 2 ? 1.4 : 0.1;
     w.bomb = wars && (mine.bomb || 0) < 4 ? (rich ? 2.5 : 2) : 0.05;
     if (H.bomb > 0){ const hb = Math.min(3, H.bomb); w.int += 2*hb; w.sam += 2.5*hb; w.asf += 6*hb; }   // being bombed: air-superiority fighters (the real counter), interceptors and SAMs where none can be built
@@ -329,9 +329,9 @@ function aiLinks(n){ const N = S.nations[n]; if (!N.alive) return 'dead'; if (N.
   if (!ck.ok && ck.c && (N.cash < ck.c.cash + 20 || !hasC(N, {...ck.c, cash:0})) && !/yours|under way|Damaged|research|track first|projects/.test(ck.why)){ if (!N.lkSave) N.lkSave = {job, c:ck.c.cash + 20, until:S.hour + 48}; return 'save'; }
   if (!ck.ok){ N.lkSave = null; return 'check:' + ck.why; } if (N.cash < ck.c.cash + 20){ if (!N.lkSave) N.lkSave = {job, c:ck.c.cash + 20, until:S.hour + 48}; return 'save'; }
   N.lkSave = null; return buildLink(n, job[0], job[1], job[2]) ? 'built:' + job[2] : 'fail'; }
-// how many heavy bombers the AI still wants: at war, Strategic Bombers researched, an Airbase II standing, oil not running dry; 2 for a small power, up to 4 for a big one
+// how many heavy bombers the AI still wants: at war, Strategic Bombers researched, an Airbase that trains them standing (level III: bldOk), oil not running dry; 2 for a small power, up to 4 for a big one
 function aiBomberWant(n, provs, inc){ if (!has(n, 'u_bomb') || !warsOf(n).length || inc.net.oil < -2*RES_K) return 0;
-  if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
+  if (!G.P.some(P => S.owner[P.id] === n && P.city && bldOk(P.id, 'bomb'))) return 0;
   const goal = provs > 160 ? 4 : provs > 70 ? 3 : 2, have = (airMine(n).bomb || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'bomb').length : 0), 0);
   return Math.max(0, goal - have); }
 // Stealth Bombers: the AI buys them late and rarely. Only from day 60, only at war with a power that fields SAM stacks (a force with two or more
@@ -349,10 +349,10 @@ function aiStealthWant(n, inc){ if (!has(n, 'u_stealth') || !aiStealthOk(n) || i
   const wings = armiesOf(n).filter(a => a.air && a.u.stealth > 0); if (wings.length > 1) return 0;
   const have = wings.reduce((s0, a) => s0 + a.u.stealth + ((a.air.pend && a.air.pend.stealth) || 0), 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'stealth').length : 0), 0);
   return have < AI_STEALTH_MAX && aiStealthSite(n) >= 0 ? AI_STEALTH_MAX - have : 0; }
-// Air Superiority Fighters wanted: with the research and an Airbase II, at war with powers that fly bombers, AWACS, patrol planes or drones
+// Air Superiority Fighters wanted: with the research and an Airbase that trains them (level I: bldOk), at war with powers that fly bombers, AWACS, patrol planes or drones
 // (or hit by air), a small fighter force: 2 + up to 4 more with the threat, bigger empires a little more
 function aiAsfWant(n, provs, inc){ if (!has(n, 'u_asf') || !warsOf(n).length || inc.net.oil < -2*RES_K) return 0;
-  if (!G.P.some(P => S.owner[P.id] === n && P.city && S.bld[P.id].air >= 2 && !bdis(P.id, 'air'))) return 0;
+  if (!G.P.some(P => S.owner[P.id] === n && P.city && bldOk(P.id, 'asf'))) return 0;
   const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, thr = 18*mx.bomb + 14*mx.sup + 6*mx.drone + 4*(mx.airm || 0) + (H.bomb + H.air > 0 ? 1.5 : 0);
   if (thr < 0.4) return 0;
   const goal = Math.min(provs > 160 ? 8 : 6, 2 + Math.round(Math.min(4, thr))), have = (airMine(n).asf || 0) + S.queue.reduce((s0, q, pp) => s0 + (S.owner[pp] === n ? q.filter(j => j.t === 'asf').length : 0), 0);
@@ -399,11 +399,42 @@ function aiRecSite(n){ let best = -1, bl = 99;
   return best; }
 // training speed limits the AI in city p: it is at war, the city's queue is full (two or more waiting) and the money for the next level is spare
 function aiRecSlow(n, p){ const l = S.bld[p].rec || 0; return l >= 1 && l < BUILD.rec.max && S.queue[p].length >= 2 && warsOf(n).length > 0 && S.nations[n].cash > buildCost(n, 'rec', l + 1, p).cash + 300; }
+// ---------- base levels (BUILD-REQS, owner 2026-11-27: units unlock by base level, rules/data.js BASE_LV; levels IV and V only train faster).
+// The Army Base: the capital goes to level II as soon as the money is there (Main Battle Tanks, IFVs, Paratroopers, Swarm Drones), and to III once
+// the nation has Rocket Artillery, Special Forces or Mobile Jammers researched or faces enemy aircraft (Mobile SAMs); of its other Army Base cities
+// the biggest (the front first: next to an enemy at war, x AI_FAC.front) go to II (more2 of them by the number of its cities) and to III (more3).
+// Levels IV and V only through the rich nation's general upgrade (aiTurn0)
+const AI_FAC = {cap2:60, cap3:140, oth2:100, oth3:200, big:[8, 20], more2:[2, 3, 4], more3:[0, 1, 2], front:1.5};
+const aiAirFoe = n => { const m = enemyMix(n), H = (S.airHit && S.airHit[n]) || {bomb:0, air:0}; return m.air > 0.1 || (H.bomb || 0) + (H.air || 0) > 0; };
+// the nation's Army Base cities other than the capital, biggest first (front cities count AI_FAC.front times their people); once per turn (AIT)
+function aiFacRank(n){ if (AIT && AIT.n === n && AIT.fac) return AIT.fac; const c = S.nations[n].capital;
+  const front = p => G.P[p].nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== n && atWar(n, S.owner[v])), w = p => popOf(p)*(front(p) ? AI_FAC.front : 1);
+  const r = ownedBy(n).filter(p => p !== c && G.P[p].city && S.bld[p].fac > 0).sort((a, b) => w(b) - w(a) || a - b); if (AIT && AIT.n === n) AIT.fac = r; return r; }
+function aiFacWant(n, p, N){ const l = S.bld[p].fac || 0; if (l < 1 || l >= 3) return false;
+  if (l === 2 && !(has(n, 'u_mlrs') || has(n, 'u_spec') || has(n, 'u_jam') || aiAirFoe(n))) return false;
+  const c = buildCost(n, 'fac', l + 1, p).cash;
+  if (p === N.capital) return N.cash > c + (l === 1 ? AI_FAC.cap2 : AI_FAC.cap3) && rng() < (l === 1 ? 0.7 : 0.35);
+  const C = ownedBy(n).filter(q => G.P[q].city).length, sz = C >= AI_FAC.big[1] ? 2 : C >= AI_FAC.big[0] ? 1 : 0, k = (l === 1 ? AI_FAC.more2 : AI_FAC.more3)[sz];
+  if (!k || N.cash < c + (l === 1 ? AI_FAC.oth2 : AI_FAC.oth3)) return false;
+  const i = aiFacRank(n).indexOf(p); return i >= 0 && i < k && rng() < 0.25; }
+// the Airbase level the nation's aircraft research calls for: II for Strike Fighters and Strike Drones, III for Heavy Bombers and AWACS (and for
+// Maritime Patrol Aircraft in a nation with a coast); the Air Superiority Fighter, the Interceptor, the Recon UAV and the Attack Helicopter need only I
+const aiAirNeed = n => has(n, 'u_bomb') || has(n, 'u_awacs') || (has(n, 'u_mpa') && ownedBy(n).some(navalCity)) ? 3 : has(n, 'u_jet') || has(n, 'u_sdrone') ? 2 : 0;
+// city p's Airbase to the next level, up to what the research calls for, at most two Airbases at each level
+function aiAirUp(n, p, N){ const l = S.bld[p].air || 0, need = aiAirNeed(n); if (l < 1 || l >= 3 || l + 1 > need) return false;
+  if (ownedBy(n).filter(q => (S.bld[q].air || 0) > l || (S.cons[q] && S.cons[q].k === 'air' && S.cons[q].lvl > l)).length >= 2) return false;
+  return N.cash > buildCost(n, 'air', l + 1, p).cash + (l === 1 ? 60 : 120) && rng() < (need === 3 ? 0.6 : 0.4); }
+// the Recruiting Office is the main way to train faster now (BUILD-REQS): at war, or with money to spare, the capital and the Army Base cities
+// take their office to level III (a city with an Army Base and no office gets one), not only when a full queue is the limit (aiRecSlow)
+const AI_REC = {lv:3, peace:250, war:80, spare:180};
+function aiRecWant(n, p, N){ const l = S.bld[p].rec || 0; if (l >= AI_REC.lv || !(S.bld[p].fac > 0) || !canBuildHere(p, 'rec')) return false;
+  const wars = warsOf(n).length > 0; if (!wars && N.cash < AI_REC.peace) return false;
+  return N.cash > buildCost(n, 'rec', l + 1, p).cash + (wars ? AI_REC.war : AI_REC.spare) && rng() < (p === N.capital ? 0.3 : 0.12); }
 const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
   // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
   if (U && U.until > S.hour && UNITS[U.t]) r += (ucost(n, U.t)[k] || 0) + (k === 'cash' ? 15 : 0);
-  if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', 2)[k] || 0;
+  if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', N.bSave.lv || 2)[k] || 0;   // (lv: the Airbase level saved for; an old save's saving was for level II)
   if (rFree(N) && N.rPick && N.rPick.until > S.hour && RN[N.rPick.id] && rNextLv(n, N.rPick.id) && (N.rPick.save || k === 'rare')) r += rCost(RN[N.rPick.id], rNextLv(n, N.rPick.id))[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
   return r; };
 // buy what a cost lacks in traded goods (plus a few spare) on the world market, if every price is at most mx times the base and the money covers it all
@@ -428,7 +459,7 @@ const AI_RKIND = nd => nd.kind === 'eng' ? 'eng' : 'sci';
 function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   const av = rOpenSteps(n); if (!av.length) return;
   const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0};
-  const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = ownedBy(n).some(p => S.bld[p].air >= 2);
+  const hb = H.bomb > 0 ? 4 : 0, wr = warsOf(n).length > 0, ab2 = ownedBy(n).some(p => S.bld[p].air >= BASE_LV.air.bomb);   // (ab2: an Airbase that trains Heavy Bombers, level III since BUILD-REQS)
   // enemies fielding (or able to field) bombers, AWACS and patrol planes, or flying drones, call for Air Superiority Fighters
   const awv = (() => { const foes = warsOf(n), heavy = foes.filter(e => has(e, 'u_bomb') || has(e, 'u_awacs')).length; return (wr ? 2.5 : 0) + 14*mx.bomb + 12*mx.sup + 8*mx.drone + 3*Math.min(2, heavy) + (H.bomb + H.air > 0 ? 4 : 0); })();
   const pgm = (wr ? 4.2 : 2.6) + 4*(mx.bomb + mx.air) + 2*Math.min(3, H.bomb) + hb, jamW = 0.8 + 14*mx.drone + 2*Math.min(3, H.drone);
@@ -587,18 +618,19 @@ function aiTurn0(n, N){
       for (const k of ['iron', 'elec', 'rare']){ if (M.p[k] >= MKT_BASE[k]*0.85 || N[k] >= 2*AI_SHORT[k]) continue;
         const q = kFloor(Math.min(cap*0.6 - N[k], 2*AI_SHORT[k] - N[k], (N.cash - 300)/buyPrice(n, k)*MKT_LOT, 40*RES_K)); if (q >= 10*RES_K) trade(n, k, q); } }
     void done; }
-  // heavy-aircraft research but no Airbase II yet: save up for one (like a link project) and build it as soon as the money is there
-  { const B2 = N.bSave; if (B2 && (B2.until <= S.hour || S.owner[B2.p] !== n || S.bld[B2.p].air !== 1)) N.bSave = null;
-    if (!N.bSave && (has(n, 'u_bomb') || has(n, 'u_asf') || has(n, 'u_awacs')) && (warsOf(n).length || N.cash > 300) && !ownedBy(n).some(p => S.bld[p].air >= 2)){ const p = ownedBy(n).find(q => G.P[q].city && S.bld[q].air === 1); if (p !== undefined) N.bSave = {p, until:S.hour + 48}; }
+  // aircraft research its Airbases cannot train yet (aiAirNeed: level II for Strike Fighters and Strike Drones, III for the heavy aircraft): save up for
+  // the next level of its best Airbase (like a link project; N.bSave.lv the level) and build it as soon as the money is there
+  { const B2 = N.bSave, need = aiAirNeed(n); if (B2 && (B2.until <= S.hour || S.owner[B2.p] !== n || (S.bld[B2.p].air || 0) !== (B2.lv || 2) - 1)) N.bSave = null;
+    if (!N.bSave && need >= 2 && (warsOf(n).length || N.cash > (need === 2 ? 120 : 300)) && !ownedBy(n).some(p => S.bld[p].air >= need)){ const p = ownedBy(n).filter(q => G.P[q].city && S.bld[q].air >= 1).sort((a, b) => S.bld[b].air - S.bld[a].air || a - b)[0]; if (p !== undefined) N.bSave = {p, lv:S.bld[p].air + 1, until:S.hour + 48}; }
     if (N.bSave && !S.cons[N.bSave.p] && build(n, N.bSave.p, 'air')) N.bSave = null; }
   // fighters before bombers: an ASF want replaces a bomber saving (and anything but another counter)
   { const A3 = aiAsfWant(n, provs, inc), U0 = N.uSave && N.uSave.until > S.hour ? N.uSave : null; if (A3 && (!U0 || U0.t === 'bomb' || !AI_CTR.has(U0.t)) && rng() < 0.5) N.uSave = {t:'asf', until:S.hour + 48}; }
   { const B3 = aiBomberWant(n, provs, inc); if (B3 && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.4) N.uSave = {t:'bomb', until:S.hour + 48}; }
-  // the stealth wing (see aiStealthWant): an Airbase III first, then the aircraft, saved for like any counter; a saving whose reason is gone is dropped
+  // the stealth wing (see aiStealthWant): an Airbase V first (its highest Airbase, from III, one level at a time), then the aircraft, saved for like any counter; a saving whose reason is gone is dropped
   if (has(n, 'u_stealth')){ const ok = aiStealthOk(n);
     if (N.uSave && N.uSave.t === 'stealth' && !aiStealthWant(n, inc)) N.uSave = null;
-    if (ok && aiStealthSite(n) < 0 && !armiesOf(n).some(a => a.air && a.u.stealth > 0)){ const P = G.P[ownedBy(n).find(q => G.P[q].city && S.bld[q].air === 2 && !S.cons[q])];
-      if (P && N.cash > buildCost(n, 'air', 3, P.id).cash + 150 && rng() < 0.3) build(n, P.id, 'air'); }
+    if (ok && aiStealthSite(n) < 0 && !armiesOf(n).some(a => a.air && a.u.stealth > 0)){ const q0 = ownedBy(n).filter(q => G.P[q].city && S.bld[q].air >= BASE_LV.air.bomb && S.bld[q].air < BASE_LV.air.stealth).sort((a, b) => S.bld[b].air - S.bld[a].air || a - b)[0], P = q0 === undefined ? null : G.P[q0];
+      if (P && !S.cons[P.id] && N.cash > buildCost(n, 'air', S.bld[P.id].air + 1, P.id).cash + 150 && rng() < 0.3) build(n, P.id, 'air'); }
     else if (ok && aiStealthWant(n, inc) && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.3) N.uSave = {t:'stealth', p:aiStealthSite(n), until:S.hour + 72}; }
   { const U = N.uSave; if (U && U.until > S.hour && UNITS[U.t]){ const c = ucost(n, U.t);
       for (const k of MKT_K){ const miss = kCeil(c[k] - N[k]); if (miss <= 0) continue; const q = miss + 5*RES_K; if (N.cash >= c.cash + lotCash(q, buyPrice(n, k)) + 20) trade(n, k, q); } } }
@@ -612,9 +644,10 @@ function aiTurn0(n, N){
       else if (has(n, 'msl1') && p === N.capital && !S.bld[p].silo && N.cash > 260 && rng() < 0.3) build(n, p, 'silo');
       else if (canBuildHere(p, 'yard') && !S.bld[p].yard && N.cash > 170 && ownedBy(n).filter(p => S.bld[p].yard).length < 2 && rng() < 0.3) build(n, p, 'yard');
       else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !ownedBy(n).some(q => S.bld[q].yard >= 2)) build(n, p, 'yard');
-      else if (S.bld[p].air === 1 && (has(n, 'u_asf') || has(n, 'u_bomb') || has(n, 'u_awacs')) && N.cash > 200 && rng() < (has(n, 'u_bomb') || has(n, 'u_asf') ? 0.6 : 0.4) && ownedBy(n).filter(q => S.bld[q].air >= 2).length < 2) build(n, p, 'air');   // Airbase II (up to two) for the heavy aircraft
-      else if (S.bld[p].fac < 2 && N.cash > 260 && rng() < 0.25) build(n, p, 'fac');
+      else if (aiAirUp(n, p, N)) build(n, p, 'air');   // Airbase II for strike fighters and strike drones, III for the heavy aircraft (up to two at each level)
+      else if (aiFacWant(n, p, N)) build(n, p, 'fac');   // Army Base II and III: the capital first, then the biggest Army Base cities (aiFacWant)
       else if (aiRecSlow(n, p) && rng() < 0.15) build(n, p, 'rec');   // training speed is the limit here: the next Recruiting Office level
+      else if (aiRecWant(n, p, N)) build(n, p, 'rec');   // the main way to train faster: the training cities' offices to level III at war or when rich
       else if (S.bld[p].air >= 1 && S.bld[p].air < 3 && N.cash > 300 + 120*S.bld[p].air && rng() < 0.2 && armiesOf(n).filter(w => w.air && w.air.base === p && count(w)).length >= 2 && armiesOf(n).some(w => w.air && w.air.base === p && (w.air.wear || 0) > 0.2)) build(n, p, 'air');   // worn wings: faster repairs
       else if ((canGrow || N.cash > 900) && N.cash > 700 && rng() < (N.cash > 1000 ? 0.2 : 0.08)){ const up = ['fac', 'air', 'yard', 'silo'].find(k => S.bld[p][k] > 0 && S.bld[p][k] < BUILD[k].max && N.cash > buildCost(n, k, S.bld[p][k] + 1, p).cash + 450); if (up) build(n, p, up); }
     }

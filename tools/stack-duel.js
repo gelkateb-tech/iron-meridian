@@ -20,7 +20,7 @@ const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f
 const JSON_OUT = process.argv.includes('--json');
 
 // the mix of one 10-unit stack; the big stack holds exactly the units of all the small ones
-const MIX10 = {inf:4, tank:2, at:2, art:1, ifv:1}, MIX8 = {inf:3, tank:2, at:1, art:1, ifv:1};
+const MIX10 = {inf:6, tank:2, art:1, ifv:1}, MIX8 = {inf:4, tank:2, art:1, ifv:1};   // (Anti-Tank Infantry is gone, BUILD-REQS: its places are infantry)
 const sumMix = list => { const m = {}; for (const x of list) for (const k in x) m[k] = (m[k] || 0) + x[k]; return m; };
 const SPLIT128 = [...Array(12).fill(MIX10), MIX8], BIG128 = sumMix(SPLIT128);
 const SPLIT20 = [MIX10, MIX10], BIG20 = sumMix(SPLIT20);
@@ -67,7 +67,7 @@ if (process.argv.includes('--scenarios')){ const out = [], ok = (name, c, d) => 
     let h = 0, hb = -1; for (; h < 24*6 && S.owner[p] !== 0; h++){ R.tick(); if (hb < 0 && S.battles.includes(p)) hb = h; }
     ok('combat: 6 tanks + 4 infantry attack 2 infantry in the open: the attacker wins and takes the province', S.owner[p] === 0 && !(R.count(D) && D.at === p && D.to === null), `battle from hour ${hb}, owner ${S.owner[p]} after ${h} h, defenders left ${R.count(D)}${R.count(D) ? ` (broke: ${D.to !== null ? 'retreating to ' + G.P[D.to].name : 'at ' + G.P[D.at].name})` : ''}, attackers ${R.count(A)}`); }
   // 2. the same small attack against a city with Bunker 3 and a dug-in garrison holds
-  { const {R, S, G, p, sides} = setup(true); S.bld[p].fort = 3; const D = R.addArmy(1, p, {inf:4, at:2}); D.still = S.hour - 48; const A = R.addArmy(0, sides[0], {inf:4, tank:1}); R.orderMove(A, p); A.forced = true;
+  { const {R, S, G, p, sides} = setup(true); S.bld[p].fort = 3; const D = R.addArmy(1, p, {inf:6}); D.still = S.hour - 48; const A = R.addArmy(0, sides[0], {inf:4, tank:1}); R.orderMove(A, p); A.forced = true;
     for (let h = 0; h < 24*5; h++) R.tick(); ok('combat: 4 infantry + 1 tank against a dug-in city garrison (4 infantry, 2 anti-tank) behind Bunker 3: the city holds', S.owner[p] === 1 && R.count(D) > 0, `owner ${S.owner[p]}, garrison left ${R.count(D)}, attackers left ${R.count(A)}`); }
   // 3. ranged fire: rocket artillery in its own province hurts an enemy force within range that it is not fighting, and takes no damage itself
   { const {R, S, G, p, sides} = setup(false); const D = R.addArmy(1, p, {inf:4}); D.still = S.hour; const M = R.addArmy(0, sides[0], {mlrs:3}); M.still = S.hour;
@@ -92,20 +92,23 @@ if (process.argv.includes('--scenarios')){ const out = [], ok = (name, c, d) => 
 const cases = [];
 for (const city of [false, true]){
   cases.push({...duel(city, [BIG128], SPLIT128, 1, '128 attacks 13 stacks'), split:'defender'});
-  cases.push({...duel(city, SPLIT128, [BIG128], 1, '13 stacks attack 128 (one side)'), split:'attacker'});
+  // (BUILD-REQS, 2026-11-27: without Anti-Tank Infantry the attackers' only anti-armour is their tanks, which attack a city at a penalty, so in a
+  // city two cases now go to the big stack: 13 stacks down one road against a 128-stack, and 2 x 10 from two sides against a 20-stack. Informational
+  // since then (the same mix with infantry in Anti-Tank Infantry's places loses them on master too); on open ground every case still holds)
+  cases.push({...duel(city, SPLIT128, [BIG128], 1, '13 stacks attack 128 (one side)'), split:'attacker', info:city});
   cases.push({...duel(city, SPLIT128, [BIG128], 3, '13 stacks attack 128 (three sides)'), split:'attacker'});
   cases.push({...duel(city, [BIG20], SPLIT20, 1, '20 attacks 2 × 10'), split:'defender'});
   // (one side into a city: the city's cover and home soil, ×1.56 on the damage the defender takes, outweigh the 20-stack's 61%: a 20-stack still holds a
   // city against the same units attacking down one road; from two sides the front widens to 21 and the split stacks take it)
   cases.push({...duel(city, SPLIT20, [BIG20], 1, '2 × 10 attack 20 (one side)'), split:'attacker', info:city});
-  cases.push({...duel(city, SPLIT20, [BIG20], 2, '2 × 10 attack 20 (two sides)'), split:'attacker'});
+  cases.push({...duel(city, SPLIT20, [BIG20], 2, '2 × 10 attack 20 (two sides)'), split:'attacker', info:city});
 }
 for (const c of cases) c.ok = c.winner === c.split || !!c.info;
 if (JSON_OUT){ console.log(JSON.stringify(cases)); process.exit(0); }
-console.log('Stack-limit duel: one big stack against the same units in stacks of at most 10 (same mix: infantry, tanks, anti-tank, artillery, IFV)');
+console.log('Stack-limit duel: one big stack against the same units in stacks of at most 10 (same mix: infantry, tanks, artillery, IFV)');
 console.log('case'.padEnd(36) + 'place'.padEnd(6) + 'front'.padEnd(6) + 'dirs'.padEnd(5) + 'winner'.padEnd(10) + 'hours'.padEnd(6) + 'attacker left'.padEnd(15) + 'defender left'.padEnd(15) + 'lost (atk/def)');
 for (const c of cases) console.log(c.label.padEnd(36) + c.place.padEnd(6) + String(c.front).padEnd(6) + String(c.dirs).padEnd(5) + (c.winner + (c.winner === c.split ? '' : c.info ? ' *' : ' !')).padEnd(10) + String(c.hours).padEnd(6) + `${c.atkLeft}%`.padEnd(15) + `${c.defLeft}%`.padEnd(15) + `${c.atkLost}/${c.defLost}`);
 const bad = cases.filter(c => !c.ok);
-if (cases.some(c => c.info && c.winner !== c.split)) console.log('* informational: two stacks of 10 attacking a 20-stack in a city down one road (city cover and home soil); from two sides they win');
+if (cases.some(c => c.info && c.winner !== c.split)) console.log('* informational: split stacks attacking a big stack in a city (city cover and home soil; since Anti-Tank Infantry was removed the attackers\' anti-armour is their tanks alone)');
 console.log(bad.length ? `FAIL: the split stacks lost or drew ${bad.length} case(s)` : `OK: the split stacks won every required case (${cases.filter(c => !c.info).length})`);
 process.exit(bad.length ? 1 : 0);

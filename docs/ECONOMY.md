@@ -280,6 +280,8 @@ or South Africa (11 to 14 rare a day) than two are to Russia or the USA (6 to 8)
 
 ### 5.1 Army Base (save key `fac`, was Arms Factory)
 
+(Its unlocks and training speed below are the economy plan's; since 2026-11-27 they are section 15, Build requirements.)
+
 Keeping the key means every old save's factories become Army Bases at the same level with no migration, and the pictures
 (`BART.fac = 'military-base'`, b-military-base-1..5) already match.
 
@@ -696,3 +698,38 @@ Measured headless, seeds 12345, 7 and 2024, 30 days, against master 15466ee.
 World gross income a day, three-seed mean, before > after: day 1 oil 510 > 521, materials 348 > 338, the rest unchanged;
 day 30 money 3951 > 4036, oil 426 > 444, materials 318 > 334, iron 278 > 278, electronics 79 > 83, rare 119 > 114,
 units 1392 > 1460.
+
+## 15. Build requirements (BUILD-REQS, owner 2026-11-27)
+
+Owner, verbatim: "only levels 4 and 5 build faster, since the Recruiting Office already handles speed". This replaces the unlocks and speeds
+of 5.1 above and the Airbase and Naval Yard level bonuses. One table in `rules/data.js` (`BASE_LV`) gives every unit the level of its base;
+`BASE_SPD` gives the build speed by level; the building texts are written from both (`baseDesc`), and the Build list shows them as a table.
+
+| Level | Army Base | Airbase | Naval Yard (unchanged this round) |
+|---|---|---|---|
+| I | Motorized Infantry, Mobile Artillery, Marines (coastal cities); the recon vehicle's slot | Recon UAV, Attack Helicopter, Air Superiority Fighter, Interceptor | Frigate, Attack Submarine |
+| II | Infantry Fighting Vehicle, Main Battle Tank, Paratroopers (also an Airbase I), Swarm Drones; Mobile Anti-Air's slot | Strike Fighter, Strike Drone | Cruiser, Aircraft Carrier |
+| III | Rocket Artillery, Mobile SAM, Special Forces, Mobile Jammer | Maritime Patrol Aircraft, AWACS, Heavy Bomber | - |
+| IV | no new units, 10% faster | no new units, 10% faster | 10% faster |
+| V | Missile Defence's slot, 20% faster | Stealth Bomber, 20% faster | 20% faster |
+
+- Build speed: levels I-III add none on all three bases; IV trains in 0.9 of the time, V in 0.8. A unit counts only the base that trains it
+  (its first building need: `trainBase`): Swarm Drones and Paratroopers the Army Base, aircraft the Airbase, ships the Naval Yard. The
+  Recruiting Office (10% a level, 50% at V), the doctrine, the research final level (15%) and the 30% floor are unchanged and multiply as before.
+- Before: Army Base 20 / 40 / 60 / 65 / 70% faster at I-V (and every level a training line), Airbase 0 / 10 / 20 / 30 / 40%, Naval Yard
+  0 / 0 / 10 / 20 / 30%. The training lines stay as they were in the rules (1 + Army Base level, a queue holds at most 2), so in practice
+  Army Base I opens the second line for a member; the texts now say so.
+- Marked slots (no unit, skipped): `rcn` the recon vehicle (Army Base I; proposed on start-armies), `maa` Mobile Anti-Air (Army Base II; no
+  such vehicle, the Mobile SAM is at III), `mdef` Missile Defence (Army Base V; today only the research Anti-Missile Shield, nation-wide).
+- Research days and prices are unchanged. All three bases already went to level V (prices from the level formula, `bldLv`; nothing added).
+- Anti-Tank Infantry is removed (unit, research line, old-tree conversions, the computer's pick). Old saves: `atMigrate` and `atResMigrate`
+  (`rules/state.js`, flag `S.noAt`): units become Motorized Infantry with their share of health (wounds x 10/9), queued ones with their share
+  trained (hours x 24/30) and $7M, 3,000 materials and 3,000 iron back each, repeat orders repeat infantry; Ceramic Body Armour, Firepower and
+  Protection carry over to the infantry's (the higher level kept, the rest refunded), Tandem Warheads, Thermal Sights and Guided Missile Teams
+  are refunded at their old price (`AT_OLD`), a project of the line still running is refunded. Test: `.test/build-reqs.js` with a save made
+  by master (`.test/fixtures/at-oldsave.json`, `.test/at-oldsave-make.js`).
+- The computer (`rules/ai.js`): `aiFacWant` (the capital to Army Base II at once, to III with Rocket Artillery, Special Forces or Jammers
+  researched or enemy aircraft about; the biggest other Army Base cities, the front first, 2-4 to II and 0-2 to III by size), `aiAirUp` and the
+  Airbase saving (`aiAirNeed`: II for Strike Fighters and Strike Drones, III for Heavy Bombers, AWACS and patrol aircraft), the stealth wing's
+  Airbase climbs III, IV, V, `aiRecWant` (Recruiting Offices to III in its training cities at war or when rich). Anti-Tank Infantry's
+  anti-armour weight went to the tank and the strike drone.

@@ -11,8 +11,8 @@
      2026-11-25, "enemy armies outside my territory ... shouldn't show at all. I only see them once they cross into my land, or when one of my
      units sees them within its sight range"; the 80 / 100 km of VIS-1 are kept in VIS_KM, unused)
    - ground force or fleet: the farthest-seeing unit type in it, 50 (UNITS[t].vis), not the province it is moving to. Recon/scout units 100:
-     Special Forces (VIS_RECON; the game has no recon vehicle or scout helicopter). Thermal Sights / Night Optics: Anti-Tank Infantry / Special
-     Forces see 50% farther (rSightF)
+     Special Forces (VIS_RECON; the game has no recon vehicle or scout helicopter). Night Optics: Special Forces see
+     50% farther (rSightF)
    - aircraft in flight 150; drones 200 (VIS_DRONE: the Recon UAV, and the armed drones: Strike Drones and Swarm Drones); fighter patrols and any
      wing on a recon mission see at least 200 (VIS_KM.patrol)
    - UAV on station, by its level (UAV I-V): 250, 300, 350, 400, 500; it marks what it sees as identified by UAV (vis.uav) and leaves the provinces

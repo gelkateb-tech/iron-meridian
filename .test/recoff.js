@@ -19,8 +19,8 @@ const { chromium } = require('playwright');
     o.y = [0, 1, 2, 3, 4, 5].map(l => { B.rec = l; return provYield(cap).mp; }); B.rec = 1;
     // training hours by level, no factory: infantry (24 h) and a tank
     B.fac = 0; o.inf = [0, 1, 2, 3, 4, 5].map(l => { B.rec = l; return trainH(cap, 'inf', 0); }); o.tank = [0, 1, 2, 3, 4, 5].map(l => { B.rec = l; return trainH(cap, 'tank', 0); }); o.base = {inf:UNITS.inf.build, tank:UNITS.tank.build};
-    // stacking with the Army Base: they multiply (Base I 0.8 x Office II 0.8 = 0.64)
-    B.fac = 1; B.rec = 2; o.stack = trainF(cap, 'tank');
+    // stacking with the Army Base: they multiply (Base IV 0.9 x Office II 0.8 = 0.72; levels I-III of the base give no speed since BUILD-REQS)
+    B.fac = 4; B.rec = 2; o.stack = trainF(cap, 'tank');
     // the floor: every unit, every level of every building, every doctrine: never under 30% of the base time
     let worst = 9, bad = [];
     for (const doc of [null, 'precision', 'mass', 'bastion']){ N.doc = doc;
@@ -33,7 +33,7 @@ const { chromium } = require('playwright');
     B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500*RES_K; N.iron = 500*RES_K; N.elec = 500*RES_K;
     // (queued as recruit() does it: with no Army Base the Army Base rule refuses new infantry, and this part measures the office alone)
     const qd = t => { const h = trainH(cap, t, 0); S.queue[cap].push({t, h, h0:h}); };
-    qd('inf'); qd('inf'); qd('at'); S.queue[cap].push({t:'cm', h:36, h0:36, msl:true});
+    qd('inf'); qd('inf'); qd('art'); S.queue[cap].push({t:'cm', h:36, h0:36, msl:true});
     S.queue[cap][0].h = 15;   // the first one is part trained
     o.q0 = S.queue[cap].map(it => [it.t, it.h, it.h0]);
     const c0 = {cash:N.cash, metal:N.metal};
@@ -41,7 +41,8 @@ const { chromium } = require('playwright');
     S.cons[cap].h = 1; consHour(cap); o.lvl = B.rec; o.q1 = S.queue[cap].map(it => [it.t, it.h, it.h0]); o.consAfter = S.cons[cap];
     o.newInf = trainH(cap, 'inf', 0);
     // at the floor already: nothing changes
-    B.fac = 5; B.rec = 4; S.queue[cap].length = 0; recruit(0, cap, 'tank'); const hF = S.queue[cap][0].h; S.cons[cap] = {k:'rec', lvl:5, h:1, h0:144}; consHour(cap); o.floorKeep = [hF, S.queue[cap][0].h, B.rec];
+    // (since BUILD-REQS only Office V with Army Base V and the Mass doctrine reaches the floor: 0.8 x 0.5 x 0.75 = 0.30; from Office IV, 0.36)
+    N.doc = 'mass'; B.fac = 5; B.rec = 4; S.queue[cap].length = 0; recruit(0, cap, 'tank'); const hF = S.queue[cap][0].h; S.cons[cap] = {k:'rec', lvl:5, h:1, h0:144}; consHour(cap); o.floorKeep = [hF, S.queue[cap][0].h, B.rec]; N.doc = null;
     // another building finishing does not retime
     B.fac = 0; B.rec = 2; S.queue[cap].length = 0; qd('inf'); const h2 = S.queue[cap][0].h; S.cons[cap] = {k:'fort', lvl:1, h:1, h0:48}; consHour(cap); o.other = [h2, S.queue[cap][0].h];
     // max level: no sixth
@@ -60,13 +61,13 @@ const { chromium } = require('playwright');
   { const d = r.y.map(v => v - r.y[0]), u = d[1]/3; ok('the city really yields that much more manpower by level', u > 0 && d.every((v, i) => Math.abs(v - r.mp[i]*u) < 1e-6), r.y); }
   ok('training 10% faster per level (infantry 24 h: 22, 19, 17, 14, 12)', JSON.stringify(r.inf) === JSON.stringify([0, 1, 2, 3, 4, 5].map(l => Math.round(r.base.inf*(1 - 0.1*l)))) && r.inf[5] === 12, r.inf);
   ok('every unit trained there, not only infantry (tank)', JSON.stringify(r.tank) === JSON.stringify([0, 1, 2, 3, 4, 5].map(l => Math.round(r.base.tank*(1 - 0.1*l)))), r.tank);
-  ok('Army Base and Recruiting Office multiply', Math.abs(r.stack - 0.64) < 1e-9, r.stack);
+  ok('Army Base and Recruiting Office multiply', Math.abs(r.stack - 0.72) < 1e-9, r.stack);
   ok('no unit ever trains under 30% of its base time (all buildings, levels, doctrines)', r.bad.length === 0 && r.worst >= 0.29 && r.min === 0.3, { worst: r.worst, bad: r.bad });
-  ok('Army Base V + Office V tank sits at the floor', r.floorTank === Math.round(r.base.tank*0.3) && r.fac5Tank === Math.round(r.base.tank*0.3), r);
+  ok('Army Base V + Office V: a tank at 0.8 x 0.5 of its time; Army Base V alone 0.8 (BUILD-REQS)', r.floorTank === Math.round(r.base.tank*0.4) && r.fac5Tank === Math.round(r.base.tank*0.8), r);
   ok('upgrade to II: paid $75M + 10 materials, 3 days', r.built === true && r.cons.k === 'rec' && r.cons.lvl === 2 && r.cons.h === 72 && r.paid.cash === 75 && r.paid.metal === 10*K, r);
   { const f = 0.8/0.9, exp = r.q0.map(([t, h, h0]) => t === 'cm' ? [t, h, h0] : [t, Math.max(1, Math.round(h*f)), Math.round(h0*f)]);
     ok('level done: remaining time of the unit in training and the queued ones cut by the new ratio (a missile is not a unit)', r.lvl === 2 && r.consAfter === null && JSON.stringify(r.q1) === JSON.stringify(exp) && r.q1[0][1] < r.q0[0][1] && r.q1[1][1] < r.q0[1][1] && Math.abs(r.q1[1][1] - r.newInf) <= 1, { q0: r.q0, q1: r.q1, exp }); }
-  ok('already at the 30% floor: the level changes nothing', r.floorKeep[0] === r.floorKeep[1] && r.floorKeep[2] === 5, r.floorKeep);
+  ok('a level that reaches the 30% floor cuts the time to the floor, no further (0.30/0.36)', r.floorKeep[1] === Math.max(1, Math.round(r.floorKeep[0]*0.3/0.36)) && r.floorKeep[2] === 5, r.floorKeep);
   ok('another building finishing leaves the queue alone', r.other[0] === r.other[1], r.other);
   ok('no level VI; infantry needs no office (Army Base I, no office: trainable; office III, no Army Base: "Needs Army Base level 1")', r.sixth === false && r.need === '' && r.need3 === 'Needs Army Base level 1', r);
   // ---- the whole thing through real game hours: queue, upgrade, watch the units come out sooner
@@ -104,7 +105,7 @@ const { chromium } = require('playwright');
   const u2 = await p.evaluate(() => { const h = document.querySelector('#sheet .rs-rec'), c = document.querySelector('#sheet .unit[data-t="inf"] .st'), r = h && h.getBoundingClientRect(), eb = document.querySelector('#sheet .eyebrow .rec-b');
     return {head:h && h.textContent, vis:!!r && r.width > 20 && r.height > 5 && r.right <= innerWidth + 1, st:c && c.textContent, dup:!!eb && eb.offsetParent !== null, exp:+(trainH(S.nations[0].capital, 'inf', 0)/24).toFixed(1), h:trainH(S.nations[0].capital, 'inf', 0)}; });
   ok('Mobilize panel header: Recruiting Office: 30% faster training', u2.head === 'Recruiting Office: 30% faster training' && u2.vis && !u2.dup, u2);
-  ok('Mobilize list times include the bonus (infantry with Army Base I and office III: 24 x 0.8 x 0.7 = 13 h)', u2.h === 13 && u2.st && u2.st.includes(u2.exp + ' d'), u2);
+  ok('Mobilize list times include the bonus (infantry with Army Base I and office III: 24 x 0.7 = 17 h; the base gives no speed at level I)', u2.h === 17 && u2.st && u2.st.includes(u2.exp + ' d'), u2);
   await p.screenshot({ path: __dirname + '/recoff-mob.png' });
   await p.click('#sheet [data-act="resume"]'); await p.waitForTimeout(250);
   await p.click('#csheet [data-act="cs-bld"]'); await p.waitForTimeout(400);
