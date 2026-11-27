@@ -13,7 +13,7 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Messages to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule: every message you send me, also save word for word to the shots branch, in a separate top-level folder: messages/<date>/<HH-MM>-<job>.md, one file per message, with the folder names of any pictures it refers to. Keep the picture folders (shots/<date>/<job>/) pictures only. Same 14-day cleanup for both." Done with `python3 -I tools/push-shots.py --msg <date> <HH-MM> <job> <file.md> --pics <folders>` (times UTC), before the message is sent.
 - **New messages never cancel running jobs (owner, 2026-11-19):** a new message from the owner never cancels or replaces a running job unless the owner says "cancel" or "stop" with the job's name. Each new block is extra work added to the queue. If a message seems to change a running job, ask the owner before stopping it. Every job brief quotes the owner's request it comes from, so a worker never mistakes a newer, unrelated message for its own task.
 
-Last updated: 2026-11-27 (MISSILES PLAN 2 sheets sent, waiting; BUILD-REQS, PINPOINT-3, FIGHTER-ASF, START-ARMIES + recon, CITY LOTS 3 running; 5 of 5 slots).
+Last updated: 2026-11-27 (owner missiles/Gemini/combat block logged; 5 of 5 running: BUILD-REQS, PINPOINT-3, FIGHTER-ASF, START-ARMIES + recon, CITY LOTS 3; next free slots listed below).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -33,13 +33,57 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 ## Next free slots (in this order)
 
+Set 2026-11-27 (owner block above). Each starts when a slot frees up (at most 5 at once):
+1. **UNIT-ART-3 FINISH** (unit-art-3; Opus): the sets that stopped at the floor (AWACS, Stealth Bomber, Marines, the 5 uniques; about $3.6 by the 2026-11-19 estimate, to be re-priced exactly). Cost of each batch to the owner first, run only on the OK. Not merged until the owner has seen it (and the open unit-art-3 decisions stand). Then the RECON VEHICLE pictures once the owner OKs its proposal (start-armies job).
+2. **MISSILES POLISH 2** (missiles; Opus; 2nd and last round): MS1 (the computer answers chemical with chemical; nuclear answers only for nuclear strikes or desperation), MS2 (Conventional Warhead researched readily at war), the desktop aiming hint clear of the mini world map, the strip says "Damaged" for a knocked-out silo; MS3-MS5 stay as built. Missiles plan 2 (ranges, HP, names) is a separate build job once the owner answers its questions 1-8.
+3. **COMBAT DISPLAY** (one round, then wait; Opus): first tell the owner how combat timing works now; then "Fighting" plus the enemy army on panel and map label, a countdown to the next damage tick on both, the damage each side took after each tick; the fixed-tick change itself only as described to the owner. Desktop and phone screenshots.
+4. **ONE FIGURE PER ARMY TEST** (own branch; Opus): one main-unit model per army with our bigger count badge, smooth turning along roads, moving/fighting/idle animations; side-by-side one figure vs three, in a fight and on a road; wait for the owner's pick.
+5. **LOGISTICS BUILDING PROPOSAL** (proposal only; Opus): any province, no levels, +25% move speed through it, thicker roads to show it, cost, build time, stacking with roads and the stack-size penalty, computer use along main routes and borders; wait for the OK.
 
-- **REBELS PICTURES** (owner 2026-11-26, verbatim: "REBELS unit picture: rebels need their own unit pictures like every other unit, instead of the code-drawn 3D figure. - Make the same set as the other units: the 3/4 side view for the info card, the card scene, and the top-down picture for the map. Same camera, size, light and framing as the other unit sets, following ART-BIBLE.md and docs/UNIT-LOOKS-PROMPTS.md. - The look: a small group of irregular fighters in mixed civilian and military clothes, scarves and headwraps, carrying generic rifles (no real brand designs), tan and khaki tones, with a small crossed-rifles flag to match the rebels badge. Make it clearly different from regular infantry and from the Export armed pickup. - Show me the prompt first, then one test picture with its cost, and wait for my OK before making the rest. - Save the pictures to the shots branch as usual."): prompts in tools/gen-art.py (ul-reb-side/scene/top); test side view made (about $0.105, check PASS), sent with the prompt (shots/2026-11-26/rebels-pictures/). **Waiting for the owner's OK** (and on the rifle wording) before the scene and top-down. Art balance about $5.42 against the $5 floor.
+
+- **REBELS PICTURES** (owner 2026-11-26, verbatim: "REBELS unit picture: rebels need their own unit pictures like every other unit, instead of the code-drawn 3D figure. - Make the same set as the other units: the 3/4 side view for the info card, the card scene, and the top-down picture for the map. Same camera, size, light and framing as the other unit sets, following ART-BIBLE.md and docs/UNIT-LOOKS-PROMPTS.md. - The look: a small group of irregular fighters in mixed civilian and military clothes, scarves and headwraps, carrying generic rifles (no real brand designs), tan and khaki tones, with a small crossed-rifles flag to match the rebels badge. Make it clearly different from regular infantry and from the Export armed pickup. - Show me the prompt first, then one test picture with its cost, and wait for my OK before making the rest. - Save the pictures to the shots branch as usual."): prompts in tools/gen-art.py (ul-reb-side/scene/top); test side view made (about $0.105, check PASS), sent with the prompt (shots/2026-11-26/rebels-pictures/). **Waiting for the owner's OK** (and on the rifle wording) before the scene and top-down. Art balance: the owner's real figure is $24.05 (2026-11-27); $5 floor kept.
 
 - **PASTED-ON CHECK** (owner 2026-11-26, verbatim: "After A6, tell me honestly whether the building pictures still look pasted on: their own ground pad, a different light direction or angle from the city blocks, or too much detail next to them. Don't redraw anything. If you think they need it, show me the problem and a single Army Base test picture with the cost, and wait for my OK."): runs when CITY LOTS GROW finishes. An independent look critic that has not seen the job's reports, plus my own look at full size, on the three points (ground pad, light and angle, detail). Only if they need it: one Army Base test picture, cost logged against the $5 floor, then wait for the owner's OK. No other picture is redrawn.
 
 1. **(DONE 2026-11-22, waiting for the owner; see Ready)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
 
+
+## Owner block 2026-11-27 (missiles answers, Gemini credit, combat display, one figure per army, logistics; verbatim; extra work, cancels nothing)
+
+```
+Missiles answers (these didn't reach you earlier):
+- MS1–MS5: your defaults.
+- Ranges: no separate answer needed, missiles plan 2 covers them.
+- Two small fixes for the missiles branch: move the aiming hint so the mini world map doesn't hide it on desktop, and make the missile strip say "Damaged" instead of "Ready" for a knocked-out silo.
+
+Gemini credit: my real balance is $24.05, not $5.32. Your number is out of date, so check it again before deciding anything.
+- Keep the $5 floor.
+- When a slot frees up, finish the last unit picture sets that stopped at the floor, then the recon vehicle once I OK its proposal.
+- Tell me the cost before each batch and wait for my OK.
+
+Combat display (one round only, then wait for me):
+Make fights read like Conflict of Nations:
+- Damage lands on a fixed tick, like CoN's hourly round. Tell me how combat timing works now before changing it.
+- While two armies fight, each army's panel and map label shows "Fighting" plus the enemy army it's fighting.
+- Show a countdown to the next damage tick, both in the panel and on the map label.
+- After each tick, briefly show the damage each side took.
+
+One figure per army (test first, on its own branch):
+- Show one model per army on the map: its main unit, like CoN, instead of three figures. Keep our bigger unit-count badge.
+- The figure turns smoothly to follow roads and bends, and has moving, fighting and idle animations.
+- Show me a side-by-side of one figure vs the current three, in a fight and on a road, then wait for my pick.
+
+Logistics building (proposal first):
+- A new building that can be built in any province, not just cities. No levels: one building per province.
+- Armies move 25% faster through a province that has it.
+- To show it's built: the roads in that province get thicker, like Conflict of Nations does it. No extra model on the map.
+- Propose cost, build time, and how it stacks with roads and the stack-size speed penalty, then wait for my OK.
+- The computer should build it sensibly, mostly along its main routes and borders.
+
+Show me screenshots on desktop and phone, saved to the shots branch as usual.
+```
+
+**Art balance (2026-11-27):** the owner's real balance is **$24.05** (my $5.32 was an estimate from per-branch logs and was out of date). $5 floor kept: about $19.05 can be spent, each batch's cost shown to the owner first and run only on the OK. The art job re-baselines tools/gen-art.py's guard to $24.05 at its branch's current log totals before any call.
 
 ## Owner playtest changes 2026-11-27 (Thanksgiving; verbatim; extra work, cancels nothing)
 
