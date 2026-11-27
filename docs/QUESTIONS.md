@@ -465,3 +465,8 @@ The Diplomacy layout options (A/B/C) from the same job are superseded by your re
 - **F4.** A force that wins a meeting outside the province it was going to loses its order. Carry on instead? → It stops; the computer plans again.
 - **F5.** You attack blind until one of your units is within 50 km (the odds chip shows no defenders). OK? → Yes.
 - **F6.** Other defaults: AWACS '?' contacts stay; ordinary sight only spots ('?'), recon identifies; no meeting with a force standing just off the road; a column fights a standing enemy at the centre; submarine-only forces are stopped by a meeting; enemy air wings show only where they fly in your sight. → All as listed.
+
+## Owner's answers, 2026-11-27 (build requirements; missiles plan 2 question 5)
+
+- Build requirements: "yes to 2, 3 and 4" (fewer tanks and strike fighters early: OK; Special Forces at Army Base III: OK; "Needs Army Base II" wording: yes). Question 1 replaced by the owner's Naval Yard levels: I Corvette, Frigate; II Destroyer; III Cruiser, Attack Submarine; IV faster; V Aircraft Carrier, Ballistic Missile Submarine, faster still (Corvette, Destroyer and Ballistic Missile Submarine as marked slots until they exist).
+- Missiles plan 2, question 5: the answer is "ships later": the Ballistic Missile Submarine (NEW SHIPS proposal) fires cruise, ballistic and nuclear missiles from the sea, its nukes inside the nation's nuke limit.
