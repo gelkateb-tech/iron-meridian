@@ -339,6 +339,13 @@ So: RB1-RB5 = my defaults (RB5 in its new wording); REBELS merged. M13 = approve
 - RB4. Old saves: is a 24 h grace with no risings enough, or should converted cities also get a 34% floor? (24 h grace only)
 - RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country, but rebels in it lay down their arms (Q27 A); gifted land arrives as the receiver's home land (Q28 B); land bought in a sale arrives annexed (not occupied) unless it was the buyer's own home land; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes) [updated 2026-11-26 after the REBELS refresh reconciled Q27/Q28]
 
+## MISSILES questions, 2026-11-27 (missiles bcb7067, recheck READY after polish 1; sheets in shots/2026-11-27/missiles/; my default in brackets)
+- **MS1.** Should the computer answer a chemical strike with a nuclear one (plan 10(a))? In a forced test every chemical strike drew a nuclear answer at the attacker's silo city within hours, and it can escalate. (no: answer chemical with chemical, keep nuclear answers for nuclear strikes or desperation)
+- **MS2.** The computer almost never researches Conventional Warhead, so in normal games it builds and fires no missiles at all (0 nations by day 60). Raise that research priority while at war? (yes)
+- **MS3.** For 3 days after a nuclear launch, the launcher's own peace offers are refused. Right, or should the victim's offers be refused? (launcher's, as built)
+- **MS4.** Keep the confirmation card for chemical strikes too (the plan had it for nuclear only)? (yes)
+- **MS5.** Keep the side panel closed on phones while aiming any missile (cruise and ballistic too)? (yes)
+
 ## Owner's answers, 2026-11-26 (verbatim)
 
 > Answers:
