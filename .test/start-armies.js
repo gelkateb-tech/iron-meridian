@@ -9,6 +9,8 @@
 // 3. the recon slot (START_ARMY.recon): null today, so the outer stacks hold infantry only; a key that is not a unit is skipped; once it names a unit,
 //    each outer stack gets it (tried with an existing unit) and nothing else changes
 // 4. old saves keep their armies: a save whose start had other forces (the old start's tanks and city garrisons) loads with every army as saved
+// 5. the computer keeps its capital held: with the smaller start no computer capital stands without ground units after 24 and 72 hours (all-computer
+//    games, seeds 12345 and 7); its capital force (2 infantry and 1 artillery) stays home in peace until there are 4 infantry to leave 2 behind
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
@@ -84,5 +86,12 @@ for (const mode of ['normal', 'competitive']){ const R = load(), api = R.IM.api;
   ok(okL && same(before, after), `an old save loads with its armies as saved (${before.length} forces, tanks and city garrisons included)`, okL ? after.length : 'restore failed');
   ok(S2.armies.some(a => a.owner >= 0 && a.u.tank > 0), 'its tanks are still there'); }
 
-console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: the starting army, its cities, the recon slot and old saves`);
+// ---- 5. computer capitals keep their garrison
+for (const seed of [12345, 7]){ const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(seed, 0, []); const S = R.S; S.started = true;
+  const AIRK = new Set(Object.keys(R.UNITS).filter(k => R.UNITS[k].cls === 'air'));
+  const empty = () => S.nations.filter(N => N.alive !== false && !S.armies.some(a => a.owner === N.id && a.at === N.capital && a.to === null && !a.air && !(a.path && a.path.length)
+    && Object.entries(a.u).some(([k, v]) => v > 0 && !AIRK.has(k)))).map(N => N.name);
+  for (let h = 1; h <= 72; h++){ api.tick(); if (h === 24 || h === 72){ const e = empty(); ok(!e.length, `seed ${seed}, hour ${h}: every computer capital holds ground units`, e.slice(0, 8)); } } }
+
+console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: the starting army, its cities, the recon slot, old saves and held capitals`);
 process.exit(bad ? 1 : 0);
