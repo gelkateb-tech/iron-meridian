@@ -79,7 +79,7 @@ function* tickHourG(){
   // the joined force stays within its stack limit (STACK_LIM); a join order (dragged onto the counter) merges anyway, with the stack-limit warning.
   // PINPOINT-3 (owner 2026-11-27, "setting a waypoint still moves the army to the centre of the province"): a force sent to an exact point is
   // looked at only once it STANDS on its last spot: not the hour it crosses the border (it still walks to the point: a.sail), not at a stop
-  // with more to come (a.wp), and it joins only a force standing practically on that spot (JOIN_R). Before, it joined any idle force of its own
+  // with more to come (a.wp), and it joins only a force standing on that very spot (JOIN_R, 0.1 km). Before, it joined any idle force of its own
   // within about 50 km of the point the hour it crossed the border, and the joined force kept its own place: the starting garrison at the city,
   // so a tap anywhere near a city of your own ended at the city, and a middle stop lost the rest of the plan
   for (const a of S.armies){ const me = a.owner; if (!isSeat(me) || a.air || a.fly || a.to !== null || a.path.length || a.from == null || a.arrH === S.hour || a.land > 0 || !count(a)) continue;   // (troops still landing join once ashore)
@@ -87,8 +87,10 @@ function* tickHourG(){
     if (a.sail || (a.wp && a.wp.length)){ a.lastAt = null; continue; }   // (still on its way: looked at again where it stops)
     a.lastAt = a.at;
     if (S.owner[a.at] !== me && !(S.owner[a.at] >= 0 && rel(me, S.owner[a.at]).st === 'ally')) continue;
-    const jt = a.join != null ? armyById(a.join) : null, pin = a.pos;   // a join order picks its partner; a force at an exact point joins only a force standing on (or by) that point
-    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && !b.fly && b.at === a.at && b.to === null && !b.path.length && !b.sail && !(b.wp && b.wp.length) && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over && (!pin || Math.hypot(pin[0] - (b.pos ? b.pos[0] : G.P[b.at].x), pin[1] - (b.pos ? b.pos[1] : G.P[b.at].y)) < JOIN_R));
+    // a join order picks its partner; any other force joins only a force standing on its very point (JOIN_R). A force with no point (a.pos null)
+    // stands at the centre, the city: it joins one at the city, not one standing on a spot elsewhere in the province (that kept its own place)
+    const jt = a.join != null ? armyById(a.join) : null, P = G.P[a.at], pin = a.pos || [P.x, P.y];
+    const into = (jt && jt !== a && jt.owner === me && !jt.air && !jt.fly && jt.at === a.at && jt.to === null && count(jt) ? jt : null) || S.armies.find(b => b !== a && b.owner === me && !b.air && !b.fly && b.at === a.at && b.to === null && !b.path.length && !b.sail && !(b.wp && b.wp.length) && count(b) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over && Math.hypot(pin[0] - (b.pos ? b.pos[0] : P.x), pin[1] - (b.pos ? b.pos[1] : P.y)) < JOIN_R);
     if (into) delete a.join;
     if (into){ merge(into, a); IM.emit('merged', a.id, into.id, true); const sp = stackPenalty(into); if (sp.over) tell(me, `${armyName(into)} at ${G.P[into.at].cityName || G.P[into.at].name}: ${stackText(sp)} (${sp.size} ${sp.dom} units, limit ${sp.limit}). Split it to fight at full strength.`, 'bad', into.at); }
   }

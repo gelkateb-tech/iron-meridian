@@ -97,16 +97,19 @@ run('saves', () => { const R = game([0]), S = R.S, n = 0, pr = landPair(R, n); i
   const R3 = new Function(SRC)(); R3.restore(JSON.parse(R.saveJSON())); const a3 = R3.S.armies.find(x => x.id === a.id);
   ok('a new save keeps the point', a3.dest && Math.abs(a3.dest.x - near[0]) < 1e-9); tickTill(R3, () => a3.to === null && !a3.path.length && !a3.sail); ok('and the force still ends there', d(R3.armyXY(a3), near) < 1e-9); });
 
-// 7. split and merge: a force split on the way keeps the point in both groups (they arrive there and join); a force arriving at a point by one of
-// yours (within JOIN_R, about 9 km since PINPOINT-3: practically on its spot) joins it there and the joined force stays on that point; one arriving farther away stands apart on its own point
+// 7. split and merge: a force split on the way keeps the point in both groups (they arrive there and join); a force arriving on the very point of
+// one of yours (within JOIN_R, 0.1 km since PINPOINT-3 round 2) joins it there and the joined force stays on that point; one arriving 4 km off,
+// or farther, stands apart on its own point
 run('split merge', () => { const R = game([0]), S = R.S, n = 0, pr = landPair(R, n); if (!pr) return; const { A, B, near, far } = pr;
   const a = R.addArmy(n, A.id, {inf:4}); R.orderMove(a, B.id, near); R.tick(); const b = R.splitArmy(a);
   ok('split on the way: both groups keep the exact point', b && b.dest && a.dest && b.dest.x === a.dest.x && b.dest.y === a.dest.y, {a:a.dest, b:b && b.dest});
   tickTill(R, () => (!S.armies.includes(b) || (b.to === null && !b.path.length && !b.sail)) && a.to === null && !a.path.length && !a.sail);
   const left = [a, b].filter(x => S.armies.includes(x) && R.count(x) > 0);
   ok('they arrive at the point and join there (one force, all 4 units, on the point)', left.length === 1 && R.count(left[0]) === 4 && d(left[0].pos, near) < 1e-9, left.map(x => ({pos:x.pos, n:R.count(x)})));
-  const c = R.addArmy(n, A.id, {inf:2}); R.orderMove(c, B.id, [near[0] + 0.4, near[1] + 0.3]); tickTill(R, () => !S.armies.includes(c) || (c.to === null && !c.path.length && !c.sail));
-  ok('a force arriving by one of yours (within JOIN_R) joins it, which stays on its point', !S.armies.includes(c) || R.count(c) === 0 ? R.count(left[0]) === 6 && d(left[0].pos, near) < 1e-9 : false, {n:R.count(left[0]), pos:left[0].pos});
+  const c = R.addArmy(n, A.id, {inf:2}); R.orderMove(c, B.id, near.slice()); tickTill(R, () => !S.armies.includes(c) || (c.to === null && !c.path.length && !c.sail));
+  ok('a force arriving on the very point of one of yours (within JOIN_R) joins it, which stays on its point', !S.armies.includes(c) || R.count(c) === 0 ? R.count(left[0]) === 6 && d(left[0].pos, near) < 1e-9 : false, {n:R.count(left[0]), pos:left[0].pos});
+  const c2 = R.addArmy(n, A.id, {inf:1}), w2 = [near[0] + 0.4, near[1] + 0.3]; R.orderMove(c2, B.id, w2); tickTill(R, () => !S.armies.includes(c2) || (c2.to === null && !c2.path.length && !c2.sail));
+  ok('one arriving 0.5 world units (about 4 km) off stands apart on its own point', S.armies.includes(c2) && R.count(c2) === 1 && d(c2.pos, w2) < 1e-9 && R.count(left[0]) === 6, {n:R.count(c2), pos:c2.pos, w2});
   const e = R.addArmy(n, A.id, {inf:1}), fp = far; R.orderMove(e, B.id, fp); tickTill(R, () => e.to === null && !e.path.length && !e.sail);
   ok('one arriving farther away stands apart on its own point', S.armies.includes(e) && R.count(e) === 1 && d(e.pos, fp) < 1e-9 && d(fp, near) > R.JOIN_R, {pos:e.pos, fp}); });
 

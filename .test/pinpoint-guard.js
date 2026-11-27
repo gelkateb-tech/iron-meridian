@@ -4,31 +4,43 @@
 // earlier tests (.test/pinpoint.js, .test/waypoints.js) empty the map first, so they never had a force of yours standing at the city of the
 // province the spot lies in, and that is where it broke: the arrival join (rules/tick.js) merged a force sent to a spot into any idle force of
 // its own within about 50 km, which kept its own place, the city; and a tap on water with the Waypoint button on deselected the fleet.
-// Part 1, the rules in plain Node, the real start (every province with its starting garrison at the city):
+// Round 2 (review of PINPOINT-3): the arrival join still took everything within JOIN_R (1 world unit, about 9 km) of a garrison, so at the
+// closest zoom a tap 7 to 9 km from a city of yours (16 to 20 px from its mark, outside index.html byCity's 16 px) ended in the garrison, as
+// did a halt that close; and this guard played only the classic world. JOIN_R is now 0.1 km (the very spot), a tap on or by a force of yours
+// goes to its spot (index.html byForce), and both parts play the nations world players play as well as the classic world of the old saves.
+// Part 1, the rules in plain Node, the real start (every province with its starting garrison at the city), the nations world (nations.js,
+// Germany's seat) and the classic world (the United States' seat; fewer cases):
 //   a plain move, a first waypoint and a middle waypoint to a spot 15, 30 and 45 km from a garrisoned city end exactly there (the force is not
-//   swallowed by the garrison, the garrison stays as it was); a plan of stops through two garrisoned provinces passes each stop exactly; a fleet
-//   with two stops on water ends exactly on the last one beside a fleet of yours; a spot on the city itself still joins the garrison there; a
-//   join order walks to the other force's spot and merges there, not at the border; a save made mid-plan, and an old save made by origin/master
-//   with moves, stops and walks in flight (.test/fixtures/pinpoint-oldsave.json), load and go on to the exact spots.
-// Part 2, the page (Playwright), a player's taps, at phone size (440 x 900, touch) and desktop size (1440 x 900, mouse), Germany's real start:
+//   swallowed by the garrison, the garrison stays as it was); a plan of stops through two garrisoned provinces passes each stop exactly; moves
+//   and waypoints to spots 2, 4, 6 and 8 km from a garrisoned city, and a halt 1 to 8 km from one, stay on their spot; a fleet with two stops on
+//   water ends exactly on the last one beside a fleet of yours; a spot on the city itself still joins the garrison there, one on the very spot
+//   of a force of yours joins it, one 4 km off it does not; an order to the centre does not join a force standing on a spot away from the city;
+//   a join order walks to the other force's spot and merges there, not at the border; a save made mid-plan, and an old save made by
+//   origin/master with moves, stops and walks in flight (.test/fixtures/pinpoint-oldsave.json), load and go on to the exact spots.
+// Part 2, the page (Playwright), a player's taps, Germany's real start, at phone size (440 x 900, touch) and desktop size (1440 x 900, mouse) in
+// the nations world (page.html?start=nations), and on the desktop in the classic world:
 //   Move and a tap 25-45 km from a garrisoned neighbour city; Waypoint and two taps through garrisoned provinces; a fleet with Waypoint and two
-//   taps on water; troops in a port, Waypoint and a tap at sea (a stop at sea); Move and a tap on the city itself (it joins the garrison); on the
-//   desktop a counter dragged onto a spot by a garrisoned city, and a save and load mid-plan. Each ends on the tapped spot, its dot drawn there.
+//   taps on water; troops in a port, Waypoint and a tap at sea (a stop at sea); Move and a tap on the city itself (it joins the garrison); at the
+//   closest zoom Move and Waypoint taps 17 px from the garrisoned city's mark, Move 4 px from a force of yours (it joins it) and 24 px off it (it
+//   stands apart); on the desktop a counter dragged onto a spot by a garrisoned city, and a save and load mid-plan. Each ends on the tapped spot.
 //   node .test/pinpoint-guard.js [--rules]   (part 2 needs bash tools/mkpage.sh; exit 1 on any failed check or error, each FAIL says what broke)
 //   node .test/pinpoint-guard.js --make-fixture <checkout>   (writes the old-save fixture with the rules of that checkout: origin/master 9f01407)
 const fs = require('fs'), path = require('path');
 const MAKE = process.argv.indexOf('--make-fixture'), ROOT = MAKE > 0 ? path.resolve(process.argv[MAKE + 1]) : path.join(__dirname, '..');
 const FIX = path.join(__dirname, 'fixtures', 'pinpoint-oldsave.json');
-globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
+globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); if (fs.existsSync(path.join(ROOT, 'nations.js'))) require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));   // (the nations world, as players play it; the classic world of the old saves too)
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + `\nreturn {IM, get S(){ return S; }, get G(){ return G; }, addArmy, tick, restore, saveJSON,
-  orderMove, addStop, stopsOf, armyXY, armyById, provOfPt, cellCenter, count, shipsOnly, KM_W, JOIN_R, resetVis(){ visCache = null; }};`;
+  orderMove, addStop, stopsOf, haltArmy, armyXY, armyById, provOfPt, cellCenter, count, shipsOnly, KM_W, JOIN_R, get POWERS(){ return POWERS; }, resetVis(){ visCache = null; }};`;
 const errors = [], checks = {}, log = [], ok = (k, v, i) => { checks[k] = v ? 'PASS' : 'FAIL ' + JSON.stringify(i ?? null); log.push(`${v ? 'PASS' : 'FAIL'}  ${k}${v ? '' : '\n      ' + JSON.stringify(i ?? null)}`); };
 const run = (k, f) => { try { f(); } catch (e){ errors.push(k + ': ' + e.stack.split('\n').slice(0, 3).join(' | ')); } };
 const d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
 const idle = a => a.to === null && !a.path.length && !a.sail;
-// the real start of the classic world (seat 0, the United States): every province of a nation with its starting garrison standing at the city
-function game(){ const R = new Function(SRC)(); R.IM.api.newGame(77, 0, [0]); R.S.started = true; R.resetVis(); return R; }
+// the real start of a world, every province of a nation with its starting garrison standing at the city: the nations world as players play it
+// (W 'nations', Germany's seat, as in the page part) or the classic 15-power world of the old saves (the default, seat 0, the United States:
+// the old-save fixture was made with it)
+function game(W = 'classic'){ const R = new Function(SRC)(); R.IM.api.useScenario(W === 'nations' ? 'world64' : 'world');
+  R.IM.api.newGame(77, W === 'nations' ? R.POWERS.findIndex(N => N.name === 'Germany') : 0, [0]); R.me = 0; R.S.started = true; R.resetVis(); return R; }   // (the power picked is the seat, nation 0)
 const garrisons = (R, n) => R.S.armies.filter(a => a.owner === n && !a.air && !a.fly && R.count(a) && !R.shipsOnly(a) && !a.pos && idle(a));
 // a spot of land province B at km from its city, well inside B (1.5 world units, about 13 km, of B all round it)
 function spotAt(R, B, km, k0 = 0){ const { G } = R; for (let i = 0; i < 24; i++){ const an = ((i + k0) % 24)*Math.PI/12, w = [B.x + Math.cos(an)*km*R.KM_W, B.y + Math.sin(an)*km*R.KM_W];
@@ -36,8 +48,8 @@ function spotAt(R, B, km, k0 = 0){ const { G } = R; for (let i = 0; i < 24; i++)
 // a starting garrison gB at the city of own land province B; own land province A next to it (where the force is sent from) and own land
 // province C next to B (its starting garrison gC, or one put there as at the start: at the city, no spot), with spots in B and C at km from
 // their cities
-function scene(R, n, km){ const { G, S } = R, gs = garrisons(R, n), own = p => !G.P[p].sea && S.owner[p] === n;
-  for (const gB of gs){ const B = G.P[gB.at], wB = spotAt(R, B, km); if (!wB) continue; const nb = [...B.nb.keys()].filter(own);
+function scene(R, n, km, used = null){ const { G, S } = R, gs = garrisons(R, n), own = p => !G.P[p].sea && S.owner[p] === n;
+  for (const gB of gs){ if (used && used.has(gB.at)) continue; const B = G.P[gB.at], wB = spotAt(R, B, km); if (!wB) continue; const nb = [...B.nb.keys()].filter(own);
     for (const c of nb){ const wC = spotAt(R, G.P[c], km, 6), A = nb.find(v => v !== c); if (!wC || A == null) continue;
       const gC = gs.find(g => g.at === c) || R.addArmy(n, c, { inf: 2 }); return { A, B: B.id, gB, wB, C: c, gC, wC }; } }
   return null; }
@@ -51,45 +63,80 @@ const place = (R, p) => R.G.P[p].cityName || R.G.P[p].name;
 if (MAKE > 0){ makeFixture(); return; }
 let page = !process.argv.includes('--rules');
 
+function rulesPart(W){ const T = W === 'nations' ? '' : 'classic world: ';
 // 1. a plain move, a first waypoint and a middle waypoint to a spot 15, 30, 45 km from a garrisoned city of yours
-for (const km of [15, 30, 45]) for (const kind of ['move', 'waypoint', 'middle waypoint']) run(`${kind} ${km}`, () => {
-  const R = game(), S = R.S, n = 0, sc = scene(R, n, km); ok(`${kind} ${km}: found a garrisoned province with a spot ${km} km from its city`, !!sc); if (!sc) return;
+for (const km of W === 'nations' ? [15, 30, 45] : [30]) for (const kind of ['move', 'waypoint', 'middle waypoint']) run(`${T}${kind} ${km}`, () => {
+  const R = game(W), S = R.S, n = R.me, sc = scene(R, n, km); ok(`${T}${kind} ${km}: found a garrisoned province with a spot ${km} km from its city`, !!sc); if (!sc) return;
   const a = R.addArmy(n, sc.A, { inf: 2, tank: 1 }), nB = R.count(sc.gB), nC = R.count(sc.gC);
   if (kind === 'move') R.orderMove(a, sc.B, sc.wB); else { R.addStop(a, sc.B, sc.wB); if (kind === 'middle waypoint') R.addStop(a, sc.C, sc.wC); }
   const last = kind === 'middle waypoint' ? sc.wC : sc.wB, r = play(R, a);
-  ok(`${kind}, ${km} km from the city of ${place(R, sc.B)}: the force is not swallowed by the garrison at the city (rules/tick.js arrival join)`, !r.gone, { gone: r.gone, hour: r.hour, garrison: R.count(sc.gB), was: nB });
+  ok(`${T}${kind}, ${km} km from the city of ${place(R, sc.B)}: the force is not swallowed by the garrison at the city (rules/tick.js arrival join)`, !r.gone, { gone: r.gone, hour: r.hour, garrison: R.count(sc.gB), was: nB });
   if (r.gone) return;
-  ok(`${kind}, ${km} km: it ends exactly on its ${kind === 'middle waypoint' ? 'last stop' : 'spot'}, not the centre`, d(a.pos, last) < 1e-6 && a.at === (kind === 'middle waypoint' ? sc.C : sc.B), { pos: a.pos, want: last, at: a.at, centre: [R.G.P[a.at].x, R.G.P[a.at].y] });
-  if (kind === 'middle waypoint') ok(`middle waypoint, ${km} km: it stood on the middle stop exactly, and kept the rest of its plan`, r.st.some(q => q.p === sc.B && d(q.pos, sc.wB) < 1e-6), r.st);
-  ok(`${kind}, ${km} km: the garrisons stay as they were, at their cities`, same(R, sc.gB, nB) && same(R, sc.gC, nC), { gB: R.count(sc.gB), nB, gC: R.count(sc.gC), nC }); });
+  ok(`${T}${kind}, ${km} km: it ends exactly on its ${kind === 'middle waypoint' ? 'last stop' : 'spot'}, not the centre`, d(a.pos, last) < 1e-6 && a.at === (kind === 'middle waypoint' ? sc.C : sc.B), { pos: a.pos, want: last, at: a.at, centre: [R.G.P[a.at].x, R.G.P[a.at].y] });
+  if (kind === 'middle waypoint') ok(`${T}middle waypoint, ${km} km: it stood on the middle stop exactly, and kept the rest of its plan`, r.st.some(q => q.p === sc.B && d(q.pos, sc.wB) < 1e-6), r.st);
+  ok(`${T}${kind}, ${km} km: the garrisons stay as they were, at their cities`, same(R, sc.gB, nB) && same(R, sc.gC, nC), { gB: R.count(sc.gB), nB, gC: R.count(sc.gC), nC }); });
 
 // 2. a fleet: two stops on water, a fleet of yours idle in each zone near the stop (the same join rule applies to ships)
-run('fleet', () => { const R = game(), S = R.S, G = R.G, n = 0;
-  const port = G.P.find(P => !P.sea && S.owner[P.id] === n && [...P.nb.keys()].some(v => G.P[v].sea && G.P[v].cells.length > 150)), z1 = G.P[[...port.nb.keys()].find(v => G.P[v].sea && G.P[v].cells.length > 150)];
-  const z2 = G.P[[...z1.nb.keys()].find(v => G.P[v].sea && G.P[v].cells.length > 150)]; ok('found two big sea zones by a port of yours', !!z2); if (!z2) return;
+run(T + 'fleet', () => { const R = game(W), S = R.S, G = R.G, n = R.me;
+  const big = v => G.P[v].sea && G.P[v].cells.length > 80, port = G.P.find(P => !P.sea && S.owner[P.id] === n && [...P.nb.keys()].some(v => big(v) && [...G.P[v].nb.keys()].some(big)));   // (the nations world's zones are smaller)
+  const z1 = port && G.P[[...port.nb.keys()].find(v => big(v) && [...G.P[v].nb.keys()].some(big))], z2 = z1 && G.P[[...z1.nb.keys()].filter(big).sort((u, v) => G.P[v].cells.length - G.P[u].cells.length)[0]];
+  ok(T + 'found two big sea zones by a port of yours', !!z2); if (!z2) return;
   const wat = (Z, k) => { const cs = Z.cells.map(c => R.cellCenter(c)).filter(q => R.provOfPt(q[0], q[1]) === Z.id && d(q, [Z.x, Z.y]) > 3 && d(q, [Z.x, Z.y]) < 9); return cs[k % cs.length]; };
   const w1 = wat(z1, 0), w2 = wat(z2, 3), f = R.addArmy(n, z1.id, { frig: 2 }), k1 = R.addArmy(n, z1.id, { crui: 1 }), k2 = R.addArmy(n, z2.id, { crui: 1 });   // (k1, k2: at the zones' centres, 3 to 9 world units off the stops)
   f.pos = [z1.x, z1.y]; f.lastAt = z1.id; f.from = z1.id; R.addStop(f, z1.id, w1); R.addStop(f, z2.id, w2);
-  ok('a fleet takes two stops on water', R.stopsOf(f).length === 2, R.stopsOf(f)); const r = play(R, f);
-  ok('the fleet is not swallowed by the fleets at the zones\' centres', !r.gone && R.count(k1) === 1 && R.count(k2) === 1, { gone: r.gone, k1: R.count(k1), k2: R.count(k2) });
-  if (!r.gone) ok('it stood on the first stop exactly and ends exactly on the second, on water', r.st.some(q => q.p === z1.id && d(q.pos, w1) < 1e-6) && f.at === z2.id && d(f.pos, w2) < 1e-6, { st: r.st, w1, w2 }); });
+  ok(T + 'a fleet takes two stops on water', R.stopsOf(f).length === 2, R.stopsOf(f)); const r = play(R, f);
+  ok(T + 'the fleet is not swallowed by the fleets at the zones\' centres', !r.gone && R.count(k1) === 1 && R.count(k2) === 1, { gone: r.gone, k1: R.count(k1), k2: R.count(k2) });
+  if (!r.gone) ok(T + 'it stood on the first stop exactly and ends exactly on the second, on water', r.st.some(q => q.p === z1.id && d(q.pos, w1) < 1e-6) && f.at === z2.id && d(f.pos, w2) < 1e-6, { st: r.st, w1, w2 }); });
 
-// 3. still joined: a spot on the city itself (a tap on or by the city goes there: index.html byCity) joins the garrison standing there; a spot
-// practically on a force of yours (within JOIN_R) joins it, which stays on its spot; one 2 world units (17 km) off stands apart
-run('joins', () => { const R = game(), S = R.S, G = R.G, n = 0, sc = scene(R, n, 30); if (!sc) return; const B = G.P[sc.B], nB = R.count(sc.gB);
+// 3. still joined, and only there: a spot on the city itself (a tap on or by the city goes there: index.html byCity) joins the garrison standing
+// there; a spot on the very point of a force of yours (a tap on or by it goes there: index.html byForce) joins it, which stays on its spot; one
+// 0.5 world units (about 4 km) off stands apart, on its own spot
+run(T + 'joins', () => { const R = game(W), S = R.S, G = R.G, n = R.me, sc = scene(R, n, 30); if (!sc) return; const B = G.P[sc.B], nB = R.count(sc.gB);
   const a = R.addArmy(n, sc.A, { inf: 2 }); R.orderMove(a, sc.B, [B.x, B.y]); tickTill(R, () => !S.armies.includes(a) || !R.count(a) || (idle(a) && R.count(sc.gB) > nB));
-  ok('a force sent to the city itself joins the garrison there', R.count(sc.gB) === nB + 2 && !sc.gB.pos, { garrison: R.count(sc.gB), was: nB });
-  const b = R.addArmy(n, sc.A, { inf: 1 }); R.orderMove(b, sc.B, sc.wB); play(R, b); const c = R.addArmy(n, sc.A, { inf: 1 }); R.orderMove(c, sc.B, [sc.wB[0] + 0.4, sc.wB[1] + 0.3]); play(R, c);
-  ok('a force sent within JOIN_R of a force of yours standing on a spot joins it, which stays on its spot', R.count(b) === 2 && d(b.pos, sc.wB) < 1e-9 && (!S.armies.includes(c) || !R.count(c)), { b: R.count(b), pos: b.pos, c: R.count(c) });
-  const e = R.addArmy(n, sc.A, { inf: 1 }), we = [sc.wB[0] + 1.6, sc.wB[1] + 1.2]; R.orderMove(e, sc.B, we); play(R, e);
-  ok('one sent 2 world units off stands apart on its own spot', S.armies.includes(e) && R.count(e) === 1 && d(e.pos, we) < 1e-6 && d(we, sc.wB) > R.JOIN_R, { n: R.count(e), pos: e.pos, we }); });
+  ok(T + 'a force sent to the city itself joins the garrison there', R.count(sc.gB) === nB + 2 && !sc.gB.pos, { garrison: R.count(sc.gB), was: nB });
+  const b = R.addArmy(n, sc.A, { inf: 1 }); R.orderMove(b, sc.B, sc.wB); play(R, b); const c = R.addArmy(n, sc.A, { inf: 1 }); R.orderMove(c, sc.B, sc.wB.slice()); play(R, c);
+  ok(T + 'a force sent to the very spot of a force of yours joins it, which stays on its spot', R.count(b) === 2 && d(b.pos, sc.wB) < 1e-9 && (!S.armies.includes(c) || !R.count(c)), { b: R.count(b), pos: b.pos, c: R.count(c) });
+  const e = R.addArmy(n, sc.A, { inf: 1 }), we = [sc.wB[0] + 0.4, sc.wB[1] + 0.3]; R.orderMove(e, sc.B, we); play(R, e);
+  ok(T + 'one sent 0.5 world units (about 4 km) off it stands apart on its own spot', S.armies.includes(e) && R.count(e) === 1 && d(e.pos, we) < 1e-6 && R.count(b) === 2, { n: R.count(e), pos: e.pos, we, b: R.count(b) });
+  // an order with no point (the province's centre, as the computer's and the Armies list's are) where your only force there stands on a spot
+  // away from the city: it arrives at the city and stays there (it joined that force before, and ended on its spot)
+  const g2 = sc.gC, wC = sc.wC; g2.pos = wC.slice(); const n2 = R.count(g2), f = R.addArmy(n, sc.B, { inf: 1 }); f.from = sc.B; f.lastAt = sc.B; R.orderMove(f, sc.C); play(R, f);
+  ok(T + 'a force sent to the centre where a force of yours stands on a spot away from the city stays at the city', S.armies.includes(f) && R.count(f) === 1 && f.at === sc.C && !f.pos && R.count(g2) === n2 && d(g2.pos, wC) < 1e-9, { f: R.count(f), at: f.at, pos: f.pos, g2: R.count(g2), n2 }); });
 
 // 4. a join order (a counter dragged onto another: index.html joinForces) walks to the other force's spot and merges there, not at the border
-run('join order', () => { const R = game(), S = R.S, n = 0, sc = scene(R, n, 30); if (!sc) return; const nB = R.count(sc.gB), t = R.addArmy(n, sc.B, { inf: 1 }); t.pos = sc.wB.slice(); t.from = sc.B; t.lastAt = sc.B;
+run(T + 'join order', () => { const R = game(W), S = R.S, n = R.me, sc = scene(R, n, 30); if (!sc) return; const nB = R.count(sc.gB), t = R.addArmy(n, sc.B, { inf: 1 }); t.pos = sc.wB.slice(); t.from = sc.B; t.lastAt = sc.B;
   const a = R.addArmy(n, sc.A, { inf: 2 }); R.orderMove(a, sc.B, t.pos); a.join = t.id; let crossed = null;
   for (let i = 0; i < 300 && S.armies.includes(a) && R.count(a); i++){ R.tick(); if (crossed === null && a.at === sc.B) crossed = { alive: R.count(a) > 0, sail: !!a.sail }; }
-  ok('a join order: the force enters the province and walks on to the other force (not merged at the border)', crossed && crossed.alive && crossed.sail, crossed);
-  ok('it merges there: the joined force stays on its spot, the garrison at the city as it was', R.count(t) === 3 && d(t.pos, sc.wB) < 1e-9 && R.count(sc.gB) === nB, { t: R.count(t), pos: t.pos, gB: R.count(sc.gB), nB }); });
+  ok(T + 'a join order: the force enters the province and walks on to the other force (not merged at the border)', crossed && crossed.alive && crossed.sail, crossed);
+  ok(T + 'it merges there: the joined force stays on its spot, the garrison at the city as it was', R.count(t) === 3 && d(t.pos, sc.wB) < 1e-9 && R.count(sc.gB) === nB, { t: R.count(t), pos: t.pos, gB: R.count(sc.gB), nB }); });
+
+// 6. the nations world: moves and waypoints to spots 2, 4, 6 and 8 km from a garrisoned city of yours end exactly there (the arrival join took
+// everything within JOIN_R, about 9 km, into the garrison until PINPOINT-3 round 2: at the closest zoom a tap 7 to 9 km from a city is
+// 16 to 20 px from its mark, so index.html byCity leaves it on the tapped spot, and the rules then merged it into the garrison at the city);
+// and a force halted 1 to 8 km from a garrisoned city, on its way past it, stays where it halted (it is looked at for the arrival join: it
+// has just come in, a.lastAt unset)
+const A0 = (R, p, n) => [...R.G.P[p].nb.keys()].find(v => !R.G.P[v].sea && R.S.owner[v] === n) ?? p;
+if (W === 'nations') run(T + 'close spots', () => { const R = game(W), S = R.S, n = R.me, used = new Set(), L = [];
+  for (const km of [2, 4, 6, 8]) for (const kind of ['move', 'waypoint']){ const sc = scene(R, n, km, used); if (!sc){ ok(`${T}${kind} ${km} km: found a garrisoned province with a spot ${km} km from its city`, false); continue; }
+    used.add(sc.B); const a = R.addArmy(n, sc.A, { inf: 2 }); if (kind === 'move') R.orderMove(a, sc.B, sc.wB); else R.addStop(a, sc.B, sc.wB); L.push({ a, sc, km, kind, nB: R.count(sc.gB) }); }
+  for (let i = 0; i < 400 && L.some(q => S.armies.includes(q.a) && R.count(q.a) && !(idle(q.a) && !q.a.wp)); i++) R.tick();
+  for (const { a, sc, km, kind, nB } of L){ const gone = !S.armies.includes(a) || !R.count(a);
+    ok(`${T}${kind} to a spot ${km} km from the city of ${place(R, sc.B)}: it ends exactly on the spot, not in the garrison`, !gone && a.at === sc.B && d(a.pos, sc.wB) < 1e-6 && same(R, sc.gB, nB), { gone, pos: a.pos, want: sc.wB, garrison: R.count(sc.gB), was: nB }); }
+  // the halt: a force walking through a garrisoned province, by its city, halted 1 to 8 km from it (walks are a few km an hour, so the spot is
+  // set to be passed that close: the force starts on a spot 20 km before the city and walks to one 20 km beyond it, 1 to 6 km off its line)
+  const H = []; for (const gB of garrisons(R, n)){ if (H.length >= 4) break; const B = R.G.P[gB.at]; if (used.has(B.id)) continue;
+    for (let k = 0; k < 12; k++){ const an = k*Math.PI/6, u = [Math.cos(an), Math.sin(an)], off = (1.5 + (H.length % 4)*1.5)*R.KM_W, K = 20*R.KM_W;
+      const w1 = [B.x - u[0]*K - u[1]*off, B.y - u[1]*K + u[0]*off], w2 = [B.x + u[0]*K - u[1]*off, B.y + u[1]*K + u[0]*off];
+      if (R.provOfPt(w1[0], w1[1]) !== B.id || R.provOfPt(w2[0], w2[1]) !== B.id) continue;
+      used.add(B.id); const a = R.addArmy(n, B.id, { inf: 2 }); a.pos = w1; a.from = A0(R, B.id, n); a.lastAt = null; R.orderMove(a, B.id, w2); H.push({ a, B, gB, nB: R.count(gB), hd: null }); break; } }
+  for (let i = 0; i < 300 && H.some(q => q.hd === null && R.count(q.a) && !idle(q.a)); i++){ R.tick();
+    for (const q of H) if (q.hd === null && q.a.sail && q.a.pos){ const k = d(q.a.pos, [q.B.x, q.B.y])/R.KM_W; if (k > 1 && k < 8){ R.haltArmy(q.a); q.hd = q.a.pos.slice(); } } }
+  for (let i = 0; i < 3; i++) R.tick(); const hs = H.filter(q => q.hd);
+  ok(T + 'found forces to halt 1 to 8 km from a garrisoned city', hs.length > 0, H.map(q => q.B.name));
+  for (const q of hs){ const gone = !S.armies.includes(q.a) || !R.count(q.a); ok(`${T}halted ${(d(q.hd, [q.B.x, q.B.y])/R.KM_W).toFixed(1)} km from the city of ${place(R, q.B.id)}: it stays where it halted, not in the garrison`, !gone && d(q.a.pos, q.hd) < 1e-6 && same(R, q.gB, q.nB), { gone, pos: q.a.pos, hd: q.hd, garrison: R.count(q.gB), was: q.nB }); } });
+
+}
+rulesPart('nations'); rulesPart('classic');
 
 // 5. saves: one made mid-plan loads and goes on to every stop exactly; an old save of origin/master with moves, stops and walks in flight
 run('saves', () => { const R = game(), n = 0, sc = scene(R, n, 30); if (!sc) return; const a = R.addArmy(n, sc.A, { inf: 2 }); R.addStop(a, sc.B, sc.wB); R.addStop(a, sc.C, sc.wC);
@@ -126,10 +173,12 @@ function makeFixture(){ const kmS = B => [80, 70, 60, 55].map(km => spotAt(build
 // Part 2: the page, a player's taps, phone and desktop, Germany's real start (garrisons kept)
 async function pagePart(){ const pickNation = require('./pick-nation.js'), { chromium } = require('playwright');
   const br = await chromium.launch({ args: ['--allow-file-access-from-files'] });
-  for (const [TAG, W, H, DPR] of [['phone', 440, 900, 2], ['desk', 1440, 900, 1]]){ const PHONE = TAG === 'phone';
+  // the nations world as players see it (page.html?start=nations: the start screen's only world), phone and desktop; the classic world of the
+  // old saves on the desktop (the test page opens on it without ?start=nations)
+  for (const [TAG, W, H, DPR, Q] of [['phone', 440, 900, 2, '?start=nations'], ['desk', 1440, 900, 1, '?start=nations'], ['classic desk', 1440, 900, 1, '']]){ const PHONE = TAG === 'phone';
     const ctx = await br.newContext(PHONE ? { viewport: { width: W, height: H }, deviceScaleFactor: DPR, hasTouch: true, isMobile: true } : { viewport: { width: W, height: H }, deviceScaleFactor: DPR }), p = await ctx.newPage();
     p.on('pageerror', e => errors.push(TAG + ' pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|ERR_|net::/.test(m.text())) errors.push(TAG + ' console: ' + m.text()); });
-    await p.goto('file://' + __dirname + '/page.html'); await p.waitForTimeout(500);
+    await p.goto('file://' + __dirname + '/page.html' + Q); await p.waitForTimeout(500);
     await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
     await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 }); await p.waitForTimeout(600);
     const R = await p.evaluate(() => { const im = window.__im; im.S.speed = 0; document.querySelectorAll('.toast,.ftip').forEach(t => t.remove());
@@ -167,6 +216,7 @@ async function pagePart(){ const pickNation = require('./pick-nation.js'), { chr
         for (const c of G.P[b].nb.keys()){ const gC = gs.find(g => g.at === c); if (!gC || c === g0.at || G.P[c].sea) continue; const sC = spot(G.P[c], [35, 30, 40, 25, 45], 7); if (!sC) continue;
           return { A: g0.at, Ac: [G.P[g0.at].x, G.P[g0.at].y], B: b, Bc: [G.P[b].x, G.P[b].y], bName: G.P[b].name, gB: gB.id, nB: count(gB), wB: sB.w, kmB: sB.km, C: c, Cc: [G.P[c].x, G.P[c].y], cName: G.P[c].name, gC: gC.id, nC: count(gC), wC: sC.w }; } }
       return null; });
+    { const nn = await p.evaluate(() => window.__im.S.nations.length); ok(`${TAG}: the page plays the ${Q ? 'nations world (68 nations)' : 'classic world (15 powers)'}`, Q ? nn > 15 : nn === 15, nn); }
     ok(`${TAG}: found Germany's garrisoned neighbour provinces with spots 25-45 km from their cities`, !!sc, null); if (!sc){ await ctx.close(); continue; }
     const newForce = (u, k = 0) => p.evaluate(([A, Ac, u, k]) => { const f = window.__im.addArmy(0, A, u); f.pos = ptIn(A, Ac[0] - 1.5 + k*0.9, Ac[1] + 1.2); f.from = A; f.lastAt = A; return f.id; }, [sc.A, sc.Ac, u, k]);
     const garOk = () => p.evaluate(([gB, nB, gC, nC]) => { const S = window.__im.S, b = S.armies.find(q => q.id === gB), c = S.armies.find(q => q.id === gC); return { b: b ? count(b) : 0, c: c ? count(c) : 0, ok: !!b && count(b) === nB && !!c && count(c) === nC }; }, [sc.gB, sc.nB, sc.gC, sc.nC]);
@@ -214,6 +264,31 @@ async function pagePart(){ const pickNation = require('./pick-nation.js'), { chr
       const r = await play(id), g = await p.evaluate(gB => { const b = window.__im.S.armies.find(q => q.id === gB); return b && { n: count(b), pos: b.pos }; }, sc.gB);
       ok(`${TAG} Move + a tap on the city of ${sc.bName}: it goes to the city and joins the garrison there`, r.gone && g && g.n === sc.nB + 1 && !g.pos, { r, g, was: sc.nB });
       await p.evaluate(([gB, nB]) => { const b = window.__im.S.armies.find(q => q.id === gB); if (b){ b.u.inf = Math.max(0, b.u.inf - (count(b) - nB)); } }, [sc.gB, sc.nB]); }
+
+    // P7. the closest zoom (view.s = 20 px a world unit, index.html ZMAX: hp 240): Move, and Waypoint, then a tap 17 px (about 7.4 km) from the mark of the
+    // garrisoned city: byCity (16 px) leaves the order on the tapped spot, and the force ends there (the arrival join took it into the garrison
+    // until PINPOINT-3 round 2: JOIN_R was about 9 km); a tap 4 px from a force of yours standing on a spot goes to it and joins it there
+    // (index.html byForce), and one 24 px off it stands apart
+    { const Z = 240; await view(sc.Bc, Z); await p.waitForTimeout(1200); await still();
+      const sp = await p.evaluate(([B, Bc]) => { const im = window.__im, out = []; for (let k = 0; k < 48 && out.length < 2; k++){ const an = k*Math.PI/24, w = [Bc[0] + Math.cos(an)*17/im.view.s, Bc[1] + Math.sin(an)*17/im.view.s], T = im.toScreen(w[0], w[1]).map(Math.round);
+          const w2 = [(T[0] - im.view.x)/im.view.s, (T[1] - im.view.y)/im.view.s]; if (provOfPt(w2[0], w2[1]) !== B || im.isWet(w2[0], w2[1]) || im.hitAt(T[0], T[1]) || Math.hypot(...im.toScreen(Bc[0], Bc[1]).map((c, i) => c - T[i])) < 16.5 || out.some(q => Math.hypot(q[0] - w2[0], q[1] - w2[1]) < 0.3)) continue; out.push(w2); }
+        return out; }, [sc.B, sc.Bc]);
+      ok(`${TAG} closest zoom: found two spots 17 px from the city of ${sc.bName} with no counter under them`, sp.length === 2, sp);
+      for (const [j, mode] of ['cm-move', 'cm-wp'].entries()) if (sp[j]){ const id = await newForce({ inf: 1 }, 4 + j); await view(sc.Bc, Z); await p.waitForTimeout(600); await select(id); await btn(mode);
+        const w = await tapW(sp[j]); if (mode === 'cm-wp') await btn('cm-wp'); const o = await info(id), km = await p.evaluate(([x, y, X, Y]) => Math.hypot(x - X, y - Y)/KM_W, [w[0], w[1], sc.Bc[0], sc.Bc[1]]);
+        ok(`${TAG} closest zoom, ${mode === 'cm-move' ? 'Move' : 'Waypoint'} + a tap ${km.toFixed(1)} km (17 px) from the city of ${sc.bName}: the order goes to the tapped spot`, o && o.stops.length === 1 && Math.hypot(o.stops[0].x - w[0], o.stops[0].y - w[1]) < 0.02, { stops: o && o.stops, w });
+        const r = await play(id), e = await info(id), g = await garOk();
+        ok(`${TAG} closest zoom, ${mode === 'cm-move' ? 'Move' : 'Waypoint'}: it ends exactly on the tapped spot, not merged into the garrison 17 px away`, !r.gone && e && e.at === sc.B && Math.hypot(e.pos[0] - w[0], e.pos[1] - w[1]) < 0.02 && g.ok, { r, e, w, garrisons: g });
+        if (j === 0) await kill([id]); else sp[j] = e && !r.gone ? { id, pos: e.pos } : null; }   // (the first goes: its counter would lie under the second tap)
+      // byForce: the Waypoint force now stands on its spot; a tap 4 px from it (Move) joins it there; a tap 24 px from it stands apart
+      if (sp[1] && sp[1].id){ const t = sp[1], P0 = await scr(t.pos), side = await p.evaluate(([B, x, y, Bc]) => { const im = window.__im, C = im.toScreen(Bc[0], Bc[1]); for (let k = 0; k < 16; k++){ const an = k*Math.PI/8, X = Math.round(x + Math.cos(an)*24), Y = Math.round(y + Math.sin(an)*24), w = [(X - im.view.x)/im.view.s, (Y - im.view.y)/im.view.s];
+            if (provOfPt(w[0], w[1]) === B && !im.isWet(w[0], w[1]) && !im.hitAt(X, Y) && Math.hypot(X - C[0], Y - C[1]) > 16.5) return w; } return null; }, [sc.B, P0[0], P0[1], sc.Bc]);
+        const near = await p.evaluate(([x, y]) => { const im = window.__im; for (const [dx, dy] of [[4, 0], [0, 4], [-4, 0], [0, -4], [3, 3]]) if (!im.hitAt(Math.round(x + dx), Math.round(y + dy))) return [(Math.round(x + dx) - im.view.x)/im.view.s, (Math.round(y + dy) - im.view.y)/im.view.s]; return [(Math.round(x + 4) - im.view.x)/im.view.s, (Math.round(y) - im.view.y)/im.view.s]; }, P0);
+        const a1 = await newForce({ inf: 1 }, 6); await select(a1); await btn('cm-move'); await tapW(near, true); const r1 = await play(a1), e0 = await info(t.id);
+        ok(`${TAG} closest zoom, Move + a tap 4 px from a force of yours standing on a spot: it goes to that force and joins it there (byForce)`, r1.gone && e0 && e0.n === 2 && Math.hypot(e0.pos[0] - t.pos[0], e0.pos[1] - t.pos[1]) < 1e-9, { r1, e0, t });
+        if (side){ const a2 = await newForce({ inf: 1 }, 7); await select(a2); await btn('cm-move'); const w = await tapW(side); const r2 = await play(a2), e2 = await info(a2), e1 = await info(t.id);
+          ok(`${TAG} closest zoom, Move + a tap 24 px from that force: it stands apart, exactly on the tapped spot`, !r2.gone && e2 && Math.hypot(e2.pos[0] - w[0], e2.pos[1] - w[1]) < 0.02 && e1 && e1.n === 2, { r2, e2, w, e1 }); await kill([a2]); } }
+      await kill(sp.filter(q => q && q.id).map(q => q.id)); }
 
     // P6. the desktop: a counter dragged onto a spot by the garrisoned city
     if (!PHONE){ const id = await newForce({ inf: 2 }, 3); await view(mid(sc.Ac, sc.wB), 55); await p.waitForTimeout(1200); await p.evaluate(() => window.__im.clearSel()); await p.waitForTimeout(250);

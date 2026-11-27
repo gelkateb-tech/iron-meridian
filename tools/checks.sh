@@ -20,10 +20,16 @@ run rebels2 node .test/rebels2.js
 run d10 node .test/d10.js
 run dealings node .test/dealings.js
 run anchor node .test/anchor-check.js 1440 900 1
+# nat-oldsave loads a save of the old build (master 8d9051c) into this one: that build is made once in .test/base8d9 (not kept in git)
+if [ ! -f "$ROOT/.test/base8d9/.test/page.html" ]; then echo "making .test/base8d9 (the old build nat-oldsave needs)"
+  rm -rf -- "$ROOT/.test/base8d9"; mkdir -p "$ROOT/.test/base8d9" && git -C "$ROOT" archive 8d9051c | tar -x -C "$ROOT/.test/base8d9" && bash "$ROOT/.test/base8d9/tools/mkpage.sh" > "$L/base8d9.log" 2>&1; fi
 run natold node .test/nat-oldsave.js
-# plain Node
-run balance node tools/balance.js & run natbal node tools/nations-balance.js & wait
-run eco node tools/eco-check.js --scenarios & run duel node tools/stack-duel.js --scenarios & wait
+# the balance checks, one after another too: balance plays in a browser, and run beside nations-balance on a loaded machine its page crashed
+# ('Target crashed', PINPOINT-3, 2026-11-27); eco-check and stack-duel are heavy plain Node runs, so they take their turn as well
+run balance node tools/balance.js
+run natbal node tools/nations-balance.js
+run eco node tools/eco-check.js --scenarios
+run duel node tools/stack-duel.js --scenarios
 run build node tools/build.js
 rm -rf -- "$ROOT/dist"
 if awk '$2 != 0 { bad = 1 } END { exit bad }' "$L/summary.txt"; then echo "ALL PASSED ($L)"; else echo "FAILED: $(awk '$2 != 0 { printf "%s ", $1 }' "$L/summary.txt")($L)"; exit 1; fi

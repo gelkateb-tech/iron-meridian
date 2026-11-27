@@ -265,10 +265,13 @@ const fightsOnWay = (a, path) => path.slice(0, -1).filter(v => !G.P[v].sea && S.
    (legRatio: from where the force stands, or the province centre, to the point, or the next centre), so a short last leg is quick and a
    long one slow, never a free jump. Ships do the same inside sea zones, on water only (a point on land is moved to the nearest water of the
    zone); air units fly missions and take no point. Old saves (no a.dest, no a.pos) keep the province centres. */
-// a force arriving at an exact point merges only with a force of its own standing that close to it (rules/tick.js), about 9 km: practically
-// the same spot (a tap on or by a city goes to the city itself, index.html byCity, and joins the force standing there). It was 6 (about 50 km)
-// until PINPOINT-3: a spot tapped near a city of your own then ended in the garrison at the city
-const JOIN_R = 1;   // world units
+// a force arriving at its spot merges only with a force of its own standing on that very point (rules/tick.js): 0.1 km, the heart's radius
+// (HEART_KM). The orders that mean "join it" hand over that exact point: a tap on or by a city goes to the city itself (index.html byCity) and
+// joins the garrison standing there; a tap on or by a force of yours goes to its spot (index.html byForce); a counter dragged onto another is a
+// join order (a.join, joinForces). Any wider radius pulls a force off the
+// spot that was tapped: it was 6 world units (about 50 km) until PINPOINT-3, then 1 (about 9 km), which still took a tap 7 to 9 km from a city of
+// yours at the closest zoom (byCity's 16 px reach there is 0.8 world units) into the garrison, and a halt or a tap that close to any force of yours
+const JOIN_R = 0.1*KM_W;   // world units
 const provOfPt = (x, y) => { const c = worldToCell(x, y); return c >= 0 ? G.prov[c] : -1; };
 // the point (x, y) if it lies in province (or sea zone) p, else the nearest point of p (the centre of its nearest cell): a zone's cells are water
 function ptIn(p, x, y){ if (!G.P[p] || !Number.isFinite(x) || !Number.isFinite(y)) return null; if (provOfPt(x, y) === p) return [x, y];

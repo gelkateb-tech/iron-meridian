@@ -202,7 +202,7 @@ The switches are saved in this browser under the localStorage key `iron-meridian
 
 ### Standard checks
 
-Run all of them before a merge: `bash tools/checks.sh [log folder]` runs them in this order, one log each and a `summary.txt` (default folder `.test/checks-log`), and exits 1 if any fails. The browser tests run one at a time (side by side on a loaded machine their tap checks fail for want of frames), and the build's `dist/` is deleted at the end.
+Run all of them before a merge: `bash tools/checks.sh [log folder]` runs them in this order, one log each and a `summary.txt` (default folder `.test/checks-log`), and exits 1 if any fails. Every check runs on its own, one after another (side by side on a loaded machine the browser tests' tap checks fail for want of frames, and balance's page crashed beside nations-balance); the old build `nat-oldsave` needs (`.test/base8d9`, master 8d9051c) is made the first time; the build's `dist/` is deleted at the end.
 
 | Check | What it guards |
 |---|---|
@@ -212,7 +212,7 @@ Run all of them before a merge: `bash tools/checks.sh [log folder]` runs them in
 | `node .test/units-in-cities.js` | forces drawn and tapped in cities |
 | `node .test/pinpoint.js` | pinpoint movement on an empty map (rules and taps) |
 | `node .test/waypoints.js` | waypoints: stops in order, Undo, saves (rules and taps) |
-| `node .test/pinpoint-guard.js` | **PINPOINT-3 guard**: on a map with the starting garrisons, a Move tap, Waypoint taps (one stop and a plan through two garrisoned provinces), a fleet's Waypoint taps on water, troops' stop at sea, a drag (desktop) and a save mid-plan end exactly on the tapped spot, at phone (440 x 900, touch) and desktop size, plus the rules cases and an old save of origin/master with moves in flight (`.test/fixtures/pinpoint-oldsave.json`). Pinpoint movement broke three times because the other tests empty the map first; this one does not. Each FAIL names what broke |
+| `node .test/pinpoint-guard.js` | **PINPOINT-3 guard**: on a map with the starting garrisons, in the nations world players play (`page.html?start=nations`; the rules part with `nations.js`, Germany's seat) and the classic world of the old saves, a Move tap, Waypoint taps (one stop and a plan through two garrisoned provinces), a fleet's Waypoint taps on water, troops' stop at sea, taps at the closest zoom 17 px (about 7 km) from a garrisoned city's mark, a tap by a force of yours (it joins it) and 24 px off it (it stands apart), a drag (desktop) and a save mid-plan end exactly on the tapped spot, at phone (440 x 900, touch) and desktop size; plus the rules cases (spots 2 to 45 km from a garrisoned city, a halt 1 to 8 km from one, a fleet, joins only on the very spot) and an old save of origin/master with moves in flight (`.test/fixtures/pinpoint-oldsave.json`). Pinpoint movement broke three times because the other tests empty the map first; this one does not. Each FAIL names what broke |
 | `node .test/controls.js` | the command bar and taps |
 | `node .test/rebels2.js`, `node .test/d10.js`, `node .test/dealings.js` | rebels, the ten-day play, the Diplomacy screens |
 | `node .test/anchor-check.js 1440 900 1` | counters and models anchored to the map |
