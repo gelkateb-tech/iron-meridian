@@ -404,3 +404,34 @@ Section 11 in the page (`index.html`, `fx.js`); the rules are untouched except o
 - **Silo panel and strip:** each kind's row says its limits ("1 of 2 here · 1 of 6 in all · one launch every 12 h (next in 7 h)") or why it cannot be built ("Needs a Missile Silo II"); the chemical and nuclear Launch buttons are red and wait out the cooldown. The strip's cells say Locked, Needs Silo II (or Needs a silo / Needs a base), None built, Ready to launch or Next in n h; the chemical and nuclear icons are the ballistic missile's with a small sign (hazard triangle, radiation sign): names only, no pictures (M10).
 - **Research tree:** Chemical Warhead and Nuclear Warhead (unlocks without a research scene) show their signs in the diamond and in the card's scene; Persistent Agent the gas sign with the up arrow; CBRN Defence a shield with the radiation sign.
 - **Tests:** `.test/missiles-page.js` also aims a chemical missile through the picker (the card, Launch), and checks the zones and their panel and army bar lines.
+
+## 20. Polish round 1 (branch `missiles`, after the rules and look critics)
+
+Master moved to Dev Build v71 (UNITS IN CITIES) and was merged in first (one conflict, the city sheet body: it keeps both the zone line and the heart line).
+
+**Rules**
+- **M8 at sea and on independent land.** A chemical or nuclear missile also self-destructs when it lands on land nobody holds, or on the sea, and no force of a nation at war with its user stands there any more (a victim that made peace in flight, `wmdFoesAt`). A neutral garrison alone is no enemy: independent land with only one cannot be targeted.
+- **A silo kind launches from a silo.** Ballistic, chemical and nuclear missiles launch only from a city with a Missile Silo (an Army Base left standing after the silo was wrecked is not enough; the stock waits for a new silo). A missile building in a silo whose level was wrecked below its own (a nuclear one in a silo knocked down to I) waits for the level to stand again.
+- **Lost and retaken in one hour.** A chemical or nuclear stock is destroyed at the moment its city changes hands (`ownChanged` runs `wmdSweep`), not only at the hour's step.
+- **Healing.** Ships in an irradiated or gassed port heal (the zones do not touch them); the army bar of a ground force in a zone now says "No healing in the gas / radiation" (`healInfo` kind `haz`) instead of the healing line.
+- **The computer's garrisons** (`hazHold`, `aiHazOut`, `aiHazRoutes`): a garrison stays in its capital, and in a city of its with enemy forces in or next to it (or on their way), through gas and radiation; a march into a zone in its own or a friend's land stops short of it (an attack on an enemy province goes on). Gassing a computer capital no longer empties it.
+- **The computer's nuclear targets** (`aiNuc`): in an answer, the silo the strike came from first (`S.wmd[].f`), then any silo city of the attacker; otherwise a stack of those enemies of 8 units and power 80 or more (forces arriving within 6 hours counted), as for chemical strikes, never a single unit; a desperate launch (no answer) only at the front: its own home land held by the enemy, or a province next to land it holds.
+- **IMP-8 for cruise and ballistic missiles** (`aiMissiles`, `aiFoePw`): the computer aims them at enemy forces standing in a province or arriving there within 4 hours, not only those standing. **AI-1:** at war, it also builds cruise missiles in a city of its with an Army Base, Airbase or Naval Yard and no silo (2 at most, as for a person).
+- Unchanged and asked (section 21): a chemical strike may still be answered with a nuclear one (section 10 (a)); Conventional Warhead's research weight.
+
+**Screens**
+- **Zone chips** (`drawHazChips`, `hazCand`): each chip takes the nearest free spot round its own, clear of the counters' tap boxes, the missile warning markers (with their word) and the chips already placed; failing that the least covered near spot. A chip moved off its spot has a thin leader to a dot inside its zone. Far out (under hexPx 12) the chip shows only its sign. A chip whose spot is off screen while part of its zone is on screen is pulled into view.
+- **The zone fades in after its blast** (1.2 s to 3.8 s after the strike; `hazIn`): its rim and chip no longer cut through the fireball. A zone already there when the page first sees it shows at once. The fade asks for frames only while it runs.
+- **Radiation at night:** the yellow tint grows a little at night (it eased off before and nearly vanished); the gas tint is as before.
+- **The province panel** (desktop side panel): the zone line now stands right under the terrain box, above the figures, so it is above the fold at 1280 x 800.
+- **The launch card on a desktop:** when the target and (nuclear) its neighbours still reach under the card, the map slides sideways just enough to clear it (`mslCfClear`). The opinion cost reads "−70 to −90" (and "−33 to −40"), the smaller number first.
+- **The missile strip on a phone:** short words in narrow cells: "Ready", "Next 7 h", "None", "Go to silo".
+- **Cost on a phone** (440 px, dpr 3, a gas and a radiation zone with their chips on screen, the machine loaded by other jobs; pan fps, 9 pans each, alternating): master a41f367 median 55.0, the branch 50.8, the branch without zones 53.4; 0 idle redraws in 4 s on all three. The chip placement looks only at the obstacles near each chip.
+- **Tests:** `.test/missiles.js` section 11 (21 checks: the M8 cases, the neutral garrison, launch without a silo, the waiting nuclear missile, lost and retaken, healing in a zone, the garrisons, the computer's nuclear targets, cruise missiles at a column and in a base city); `.test/missiles-page.js` checks the army bar's healing line, three zones side by side (no chip on a chip or a counter) and the side panel's zone line above the figures.
+
+## 21. Open questions after polish round 1
+
+1. **A nuclear answer to a chemical strike.** Section 10 (a) lets the computer answer a chemical strike on itself or an ally with a nuclear missile (at the attacker's silo city, usually its capital). In a forced test (12 nations given the research and a Silo II, six wars) every chemical strike drew a nuclear answer within hours. Keep it, or answer only a nuclear strike with a nuclear one?
+2. **Will the computer ever use these weapons?** In ordinary 60-day computer games no nation researches Conventional Warhead, so none builds a silo, and no chemical or nuclear missile is ever built. A higher research weight for Conventional Warhead at war would bring them in; leave it as it is?
+3. **Section 1 vs section 9:** the "Used nuclear weapons" line is −55 (section 9, as built), not −30 (section 1).
+4. **Peace after a nuclear strike:** as built, for 3 days after a nuclear launch every nation at war with the launcher refuses the launcher's peace offers (section 10 reads "the victim's offers"); confirm.

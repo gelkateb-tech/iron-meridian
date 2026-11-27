@@ -58,6 +58,17 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
     const zz = await p.evaluate(tg => { const im = window.__im, S = im.S; S.haz = S.haz || {}; S.haz[tg[0]] = {k:'gas', h0:S.hour, until:S.hour + 9, by:0}; S.haz[tg[1]] = {k:'rad', h0:S.hour, until:S.hour + 40, by:0};
       const a = addArmy(0, tg[0], {inf:2}); return {shown:im.msl.haz().length, gas:(im.msl.hazLine(tg[0]) || {}).html || '', rad:(im.msl.hazLine(tg[1]) || {}).html || '', ab:im.msl.abHaz(a)}; }, r.tg);
     ok(zz.shown >= 2 && /Gas: 9 h left/.test(zz.gas) && /Radiation: 40 h left/.test(zz.rad) && /In gas/.test(zz.ab), tag + ': zones known, the panel lines and the army bar chip: ' + JSON.stringify(zz).slice(0, 200));
+    // polish 1: the army bar says "no healing" in the gas; a third zone next door: the chips keep clear of each other, the counters and the markers;
+    // the province panel's zone line stands high (under the terrain box, before the figures)
+    const hb = await p.evaluate(tg => { const a = stationaryAt(tg[0]).find(b => b.owner === 0); a.w.inf = 3; return window.__im.msl.abHeal(a); }, r.tg); ok(/No healing in the gas/.test(hb[0] || ''), tag + ': army bar: ' + JSON.stringify(hb));
+    await p.evaluate(tg => { const S = window.__im.S, q = G.P[tg[0]].nbs.find(v => !G.P[v].sea && v !== tg[1]); if (q != null) S.haz[q] = {k:'gas', h0:S.hour - 11, until:S.hour + 1, by:0}; window.__im.selectProv(tg[0]); }, r.tg);
+    await p.waitForTimeout(3800); await p.evaluate(() => { window.__im.redraw && window.__im.redraw(); }); await p.waitForTimeout(400);
+    const ch = await p.evaluate(() => { const L = window.__im.msl.chips(); if (!L) return null; const ov = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
+      let cc = 0, co = 0; for (let i = 0; i < L.placed.length; i++){ for (let j = i + 1; j < L.placed.length; j++) if (ov(L.placed[i].map((v, k) => v + (k < 2 ? 2 : -2)), L.placed[j].map((v, k) => v + (k < 2 ? 2 : -2)))) cc++; for (const o of L.ob) if (ov(L.placed[i].map((v, k) => v + (k < 2 ? 2 : -2)), o)) co++; }
+      return {n:L.placed.length, ob:L.ob.length, chipOnChip:cc, chipOnCounter:co}; });
+    ok(ch && ch.n >= 2 && ch.chipOnChip === 0 && ch.chipOnCounter === 0, tag + ': zone chips clear of each other and of the counters: ' + JSON.stringify(ch));
+    if (!phone){ const pos = await p.evaluate(() => { const side = document.querySelector('#side') || document.body, h = side.querySelector('.status.haz'), kv = side.querySelector('dl.kv'); return h && kv ? [h.getBoundingClientRect().top, kv.getBoundingClientRect().top] : null; });
+      ok(pos && pos[0] < pos[1], tag + ': the province panel shows the zone line above its figures: ' + JSON.stringify(pos)); }
     await p.waitForTimeout(400);
     if (SHOTS) await p.screenshot({path:path.join(SHOTS, `${tag}-strike.png`)}); }
   await ctx.close(); }
