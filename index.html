@@ -6789,8 +6789,11 @@ function bnBox(nm, mir){ const M = BNMETA[nm]; if (!M) return [-0.5, -0.4, 0.5, 
      dock basin under its piers. A town inland has none.
    - Army Base, Bunker and Recruiting Office: among the inner blocks, as near the centre as there is room (the Army Base looks west first,
      the Bunker east); then the Arms Industry, from a third of the radius out (round 3: nearer the core, the town not scattered).
-   - Airbase and Missile Silo: the first open ground past the built-up edge (swept out from half the radius), off every road: open ground.
-   - Round the HQ's square (its lot and the paved square round the point) a ring road (rg; cityHqRings): no other lot over it.
+   - Airbase and Missile Silo: the first open ground past the built-up edge (swept out from half the radius; no dense blocks round the lot
+     nor between it and the town: densE), off every road: open ground.
+   - Round the HQ's lot and its picture its grounds and a ring road's line (rg; cityHqRings): no other lot over it, nor a neighbour's, nor
+     the Naval Yard's (placed first: the HQ's spot keeps its ring clear of it). Of the line only the stretches a map road takes round the
+     HQ are drawn (cityRingArcs), from hex 100 px.
    No lot over a road, a railway or a river where there is any room off them (then a smaller lot, its pictures drawn at 0.85, 0.7, 0.55 or
    0.45; only then on a road, then over a river), none over the national border or the water, none over the town's name or point, every lot
    nearer its own town's point than any other's (by size, and by plain distance), none out of the town's square. A building with no room
@@ -6804,7 +6807,12 @@ const BN_LOTM = 0.5*KM_W, BN_LOTG = 1.4*KM_W, BN_LOTP = 5*KM_W, BN_LOTF = 6*KM_W
 // the ring road round the HQ's square (round 3, owner 2026-11-26: "roads should curve round the HQ square and carry on, not stop at its
 // edge"): its line this far out from the HQ's lot and the paved square round the point together, its corners rounded (at most BN_LOTRR),
 // the town's blocks kept BN_LOTRW past its line (cityLotPrep's ring)
-const BN_LOTRG = 1.6*KM_W, BN_LOTRW = 1.2*KM_W, BN_LOTRR = 9*KM_W;
+const BN_LOTRG = 1.2*KM_W, BN_LOTRW = 1.2*KM_W, BN_LOTRR = 6*KM_W;
+// (polish 1 of round 3, look critic: the ring round the whole square read as a frame, a badge round the HQ, and the town's name sat on its
+// bottom line: the ring goes round the HQ's lot and its picture alone, the paved square round the point stays the town's own as in every
+// town, and the ring is only a way round: of its line only the stretches a map road takes round the HQ are drawn (cityRingArcs))
+const cityRingOf = (q, B) => { const g = BN_LOTRG, R = [Math.min(q[0], B[0]) - g, Math.min(q[1], B[1]) - g, Math.max(q[2], B[2]) + g, Math.max(q[3], B[3]) + g]; R.push(Math.min(BN_LOTRR, 0.4*Math.min(R[2] - R[0], R[3] - R[1]))); return R; };
+const cityRingBox = R => [R[0] - BN_LOTRW, R[1] - BN_LOTRW, R[2] + BN_LOTRW, R[3] + BN_LOTRW];
 // per building: t, how far out (share of the town's radius; 0: as near the centre as there is room), a, the direction looked at first
 // (screen angle: 0 east, -pi/2 north; sec: the open sector between the town's roads instead, 0 the widest), out: the ring past t first
 const BN_LOTR = {hq:{t:0, a:-Math.PI/2}, fac:{t:0, a:Math.PI}, fort:{t:0, a:0}, rec:{t:0, a:-Math.PI/2}, arms:{t:0.3, a:-3*Math.PI/4}, air:{t:0.5, sec:0, out:1}, silo:{t:0.45, sec:1, out:1}, yard:{t:0.3, a:Math.PI/2}};
@@ -6891,6 +6899,11 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   const DG = yield* cityDensGrid(p, 48), BD = DG.D.map(v => sstep(0.25, 0.75, v));   // (BD: about the share of the ground its blocks cover)
   const dens = (x, y) => { const u = Math.floor((x/DG.E + 1)*24), v = Math.floor((y/DG.E + 1)*24); return u < 0 || v < 0 || u > 47 || v > 47 ? 0 : BD[v*48 + u]; };
   const densQ = q => { let t = 0; for (const [a, b] of [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) t += dens(q[0] + (q[2] - q[0])*a, q[1] + (q[3] - q[1])*b); return t/5; };
+  // (a field's lot out past the built-up edge: no dense blocks within half its short side round it, nor within its short side towards the
+  // point; look critic, polish 1 of round 3: Riyadh's Airbase in a gap among its blocks, which the lot's middle alone took for open ground)
+  const densE = q => { const w = Math.min(q[2] - q[0], q[3] - q[1]), e = 0.5*w, cx = (q[0] + q[2])/2, cy = (q[1] + q[3])/2, d = Math.hypot(cx, cy) || 1, hr = Math.hypot(q[2] - q[0], q[3] - q[1])/2; let mx = 0;
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) mx = Math.max(mx, dens(q[0] - e + (q[2] - q[0] + 2*e)*i/4, q[1] - e + (q[3] - q[1] + 2*e)*j/4));
+    for (const t of [hr + 0.5*w, hr + w]) mx = Math.max(mx, dens(cx - cx/d*t, cy - cy/d*t)); return mx; };
   let am = null; { let sx = 0, sy = 0, sw = 0; for (let j = -8; j <= 8; j++) for (let i = -8; i <= 8; i++){ const x = i*r/8, y = j*r/8; if (x*x + y*y > r*r) continue; const w = dens(x, y); sx += w*x; sy += w*y; sw += w; } if (sw > 0 && Math.hypot(sx, sy)/sw > 0.12*r) am = Math.atan2(sy, sx); }
   /*@TEST*/out.am = am;/*@ENDTEST*/ yield;
   // the other towns round it (world px from its point, this town's radius over theirs; their names): a lot stays nearer this town than any
@@ -6903,7 +6916,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   // Osaka's, Beersheba's over its neighbours', where a lot's way in was cut off)
   const iN0 = placed.length; for (const Q of G.P){ if (Q === P || !Q.city || Q.sea) continue; const RQ = cityR(Q.id); if (RQ.r < r || (RQ.r === r && Q.id > p)) continue; let dx = Q.x - P.x; if (Math.abs(dx) > WORLD_W/2) dx -= Math.sign(dx)*WORLD_W; const dy = Q.y - P.y;
     if (Math.abs(dx) > E + 1.5*RQ.E || Math.abs(dy) > E + 1.5*RQ.E) continue; const Lo = yield* cityLotsWait(Q.id); if (!Lo) continue;
-    for (const q of Lo.list.map(l => l.q).concat([Lo.fc])) if (Math.abs(q[0] + dx) < 1.6*E || Math.abs(q[2] + dx) < 1.6*E) placed.push([q[0] + dx, q[1] + dy, q[2] + dx, q[3] + dy]); }
+    for (const q of Lo.list.map(l => l.q).concat([Lo.fc], Lo.k.hq && Lo.k.hq.rg ? [cityRingBox(Lo.k.hq.rg)] : [])) if (Math.abs(q[0] + dx) < 1.6*E || Math.abs(q[2] + dx) < 1.6*E) placed.push([q[0] + dx, q[1] + dy, q[2] + dx, q[3] + dy]); }
   const iN1 = placed.length;   // (placed[iN0..iN1): the bigger towns' lots; a town hemmed in by them on every side looks past them at the very last, rx 3)
   const mine = q => { for (const [x, y] of [[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]], [(q[0] + q[2])/2, (q[1] + q[3])/2]]){ const d = Math.hypot(x, y); for (const n of nbr){ const dn = Math.hypot(x - n[0], y - n[1]); if (dn*n[2] < d || dn < 0.8*d) return false; } } return true; };
   const mineR = q => { for (const [x, y] of [[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]]){ const d = Math.hypot(x, y); for (const n of nbr) if (Math.hypot(x - n[0], y - n[1]) < d) return false; } return true; };
@@ -6925,28 +6938,32 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   const dry = (pics, x, y, m, f) => pics.every(([nm, F0]) => { const s = sz(F0)*f, A = bnFoot(nm).all, b = bnFootRect(nm, P.x + x, P.y + y, s, m); if (bnDryRect(b[0], b[1], b[2], b[3])) return true; return bnWet(nm, A, P.x + x, P.y + y, s, m, 0) <= 0 && bnWet(nm, A, P.x + x, P.y + y, s*0.72, m, 0) <= 0; });
   // (a yard on a dock basin, no shore near its town: its anchor within 3 world px of the water, so the basin reaches it; round 3,
   // Arish's moved inland with the lots' new order)
+  let wNear = true;   // (the water near first; with no such spot, the old search: tech critic, polish 1 of round 3, seven towns' yards lost their lots)
   const nearW = (x, y) => { for (const rr of [1, 2, 3]) for (let j = 0; j < 16; j++) if (bnWater(P.x + x + Math.cos(j*Math.PI/8)*rr, P.y + y + Math.sin(j*Math.PI/8)*rr)) return true; return false; };
   const inSq = (q, e = E*0.97) => q[0] > -e && q[2] < e && q[1] > -e && q[3] < e;
   const pt = out.fc, freeH = q => !placed.some(b => ov(q, b, BN_LOTG)) && !(nb && ov(q, nb));   // (pt: the square round the town's point, which no lot takes (ring's FB) but the HQ's, which meets it: freeH)
   const put = (k, x, y, m, f, q, ex) => { const l = Object.assign({k, x, y, m, f, q, c:k === 'yard' ? 0 : BN_LOTCH*Math.min(q[2] - q[0], q[3] - q[1]), st:BN_LOTSTY[k], bit:BN_LOTB(k)}, ex || {}); if (!l.g) l.g = [q[0] + BN_LOTM, q[1] + BN_LOTM, q[2] - BN_LOTM, q[3] - BN_LOTM];
     if (BN_LOTCK[k]){ const g1 = at(lotR([[bnName(k, 1), bnF(k, 1)]], m, f), x, y), cx = (g1[0] + g1[2])/2, cy = (g1[1] + g1[3])/2, hw = 0.3*(g1[2] - g1[0]), hh = 0.3*(g1[3] - g1[1]);   // (the empty lot's park: three fifths of a level I picture's ground, round where it will stand)
-      const cq = [Math.max(q[0], cx - hw), Math.max(q[1], cy - hh), Math.min(q[2], cx + hw), Math.min(q[3], cy + hh)]; l.cq = cq; l.cc = BN_LOTCH*Math.min(cq[2] - cq[0], cq[3] - cq[1]); } out.k[k] = l; out.list.push(l); placed.push(q); return l; };
+      const cq = [Math.max(q[0], cx - hw), Math.max(q[1], cy - hh), Math.min(q[2], cx + hw), Math.min(q[3], cy + hh)]; l.cq = cq; l.cc = BN_LOTCH*Math.min(cq[2] - cq[0], cq[3] - cq[1]); } out.k[k] = l; out.list.push(l);
+    if (k === 'yard' || k === 'hq') placed.push(q); else { const B = at(boxR(bnLotPics(k), m, f), x, y); placed.push([Math.min(q[0], B[0]), Math.min(q[1], (B[1] + q[1])/2), Math.max(q[2], B[2]), q[3]]); }   // (and the lower half of its picture above its ground: the next lot not under it; look critic, polish 1 of round 3, Paris' Bunker against the Army Base's wall)
+    return l; };
   // one sweep from the target ring out and in (st apart, out to Rm), on each ring the preferred direction first, for a lot of k at size f:
   // the first spot where it fits off the map's lines, else the first on a road (or railway) and the first over a river ([lv 0, 1, 2]: the
   // sweep stops at the first off them); FB: the anchors whose lot would reach another lot, or whose pictures the town's name or the square
   // round its point (boxes, tested before the rest); wide: the overflow, out to 1.5 times the square
-  function* ring(k, pics, m, f, wide, rx, dq = 0, dm = 2, hf = 0){ const R0 = BN_LOTR[k], a0 = R0.sec != null ? sec[Math.min(R0.sec, sec.length - 1)] : am != null && BN_LOTDN[k] ? am + BN_LOTDN[k][1] : R0.a, e = wide ? 1.5*E : E*0.97, Rm = wide ? 1.45*E : Math.min(E*0.92, R0.t*r + Math.max(1.1*r, 2.4*BN_WPX)), t = wide ? Math.min(Math.max(R0.t*r, E*0.6), Rm) : Math.min(R0.t*r, Rm), rl = lotR(pics, m, f), rad = [t], g = BN_LOTG + (dq ? 0.1*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : dm < 2 ? 0.3*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : 0);   // (among the blocks: a row of the town's blocks kept between it and the next lot; a field out of them: open ground between it and the next lot, no compound of lots side by side)
+  function* ring(k, pics, m, f, wide, rx, dq = 0, dm = 2, hf = 0, rmx = Infinity){ const R0 = BN_LOTR[k], a0 = R0.sec != null ? sec[Math.min(R0.sec, sec.length - 1)] : am != null && BN_LOTDN[k] ? am + BN_LOTDN[k][1] : R0.a, e = wide ? 1.5*E : E*0.97, Rm = wide ? 1.45*E : Math.min(E*0.92, R0.t*r + Math.max(1.1*r, 2.4*BN_WPX)), t = wide ? Math.min(Math.max(R0.t*r, E*0.6), Rm) : Math.min(R0.t*r, Rm), rl = lotR(pics, m, f), rad = [t], g = BN_LOTG + (dq || dm < 2 || BN_LOTCK[k] ? 0.2*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : 0);   // (polish 1 of round 3, look critic: lots side by side read as one compound; a street and a row of blocks between them again, a fifth of a lot's short side and the street's own gap)   // (among the blocks: a row of the town's blocks kept between it and the next lot; a field out of them: open ground between it and the next lot, no compound of lots side by side)
     const FB = (rx > 2 ? placed.filter((b, i) => i < iN0 || i >= iN1) : placed).map(b => [b[0] - g - rl[2], b[1] - g - rl[3], b[2] + g - rl[0], b[3] + g - rl[1]]), br = boxR(pics, m, f); for (const b of nb ? [nb, pt] : [pt]) FB.push([b[0] - br[2], b[1] - br[3], b[2] - br[0], b[3] - br[1]]);   // (the name and the point's square clear of its pictures' whole boxes)
     const sx0 = -e - rl[0], sx1 = e - rl[2], sy0 = -e - rl[1], sy1 = e - rl[3], o = [null, null, null], fld = BN_LOTSTY[k] === 'field', rlk = !!BN_LOTCK[k]; let nc = 0;   // (fld: a field's pictures, the runways, BN_LOTRD clear of every road, off the railways: round 3, Berlin's Airbase across the highway; rlk: the middle's buildings may stand over a railway, which ends at their fence (a siding into the compound, cityLotHoles), never over a road: round 3, the lots nearer the core)
     if (R0.out){ for (let v = t + st; v <= Rm; v += st) rad.push(v); for (let v = t - st; v >= 0; v -= st) rad.push(v); }   // (out first: past the target ring to the edge of the room, only then back in)
     else for (let j = 1; t + j*st <= Rm || t - j*st >= 0; j++){ const a = t + j*st <= Rm ? t + j*st : -1, b = t - j*st; for (const v of [b, a]) if (v >= 0) rad.push(v); }
-    for (const rho of rad){ const n = rho < 1e-6 ? 1 : Math.max(8, Math.min(96, Math.round(2*Math.PI*rho/st)));
+    for (const rho of rad){ if (rho >= rmx){ o.cut = true; continue; } const n = rho < 1e-6 ? 1 : Math.max(8, Math.min(96, Math.round(2*Math.PI*rho/st)));   // (rmx: no spot this far out can beat the one in hand: place)
       for (let i = 0; i < n; i++){ const da = Math.ceil(i/2)*2*Math.PI/n; if (hf && rho > 1e-6 && da > hf) break; const a = a0 + (i & 1 ? -1 : 1)*da, x = Math.cos(a)*rho, y = Math.sin(a)*rho; if (x <= sx0 || x >= sx1 || y <= sy0 || y >= sy1) continue;   // (hf: only so far either side of a0)
         let bad = false; for (const F of FB) if (x > F[0] && x < F[2] && y > F[1] && y < F[3]){ bad = true; break; } if (bad) continue;
         if ((nc += 1) >= 24){ nc = 0; yield; }
-        const q = at(rl, x, y); if ((dq && densQ(q) < dq) || (dm < 2 && densQ(q) > dm)) continue; const bq = at(br, x, y), lv = Math.max(lines(q, rlk), (rlk ? RA.rdo(bq) : RA.road(bq)) || (fld && RA.rdo([bq[0] - BN_LOTRD, bq[1] - BN_LOTRD, bq[2] + BN_LOTRD, bq[3] + BN_LOTRD])) ? 1 : 0); if ((lv === 1 && o[1]) || (lv === 2 && (o[1] || o[2]))) continue;   // (dq: among the town's blocks, dm: a field's out of them; every picture's whole box off the map's roads, a road behind a building not under its picture: look critic, polish 1)
+        const q = at(rl, x, y); if ((dq && densQ(q) < dq) || (dm < 2 && (densQ(q) > dm || (fld && densE(q) > 0.5)))) continue; const bq = at(br, x, y), lv = Math.max(lines(q, rlk), (rlk ? RA.rdo(bq) : RA.road(bq)) || (fld && RA.rdo([bq[0] - BN_LOTRD, bq[1] - BN_LOTRD, bq[2] + BN_LOTRD, bq[3] + BN_LOTRD])) ? 1 : 0); if ((lv === 1 && o[1]) || (lv === 2 && (o[1] || o[2]))) continue;   // (dq: among the town's blocks, dm: a field's out of them; every picture's whole box off the map's roads, a road behind a building not under its picture: look critic, polish 1)
+        if (k === 'hq' && !(rx >= 2)){ const RB = cityRingBox(cityRingOf(q, bq)); if (placed.some(b => ov(RB, b)) || (nb && ov(RB, nb))) continue; }   // (an HQ off the point too: its ring clear of the lots and names round it)
         nc += 3; if ((rx < 2 && !(rx ? mineR(q) : mine(q))) || !ctry(q) || !ctry([bq[0] - BN_LOTBD, bq[1] - BN_LOTBD, bq[2] + BN_LOTBD, bq[3] + BN_LOTBD]) || wetIn(q) > 0.12) continue;   // (its pictures clear of the border's ribbon)
-        nc += 6; if (!dry(pics, x, y, m, f) || (k === 'yard' && !nearW(x, y))) continue;   // (nc: the work done since the last yield, the footprint tests counted heavier)
+        nc += 6; if (!dry(pics, x, y, m, f) || (k === 'yard' && wNear && !nearW(x, y))) continue;   // (nc: the work done since the last yield, the footprint tests counted heavier)
         o[lv] = [k, x, y, m, f, q, {ln:lv, ov:wide ? 1 : 0}]; o['r' + lv] = rho; if (!lv) return o; } }
     return o; }
   // the sizes tried and in which order the spots they found are taken ([size, lines]): full size off the map's lines first, then a size smaller,
@@ -6956,7 +6973,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   const ORDF = [[1, 0], [0.85, 0], [0.7, 0], [1, 0, 1], [0.85, 0, 1], [0.55, 0], [0.7, 0, 1], [0.45, 0], [0.55, 0, 1], [0.45, 0, 1]].concat(ORDE.filter(o => o[1]));   // (a field: off every road at any size, in its square or past it, before one on a road; round 3)   // (the town's edge buildings: further out at full size before smaller)
   function* place(k, pics, m){ const S = new Map(), ctr = !BN_LOTR[k].t;
     if (BN_LOTDN[k]){   // (round 3: of the nearest spot among its densest blocks on the side the town's mass lies on, the nearest among them anywhere and the nearest off the map's lines anywhere, the nearest, one out on thin ground a fifth of the radius further, one off the mass's side a twentieth: the lots among the inner blocks, the town not scattered)
-      let b = null, bs = Infinity; for (const [dq, hf, pen] of [[BN_LOTDN[k][0], 0.55*Math.PI, 0], [BN_LOTDN[k][0], 0, 0.05], [0, 0, 0.05]]){ const o = yield* ring(k, pics, m, 1, false, 0, dq, 2, hf), c = o[0] || o[1]; if (!c) continue;
+      let b = null, bs = Infinity; for (const [dq, hf, pen] of [[BN_LOTDN[k][0], 0.55*Math.PI, 0], [BN_LOTDN[k][0], 0, 0.05], [0, 0, 0.05]]){ const o = yield* ring(k, pics, m, 1, false, 0, dq, 2, hf, bs - pen*r), c = o[0] || (o.cut ? null : o[1]); if (!c) continue;   // (a sweep goes only as far out as could beat the best in hand: tech critic, polish 1 of round 3, the lots' cost)
         const sc = (o[0] ? o.r0 : o.r1 + 0.1*r) + (pen + (densQ(c[5]) < 0.3 ? 0.2 : 0) + (o[0] ? 0 : 0.15))*r; if (sc < bs){ bs = sc; b = c; } }
       if (b) return put(...b); }   // (among the blocks first, at full size: off the map's lines, else beside a road; on the side the town's mass lies on (else its own side, BN_LOTR) first, then anywhere: look critic, polish 1, Hamburg's Army Base among its western blocks)
     if (BN_LOTSTY[k] === 'field') for (const f of [1, 0.85]){ const o = yield* ring(k, pics, m, f, false, 0, 0, 0.3); if (o[0]) return put(...o[0]); }   // (a field out where the town has no blocks first: it takes none of them)
@@ -6987,18 +7004,18 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
       if (onPt(sh)){ const s2 = yield* bnShoreG(p, e5, AV(placed.concat([ptA])), true); if (!onPt(s2)) sh = s2; }
       if (!onPt(sh) && !sh.far && !hit(sh) && !brd(sh)){ const g = land(sh);   // (over the town's name only where no other shore is near: as before the lots; no spot by the water clear of the border: a lot as the others, below)
         l = put(k, sh.dx, sh.dy, !!sh.mir, Math.min(1, sh.k || 1), [g[0] - BN_LOTM, g[1] - BN_LOTM, g[2] + BN_LOTM, g[3] + BN_LOTM], {sh, g}); }
-      else if ((l = yield* place(k, pics, !!sh.mir))){ l.sh = Object.assign({}, sh, {bas:true, dx:l.x, dy:l.y, mir:l.m}); }   // (no shore near, or only over the town's name or point: a lot as the others, a dock basin cut under its piers: the ships stand in water)
+      else { l = yield* place(k, pics, !!sh.mir); if (!l){ wNear = false; l = yield* place(k, pics, !!sh.mir); } if (l) l.sh = Object.assign({}, sh, {bas:true, dx:l.x, dy:l.y, mir:l.m}); }   // (no shore near, or only over the town's name or point: a lot as the others, a dock basin cut under its piers: the ships stand in water)
       if (!l) out.miss.push(k); continue; }
     if (k === 'hq'){   // the HQ north of the point (west of it, east of it), slid a little along that side, its front BN_LOTP from the point
       for (const [f, lv0] of [[1, 0], [0.85, 0], [1, 1], [0.85, 1], [0.7, 1], [1, 2], [0.7, 2], [0.55, 2]]){ const rl = lotR(pics, false, f), bx = boxR(pics, false, f);
         for (const side of ['n', 'nw', 'ne', 'w', 'e']){ const dg = side.length > 1; for (let j = 0; j <= (dg ? 4 : 8) && !l; j++){ const d = dg ? j*st*0.5 : (j & 1 ? -1 : 1)*Math.ceil(j/2)*st, c0 = 0.5*BN_LOTF;   // (diagonally: its box's near corner at the square's corner, then further out along the diagonal)
             const x = side === 'n' ? d : side === 'nw' ? -bx[2] - c0 - d : side === 'ne' ? -bx[0] + c0 + d : side === 'w' ? -bx[2] - BN_LOTP : -bx[0] + BN_LOTP, y = side === 'n' ? -bx[3] - BN_LOTP : dg ? -bx[3] - c0 - d : d, q = at(rl, x, y);
-            if (!inSq(q) || !freeH(q)) continue; const lv = lines(q); if (lv > lv0 || !mine(q) || !ctry(q) || wetIn(q) > 0.12 || !dry(pics, x, y, false, f)) continue;
+            if (!inSq(q) || !freeH(q)) continue; const RB = cityRingBox(cityRingOf(q, at(bx, x, y))); if (placed.some(b => ov(RB, b)) || (nb && ov(RB, nb))) continue;   // (its ring road clear of the lots placed before it (the Naval Yard), the bigger towns' lots and the other towns' names: tech critic, round 3, Algiers' yard over its ring)
+            const lv = lines(q); if (lv > lv0 || !mine(q) || !ctry(q) || wetIn(q) > 0.12 || !dry(pics, x, y, false, f)) continue;
             l = put(k, x, y, false, f, q, {side, ln:lv, bx:at(bx, x, y)}); } if (l) break; }
         if (l) break; yield; }
       if (!l) l = yield* place(k, pics, false);   // (no room round the point: the nearest lot off it; the point stays free)
-      if (l){ const q = l.q, U = l.side ? [Math.min(q[0], pt[0]), Math.min(q[1], pt[1]), Math.max(q[2], pt[2]), Math.max(q[3], pt[3])] : q, g = BN_LOTRG;   // (the HQ's square: its lot and the paved square round the point; an HQ off the point, its lot alone)
-        const R = [U[0] - g, U[1] - g, U[2] + g, U[3] + g]; R.push(Math.min(BN_LOTRR, 0.4*Math.min(R[2] - R[0], R[3] - R[1]))); l.rg = R; placed.push([R[0] - BN_LOTRW, R[1] - BN_LOTRW, R[2] + BN_LOTRW, R[3] + BN_LOTRW]); }   // (no other lot over the ring)
+      if (l){ l.rg = cityRingOf(l.q, l.bx || at(boxR(pics, l.m, l.f), l.x, l.y)); placed.push(cityRingBox(l.rg)); }   // (the HQ's ring round its lot and its whole picture; no other lot over it)
       if (!l) out.miss.push(k); continue; }
     l = yield* place(k, pics, false);
     if (!l) out.miss.push(k); }
@@ -7148,7 +7165,7 @@ const BNFR_MAX = 4e6, BNFRM = document.createElement('canvas'), BN_FRH = 40;   /
 // is drawn again when a town in it gets or loses a building (cityLotSig). true: a clip to restore
 function cityLotHoles(c, wx0, wy0, wx1, wy1, hexPx){ if (hexPx < BN_LOTH || !S) return false; const H = [];
   const RG = [];   // (an HQ's whole square, to its ring road: the railways end on the ring as the roads do, cityHqRings; round 3)
-  cityEach(wx0, wy0, wx1, wy1, (p, P) => { const L = CLOTS.get(p); if (!L) return; for (const e of bnItems(p)){ const l = L.k[e.k]; if (!l || (e.k === 'hq' && !cityHqOpen(p))) continue; if (e.k === 'hq' && l.rg){ RG.push([l.rg, P.x, P.y]); continue; } H.push(cityLotPoly(l.q, l.c).map((v, i) => v + (i & 1 ? P.y : P.x))); } });
+  cityEach(wx0, wy0, wx1, wy1, (p, P) => { const L = CLOTS.get(p); if (!L) return; for (const e of bnItems(p)){ const l = L.k[e.k]; if (!l || (e.k === 'hq' && !cityHqOpen(p))) continue; if (e.k === 'hq' && l.rg && hexPx >= BN_LOTRH){ RG.push([l.rg, P.x, P.y]); continue; } H.push(cityLotPoly(l.q, l.c).map((v, i) => v + (i & 1 ? P.y : P.x))); } });
   if (!H.length && !RG.length) return false; c.save(); const cp = new Path2D(); cp.rect(wx0 - 1e3, wy0 - 1e3, wx1 - wx0 + 2e3, wy1 - wy0 + 2e3);
   for (const A of H){ cp.moveTo(A[0], A[1]); for (let i = 2; i < A.length; i += 2) cp.lineTo(A[i], A[i + 1]); cp.closePath(); } for (const [R, x, y] of RG) cityRingPath(cp, R, x, y); c.clip(cp, 'evenodd'); return true; }
 // the ring road round the square of each town an HQ stands in (round 3, owner 2026-11-26: "roads should curve round the HQ square and carry
@@ -7157,15 +7174,73 @@ function cityLotHoles(c, wx0, wy0, wx1, wy1, hexPx){ if (hexPx < BN_LOTH || !S) 
 // others; the ring is stroked with them, as a highway where a highway meets it, else as a road. {clip: the painted rect with the rings' insides
 // cut out (even-odd), rd, hw: the rings by class} or null
 const cityRingPath = (Pp, R, x, y) => { const a = x + R[0], b = y + R[1], c = x + R[2], d = y + R[3], r = R[4]; Pp.moveTo(a + r, b); Pp.arcTo(c, b, c, d, r); Pp.arcTo(c, d, a, d, r); Pp.arcTo(a, d, a, b, r); Pp.arcTo(a, b, c, b, r); Pp.closePath(); };
-function cityRingHw(P, R){ const T = loadWorld.lines.roadsT[3], x0 = P.x + R[0], y0 = P.y + R[1], x1 = P.x + R[2], y1 = P.y + R[3]; if (!T || !T.tiles) return false;   // (a highway's run with a point inside the ring)
-  for (const t of T.tiles){ if (!t.runs || t.x1 < x0 || t.x0 > x1 || t.y1 < y0 || t.y0 > y1) continue; for (const [f] of t.runs) for (let i = 0; i < f.length; i += 2) if (f[i] > x0 && f[i] < x1 && f[i + 1] > y0 && f[i + 1] < y1) return true; }
-  return false; }
-function cityHqRings(wx0, wy0, wx1, wy1, hexPx){ if (hexPx < BN_LOTH || !S || !G) return null; const LN = loadWorld.lines; if (!LN || !Array.isArray(LN.roadsT)) return null; let o = null;
-  cityEach(wx0, wy0, wx1, wy1, (p, P) => { if (!cityHqOpen(p)) return; const L = CLOTS.get(p), l = L && L.k.hq; if (!l || !l.rg || !bnItems(p).some(e => e.k === 'hq')) return;
-    if (!o){ o = {clip:new Path2D(), rd:new Path2D(), hw:new Path2D(), n:0, nh:0}; o.clip.rect(wx0 - 1e3, wy0 - 1e3, wx1 - wx0 + 2e3, wy1 - wy0 + 2e3); }
-    if (l.rgH === undefined){ l.rgH = cityRingHw(P, l.rg); const R = l.rg; l.rgW = false; for (let t = 0; t < 1 && !l.rgW; t += 0.02){ for (const [x, y] of [[R[0] + (R[2] - R[0])*t, R[1]], [R[0] + (R[2] - R[0])*t, R[3]], [R[0], R[1] + (R[3] - R[1])*t], [R[2], R[1] + (R[3] - R[1])*t]]) if (bnWater(P.x + x, P.y + y)){ l.rgW = true; break; } } }   // (rgW: the ring reaches over the water the map draws, Tokyo's by its bay: stroked on the land only)
-    if (l.rgW) o.wet = true; const h = l.rgH && hexPx >= 120; cityRingPath(o.clip, l.rg, P.x, P.y); cityRingPath(h ? o.hw : o.rd, l.rg, P.x, P.y); o.n++; if (h) o.nh++; });   // (a highway's ring as a road below hexPx 120: no heavy frame round the HQ at the mid zoom)
-  return o; }
+// the stretches of an HQ's ring road the map's roads take round the HQ (polish 1 of round 3, look critic: the whole ring read as a frame
+// round it): a road that runs through the ring goes round it on its line from where it meets it to where it leaves it, the shorter way; two
+// that end on one point inside it (a junction there) are joined the same way; one that ends alone inside it ends on the ring. Worked out
+// once from the roads' kept runs (roadsT 2 and 3), world px from the town's point: {rd, hw: [[x, y, x, y, ...]]}
+function cityRingArcs(P, l){ if (l.rgA) return l.rgA; const R = l.rg, r = R[4], LN = loadWorld.lines, o = {rd:[], hw:[]}; if (!LN || !Array.isArray(LN.roadsT)) return o;
+  const ins = (x, y) => { if (x <= R[0] || x >= R[2] || y <= R[1] || y >= R[3]) return false; const qx = Math.max(R[0] + r - x, x - (R[2] - r), 0), qy = Math.max(R[1] + r - y, y - (R[3] - r), 0); return qx*qx + qy*qy < r*r; };
+  // (its line, clockwise from the top's left end, about half a km a point, with the length along it to each)
+  const B = []; { const seg = (x0, y0, x1, y1) => { const m = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)/(0.5*KM_W))); for (let i = 0; i < m; i++) B.push(x0 + (x1 - x0)*i/m, y0 + (y1 - y0)*i/m); };
+    const arc = (cx, cy, a0) => { const m = Math.max(2, Math.ceil(r*Math.PI/2/(0.5*KM_W))); for (let i = 0; i < m; i++){ const a = a0 + i/m*Math.PI/2; B.push(cx + Math.cos(a)*r, cy + Math.sin(a)*r); } };
+    seg(R[0] + r, R[1], R[2] - r, R[1]); arc(R[2] - r, R[1] + r, -Math.PI/2); seg(R[2], R[1] + r, R[2], R[3] - r); arc(R[2] - r, R[3] - r, 0); seg(R[2] - r, R[3], R[0] + r, R[3]); arc(R[0] + r, R[3] - r, Math.PI/2); seg(R[0], R[3] - r, R[0], R[1] + r); arc(R[0] + r, R[1] + r, Math.PI); }
+  const nB = B.length/2, CL = [0]; for (let i = 1; i <= nB; i++) CL.push(CL[i - 1] + Math.hypot(B[2*(i % nB)] - B[2*(i - 1)], B[2*(i % nB) + 1] - B[2*(i - 1) + 1]));
+  const near = (x, y) => { let bi = 0, bd = Infinity; for (let i = 0; i < nB; i++){ const d = (B[2*i] - x)**2 + (B[2*i + 1] - y)**2; if (d < bd){ bd = d; bi = i; } } return bi; };
+  const way = (a, b, dr) => { const ia = near(a[0], a[1]), ib = near(b[0], b[1]), A = [a[0], a[1]]; if (ia === ib) return null;   // (dr 1: on round the way the line runs, -1 the other)
+    if (dr > 0){ for (let i = (ia + 1) % nB; i !== ib; i = (i + 1) % nB) A.push(B[2*i], B[2*i + 1]); } else { for (let i = ia; i !== (ib + 1) % nB; i = (i - 1 + nB) % nB) A.push(B[2*i], B[2*i + 1]); }
+    A.push(b[0], b[1]); return fil(A, a, b); };
+  // (each end eased: from where the road meets the line, on in its own direction and round onto the line over a couple of km, a curve, not a
+  // corner where the road turns)
+  const fil = (A, a, b) => { const n = A.length/2, cl = [0]; for (let i = 1; i < n; i++) cl.push(cl[i - 1] + Math.hypot(A[2*i] - A[2*i - 2], A[2*i + 1] - A[2*i - 1])); const Lt = cl[n - 1], s = Math.min(2.6*KM_W, 0.32*Lt);
+    const at = d => { let i = 1; while (i < n - 1 && cl[i] < d) i++; const t = (d - cl[i - 1])/((cl[i] - cl[i - 1]) || 1); return [i, A[2*i - 2] + (A[2*i] - A[2*i - 2])*t, A[2*i - 1] + (A[2*i + 1] - A[2*i - 1])*t]; };
+    const q = (o, p0, c, p1) => { for (let k = 1; k <= 8; k++){ const t = k/8, u = 1 - t; o.push(u*u*p0[0] + 2*u*t*c[0] + t*t*p1[0], u*u*p0[1] + 2*u*t*c[1] + t*t*p1[1]); } };
+    const [i1, y1x, y1y] = at(s), [i2, y2x, y2y] = at(Lt - s), o = [a[0], a[1]]; q(o, a, [a[0] + (a[3] || 0)*0.6*s, a[1] + (a[4] || 0)*0.6*s], [y1x, y1y]);
+    for (let i = i1; i < i2; i++) o.push(A[2*i], A[2*i + 1]); o.push(y2x, y2y); q(o, [y2x, y2y], [b[0] + (b[3] || 0)*0.6*s, b[1] + (b[4] || 0)*0.6*s], b); return o; };
+  const x0 = P.x + R[0] - KM_W, y0 = P.y + R[1] - KM_W, x1 = P.x + R[2] + KM_W, y1 = P.y + R[3] + KM_W, cr = [];
+  for (const c of [2, 3]){ const T = LN.roadsT[c]; if (!T || !T.tiles) continue; const runs = [];
+    for (const t of T.tiles){ if (!t.runs || t.x1 < x0 || t.x0 > x1 || t.y1 < y0 || t.y0 > y1) continue; for (const q of t.runs) if (!(q[3] < x0 || q[1] > x1 || q[4] < y0 || q[2] > y1)) runs.push(q[0]); }
+    // (the runs stitched back into their roads: a run whose end is the start of exactly one other)
+    const kS = f => f[0] + ',' + f[1], kE = f => f[f.length - 2] + ',' + f[f.length - 1], byS = new Map(), byE = new Map(); for (const f of runs){ (byS.get(kS(f)) || byS.set(kS(f), []).get(kS(f))).push(f); (byE.get(kE(f)) || byE.set(kE(f), []).get(kE(f))).push(f); }
+    const nxt = f => { const a = byS.get(kE(f)), b = byE.get(kE(f)); return a && a.length === 1 && b.length === 1 ? a[0] : null; }, seen = new Set(), chains = [];
+    const walk = f0 => { const pts = []; for (let f = f0; f && !seen.has(f); f = nxt(f)){ seen.add(f); for (let i = pts.length ? 2 : 0; i < f.length; i++) pts.push(f[i]); } chains.push(pts); };
+    for (const f of runs){ const a = byE.get(kS(f)), b = byS.get(kS(f)); if (!(a && a.length === 1 && b.length === 1)) walk(f); } for (const f of runs) if (!seen.has(f)) walk(f);
+    for (const A of chains){ let pin = ins(A[0] - P.x, A[1] - P.y);
+      for (let i = 2; i < A.length; i += 2){ const bx = A[i] - P.x, by = A[i + 1] - P.y, cin = ins(bx, by); if (cin === pin) continue; let ax = A[i - 2] - P.x, ay = A[i - 1] - P.y, ex = bx, ey = by;
+        for (let j = 0; j < 14; j++){ const mx = (ax + ex)/2, my = (ay + ey)/2; if (ins(mx, my) === pin){ ax = mx; ay = my; } else { ex = mx; ey = my; } }   // (where it crosses the line)
+        const dl = Math.hypot(bx - A[i - 2] + P.x, by - A[i - 1] + P.y) || 1, sg = cin ? 1 : -1, X = [(ax + ex)/2, (ay + ey)/2, c, sg*(bx - A[i - 2] + P.x)/dl, sg*(by - A[i - 1] + P.y)/dl];   // (its direction into the ring there)
+        X.s = CL[near(X[0], X[1])]; cr.push(X); pin = cin; } } }
+  // (the roads that meet the ring, round it in order (two within a km of each other one), each joined to the one beside it, by twos, the
+  // pairing that takes the least of the ring: a road meets the ring and goes on round it to the next road out, never round the whole of it;
+  // an odd one joined to its nearer neighbour; a road that meets it alone round it to the front of the HQ's grounds and a drive in to its forecourt)
+  const L = CL[nB]; cr.sort((a, b) => a.s - b.s); const C = []; for (const X of cr){ const Y = C[C.length - 1]; if (Y && X.s - Y.s < KM_W){ if (X[2] === 3) Y[2] = 3; continue; } C.push(X); }
+  if (C.length > 1 && C[0].s + L - C[C.length - 1].s < KM_W){ if (C[0][2] === 3) C[C.length - 1][2] = 3; C.shift(); }
+  // (roads that meet the ring close together merge just before it into one, which goes on round it: no small loop of ring between them)
+  { const thr = Math.max(4*KM_W, 0.08*L), m = C.length; if (m > 1){ let k0 = 0; for (let i = 0; i < m; i++) if ((C[i].s - C[(i + m - 1) % m].s + L) % L >= thr){ k0 = i; break; }
+      const G2 = []; for (let j = 0; j < m; j++){ const X = C[(k0 + j) % m], g = G2[G2.length - 1]; if (g && (X.s - g[g.length - 1].s + L) % L < thr && m > 1) g.push(X); else G2.push([X]); }
+      if (G2.length > 1 || G2[0].length < m){ C.length = 0; for (const g of G2){ if (g.length === 1){ C.push(g[0]); continue; } let ds = 0; for (const X of g) ds += (X.s - g[0].s + L) % L; const sm = (g[0].s + ds/g.length) % L;
+          let bi = 0; for (let i = 0; i < nB; i++) if (Math.abs(CL[i] - sm) < Math.abs(CL[bi] - sm)) bi = i; let ux = 0, uy = 0, hw = false; for (const X of g){ ux += X[3]; uy += X[4]; if (X[2] === 3) hw = true; } const ul = Math.hypot(ux, uy) || 1, M = [B[2*bi], B[2*bi + 1], hw ? 3 : 2, ux/ul, uy/ul]; M.s = CL[bi]; M.mg = 1;
+          for (const X of g){ const d = Math.hypot(M[0] - X[0], M[1] - X[1]); if (d < 1) continue; const W = [X[0], X[1]], cx = X[0] + X[3]*0.45*d, cy = X[1] + X[4]*0.45*d; for (let k = 1; k <= 8; k++){ const t = k/8, u = 1 - t; W.push(u*u*X[0] + 2*u*t*cx + t*t*M[0], u*u*X[1] + 2*u*t*cy + t*t*M[1]); } o[X[2] === 3 ? 'hw' : 'rd'].push(W); }
+          C.push(M); } } } }
+  const n = C.length, gap = i => (C[(i + 1) % n].s - C[i].s + L) % L || L, add = (a, b, dr) => { const W = way(a, b, dr); if (W) o[a[2] === 3 && b[2] === 3 ? 'hw' : 'rd'].push(W); };
+  if (n === 1 && !C[0].mg){ const X = C[0], g = l.g || l.q, F = [(g[0] + g[2])/2, g[3] + 0.4*KM_W], Bc = [F[0], R[3], X[2], 0, -1], rr = 0, ia = near(X[0], X[1]), ib = near(Bc[0], Bc[1]), f = (CL[ib] - CL[ia] + L) % L;   // (round the ring the shorter way to the front of the HQ's grounds, then in to its forecourt)
+    if (ia !== ib) add(X, Bc, f <= L - f ? 1 : -1); o.rd.push([Bc[0], Bc[1], F[0], F[1] + rr]); }   // (a merged pair, a road through one corner of the ring, needs none)
+  else if (n > 1){ let best = null, bt = Infinity; for (let st = 0; st < (n & 1 ? n : 2); st++){ let t = 0; const pr = []; for (let k = 0; k + 1 < n; k += 2){ const i = (st + k) % n; pr.push(i); t += gap(i); }
+      if (n & 1){ const u = (st + n - 1) % n, gb = gap((u + n - 1) % n), gf = gap(u); t += Math.min(gb, gf); pr.push(gf <= gb ? u : -1 - u); } if (t < bt){ bt = t; best = pr; } }
+    for (const i of best){ if (i >= 0) add(C[i], C[(i + 1) % n], 1); else { const u = -1 - i; add(C[u], C[(u + n - 1) % n], -1); } } }
+  return (l.rgA = o); }
+// the HQs' rings in view, close in (from BN_LOTRH, where every road the town has is drawn): {clip: the world with the rings' insides cut out
+// (even-odd), rd, hw: the stretches of them the roads take, by class (a highway's as a road below hexPx 120); wet: one by the water (stroked
+// on the land only)} or null. Kept while the same rings are in view
+const BN_LOTRH = 100; let CHQR = null;
+function cityHqRings(wx0, wy0, wx1, wy1, hexPx){ if (hexPx < BN_LOTRH || !S || !G) return null; const LN = loadWorld.lines; if (!LN || !Array.isArray(LN.roadsT)) return null; const L2 = [];
+  cityEach(wx0, wy0, wx1, wy1, (p, P) => { if (!cityHqOpen(p)) return; const L = CLOTS.get(p), l = L && L.k.hq; if (!l || !l.rg || !bnItems(p).some(e => e.k === 'hq')) return; L2.push([p, P, l]); });
+  if (!L2.length) return null; const hk = hexPx >= 120, key = (hk ? 'h' : 'r') + L2.map(e => e[0] + ':' + e[2].x).join(',') + '|' + LN.roadsT[2].tiles.length; if (CHQR && CHQR.key === key && CHQR.l0 === L2[0][2]) return CHQR;
+  const o = {key, l0:L2[0][2], clip:new Path2D(), rd:new Path2D(), hw:new Path2D(), n:0, nh:0, wet:false}; o.clip.rect(-1e5, -1e5, 4e5, 4e5);
+  for (const [, P, l] of L2){ const R = l.rg;
+    if (l.rgW === undefined){ l.rgW = false; for (let t = 0; t < 1 && !l.rgW; t += 0.02){ for (const [x, y] of [[R[0] + (R[2] - R[0])*t, R[1]], [R[0] + (R[2] - R[0])*t, R[3]], [R[0], R[1] + (R[3] - R[1])*t], [R[2], R[1] + (R[3] - R[1])*t]]) if (bnWater(P.x + x, P.y + y)){ l.rgW = true; break; } } }   // (rgW: the ring reaches over the water the map draws, Tokyo's by its bay: stroked on the land only)
+    if (l.rgW) o.wet = true; cityRingPath(o.clip, R, P.x, P.y); const A = cityRingArcs(P, l);
+    for (const [k, W] of [['rd', A.rd], ['hw', A.hw]]) for (const pts of W){ const Q = k === 'hw' && hk ? o.hw : o.rd; Q.moveTo(P.x + pts[0], P.y + pts[1]); for (let i = 2; i < pts.length; i += 2) Q.lineTo(P.x + pts[i], P.y + pts[i + 1]); if (Q === o.hw) o.nh++; else o.n++; } }
+  return (CHQR = o); }
 const LOTSIG = new Map();
 function cityLotSig(p, its, hexPx){ if (hexPx < BN_LOTH*0.8 || !G.P[p].city) return; let sg = ''; for (const e of its) sg += e.k + (e.site ? 's' : '') + ','; const o = LOTSIG.get(p); if (o === sg) return; if (o !== undefined) layerKey = ''; LOTSIG.set(p, sg); }
 // a capital that moves (or falls): a town whose canvases were made with its HQ's lot open, or shut, the other way has them made again (dropped;
@@ -7886,11 +7961,11 @@ function* cityLotPrep(I, P){ if (P.LT) return P.LT; const Ek = I.E/KM_W;
     for (const l of Lo.list.concat([{k:'fc', st:me ? 'fc' : 'nfc', q:Lo.fc, g:Lo.fc, c:0, bit:BN_LOTFC, x:0, y:0}])){ const q = km(l.q); if (q[2] < -Ek || q[0] > Ek || q[3] < -Ek || q[1] > Ek) continue;   // (a neighbour's square and HQ lot too: no building of this town's plan on them, which its canvas drew faintly over the other's square; look critic, polish 1)
       LT.push({k:l.k, st:l.st, q, c:(l.c || 0)/KM_W, g:km(l.g), x:(l.x + dx)/KM_W, y:(l.y + dy)/KM_W, side:l.side || null, bit:me ? l.bit : BN_LOTNB | (l.k === 'fc' ? BN_LOTNA : 0), nq:me ? -1 : Q.id, f:l.f, sh:me && l.sh ? {bas:!!l.sh.bas, riv:!!l.sh.riv} : null, bx:me && l.bx ? km(l.bx) : null});
       if (me && l.cq){ const cq = km(l.cq); LT.push({k:l.k, st:'park', cr:1, q:cq, c:l.cc/KM_W, g:cq, x:(l.x + dx)/KM_W, y:(l.y + dy)/KM_W, side:null, bit:BN_LOTC(l.k), f:l.f, sh:null}); }   // (an empty lot's small park: BN_LOTC)
-      if (me && l.rg){ const R = l.rg, w = BN_LOTRW, ri = km(R), q = km([R[0] - w, R[1] - w, R[2] + w, R[3] + w]), rr = R[4]/KM_W;   // (the ring road round the HQ's square, open with the HQ: the town's blocks and streets kept off it, cityLotStreets ends the streets on its line; first, so the square's paving is under the rest)
-        LT.unshift({k:'hq', st:'ring', q, c:0.59*rr + 0.41*w/KM_W, g:q, ri, rr, x:0, y:0, side:null, bit:BN_LOTB('hq'), nq:-1, f:1, sh:null}); } } }
+      if (l.rg){ const R = l.rg, w = BN_LOTRW, ri = km(R), q = km([R[0] - w, R[1] - w, R[2] + w, R[3] + w]), rr = R[4]/KM_W;   // (a neighbour's ring too, open where that one's HQ stands: none of this town's blocks or its growth inside it; tech critic, polish 1 of round 3, Chattogram's blocks in Dhaka's square)   // (the ring road round the HQ's square, open with the HQ: the town's blocks and streets kept off it, cityLotStreets ends the streets on its line; first, so the square's paving is under the rest)
+        const e = {k:'hq', st:'ring', q, c:0.59*rr + 0.41*w/KM_W, g:q, ri, rr, x:0, y:0, side:null, bit:me ? BN_LOTB('hq') : BN_LOTNB, nq:me ? -1 : Q.id, f:1, sh:null}; if (me) LT.unshift(e); else LT.push(e); } } }
   yield; { let ni = 0; for (const l of LT){ if (!(l.bit & BN_LOTNB) || l.k === 'fc') continue; const q = l.q, on = b => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1];   // (a neighbour's lot over any of this town's buildings or trees its own bit of the 9: the fewer share one, the fewer open with another's)
       if (P.B.some(b => on(b.bb)) || P.T.some(t => t[0] + t[2] > q[0] && t[0] - t[2] < q[2] && t[1] + t[2] > q[1] && t[1] - t[2] < q[3])) l.bit |= 1 << (22 + (ni++ % 9)); } }
-  P.TL = cityLotTrees(I, LT); cityLotTag(I, P, LT);
+  P.TL = cityLotTrees(I, LT, P); cityLotTag(I, P, LT);
   { const G0 = CGEO.get(I.p); if (G0 && G0.occ){ const f = CO/(2*Ek), cl = v => Math.max(0, Math.min(CO - 1, Math.floor((v + Ek)*f)));
       for (const l of LT){ if (l.bit & BN_LOTNB) continue; const cs = []; for (let j = cl(l.q[1]) - 1; j <= cl(l.q[3]) + 1; j++) for (let i = cl(l.q[0]) - 1; i <= cl(l.q[2]) + 1; i++) if (i >= 0 && j >= 0 && i < CO && j < CO) cs.push(j*CO + i);
         if (l.st === 'field' || l.st === 'quay') (P.occL || (P.occL = [])).push([l.bit, cs]); else for (const c of cs) G0.occ[c] = 1; } } }   // (a field's or a quay's chunks, out on open ground or a far shore, only once its building stands or goes up: cityPlanDraw; no chunk made for an empty lot no one sees)
@@ -7981,7 +8056,7 @@ function c3Pick(P, om, far, lod, inB, add, hide){ const one = (b, lt) => { if (b
 // in the street plan as blocks do); a lot no street reaches (one out on the town's edge) a street from the middle of its side nearest the
 // town's point to the nearest street
 function cityLotStreets(P, om, I){ if (!P.stc) P.stc = new Map(); let o = P.stc.get(om); if (o) return o;
-  const LA = P.LT.filter(l => l.bit & om).map(l => ({l, pg:l.st === 'ring' ? cityLotPoly(l.ri, 0.59*l.rr) : cityLotPoly(l.q, l.c), reach:false}));   // (the HQ's ring: the streets end on its line, so they meet the ring road; round 3)
+  const LA = P.LT.filter(l => l.bit & om).map(l => ({l, pg:cityLotPoly(l.q, l.c), reach:false}));   // (the HQ's ring: the streets end where the town's blocks do, at the edge of the HQ's grounds; polish 1 of round 3)
   const clip = A => { const out = []; let cur = null; const push = (x, y) => { if (!cur) cur = []; const m = cur.length; if (m >= 2 && Math.abs(cur[m - 2] - x) < 1e-9 && Math.abs(cur[m - 1] - y) < 1e-9) return; cur.push(x, y); }, end = () => { if (cur && cur.length >= 4) out.push(cur); cur = null; };
     for (let i = 0; i + 3 < A.length; i += 2){ const ax = A[i], ay = A[i + 1], dx = A[i + 2] - ax, dy = A[i + 3] - ay, iv = [];
       for (const o2 of LA){ const b = o2.l.q; if (Math.max(ax, ax + dx) < b[0] || Math.min(ax, ax + dx) > b[2] || Math.max(ay, ay + dy) < b[1] || Math.min(ay, ay + dy) > b[3]) continue; const s = c3SegIn(ax, ay, dx, dy, o2.pg); if (s){ iv.push(s); if (s[0] > 1e-6 || s[1] < 1 - 1e-6) o2.reach = true; } }   // (reached: a street that runs on outside it, not a stretch wholly inside)
@@ -8084,6 +8159,7 @@ function* cityGrowPrep(I, P){ if (P.GR) return P.GR; const Ek = I.E/KM_W, GR = [
       if (nx){ const xa = nx > 0 ? x1 + off : x0 - off; cc = row(xa, y0 - rg*3, 0, 1, nx, 0, 0.5, y1 - y0 + rg*6, cc); } else { const ya = ny > 0 ? y1 + off : y0 - off; cc = row(x0 - rg*3, ya, 1, 0, 0, ny, 0.5, x1 - x0 + rg*6, cc); } }
     // (then round its other sides and a row further out: the lots stand closer together since round 3, so the rows facing the town meet the
     // next lot sooner; these come after every earlier one, so a level's buildings stay as they were and only fill up to their number)
+    const nF = cand.length;   // (those rows only where the town is built up or by a street: no file of new buildings out on bare grass; look critic, polish 1 of round 3, Hamburg's east)
     for (const rg of [0, 1, 2]) for (const [nx, ny] of [[0, -1], [0, 1], [-1, 0], [1, 0]]){ if (rg < 2 && sides.some(sd => sd[0] === nx && sd[1] === ny)) continue; const off = 2.0 + rg*(Ln*0.8 + 1.7);
       if (nx){ const xa = nx > 0 ? x1 + off : x0 - off; cc = row(xa, y0 - rg*3, 0, 1, nx, 0, 0.5, y1 - y0 + rg*6, cc); } else { const ya = ny > 0 ? y1 + off : y0 - off; cc = row(x0 - rg*3, ya, 1, 0, 0, ny, 0.5, x1 - x0 + rg*6, cc); } }
     let nb = 0, nt = 0; const LVB = [1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], BT = [];
@@ -8091,7 +8167,7 @@ function* cityGrowPrep(I, P){ if (P.GR) return P.GR; const Ek = I.E/KM_W, GR = [
       for (const q0 of cl){ if (nb >= LVB.length) break; for (const f of [1, 0.66]){ const mx = (q0[0] + q0[4])/2, my = (q0[1] + q0[5])/2, q = q0.map((v, i) => (i & 1 ? my : mx) + (v - (i & 1 ? my : mx))*f), b = box(q);   // (no room: a smaller one)
         if (Math.abs(b[0]) > Ek - 2 || Math.abs(b[2]) > Ek - 2 || Math.abs(b[1]) > Ek - 2 || Math.abs(b[3]) > Ek - 2) continue;
         const r = h(li, nb, 11), hh = Math.max(1.6, hm*(0.45 + 0.65*r)), rp = gover(b, 0.2, hh);
-        const why = onLot(b, 0.8) ? 'lot' : !rp ? 'bld' : onSt(b, 0.3) ? 'st' : lines(b) ? 'ln' : wet(q[0], q[1]) || wet(q[2], q[3]) || wet(q[4], q[5]) || wet(q[6], q[7]) || wet((b[0] + b[2])/2, (b[1] + b[3])/2) ? 'wet' : ''; /*@TEST*/(P.grDbg || (P.grDbg = {}))[why || 'ok'] = ((P.grDbg || {})[why || 'ok'] || 0) + 1;/*@ENDTEST*/ if (why) continue;
+        const why = onLot(b, 0.8) ? 'lot' : !rp ? 'bld' : ci > nF && dn(mx, my) < 0.3 && !onSt(b, 1.6) ? 'open' : onSt(b, 0.3) ? 'st' : lines(b) ? 'ln' : wet(q[0], q[1]) || wet(q[2], q[3]) || wet(q[4], q[5]) || wet(q[6], q[7]) || wet((b[0] + b[2])/2, (b[1] + b[3])/2) ? 'wet' : ''; /*@TEST*/(P.grDbg || (P.grDbg = {}))[why || 'ok'] = ((P.grDbg || {})[why || 'ok'] || 0) + 1;/*@ENDTEST*/ if (why) continue;
         const bo = c3Geo({q, z0:0, h:hh, hm:hh, c:(h(li, nb, 12)*6) | 0, t:!I.dry && h(li, nb, 13) < Math.max(0.35, Y.pt) ? 1 : 0, lv:3, nl:0.55, tn:(h(li, nb, 14)*5) | 0, sd:(I.p*977 + 500000 + li*131 + nb*7) | 0, gw:1});
         const rt = []; for (const ti of TN) if (!rt.includes(ti)){ const t = P.T[ti]; if (t[0] + t[2] > b[0] && t[0] - t[2] < b[2] && t[1] + t[2] > b[1] && t[1] - t[2] < b[3]) rt.push(ti); }   // (and the town's trees under it)
         GR.push({t:'b', k:l.k, lv:LVB[nb], b:bo, rep:rp, rt}); gput(b); BT.push([b, LVB[nb]]); nb++; break; } } }
@@ -8111,16 +8187,17 @@ function cityGrowFor(P, sg){ if (!sg || !P.GR) return null; if (!P.gws) P.gws = 
   o.B.sort((a, b) => a.k - b.k); if (P.gws.size > 8) P.gws.clear(); P.gws.set(sg, o); return o; }
 // the lots' own trees, close in (cityLotDraw draws their ground): a park clumps of trees round its lawn and a broken row inside its fence;
 // the square round the point a row of small trees down each side; a works, a field or a quay a clump or two by its fence. [x, y, r, lv, th, ci, bit]
-function cityLotTrees(I, LT){ const T = [], RG = LT.find(l => l.st === 'ring' && !(l.bit & BN_LOTNB)), hq = BN_LOTB('hq');   // ([x, y, r, lv, th, ci, bit, hide]: drawn where its bit is open and its hide bit is not)
-  if (RG){ const [a, b, c, d] = RG.ri, pg = cityLotPoly([a + 1.8, b + 1.8, c - 1.8, d - 1.8], Math.max(0, 0.59*RG.rr - 0.75)), HL = LT.find(l => l.st === 'sq' && !(l.bit & BN_LOTNB)), F = LT.find(l => l.st === 'fc' && !(l.bit & BN_LOTNB)), h = (u, v) => c3H(I.p + 77, u, v);
-    const gx = HL ? (HL.g[0] + HL.g[2])/2 : 0, gy = HL ? HL.g[3] : 0, off = (x, y) => (F && x > F.q[0] - 0.6 && x < F.q[2] + 0.6 && y > F.q[1] - 0.6 && y < F.q[3] + 0.6) || (HL && Math.abs(x - gx) < 6 && y > gy - 5 && y < gy + 8); let n = 0;   // (none on the paved square or the forecourt before the HQ's front; on its lot elsewhere they stand round its picture, which covers those under it)   // (round 3: the HQ's square, a row of trees inside its ring road, broken here and there, none on the HQ's lot or the paved square round the point)
-    for (let i = 0; i < pg.length; i += 2){ const ax = pg[i], ay = pg[i + 1], bx = pg[(i + 2) % pg.length], by = pg[(i + 3) % pg.length], L = Math.hypot(bx - ax, by - ay); for (let t = 0.8; t < L - 0.4; t += 2.3){ n++; if (h(n, 1) < 0.22) continue; const x = ax + (bx - ax)*t/L, y = ay + (by - ay)*t/L; if (!off(x, y)) T.push([x, y, 0.65 + 0.3*h(n, 2), 2, 1.2, (h(n, 3)*3) | 0, hq, 0]); } }
-    // (and clumps over the rest of its open ground, beside the HQ and the paved square: a square with trees, not a bare tile; round 3)
-    for (let y = b + 4; y < d - 3; y += 3.6) for (let x = a + 4; x < c - 3; x += 3.6){ n++; if (h(n, 4) < 0.5) continue; const k = 2 + ((h(n, 5)*3) | 0);
-      for (let j = 0; j < k; j++){ n++; const tx = x + (h(n, 6) - 0.5)*2.6, ty = y + (h(n, 7) - 0.5)*2.6; if (!off(tx, ty)) T.push([tx, ty, 0.8 + 0.6*h(n, 8), 0, 0, (h(n, 9)*3) | 0, hq, 0]); } } }
+function cityLotTrees(I, LT, P){ const T = [], RG = LT.find(l => l.st === 'ring' && !(l.bit & BN_LOTNB)), hq = BN_LOTB('hq');   // ([x, y, r, lv, th, ci, bit, hide]: drawn where its bit is open and its hide bit is not)
+  if (RG){ const [a, b, c, d] = RG.ri, HL = LT.find(l => l.st === 'sq' && !(l.bit & BN_LOTNB)), F = LT.find(l => l.st === 'fc' && !(l.bit & BN_LOTNB)), h = (u, v) => c3H(I.p + 77, u, v), K = KM_W;
+    const RA = P && (P.gra || (P.gra = cityLotRaster(G.P[I.p], I.E))), r0 = RG.rr, inR = (x, y) => { const qx = Math.max(a + r0 - x, x - (c - r0), 0), qy = Math.max(b + r0 - y, y - (d - r0), 0); return x > a && x < c && y > b && y < d && qx*qx + qy*qy < r0*r0; };
+    const gx = HL ? (HL.g[0] + HL.g[2])/2 : 0, gy = HL ? HL.g[3] : 0, off = (x, y, rt) => !inR(x, y) || (F && x > F.q[0] - 0.6 && x < F.q[2] + 0.6 && y > F.q[1] - 0.6 && y < F.q[3] + 0.6) || (HL && Math.abs(x - gx) < 4 && y > gy - 3 && y < gy + 5)
+      || bnWater(I.x + x*K, I.y + y*K) || (RA && RA.riv([(x - rt - 0.4)*K, (y - rt - 0.4)*K, (x + rt + 0.4)*K, (y + rt + 0.4)*K])); let n = 0;   // (none on the paved square or the forecourt before the HQ's front, none on the water or a river: look critic, polish 1 of round 3, Tokyo's bay and the Seine; on its lot elsewhere they stand round its picture, which covers those under it)
+    // (the HQ's grounds: clumps of trees over its open ground round the HQ, no row along the ring's line (it drew the ring's shape); polish 1 of round 3)
+    for (let y = b + 2; y < d - 1.5; y += 3.2) for (let x = a + 2; x < c - 1.5; x += 3.2){ n++; if (h(n, 4) < 0.45) continue; const k = 2 + ((h(n, 5)*3) | 0);
+      for (let j = 0; j < k; j++){ n++; const tx = x + (h(n, 6) - 0.5)*2.6, ty = y + (h(n, 7) - 0.5)*2.6, tr = 0.8 + 0.6*h(n, 8); if (!off(tx, ty, tr)) T.push([tx, ty, tr, 0, 0, (h(n, 9)*3) | 0, hq, 0]); } } }
   for (const l of LT){ if (l.bit & BN_LOTNB) continue; const [x0, y0, x1, y1] = l.q, w = x1 - x0, hh = y1 - y0, pg = cityLotPoly([x0 + 1.2, y0 + 1.2, x1 - 1.2, y1 - 1.2], Math.max(0, l.c - 0.5)), ln = l.k.charCodeAt(0)*31 + l.k.charCodeAt(1), h = (a, b) => c3H(I.p + ln, a, b);
     const inP = (x, y) => { for (let i = 0, n = pg.length; i < n; i += 2){ const j = (i + 2) % n; if ((pg[j] - pg[i])*(y - pg[i + 1]) - (pg[j + 1] - pg[i + 1])*(x - pg[i]) < 0) return false; } return true; };
-    const add = (x, y, r, lv, th) => { if (inP(x, y)) T.push([x, y, r, lv, th, (h(T.length, 8)*3) | 0, l.bit, l.st === 'fc' && RG ? hq : 0]); };   // (the square's own rows gone where the HQ's square takes it in)
+    const add = (x, y, r, lv, th) => { if (inP(x, y)) T.push([x, y, r, lv, th, (h(T.length, 8)*3) | 0, l.bit, 0]); };   // (the paved square's own rows, in a capital too: polish 1 of round 3, the HQ's ring no longer takes the square in)
     if (l.st === 'park'){ const nc = Math.max(4, Math.round(w*hh/30)), mx = (x0 + x1)/2, my = (y0 + y1)/2; let n = 0;   // (a town park, its trees in clumps: denser than at first, so an empty lot reads as the town's park, not a gap in it)
       const add = (x, y, r, lv, th) => { const u = (x - mx)/(0.46*w), v = (y - my)/(0.46*hh); if (u*u + v*v < 1) T.push([x, y, r, lv, th, (h(T.length, 8)*3) | 0, l.bit, 0]); };   // (round 3: within an oval round its middle, never filling the lot to its corners: no lot's shape)
       for (let c = 0; c < nc; c++){ const cx = x0 + w*(0.15 + 0.7*h(c, 1)), cy = y0 + hh*(0.15 + 0.7*h(c, 2)), k = 4 + ((h(c, 3)*6) | 0); for (let j = 0; j < k; j++){ n++; const a = h(n, 4)*6.283, rr = 0.6 + 2.2*h(n, 5); add(cx + Math.cos(a)*rr*1.3, cy + Math.sin(a)*rr, 0.9 + 0.8*h(n, 6), 0, 0); } }
@@ -8260,9 +8337,8 @@ function cityLotDraw(g, I, LT, S, X0, Y0, W, H, pk, pkc, C, WY, hk){ const Ek = 
   // blob of its own, an uneven ellipse round the lot's middle, never the lot's shape)
   const blob = (q, k, sd) => { const cx = (q[0] + q[2])/2, cy = (q[1] + q[3])/2, rx = k*(q[2] - q[0])/2, ry = k*(q[3] - q[1])/2, o = [], ph = [0, 1, 2].map(j => 6.283*c3H(sd, j, 11)), am = [0.11, 0.07, 0.05];
     for (let i = 0; i < 28; i++){ const a = i/28*6.283; let f = 1; for (let j = 0; j < 3; j++) f += am[j]*Math.sin((j + 2)*a + ph[j]); o.push(cx + Math.cos(a)*rx*f, cy + Math.sin(a)*ry*f); } return o; };
-  let kd = 1; const ringOn = LT.some(l => l.st === 'ring');
+  let kd = 1;
   for (const l of vis){ const [a, b, c, d] = l.q, cx = (a + c)/2, cy = (b + d)/2; kd = sstep(0.15, 0.55, Math.max(dn(cx, cy), dn((a + cx)/2, (b + cy)/2), dn((c + cx)/2, (b + cy)/2), dn((a + cx)/2, (d + cy)/2), dn((c + cx)/2, (d + cy)/2))); const sd = I.p*13 + l.k.charCodeAt(0)*7 + l.k.charCodeAt(1), h = k => c3H(sd, k, 3);
-    if (l.st === 'fc' && ringOn){ soft(blob([a - 1.5, b - 3, c + 1.5, d + 1], 0.95, sd), 'rgb(124,120,110)', 0.3); continue; }   // (in the HQ's square: its forecourt, no kerb or band marking the square's shape; round 3)
     if (l.st === 'fc'){ gs.globalAlpha = 0.36; gs.fillStyle = 'rgb(124,120,110)'; gs.fillRect(a + 0.3, b + 0.3, c - a - 0.6, d - b - 0.6); gs.globalAlpha = 0.14; gs.strokeStyle = C.kerb; gs.lineWidth = 0.9; gs.strokeRect(a + 1.4, b + 1.4, c - a - 2.8, d - b - 2.8);   // the square round the point: paving, a darker band of setts inside its edge
       if (kF > 0){ gs.globalAlpha = 0.35*kF; gs.strokeStyle = C.kerb; gs.lineWidth = Math.max(px(0.8), 0.15); gs.strokeRect(a + 0.3, b + 0.3, c - a - 0.6, d - b - 0.6); } continue; }   // (close in its kerb)
     if (l.st === 'ring') continue;   // the HQ's square inside its ring road: the town's own ground, its trees (cityLotTrees) and the forecourt before the HQ; no fill of its own, no tile (the ring's line the overlay draws: cityHqRings)
@@ -8549,6 +8625,7 @@ function cityNightSquare(g, I, S, X0, Y0){ if (I.lo) return; const Ek = I.E/KM_W
   // the lamps: warm points about two km apart along the square's kerb (a little in from its edge), a soft halo each, some brighter than others
   g.globalCompositeOperation = 'lighter'; const e = 0.86*h, st = Math.max(3, Math.round(2*e/(2*pk))), r = Math.max(0.7, 0.2*pk);
   for (let k = 0; k < 4*st; k++){ const sd = Math.floor(k/st), t = (k % st)/st*2 - 1, x = mx + (sd === 0 ? t*e : sd === 1 ? e : sd === 2 ? -t*e : -e), y = my + (sd === 0 ? -e : sd === 1 ? t*e : sd === 2 ? e : -t*e), a = 0.35 + 0.25*(((k*7 + I.p*3) % 5)/4);
+    if (bnWater(I.x + (x - mx)/pk*KM_W, I.y + (y - my)/pk*KM_W)) continue;   // (no lamp out on the water: look critic, polish 1 of round 3, Tokyo's bay)
     const q = g.createRadialGradient(x, y, 0, x, y, 3.2*r); q.addColorStop(0, `rgba(255,214,150,${a.toFixed(2)})`); q.addColorStop(0.3, 'rgba(255,190,120,0.35)'); q.addColorStop(1, 'rgba(255,170,90,0)'); g.fillStyle = q; g.fillRect(x - 3.2*r, y - 3.2*r, 6.4*r, 6.4*r); }
   g.restore(); }
 // the brightness of a light canvas matched to the town's low tier over the same ground: both measured on a grid of cells (S/32 px of the
@@ -8616,11 +8693,13 @@ function cityLinesNight(g, I, S, X0, Y0, lit){ const LN = loadWorld.lines; if (!
   if (lit){ const m = 4/k, ax = wx0 + X0/k - m, ay = wy0 + Y0/k - m, bx = wx0 + (X0 + g.canvas.width)/k + m, by = wy0 + (Y0 + g.canvas.height)/k + m, near = T => tiledNear(T, ax, ay, bx, by);   // (only the runs of road over this canvas: the dashes of a whole tile of roads cost 10 ms and more a town)
     g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#f2d2a0'; const u = KM_W; g.setLineDash([0.9*u, 0.35*u, 0.4*u, 0.6*u, 1.3*u, 0.45*u]);   // (in broken runs of lamps, like the town's own streets)
     const wd = (w, m) => { const lw = Math.max(m/k, w); g.lineWidth = lw; return w/lw; };   // (a line thinner than the canvas holds drawn wider and dimmer by as much: the same light, so a soft stand-in's roads are as bright as the sharp tier's, not streaks)
-    const L0 = !lo && I.p != null && hp >= BN_LOTH && S && cityHqOpen(I.p) ? CLOTS.get(I.p) : null, rg = L0 && L0.k.hq && L0.k.hq.rg, RP = rg ? new Path2D() : null;   // (close in, round an HQ's square: the roads' lamps end on its ring road, cityHqRings; not the low tier, the town's geometry alone, made for any zoom)
+    const L0 = !lo && I.p != null && hp >= BN_LOTRH && S && cityHqOpen(I.p) ? CLOTS.get(I.p) : null, rg = L0 && L0.k.hq && L0.k.hq.rg, RP = rg ? new Path2D() : null;   // (close in, round an HQ's square: the roads' lamps end on its ring road, cityHqRings; not the low tier, the town's geometry alone, made for any zoom)
     if (RP){ cityRingPath(RP, rg, I.x, I.y); const cp = new Path2D(); cp.rect(wx0 - 1, wy0 - 1, 2*I.E + 2, 2*I.E + 2); cp.addPath(RP); g.save(); g.clip(cp, 'evenodd'); }
     if (hp >= 22){ const f2 = wd((0.7 + 0.5*ramp(22, 90))*cs, 1.2); g.globalAlpha = (0.15 + 0.04*ramp(40, 120))*f2; g.stroke(near(Array.isArray(LN.roadsT) ? LN.roadsT[3] : null)); }
     if (hp >= 70){ const f2 = wd(0.6*cs, 1); g.globalAlpha = 0.13*ramp(70, 110)*f2; g.stroke(near(LN.roadsCity || LN.roadsMain || LN.roadsT[2])); }
-    if (RP) g.restore(); g.setLineDash([]); }   // (the ring itself unlit here: the square's own lamps light it, cityNightSquare)
+    if (RP){ g.restore(); const A = cityRingArcs(G.P[I.p], L0.k.hq), W = new Path2D(); for (const pts of A.rd.concat(A.hw)){ W.moveTo(I.x + pts[0], I.y + pts[1]); for (let i = 2; i < pts.length; i += 2) W.lineTo(I.x + pts[i], I.y + pts[i + 1]); }   // (the lamps go on round the HQ with the roads that do: polish 1 of round 3)
+      if (hp >= 70){ const f2 = wd(0.6*cs, 1); g.globalAlpha = 0.13*ramp(70, 110)*f2; g.stroke(W); } }
+    g.setLineDash([]); }
   else { g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.strokeStyle = '#000';
     const z = Math.max(0.7, Math.min(2.4, hp/32));   // (the overlay's river: RIV_W wide times z CSS px, a dark bank 1.1 px wider; past hexPx 77 the same on screen at every zoom)
     for (let i = 0; i < 3; i++){ if (hp < RIV_W[i][1]) continue; const w = (RIV_W[i][0]*z + 0.3)*cs, lw = Math.max(1.5/k, w); g.lineWidth = lw; g.globalAlpha = Math.min(1, 0.15 + w/lw); each(LN.riversT[i], p => g.stroke(p)); } }   // (as wide as the river on screen at the zoom the tier is for, not its bank: the river runs through the lit town as it does by day, and the town's lights keep their own banks)
@@ -9099,7 +9178,7 @@ function drawWaysOver(c, LN, px, hexPx, wx0, wy0, wx1, wy1, lite){ const ramp = 
   const moving = lite; lite = lite || hexPx < 34;   // (no casing while the lines are still thin: they read on their own; a quick render while the map moves: roads and highways only, the full one follows)
   const HR = cityHqRings(wx0, wy0, wx1, wy1, hexPx), LP = HR && HR.wet && GEO && GEO.coastV, SKc = (t, rg) => { if (HR){ c.save(); c.clip(HR.clip, 'evenodd'); SK(t); c.restore(); if (rg){ if (LP){ c.save(); c.clip(LP, 'evenodd'); c.stroke(rg); c.restore(); } else c.stroke(rg); } } else SK(t); };   // (a ring over the water only on the land, the coast's path: LP)   // (the roads cut at the HQs' ring roads, each ring stroked with its class: cityHqRings)
   if (TR && hexPx >= 45 && !moving){ const t = T(TR); if (!lite){ c.strokeStyle = `rgba(18,14,8,${0.22*a})`; c.lineWidth = (1.5 + 0.4*z)*px; SKc(t); } c.strokeStyle = `rgba(226,212,174,${(0.42 + 0.18*z)*ramp(45, 60)})`; c.lineWidth = (0.6 + 0.3*z)*px; SKc(t); }
-  if (RD){ const r = T(RD), rg = HR && HR.n > HR.nh ? HR.rd : null; if (!lite){ c.strokeStyle = `rgba(18,14,8,${(0.42 + 0.1*z)*a})`; c.lineWidth = (2.3 + 1.1*z)*px; SKc(r, rg); } c.strokeStyle = `rgba(238,226,192,${(0.66 + 0.2*z)*a})`; c.lineWidth = (1.0 + 0.7*z)*px; SKc(r, rg); }
+  if (RD){ const r = T(RD), rg = HR && HR.n ? HR.rd : null; if (!lite){ c.strokeStyle = `rgba(18,14,8,${(0.42 + 0.1*z)*a})`; c.lineWidth = (2.3 + 1.1*z)*px; SKc(r, rg); } c.strokeStyle = `rgba(238,226,192,${(0.66 + 0.2*z)*a})`; c.lineWidth = (1.0 + 0.7*z)*px; SKc(r, rg); }
   if (HW){ const h = T(HW), rg = HR && HR.nh ? HR.hw : null; if (!lite){ c.strokeStyle = `rgba(16,11,4,${(0.5 + 0.1*z)*a})`; c.lineWidth = (2.9 + 1.5*z)*px; SKc(h, rg); } c.strokeStyle = `rgba(250,226,160,${(0.78 + 0.18*z)*a})`; c.lineWidth = (1.3 + 1.0*z)*px; SKc(h, rg); }
   // the centre point of every province where its roads meet (where a province is captured), close in: a small light ring with a dark dot
   if (hexPx >= 50 && LN.hubs && !moving){ const k = ramp(50, 75), r0 = (1.6 + 1.2*ramp(75, 200))*px, P2 = new Path2D(); let n = 0;
@@ -9114,7 +9193,8 @@ function drawRoadsNight(hexPx, nn){ const LN = loadWorld.lines; if (!LN || !LN.o
   const RD = pick('r', hexPx >= 100 ? LN.roadsT[2] : LN.roadsMain), HW = pick('h', LN.roadsT[3]); ctx.save(); ctx.setTransform(dpr*view.s, 0, 0, dpr*view.s, dpr*view.x, dpr*view.y); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   const a = Math.min(1, (hexPx - 26)/6)*nn, HR = cityHqRings(x0, y0, x1, y1, hexPx); if (HR){ ctx.save(); ctx.clip(HR.clip, 'evenodd'); }   // (the roads cut at the HQs' ring roads, the rings stroked after: cityHqRings)
   if (RD){ ctx.strokeStyle = `rgba(230,218,186,${0.32*a})`; ctx.lineWidth = 0.9*px; ctx.stroke(RD); } if (HW){ ctx.strokeStyle = `rgba(250,226,160,${0.4*a})`; ctx.lineWidth = 1.2*px; ctx.stroke(HW); }
-  if (HR){ ctx.restore(); if (HR.n > HR.nh){ ctx.strokeStyle = `rgba(230,218,186,${0.32*a})`; ctx.lineWidth = 0.9*px; ctx.stroke(HR.rd); } if (HR.nh){ ctx.strokeStyle = `rgba(250,226,160,${0.4*a})`; ctx.lineWidth = 1.2*px; ctx.stroke(HR.hw); } } ctx.restore(); }
+  if (HR){ ctx.restore(); const LP = HR.wet && GEO && GEO.coastV; if (LP){ ctx.save(); ctx.clip(LP, 'evenodd'); }   // (a ring by the water on the land only, as by day: look critic, polish 1 of round 3, Tokyo's over its bay by night)
+    if (HR.n){ ctx.strokeStyle = `rgba(230,218,186,${0.32*a})`; ctx.lineWidth = 0.9*px; ctx.stroke(HR.rd); } if (HR.nh){ ctx.strokeStyle = `rgba(250,226,160,${0.4*a})`; ctx.lineWidth = 1.2*px; ctx.stroke(HR.hw); } if (LP) ctx.restore(); } ctx.restore(); }
 // live link overlay: damaged links red-dashed with a repair badge, works in progress pulsing with their progress
 function drawLinkFx(now, vis){ if (!S.links) return; const hexPx = view.s*HS0; if (hexPx < 4) return; const px = 1/view.s;
   const x0 = -view.x/view.s - 30, y0 = -view.y/view.s - 30, x1 = (cw - view.x)/view.s + 30, y1 = (ch - view.y)/view.s + 30;
