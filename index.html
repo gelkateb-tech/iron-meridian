@@ -8464,7 +8464,7 @@ const c3O = q => { let a = 0; for (let k = 0; k < 4; k++){ const ax = q[2*k], ay
      darkened as the town is (bnFrontMake's formula) with a warm speck or two; kept like the pictures (BDS, least recently drawn dropped). */
 const BD_MIL = {olive:'#7b7f62', olive2:'#686c55', khaki:'#a79c7b', hangar:'#a4a7a5', asph:'#4f4e4a', conc:'#b4afa5', conc2:'#8d8a84', render:'#ddd6c8', sand:'#cdb894',
   sandst:'#a9654f', terra:'#9a6c5c', slate:'#676c70', ochre:'#c29f66', earth:'#748452', hull:'#6c7278', deck:'#a2a6a7', brick:'#8a5646', yellow:'#ddcc95', dark:'#45474a',
-  white:'#e8e4da', steel:'#7f848a', net:'#8b9879', copper:'#7f9f92', stone:'#cbc2b0', bus:'#d6c27e', water:'#3c7496'};
+  white:'#e8e4da', steel:'#7f848a', net:'#8b9879', copper:'#7f9f92', stone:'#cbc2b0', bus:'#d6c27e', water:'#3c7496', crane:'#d9ad40'};
 const BD_U = [19, 21, 22.5, 25, 28.5].map(v => 0.6*v);   // u by the town's tier (BN_TKH: the drawn height foot to roof of its biggest ordinary block; about 0.6 of it its height)
 const bdQ = (x0, y0, x1, y1) => [x0, y0, x1, y0, x1, y1, x0, y1];
 // a rectangle L long along the unit direction (dx, dy) and W wide round (cx, cy)
@@ -8609,7 +8609,7 @@ function bdSite(k, g, o){ const M = o.C.mil, U = o.u, st = o.site; let P = bdPar
   if (st === 0){ rec(bdQ(g[0] + 0.5, g[3] - 2.4, g[0] + 3.4, g[3] - 0.9), 0.07*U, 0, M.white, {nl:0.6});   // the site cabin
     for (let i = 0; i < 3; i++){ const x = x0 + (x1 - x0)*(0.2 + 0.3*i), y = y1 + 1.6; rec(bdQ(x - 0.9, y - 0.5, x + 0.9, y + 0.5), 0.5 + 0.3*i, 0, i === 1 ? M.steel : M.khaki, {nw:1}); } }
   else for (const b of main) rec(b.q, (st === 1 ? 0.5 : 1)*b.h, st === 1 ? 0 : 11, st === 1 ? M.net : M.steel, {open:st === 1 ? 1 : 0, nl:0.15, nw:st === 2 ? 1 : 0});
-  { const x = x1 + 0.6, y = y0 + 0.4, h = 0.6*U; rec(bdQ(x - 0.3, y - 0.3, x + 0.3, y + 0.3), h, 10, M.steel, {jib:Math.max(6, 0.45*(x1 - x0)), nw:1}); L.push([x, y, h + 0.3, '#ff5a4a', 2]); }   // the tower crane
+  { const x = x1 + 0.6, y = y0 + 0.4, h = 0.6*U; rec(bdQ(x - 0.3, y - 0.3, x + 0.3, y + 0.3), h, 10, M.crane, {jib:Math.max(6, 0.45*(x1 - x0)), nw:1, pw:0.6}); L.push([x, y, h + 0.3, '#ff5a4a', 2]); }   // the tower crane
   return {B, G, X:L, F:[]}; }
 const bdArea = q => Math.abs((q[4] - q[0])*(q[7] - q[3]) - (q[5] - q[1])*(q[6] - q[2]))/2;
 // the drawing of the new types (c3Bld hands them on): pal the roof's, wp the walls' palette
@@ -8644,8 +8644,8 @@ function bdBld(g, b, pal, wp, kR, px){ const q = b.q, o = c3O(q), z0 = b.z0, h =
     return; }
   if (b.t === 10){ // a pole or mast (a flagpole, the crane's, an antenna): a thin line lit on its west side; a crane its jib, a radar its dish
     const w = Math.max(px(0.9), b.pw || 0.28), bx0 = cx + L*z0, by0 = cy - z0, tx = cx + L*H0, ty = cy - H0;
-    g.lineCap = 'butt'; g.strokeStyle = wp.w[2]; g.lineWidth = w; g.beginPath(); g.moveTo(bx0, by0); g.lineTo(tx, ty); g.stroke(); g.strokeStyle = wp.hi; g.lineWidth = w*0.45; g.beginPath(); g.moveTo(bx0 - w*0.25, by0); g.lineTo(tx - w*0.25, ty); g.stroke();
-    if (b.jib){ g.strokeStyle = wp.w[2]; g.lineWidth = w*0.9; g.beginPath(); g.moveTo(tx + b.jib*0.28, ty); g.lineTo(tx - b.jib, ty); g.stroke(); g.lineWidth = w*0.35; g.beginPath(); g.moveTo(tx - b.jib*0.7, ty); g.lineTo(tx - b.jib*0.7, ty + h*0.45); g.stroke(); g.fillStyle = wp.rd; g.fillRect(tx + b.jib*0.16, ty - w*0.2, b.jib*0.12, w*1.6); }
+    g.lineCap = 'butt'; g.strokeStyle = b.jib ? wp.rd : wp.w[2]; g.lineWidth = w; g.beginPath(); g.moveTo(bx0, by0); g.lineTo(tx, ty); g.stroke(); g.strokeStyle = wp.hi; g.lineWidth = w*0.45; g.beginPath(); g.moveTo(bx0 - w*0.25, by0); g.lineTo(tx - w*0.25, ty); g.stroke();
+    if (b.jib){ g.strokeStyle = wp.r; g.lineWidth = w*0.8; g.beginPath(); g.moveTo(tx + b.jib*0.28, ty); g.lineTo(tx - b.jib, ty); g.stroke(); g.lineWidth = w*0.35; g.beginPath(); g.moveTo(tx - b.jib*0.7, ty); g.lineTo(tx - b.jib*0.7, ty + h*0.45); g.stroke(); g.fillStyle = wp.rd; g.fillRect(tx + b.jib*0.16, ty - w*0.2, b.jib*0.12, w*1.6); }
     if (b.dish){ g.fillStyle = pal.hi; g.beginPath(); g.ellipse(tx - w, ty - w*0.6, w*3.2, w*1.7, -0.5, 0, Math.PI*2); g.fill(); g.strokeStyle = wp.w[2]; g.lineWidth = w*0.5; g.stroke(); }
     g.lineCap = 'round'; return; }
   if (b.t === 11){ // a bare frame going up: its columns and floors, the far walls fainter, no walls or roof
@@ -8723,7 +8723,10 @@ function bdGround(g, Gm, pkc, px){ const kF = Math.max(0, Math.min(1, (pkc - 1.8
   g.globalAlpha = 1; }
 // a building of a town in option B, as drawBuildings lays it out (q, its building e): its parts on its lot (or, off one, on its picture's
 // ground), in km from its anchor (bdFor)
-function bdLot(p, e, l, kz){ const site = e.site ? bdSiteSt(e.c) : -1, st = e.k === 'hq' ? bnHqStyle(bnHqAt(p)) : null;
+const BDLC = new Map();   // (bdLot's answers by town, building, level, site and style: no key of numbers made each frame)
+function bdLot(p, e, l, kz){ const site = e.site ? bdSiteSt(e.c) : -1, st = e.k === 'hq' ? bnHqStyle(bnHqAt(p)) : null, key = p + '|' + e.k + e.lv + '|' + site + '|' + (st || '') + (kz ? 'z' : '');
+  let c = BDLC.get(key); if (c && c.l === l && c.g === G) return c.o; if (BDLC.size > 800) BDLC.clear(); const o = bdLot0(p, e, l, kz, site, st); BDLC.set(key, {l, g:G, o}); return o; }
+function bdLot0(p, e, l, kz, site, st){
   if (l) return bdFor(p, e.k, e.lv, site, [(l.g[0] - l.x)/KM_W, (l.g[1] - l.y)/KM_W, (l.g[2] - l.x)/KM_W, (l.g[3] - l.y)/KM_W], !!l.m, l.f, st, kz);
   const s = BN_WPX*bnF(e.k, e.lv)*bnTk(p)/KM_W, bb = bnBox(e.nm, false); return bdFor(p, e.k, e.lv, site, [bb[0]*s, -bb[3]*s, bb[2]*s, bb[3]*s], false, 1, st, kz); }
 // is it part of its town's canvases (bdTownParts: on its lot, within the town's square)?
@@ -8748,9 +8751,9 @@ function bdItem(q, e, lk, hexPx, now, ga0){ const p = q.p, l = q.lot, f = l ? l.
   if (o.F.length && (e.k === 'hq' || e.k === 'rec')){ const F = o.F.map(([x, y, h]) => [x + C3_LEAN*h, y - h, h]); bnFlags({p, a:q.a, mir:false, e:{nm:'bd-' + e.k}}, {w:3.75, h:1, flags:F}, q.x, q.y, K, K, lk, now, ga0); ctx.globalAlpha = ga0; }   // the holder's flags on its flagpoles
   return {b, w:b[2] - b[0], pf, c, pic:q.bk ? 'code-town' : 'code-sprite'}; }
 // a crane over a building going up a level (drawn over the map each frame: no new canvas of the town), at (x, y) css px, its mast h px high
-function bdCrane(x, y, h, lk, a){ const k = 1 - lk/8*0.6, col = `rgb(${Math.round(150*k)},${Math.round(156*k)},${Math.round(160*k)})`; ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineCap = 'butt';
-  ctx.lineWidth = Math.max(1, h*0.045); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + C3_LEAN*h, y - h); ctx.stroke();
-  const tx = x + C3_LEAN*h, ty = y - h; ctx.lineWidth = Math.max(0.8, h*0.03); ctx.beginPath(); ctx.moveTo(tx + h*0.18, ty); ctx.lineTo(tx - h*0.75, ty); ctx.stroke();
+function bdCrane(x, y, h, lk, a){ const k = 1 - lk/8*0.65, col = `rgb(${Math.round(214*k)},${Math.round(170*k)},${Math.round(62*k)})`; ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineCap = 'butt';
+  ctx.lineWidth = Math.max(1.4, h*0.05); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + C3_LEAN*h, y - h); ctx.stroke();
+  const tx = x + C3_LEAN*h, ty = y - h; ctx.lineWidth = Math.max(1.1, h*0.035); ctx.beginPath(); ctx.moveTo(tx + h*0.18, ty); ctx.lineTo(tx - h*0.75, ty); ctx.stroke();
   ctx.lineWidth = Math.max(0.6, h*0.012); ctx.beginPath(); ctx.moveTo(tx - h*0.5, ty); ctx.lineTo(tx - h*0.5, ty + h*0.4); ctx.stroke(); ctx.fillStyle = col; ctx.fillRect(tx + h*0.06, ty - h*0.02, h*0.1, h*0.06); ctx.restore(); }
 // paint the bake of city p at S px (its square of 2E world units) into canvas c, which holds the part of it whose corner is (X0, Y0): the whole
 // bake, or one chunk of a big city (chunks overlap by a gutter, so they meet without a seam)
@@ -13767,7 +13770,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.lightsOnly = () =>
 if (location.protocol === 'file:' && window.__im) Object.assign(window.__im.bn, {front:() => ({n:BNFR.size, px:BNFR_PX, made:[...BNFR.entries()].filter(e => e[1]).map(e => e[0])}), wsize:(p, i, h) => { const its = bnItems(p), Lo = bnLayout(p, its), nd = bnNear(p), s = h/HS0, e = its[i]; return e ? Math.min(bnL(h)*bnF(e.k, e.lv)*Lo.shr[i]*Lo.tk, Lo.grow[i]*Lo.shr[i]*BN_WPX*bnF(e.k, e.lv)*Lo.tk*s, nd*2*s*1.1)/s : 0; }, foot:nm => bnFoot(nm), wet:(nm, pts, x, y, s, m, sea) => bnWet(nm, pts, x, y, s, m, 1, sea ? bnSea : bnWater), water:(x, y) => bnWater(x, y), isWet:(x, y) => isWet(x, y), box:(nm, mir) => bnBox(nm, mir), NAMEH:BN_NAMEH, lake:(x, y) => bnSmallLake(x, y), K0:BN_K0, WPX:BN_WPX, reset:() => bnReset(), riv:(p, e) => { const P = G.P[p], d = bnRivDist(P.x, P.y, 20), R = bnRivers(); return {d, rivers:R.sea.length, toSea:R.sea.filter(Boolean).length}; }, rivDist:(x, y, l) => bnRivDist(x, y, l), stages:BN_STG, pierWater:p => { const its = bnItems(p), i = its.findIndex(e => e.k === 'yard'); if (i < 0) return null; const e = its[i], Lo = bnLayout(p, its), P = G.P[p], M = BNMETA[e.nm], F = bnFoot(e.nm), s = window.__im.bn.wsize(p, i, 100), Lm = Math.max(M.w, M.h), w = s*M.w/Lm, h = s*M.h/Lm, mir = !!Lo.mir[i], x = P.x + Lo.pos[i][0], y = P.y + Lo.pos[i][1], riv = !!(Lo.shore && Lo.shore.riv), Q = Lo.shore && Lo.shore.bas ? bnBasinGeo(e.nm) : null;
     let sea = 0, rv = 0, bs = 0; for (const [u, v] of F.pier){ const X = x + (mir ? M.ax - u : u - M.ax)*w, Y = y + (v - M.ay)*h; if (bnSea(X, Y)) sea++; else if (riv && bnRivDist(X, Y, 0.4) < 0.4) rv++; else if (Q && Q.in(u, v)) bs++; } const n = Math.max(1, F.pier.length); return {sea:sea/n, river:rv/n, basin:bs/n, water:(sea + rv + bs)/n}; }});   // building layout checks (.test/bldangled.js): a picture's drawn long side in world px at hexPx h, the footprints
 if (location.protocol === 'file:' && window.__im) window.__im.bd = {get on(){ return BLD_B; }, open:p => bdOpen(p, G.P[p].x, G.P[p].y), sig:p => bdSig(p), get spr(){ return {n:BDS.size, b:BDS_B}; }, parts:(p, k, lv, site, st) => { const l = CLOTS.get(p) && CLOTS.get(p).k[k], e = {k, lv, nm:bnName(k, lv) || 'bn-hq-western', site:site >= 0, c:site >= 0 ? {h:(1 - (site + 0.5)/3)*30, h0:30} : null}; const o = bdLot(p, e, l, false); return {B:o.B.length, G:o.G.length, X:o.X.length, F:o.F.length, bb:o.bb.map(v => +v.toFixed(1)), types:[...new Set(o.B.map(b => b.t))]}; },
-  town:p => { CITY_DL = Infinity; const I = cityInfo(p); CITY_DL = 0; const P = cityPlan(I); { const it = cityLotPrep(I, P); while (!it.next().done); } const o = bdTownParts(I, P, cityLotMask(I)); return {B:o.B.length, G:o.G.length, X:o.X.length, lots:[...o.lots].map(l => l.k)}; }, reset:() => { BDPC.clear(); BDS.clear(); BDS_LAST.clear(); BDS_B = 0; }};   // option B's checks (simpler-bldg)
+  town:p => { CITY_DL = Infinity; const I = cityInfo(p); CITY_DL = 0; const P = cityPlan(I); { const it = cityLotPrep(I, P); while (!it.next().done); } const o = bdTownParts(I, P, cityLotMask(I)); return {B:o.B.length, G:o.G.length, X:o.X.length, lots:[...o.lots].map(l => l.k)}; }, reset:() => { BDPC.clear(); BDLC.clear(); BDS.clear(); BDS_LAST.clear(); BDS_B = 0; }};   // option B's checks (simpler-bldg)
 if (location.protocol === 'file:' && window.__im) window.__im.cityDbg.lotCheck = p => { const I = cityInfo(p); if (!I) return null; const P = cityPlan(I); if (!P) return null; { const it = cityLotPrep(I, P); while (!it.next().done); } const om = cityLotMask(I), K = KM_W, o = {inLot:[], unreached:[], outside:[], open:P.LT.filter(l => l.bit & om && !(l.bit & BN_LOTNB)).map(l => l.k)};   // (the building lots in the plan, close in: what is drawn inside an open lot, and the lots no street comes within 1.2 km of; .test checks)
   const LA = P.LT.filter(l => l.bit & om).map(l => ({l, pg:cityLotPoly([l.q[0] + 0.3, l.q[1] + 0.3, l.q[2] - 0.3, l.q[3] - 0.3], Math.max(0, l.c - 0.3))}));
   c3Pick(P, om, false, true, () => true, b => { for (const a of LA) if (c3PolyOv(b.q, a.pg)) o.inLot.push(a.l.k); });
