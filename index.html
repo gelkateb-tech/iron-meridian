@@ -10830,7 +10830,10 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
     sfx('order'); toast(`Merged ${pluN(n0, 'unit')} into ${armyName(b)}: ${pluN(count(b), 'unit')}.${warn}`, sp.over ? 'bad' : 'good', null); renderSide(true); return true; }
-  const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
+  // (to the spot where the other force stands, not the centre of its province: it merges there, rules/combat.js joinHour; one on the move is
+  // followed province by province)
+  const dest = b.to ?? b.at, spot = b.to !== null || b.path.length ? null : b.sail ? (b.sail.nx || b.sail.to) : b.pos;
+  orderMove(a, dest, spot); if (!a.path.length && a.to === null && !a.sail){ toast('No route to that force.', 'bad', null); return false; }
   a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.${warn}`, sp.over ? 'bad' : 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
 // a move to a spot in the force's own province (rules/movement.js orderMove → orderSpot): it walks, or a fleet sails, there and takes the time
@@ -10919,8 +10922,11 @@ function tap(x, y, shift = false, long = false){
   const p = mk ? mk.p : provAt(x, y);
   if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
-  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
+  // the Waypoint button on: a tap on water is a stop too (a fleet's stops are on water; troops embark through a port). Before PINPOINT-3 the
+  // line below deselected first (c67d74a, "a tap only selects"), so no fleet could be given a stop by a tap, and a phone had no other way
+  if (a && wpMode && !a.air && !long && p >= 0 && G.P[p].sea){ stopTap(a, p, x, y); return; }
+  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   if (a){
     // a tap is only a selection: it never moves the force (owner's rule). Move or Attack in the command bar (M, K), then a tap, gives the order;
     // the Waypoint button on makes each tap a stop. Anything else: a city or building tapped opens its panel with the force deselected, empty land deselects

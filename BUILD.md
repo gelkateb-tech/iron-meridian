@@ -200,6 +200,27 @@ The switches are saved in this browser under the localStorage key `iron-meridian
 
 ## Tests
 
+### Standard checks
+
+Run all of them before a merge: `bash tools/checks.sh [log folder]` runs them in this order, one log each and a `summary.txt` (default folder `.test/checks-log`), and exits 1 if any fails. The browser tests run one at a time (side by side on a loaded machine their tap checks fail for want of frames), and the build's `dist/` is deleted at the end.
+
+| Check | What it guards |
+|---|---|
+| `node tools/split-lint.js` | the rules files' boundary (no page names, browser globals, load-order problems) |
+| `bash tools/mkpage.sh`, then `node tools/split-golden.js 10 12345` | the test page; 10 fixed-seed days give the recorded state hashes |
+| `node tools/headless.js --check` | the same seed twice gives the same game (plain Node) |
+| `node .test/units-in-cities.js` | forces drawn and tapped in cities |
+| `node .test/pinpoint.js` | pinpoint movement on an empty map (rules and taps) |
+| `node .test/waypoints.js` | waypoints: stops in order, Undo, saves (rules and taps) |
+| `node .test/pinpoint-guard.js` | **PINPOINT-3 guard**: on a map with the starting garrisons, a Move tap, Waypoint taps (one stop and a plan through two garrisoned provinces), a fleet's Waypoint taps on water, troops' stop at sea, a drag (desktop) and a save mid-plan end exactly on the tapped spot, at phone (440 x 900, touch) and desktop size, plus the rules cases and an old save of origin/master with moves in flight (`.test/fixtures/pinpoint-oldsave.json`). Pinpoint movement broke three times because the other tests empty the map first; this one does not. Each FAIL names what broke |
+| `node .test/controls.js` | the command bar and taps |
+| `node .test/rebels2.js`, `node .test/d10.js`, `node .test/dealings.js` | rebels, the ten-day play, the Diplomacy screens |
+| `node .test/anchor-check.js 1440 900 1` | counters and models anchored to the map |
+| `node .test/nat-oldsave.js` | an old save plays on to the same state |
+| `node tools/balance.js`, `node tools/nations-balance.js` | balance of both worlds |
+| `node tools/eco-check.js --scenarios`, `node tools/stack-duel.js --scenarios` | the economy, stack fights |
+| `node tools/build.js` | the test and public builds (then `rm -rf -- ./dist`) |
+
 - `bash tools/mkpage.sh` builds `.test/page.html` from `index.html`. The markers are comments, so this page is the test build. All the existing `node .test/<name>.js` tests and `node tools/smoke.js` run on it.
 - Stealth Bomber: `node .test/stealth.js` (plain Node, about 4 minutes; `quick` skips the 80-day game) checks the unit's numbers, the two research projects (Stealth Bombers needs both Strategic Bomber Upgrade and Stealth Airframes: `req` and `req2`, read through `techReqs` / `techOpen`), the detection rates measured over hundreds of raids, the bomb load, the fog rule and the AI's limits; `node .test/stealth-ui.js` checks the research tree, the Mobilize list and what the map draws (it reads `window.__airSeen`, a test hook); `node .test/stealth-play.js` plays 5 days in developer mode with stealth raids.
 - One map look at every zoom (MAP-2): `node .test/map-zoom-look.js [W H dpr]` measures the ground's mean colour (the layer without its overlay sheet and towns: the test hook `window.__groundOnly`) at five places from hexPx 5 to 150 (land within 4% of the world view's, sea within 6%), compares a layer rendered as a live zoom renders it (`__im.zoomRender()`) with the settled one, and makes detail tiles all round the world (`__im.dtProbe(k, tx, ty)`) to check each terrain class's mean change stays within 3%. The detail tiles multiply the texture by a modulation whose mean is 1 per class (`DT_G`, the gains measured with `dtProbe`; re-measure them if the tile generator changes); the sea's depth (`SEA_A`), the ground grain (`GRAIN_A`) and the political tint have one strength at every zoom. The map style (Political / Terrain) and the Relations and Supply overlays are in Settings > Map (saved as `SET.mapMode`, `SET.ovlRel`, `SET.ovlSup`) and the More menu's Map item; there is no switch on the map.

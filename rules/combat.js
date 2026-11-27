@@ -372,7 +372,7 @@ function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return fals
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
 function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a) || a.fly) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
-    if (a.to !== null || a.path.length) continue;
+    if (a.to !== null || a.path.length || a.sail) continue;   // (still walking to the other force's spot: it merges there)
     if (a.at === b.at && b.to === null){ delete a.join; merge(b, a); any = true; if (isSeat(a.owner)){ const sp = stackPenalty(b); tell(a.owner, `${armyName(a)} joined ${armyName(b)} at ${G.P[b.at].cityName || G.P[b.at].name}: ${pluN(count(b), 'unit')}.${sp.over ? ` ${stackText(sp)}.` : ''}`, sp.over ? 'bad' : 'good', b.at); IM.emit('merged', a.id, b.id); } continue; }
     const pth = pathFor(a, a.at, b.to ?? b.at); if (pth.length){ a.path = pth; a.forced = true; } else delete a.join; }
   if (any) removeEmpty(); }
