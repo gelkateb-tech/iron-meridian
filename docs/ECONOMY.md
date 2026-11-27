@@ -729,7 +729,8 @@ of 5.1 above and the Airbase and Naval Yard level bonuses. One table in `rules/d
   are refunded at their old price (`AT_OLD`), a project of the line still running is refunded. Test: `.test/build-reqs.js` with a save made
   by master (`.test/fixtures/at-oldsave.json`, `.test/at-oldsave-make.js`).
 - The computer (`rules/ai.js`): `aiFacWant` (the capital to Army Base II at once, to III with Rocket Artillery, Special Forces or Jammers
-  researched or enemy aircraft about; the biggest other Army Base cities, the front first, 2-4 to II and 0-2 to III by size), `aiAirUp` and the
+  researched or enemy aircraft about, and AT WAR outright, keeping only $25M back over the price (`AI_FAC.war3`; at peace $140M), its other
+  cities at war $90M (`warO3`; at peace $200M): the peace-time reserve had left every warring nation without Mobile SAMs; the biggest other Army Base cities, the front first, 2-4 to II and 0-2 to III by size), `aiAirUp` and the
   Airbase saving (`aiAirNeed`: II for Strike Fighters and Strike Drones, III for Heavy Bombers, AWACS and patrol aircraft), the stealth wing's
   Airbase climbs III, IV, V, `aiRecWant` (Recruiting Offices to III in its training cities at war or when rich). Anti-Tank Infantry's
   anti-armour weight went to the tank and the strike drone.

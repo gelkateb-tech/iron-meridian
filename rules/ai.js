@@ -403,19 +403,23 @@ function aiRecSlow(n, p){ const l = S.bld[p].rec || 0; return l >= 1 && l < BUIL
 // The Army Base: the capital goes to level II as soon as the money is there (Main Battle Tanks, IFVs, Paratroopers, Swarm Drones), and to III once
 // the nation has Rocket Artillery, Special Forces or Mobile Jammers researched or faces enemy aircraft (Mobile SAMs); of its other Army Base cities
 // the biggest (the front first: next to an enemy at war, x AI_FAC.front) go to II (more2 of them by the number of its cities) and to III (more3).
-// Levels IV and V only through the rich nation's general upgrade (aiTurn0)
-const AI_FAC = {cap2:60, cap3:140, oth2:100, oth3:200, big:[8, 20], more2:[2, 3, 4], more3:[0, 1, 2], front:1.5};
+// Levels IV and V only through the rich nation's general upgrade (aiTurn0). AT WAR level III is wanted outright (Mobile SAMs need no research and
+// are what stops enemy aircraft and, with the missiles, what intercepts): any war, enemy aircraft or a level-III unit researched calls for it, the
+// capital keeps only AI_FAC.war3 back (not cap3) and tries more often, and its other cities keep warO3 back (not oth3). In a 60-day test with wars
+// the old peace-time reserve left every warring nation at Army Base II (5 of 88 capital-days with a reason had the money)
+const AI_FAC = {cap2:60, cap3:140, oth2:100, oth3:200, war3:25, warO3:90, big:[8, 20], more2:[2, 3, 4], more3:[0, 1, 2], front:1.5};
 const aiAirFoe = n => { const m = enemyMix(n), H = (S.airHit && S.airHit[n]) || {bomb:0, air:0}; return m.air > 0.1 || (H.bomb || 0) + (H.air || 0) > 0; };
 // the nation's Army Base cities other than the capital, biggest first (front cities count AI_FAC.front times their people); once per turn (AIT)
 function aiFacRank(n){ if (AIT && AIT.n === n && AIT.fac) return AIT.fac; const c = S.nations[n].capital;
   const front = p => G.P[p].nbs.some(v => S.owner[v] >= 0 && S.owner[v] !== n && atWar(n, S.owner[v])), w = p => popOf(p)*(front(p) ? AI_FAC.front : 1);
   const r = ownedBy(n).filter(p => p !== c && G.P[p].city && S.bld[p].fac > 0).sort((a, b) => w(b) - w(a) || a - b); if (AIT && AIT.n === n) AIT.fac = r; return r; }
 function aiFacWant(n, p, N){ const l = S.bld[p].fac || 0; if (l < 1 || l >= 3) return false;
-  if (l === 2 && !(has(n, 'u_mlrs') || has(n, 'u_spec') || has(n, 'u_jam') || aiAirFoe(n))) return false;
+  const war = warsOf(n).length > 0;
+  if (l === 2 && !(war || has(n, 'u_mlrs') || has(n, 'u_spec') || has(n, 'u_jam') || aiAirFoe(n))) return false;
   const c = buildCost(n, 'fac', l + 1, p).cash;
-  if (p === N.capital) return N.cash > c + (l === 1 ? AI_FAC.cap2 : AI_FAC.cap3) && rng() < (l === 1 ? 0.7 : 0.35);
+  if (p === N.capital) return N.cash > c + (l === 1 ? AI_FAC.cap2 : war ? AI_FAC.war3 : AI_FAC.cap3) && rng() < (l === 1 ? 0.7 : war ? 0.6 : 0.35);
   const C = ownedBy(n).filter(q => G.P[q].city).length, sz = C >= AI_FAC.big[1] ? 2 : C >= AI_FAC.big[0] ? 1 : 0, k = (l === 1 ? AI_FAC.more2 : AI_FAC.more3)[sz];
-  if (!k || N.cash < c + (l === 1 ? AI_FAC.oth2 : AI_FAC.oth3)) return false;
+  if (!k || N.cash < c + (l === 1 ? AI_FAC.oth2 : war ? AI_FAC.warO3 : AI_FAC.oth3)) return false;
   const i = aiFacRank(n).indexOf(p); return i >= 0 && i < k && rng() < 0.25; }
 // the Airbase level the nation's aircraft research calls for: II for Strike Fighters and Strike Drones, III for Heavy Bombers and AWACS (and for
 // Maritime Patrol Aircraft in a nation with a coast); the Air Superiority Fighter, the Interceptor, the Recon UAV and the Attack Helicopter need only I
