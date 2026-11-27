@@ -6728,10 +6728,10 @@ function tmLevel(t, dp){ const M = U3D.map(t); if (!M) return null;
   if (dp > M.ppm*0.45) return M;
   return tmMip(t, M, dp > M.ppm*0.225 ? 1 : 2); }
 function tmMip(t, M, k){ const key = t + '|' + k; let L = TMMIP.get(key); if (L && L.src === M.cv) return L;
-  const src = k > 1 ? tmMip(t, M, k - 1) : M, f = 2**-k, w = Math.ceil(src.w/2), h = Math.ceil(src.h/2), c = document.createElement('canvas'); c.width = w*M.cols; c.height = h*Math.ceil(16/M.cols);
+  const src = k > 1 ? tmMip(t, M, k - 1) : M, f = 2**-k, w = Math.ceil(src.w/2), h = Math.ceil(src.h/2), n = M.n || 16, c = document.createElement('canvas'); c.width = w*M.cols; c.height = h*Math.ceil(n/M.cols);   // (n cells: 16 views, or more views or frames)
   const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-  for (let d = 0; d < 16; d++) g.drawImage(src.cv, (d % M.cols)*src.w, Math.floor(d/M.cols)*src.h, src.w, src.h, (d % M.cols)*w, Math.floor(d/M.cols)*h, src.w/2, src.h/2);
-  L = {cv:c, src:M.cv, cols:M.cols, w, h, ox:M.ox*f, oy:M.oy*f, ppm:M.ppm*f, bb:M.bb.map(q => q.map(v => v*f)), air:M.air, sea:M.sea, lvl:-k}; TMMIP.set(key, L); return L; }
+  for (let d = 0; d < n; d++) g.drawImage(src.cv, (d % M.cols)*src.w, Math.floor(d/M.cols)*src.h, src.w, src.h, (d % M.cols)*w, Math.floor(d/M.cols)*h, src.w/2, src.h/2);
+  L = {cv:c, src:M.cv, cols:M.cols, w, h, ox:M.ox*f, oy:M.oy*f, ppm:M.ppm*f, bb:M.bb.map(q => q.map(v => v*f)), air:M.air, sea:M.sea, lvl:-k, n, dirs:M.dirs, frames:M.frames}; TMMIP.set(key, L); return L; }
 // the map's light on a model (drawNight's daylight lift, dusk glow and night multiply as per-channel tables; 17 steps each)
 function tmLut(Lt){ const dk = Math.round(Lt.day*16), tk = Math.round(Lt.tw*16), key = dk + ':' + tk; let E = TMLUT.get(key); if (E) return E;
   const day = dk/16, tw = tk/16, nn = (1 - day)*0.86, F1 = [255, 250, 236], F2 = [255, 128, 60], MU = NIGHT_MU, tb = [0, 1, 2].map(() => new Uint8ClampedArray(256));
@@ -6771,7 +6771,7 @@ let TMFOAM = null; function tmFoam(){ if (TMFOAM) return TMFOAM; const N = 128, 
   return (TMFOAM = c); }
 // a model's class: 'g' ground, 's' naval, 'a' air
 const TM_FOOT = new Set(['sol', 'reb', 'sat', 'ssf']);   // the squads (on the march: a walking bob)
-const TM_CLS = t => /^(frig|lst|sub|crui|carr)$/.test(t) ? 's' : /^(jet|int|asf|bomb|stealth|mpa|awacs|heli|drone|sdrone|swarm)$/.test(t) ? 'a' : 'g';
+const TM_CLS = t => /^(frig|lst|sub|crui|carr|unks)$/.test(t) ? 's' : /^(jet|int|asf|bomb|stealth|mpa|awacs|heli|drone|sdrone|swarm)$/.test(t) ? 'a' : 'g';
 const TM_CT = {g:['sol', 'reb', 'sat', 'ssf', 'hmv', 'truck', 'tank', 'ifv', 'art', 'mlrs', 'sam'], s:['frig', 'lst', 'sub', 'crui', 'carr'], a:['jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs', 'heli', 'drone', 'sdrone', 'swarm']};
 // the unit mix of some armies: count per unit type (troops embarked at sea count as their transport, 'lst')
 function tmUnits(list){ const u = {}; for (const q of list){ if (!q.air && G.P[q.at] && G.P[q.at].sea && !shipsN(q)){ u.lst = (u.lst || 0) + count(q); continue; }
@@ -6823,6 +6823,143 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E
   const b = [Infinity, Infinity, -Infinity, -Infinity], feet = [];
   for (const o of perms){ const F = tmForm(o); b[0] = Math.min(b[0], F.b[0]); b[1] = Math.min(b[1], F.b[1]); b[2] = Math.max(b[2], F.b[2]); b[3] = Math.max(b[3], F.b[3]); for (const f of F.feet) feet.push([f[0], f[1], f[2]/perms.length]); }
   E = {b, feet}; TMFORM.set('F|' + key, E); return E; }
+/* ---------------- ONE FIGURE PER ARMY: the test behind ?fig=1 (owner 2026-11-27; today's look stays the default) ----------------
+   Each force stands on the map as ONE model, its main unit (figMain: the badge's own rule, count x hit points, so the figure and the badge's
+   icon agree; ties: the dearer type, then the stronger in attack, then FIG_ORD), with today's count badge pinned above it. The main unit changes
+   only when the new one leads by more than 10% or has led for 2 s, and the two cross-fade over 300 ms (a loss in a battle never flickers it).
+   The layout keeps today's reservation (roleStr: every spot stays where it is; only the figure changes).
+   Motorized Infantry is one rifleman with his transport (units3d.js mApc4, mRifleman: code-drawn, baked to m-mot, m-motr, m-mots): on the move
+   he rides in the roof hatch, at rest he stands by the front left wheel, in a battle he kneels at the nose and fires, the roof gun with him.
+   Paratroopers and marines are the rifleman alone (a four-frame walk cycle on the move).
+   The figure turns smoothly: it aims at a point 0.7 of its length further along the road or railway it follows (figAhead), so it starts each
+   bend before the corner, and its heading follows a critically damped spring under a turn-rate cap by kind (figTurn). A 3D figure is drawn from
+   the nearest of its views (32 for the new transport, 16 for the others) turned by the angle left over, so it never snaps.
+   Idle: vehicles heave a little and puff a wisp of exhaust every 2-3 s, soldiers shift their weight; moving: the walk cycle, a vehicle's body
+   pitches as it sets off and brakes; fighting: the kneeling aim, the muzzle flashes and recoil of the battle fire (BFX). None of it with Low
+   effects or reduced motion; the idle motion asks for gentle frames only (animAmb: 10 fps with the Battery saver, resting while paused).
+   Fog: an unidentified army ('?') shows a neutral figure (a grey tarp-covered load on land, a plain grey hull at sea) of one size, from the
+   province alone, never its units, owner's kind of force or a docked fleet; its layout role is neutral too (roleOf). */
+const FIG1 = /[?&]fig=1\b/.test(location.search);
+if (FIG1){ Object.assign(TMG, {mot:[6.2, 0.74], motr:[6.2, 0.74], mots:[1.8, 0.42], unkg:[5.6, 0.74], unks:[7.4, 1.25]}); TM_FOOT.add('mots'); }
+const FIGM = {inf:'mot', para:'mots', mar:'mots'};   // a unit type's one figure where it is not its first model (TMM)
+const FIG_ORD = ['tank', 'ifv', 'art', 'mlrs', 'sam', 'at', 'spec', 'inf', 'para', 'mar'], FIG_HYS = 1.1, FIG_HOLD = 2000, FIG_XF = 300, FIG_MAN = 1.6;   // (FIG_MAN: the rifleman beside his transport, at 1.6 times its scale: as tall as a squad's soldier, so he reads)
+const figModel = t => FIGM[t] || (TMM[t] && TMM[t][0]) || null;
+const figW = (u, t) => (u[t] || 0)*((UNITS[t] || {hp:10}).hp);
+// the main unit type of a unit mix (count per type) among the types whose figure is of class cls (null: any)
+function figMain(u, cls){ let best = null, bw = null;
+  for (const t in u){ if (!(u[t] > 0)) continue; const m = figModel(t); if (!m || (cls && TM_CLS(m) !== cls)) continue;
+    const U = UNITS[t] || {hp:10}, oi = FIG_ORD.indexOf(t), w = [figW(u, t), U.cost || 0, U.atk || 0, oi < 0 ? -99 : -oi];
+    let better = !best; if (!better) for (let i = 0; i < 4; i++){ if (w[i] !== bw[i]){ better = w[i] > bw[i]; break; } if (i === 3) better = t < best; }
+    if (better){ best = t; bw = w; } }
+  return best; }
+// the shown main unit of a force (by its oldest force's id), with hysteresis: {t, pv (the one fading out), x0 (when it started to)}
+const FIGH = new Map();
+function figPick(id, u, cls, now){ const t = figMain(u, cls); if (!t) return null; let E = FIGH.get(id);
+  if (!E || E.S !== S || now - E.u > 1500){ E = {t, pv:null, x0:-1e9, c:null, ct:0, u:now, S}; FIGH.set(id, E); if (FIGH.size > 3000) FIGH.clear(); return E; }
+  E.u = now; if (t === E.t){ E.c = null; return E; }
+  if (E.c !== t){ E.c = t; E.ct = now; }
+  if (!(u[E.t] > 0) || figW(u, t) > FIG_HYS*figW(u, E.t) || now - E.ct >= FIG_HOLD){ if (figModel(t) !== figModel(E.t)){ E.pv = E.t; E.x0 = now; } E.t = t; E.c = null; }
+  else animIn(FIG_HOLD - (now - E.ct));
+  return E; }
+// the badge's main type under the test: the figure's own (the same rule, and while a change waits, the one still shown)
+function figBadge(L){ const u = {}; for (const q of L) for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) u[t] = (u[t] || 0) + q.u[t];
+  const E = L.length ? FIGH.get(L[0].id) : null; return E && E.S === S && u[E.t] > 0 ? E.t : figMain(u, null); }
+// the drawn way ahead of a marching force: the point D world px further along its legs (the road or railway it follows, the gentle curve
+// elsewhere) from its drawn spot (x, y); its bearing is where the figure turns to, so it starts each bend before the corner. null: none
+function figAhead(a, x, y, D){ const W = [];
+  const leg = (f, t) => { if (f == null || t == null || f === t || !G.P[f] || !G.P[t]) return; const g = legGeom(a, f, t); for (const q of W.length ? g.slice(1) : g) W.push(q); };
+  if (a.sail && a.to === null && !a.path.length) W.push([x, y], a.sail.to);
+  else { const t0 = a.to !== null ? a.to : a.path.length ? a.path[0] : null; if (t0 == null) return null; leg(a.at, t0); leg(t0, a.to !== null ? a.path[0] : a.path[1]);
+    if (a.dest && W.length && !(a.to !== null ? a.path.length > 1 : a.path.length > 2)) W.push([a.dest.x, a.dest.y]); }
+  if (W.length < 2) return null; let bi = 0, bu = 0, bd = Infinity;
+  for (let i = 0; i + 1 < W.length; i++){ const ax = W[i][0], ay = W[i][1], dx = W[i + 1][0] - ax, dy = W[i + 1][1] - ay, u = Math.max(0, Math.min(1, ((x - ax)*dx + (y - ay)*dy)/(dx*dx + dy*dy || 1e-9))), d = (ax + dx*u - x)**2 + (ay + dy*u - y)**2;
+    if (d < bd){ bd = d; bi = i; bu = u; } }
+  let px = W[bi][0] + (W[bi + 1][0] - W[bi][0])*bu, py = W[bi][1] + (W[bi + 1][1] - W[bi][1])*bu, left = D;
+  for (let i = bi; i + 1 < W.length && left > 0; i++){ const ex = W[i + 1][0], ey = W[i + 1][1], l = Math.hypot(ex - px, ey - py); if (l >= left){ px += (ex - px)*left/l; py += (ey - py)*left/l; left = 0; break; } left -= l; px = ex; py = ey; }
+  if (Math.hypot(px - x, py - y) < D*0.3) return null;   // (at the end of its way)
+  return Math.atan2(py - y, px - x); }
+// the heading spring: critically damped (w 8/s) toward the wanted heading, its turn rate capped by kind (rad/s; times the square root of the game
+// speed, at most twice, so a fast game never leaves the figure a whole bend behind). Tracked vehicles may pivot in place
+const FIG_TURN = {foot:4, wheel:2.5, track:2, ship:0.7}, FIGT = new Map();
+const figKind = t => TM_CLS(t) === 's' ? 'ship' : TM_FOOT.has(t) ? 'foot' : t === 'tank' || t === 'ifv' ? 'track' : 'wheel';
+function figTurn(id, want, now, t){ let E = FIGT.get(id);
+  if (!E || E.S !== S || now - E.t > 1500 || !isFinite(E.a)){ E = {a:want, v:0, t:now, S}; FIGT.set(id, E); if (FIGT.size > 3000) FIGT.clear(); return want; }
+  const dt = Math.min(0.1, Math.max(0, (now - E.t)/1000)); E.t = now; if (!(dt > 0)) return E.a;
+  const sp = S.speed ? Math.min(2, Math.sqrt(HOURS_PER_SEC[S.speed]/HOURS_PER_SEC[1])) : 1, cap = FIG_TURN[figKind(t)]*sp, w = 8, d = Math.atan2(Math.sin(want - E.a), Math.cos(want - E.a));
+  E.v += (w*w*d - 2*w*E.v)*dt; E.v = Math.max(-cap, Math.min(cap, E.v)); E.a += E.v*dt; E.a = Math.atan2(Math.sin(E.a), Math.cos(E.a));
+  if (Math.abs(d) < 2e-3 && Math.abs(E.v) < 2e-3){ E.a = want; E.v = 0; } else animFast(); return E.a; }
+// the view of a model for a heading: its nearest baked direction and the angle left over (drawn turned by it)
+function figCell(t, ang){ const M = U3D.mapMeta(t), n = (M && M.dirs) || 16, st = Math.PI*2/n, d = ((Math.round(ang/st) % n) + n) % n; return [d, Math.atan2(Math.sin(ang - d*st), Math.cos(ang - d*st)), (M && M.frames) || 1]; }
+// one cell (ci: direction*frames + frame) of a model drawn with its ground origin on (x, y), turned by rot round it; returns its box on screen
+function figDraw(t, ci, x, y, s, lut, now, alpha, rot){ const L = tmLevel(t, s*dpr); if (!L) return null; const E = tmCell(t, L, ci, lut, now), k = s/E.L.ppm, w = E.c.width*k, h = E.c.height*k;
+  if (alpha > 0.003){ const ga = ctx.globalAlpha; ctx.globalAlpha = ga*alpha; if (!E.ol){ E.ol = 1; E.c = figWithOutline(E.c, false); }
+    if (Math.abs(rot) > 1e-4){ ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.drawImage(E.c, -E.L.ox*k, -E.L.oy*k, w, h); ctx.restore(); } else ctx.drawImage(E.c, x - E.L.ox*k, y - E.L.oy*k, w, h);
+    ctx.globalAlpha = ga; }
+  const b = E.L.bb[ci] || E.L.bb[0]; return {box:[x + (b[0] - E.L.ox)*k, y + (b[1] - E.L.oy)*k, x + (b[2] - E.L.ox)*k, y + (b[3] - E.L.oy)*k], lvl:E.L.lvl}; }
+// the rifleman beside his transport (not on the move): where he stands (css px from the vehicle's ground origin, its view squashed like the
+// sheets), at which scale, and whether he is behind the hull (drawn before it). fight: kneeling at the nose; else standing by the front left wheel
+function figMan(ang, s, fight){ const f = fight ? 3.7 : 1.75, l = fight ? -0.75 : -1.8, ca = Math.cos(ang), sa = Math.sin(ang), dx = (f*ca - l*sa)*s, dy = (f*sa + l*ca)*s*TM_SIN_EL;
+  return {dx, dy, s:s*FIG_MAN, back:dy < 0}; }
+// the per-figure motion state (walk phase, body pitch, the exhaust's next wisp)
+const FIGA = new Map();
+function figAnim(id, now){ let E = FIGA.get(id); if (!E){ E = {ph:0, pt:now, pv:0, pitch:0, wisp:now + 800 + ((parseInt(id, 10) || 0) % 7)*300}; FIGA.set(id, E); if (FIGA.size > 600) FIGA.delete(FIGA.keys().next().value); } return E; }
+// an unidentified contact's neutral figure (the province's kind only: land or sea), drawn under the names like the other figures: its
+// position dot stays on its spot, the figure stands centred on it and the '?' plate is lifted above it (UNKF: the lift per contact group)
+const UNKF = new Map();
+function unkFigs(list, hexPx, now){ UNKF.clear(); const fa = tmOn() && window.U3D && U3D.mapMeta ? tmFade(hexPx) : 0; if (fa <= 0) return; const lut = tmLut(viewLight());
+  for (const g of list.values()){ if (g.air) continue; const t = g.sea ? 'unks' : 'unkg', M = U3D.mapMeta(t); if (!M) continue; const s = tmScale(t, hexPx), k = s/M.ppm, ang = figTurn('u' + g.id, g.ang, now, t), [d, rr] = figCell(t, ang), b = M.bb[d];
+    const ox = g.hp ? heartRingR(hexPx) + 4 + (b[2] - b[0])*k/2 : 0, gx = g.x + ox - ((b[0] + b[2])/2 - M.ox)*k, gy = g.y - ((b[1] + b[3])/2 - M.oy)*k;
+    const r = figDraw(t, d, gx, gy, s, lut, now, fa, rr); if (!r) continue; if (TMBX.length < 200) TMBX.push(r.box);
+    if (!g.hp) UNKF.set(g.key, Math.max(0, (g.y - r.box[1]) - dotR() - 2 + PLATE_GAP)*smooth01(Math.min(1, fa*1.5))); } }
+// the figure list of a force under the test: its main unit's model (src: the unit type it stands for, for its picture) and, for 300 ms after a
+// change, the one fading out (pv)
+function figWant(E, cls, now){ if (!E) return []; const m = figModel(E.t); if (!m || TM_CLS(m) !== cls) return []; const w = [m]; w.src = {[m]:E.t};
+  if (E.pv && now - E.x0 < FIG_XF){ const pm = figModel(E.pv); if (pm && pm !== m && TM_CLS(pm) === cls){ w.pv = {t:pm, src:E.pv, k:(now - E.x0)/FIG_XF}; animFast(); } }
+  return w; }
+// one figure under the test, drawn (troopModels): its idle, moving and fighting motion, the rifleman beside his transport, the battle fire hook
+function figQ(q, lut, now, nightK, clBox){ const c = q.c, ua = unitAnim(c.list, now), lv = fxLv(), calm = afxReduced() || !lv, E = figAnim(q.id + '|' + q.t, now);
+  if (ua && (ua.dx || ua.dy || ua.rot)){ q.x += ua.dx; q.y += ua.dy; q.box = [q.box[0] + ua.dx, q.box[1] + ua.dy, q.box[2] + ua.dx, q.box[3] + ua.dy]; q.ang += ua.rot; }   // (fx.js: recoil, the hit shake, a ship's rock)
+  const fight = !c.moving && S.battles.includes(c.at), mv = c.run > 0.02 && !q.air, foot = TM_FOOT.has(q.t), walk = q.t === 'mots', dt = Math.min(0.1, Math.max(0, (now - E.pt)/1000)); E.pt = now;
+  let rot = 0, dy = 0, fr = fight && walk ? 5 : 0;
+  if (mv){ if (walk && !calm){ E.ph = (E.ph + dt*1.8*Math.max(0.5, c.run)) % 1; fr = 1 + Math.floor(E.ph*4) % 4; animFast(); }   // the walk cycle (four steps, about two strides a second)
+    const wl = q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2), L = moveFig({id:q.id, key:q.id + '|' + q.slot, x:q.x, y:q.y, ang:q.ang, len:wl*view.s, wl, run:c.run, pv:c.pv, sea:q.sea, foot:foot && !walk, top:!!q.art, tn:dustTone(c.list[0].at)}, now);
+    dy += L.dy; rot += L.rot;   // (fx.js: dust behind vehicles, a ship's wake and rock, a squad's bob)
+    if (!foot && !q.sea && !q.art && !calm){ const acc = (c.pv - E.pv)/Math.max(dt, 1e-3), tg = Math.max(-1, Math.min(1, acc/(3*Math.max(4, c.pv))))*0.026; E.pitch += (tg - E.pitch)*Math.min(1, dt*6); rot -= E.pitch*Math.cos(q.ang); }   // the body pitches up setting off, down braking (about 1.5 degrees)
+    E.pv = c.pv; }
+  else { E.pv = 0; E.pitch = 0;
+    if (!calm && !q.air){ const ph = now/1000 + (q.id % 17)*0.37;
+      if (foot) rot += 0.026*Math.sin(ph*Math.PI*2/3.2);   // a soldier shifts his weight (about 1.5 degrees round his feet)
+      else if (q.sea) rot += 0.012*Math.sin(ph*1.3);
+      else { dy += 0.3*Math.sin(ph*Math.PI*2);   // an engine idling: a heave of a third of a pixel
+        if (!fight && now >= E.wisp && q.a > 0.3){ E.wisp = now + 2000 + Math.random()*1000; const Lw = (q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1)), ca = Math.cos(q.ang), sa = Math.sin(q.ang), hh = q.art ? 0 : 1.6*q.s*Math.cos(0.82);
+          const [wx, wy] = screenToWorld(q.x - ca*Lw*view.s*0.42, q.y - sa*Lw*view.s*0.42*(q.art ? 1 : TM_SIN_EL) - hh); emit('smoke', wx, wy, {ws:true, s0:Lw*0.05, s1:Lw*0.22, vx:-ca*Lw*0.03, vy:-Lw*0.07, life:1700, a:0.3}); } }   // a wisp of exhaust every 2-3 s
+      animAmb(); } }
+  if (dy){ q.y += dy; q.box = [q.box[0], q.box[1] + dy, q.box[2], q.box[3] + dy]; }
+  let r = null, man = null;
+  if (q.art){ const a0 = q.ang; q.ang += rot; ctx.globalAlpha = q.a; if (tmArtDraw(q, nightK)) r = {box:q.box, lvl:'art'}; ctx.globalAlpha = 1; q.ang = a0; }
+  else { const t = q.t === 'mot' && mv ? 'motr' : q.t, [d0, rr, nf] = figCell(t, q.ang), ci = d0*nf + Math.min(nf - 1, fr);
+    if (q.t === 'mot' && !mv){ man = figMan(q.ang, q.s, fight); man.x = q.x + man.dx; man.y = q.y + man.dy; const [md, mr, mf] = figCell('mots', q.ang); man.ci = md*mf + (fight ? 5 : 0);
+      man.rr = mr + (fight || calm ? 0 : 0.026*Math.sin((now/1000 + (q.id % 17)*0.37)*Math.PI*2/3.2)); }
+    if (man && man.back) man.r = figDraw('mots', man.ci, man.x, man.y, man.s, lut, now, q.a, man.rr);
+    r = figDraw(t, ci, q.x, q.y, q.s, lut, now, q.a, rr + rot);
+    if (man && !man.back) man.r = figDraw('mots', man.ci, man.x, man.y, man.s, lut, now, q.a, man.rr);
+    if (r && man && man.r){ const b = man.r.box; r.box = [Math.min(r.box[0], b[0]), Math.min(r.box[1], b[1]), Math.max(r.box[2], b[2]), Math.max(r.box[3], b[3])]; } }
+  if (ua && ua.red > 0.02) unitHitMark(q.box[0], q.box[1], q.box[2] - q.box[0], q.box[3] - q.box[1], ua.red*q.a);
+  const box = r ? r.box : q.box; if (r && TMBX.length < 200) TMBX.push(box);
+  if (r){ bfxFigure(c, q.t, q.x, q.y, q.ang, q.a, q.art ? {top:true, len:q.art.Lw} : undefined); if (man) bfxFigure(c, 'mots', man.x, man.y, q.ang, q.a, {len:1.8*man.s/view.s}); }   // (the battle fire: the roof gun and the rifleman's rifle)
+  /*@TEST*/if (TMDBG.on){ const [wx, wy] = screenToWorld(q.x, q.y); TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+wx.toFixed(3), wy:+wy.toFixed(3), box:box.map(v => +v.toFixed(1)), w:Math.round(box[2] - box[0]), h:Math.round(box[3] - box[1]), d:q.d, fr, lvl:r ? r.lvl : null, art:q.art ? q.art.n : null, a:+q.a.toFixed(3), ang:+q.ang.toFixed(4), man:man ? 1 : 0,
+    id:q.id, ids:c.list.map(a => a.id), owner:c.owner, moving:c.moving ? 1 : 0, air:c.air ? 1 : 0, sea:q.sea ? 1 : 0, core:clBox(c).core.map(v => +v.toFixed(1)), tp:[c.x, c.y].map(v => +v.toFixed(1)), spot:q.slot, aw:[+c.wx.toFixed(3), +c.wy.toFixed(3)]}); }/*@ENDTEST*/ }
+// the unidentified contacts' groups (one per province, a moving one each), their spots as the '?' plates stand (the plates' loop reads them back)
+function unkGroups(unkA, ROLES, now){ const grp = new Map(), out = new Map();
+  for (const a of unkA){ const key = a.to !== null ? 'm' + a.id : 'p' + a.at + heartKey(a); if (!grp.has(key)) grp.set(key, []); grp.get(key).push(a); }
+  for (const [key, list] of grp){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkeyU(a0, pa) + a0.owner);
+    const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy);
+    const T0 = a0.to !== null ? G.P[a0.to] : null;   // (one on the move faces the province it moves to: nothing it does not show already)
+    out.set(key, {key, wx, wy, x, y, hp, id:a0.id, air:!!a0.air, sea:!!G.P[pa].sea, ang:T0 && Math.hypot(T0.x - wx, T0.y - wy) > 0.2 ? Math.atan2(T0.y - wy, T0.x - wx) : tmRest(a0.id)}); }
+  return out; }
+// a force's key in its province's roles: an unidentified one by its province alone under the test (never its docked-fleet look)
+const fkeyU = (a, p) => FIG1 && !knowA(a) ? (a.air ? 'a' : 'x') : fkey(a, p);
+/*@TEST*/if (location.protocol === 'file:') window.__fig = {on:FIG1, legGeom:(a, f, t) => legGeom(a, f, t), main:figMain, model:figModel, ahead:figAhead, get FIGT(){ return FIGT; }, get FIGH(){ return FIGH; }, get UNKF(){ return UNKF; }, TMDBG};/*@ENDTEST*/
 /* ---------------- World anchors: where each force stands ----------------
    The forces standing in a province (one per holder and kind: ground 'g', naval 's', parked air 'a'; a role 'g3:2' = ground force of power 3
    showing 2 models) get their spots once, in world units, by provLayout: yours first, then the others by power, each the cheapest spot of a grid
@@ -6878,10 +7015,11 @@ const pinOf = a => !!a.pos && !(heartOn(a) && heartCity(a.at));
 // which part of a city a ground force stands in, for the counters: 'H' on the centre point (heartOn), 'O' off it (a pinned spot, a landing, a walk
 // through: it keeps its own counter and dot, never merged into the city's stack), '' anywhere else (not a city, a fleet, an air wing: as before)
 const heartKey = a => a.air || a.fly || !heartCity(a.at) || shipsOnly(a) ? '' : heartOn(a) ? 'H' : 'O';
-function tmRoleAdd(R, a){ if (a.fly || pinOf(a) || a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id))) return;
+function tmRoleAdd(R, a, unk = false){ if (a.fly || pinOf(a) || a.to !== null || (a.path.length > 0 && GO.S === S && GO.has(a.id))) return;
   const p = a.air ? (a.air.base ?? a.at) : a.at; if (p == null || !G.P[p]) return; let M = R.get(p); if (!M) R.set(p, M = new Map());
-  const k = fkey(a, p) + a.owner; let e = M.get(k); if (!e) M.set(k, e = {air:!!a.air, owner:a.owner, list:[]}); e.list.push(a); }
-function roleOf(p, e){ if (e.r) return e.r; const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
+  const k = (unk ? (a.air ? 'a' : 'x') : fkey(a, p)) + a.owner; let e = M.get(k); if (!e) M.set(k, e = {air:!!a.air, owner:a.owner, list:[], unk}); e.list.push(a); }   // (unk: the one-figure test's unidentified contact: by its province alone)
+function roleOf(p, e){ if (e.r) return e.r; if (e.unk && !e.air){ const sea = !!G.P[p].sea; return (e.r = (sea ? 's' : 'g') + e.owner + ':' + (sea ? 'unks' : 'unkg')); }
+  const u = tmUnits(e.list), naval = Object.keys(u).every(t => t === 'lst' || (UNITS[t] && UNITS[t].cls === 'naval'));
   const cls = e.air ? 'a' : G.P[p].sea || naval ? 's' : 'g'; return (e.r = roleStr(cls, e.owner, u, p)); }
 function rolesAt(R, p){ const M = R.get(p); return M ? [...M.values()].map(e => roleOf(p, e)) : []; }
 // the room beside your capital that your forces keep clear (css px from the capital's point, at its own bearing: where the HQ stood before the
@@ -7189,17 +7327,18 @@ function tmFaceTurn(id, want, now){ let E = TMFACE.get(id);
 const TMTOP = new Map(), TMGA = new Map(), TMCEN = new Map(), TMCEN_V = 0.006; /*@TEST*/const PATHDBG = {};/*@ENDTEST*/   // (TMCEN_V: world units a ms the centring shift moves; PATHDBG: the selected force's drawn route, stops and ETA chip, for .test/controls.js)
 function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
   for (const c of clusters){ c.form = null; c.pinY = c.wy; if (!on || c.wx == null || (c.air && c.moving)) continue;
-    const cls = c.cls || (c.air ? 'a' : 'g'), want = tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrimO(c.at, c.owner)); if (!want.length) continue;
+    const cls = c.cls || (c.air ? 'a' : 'g'), want = FIG1 ? figWant(figPick(c.list[0].id, tmUnits(c.list), cls, now), cls, now) : tmRank(tmUnits(c.list), cls, c.moving ? Math.min(3, tmNMax(-1)) : tmNMax(c.at), !c.moving && tmPrimO(c.at, c.owner)); if (!want.length) continue;   // (FIG1: one figure, the main unit)
     const lead = c.list[0], mS = c.air ? null : movOwn(lead.id);   // (the group goes by its oldest force, which stays while others come and go)
     const foe = !c.air && !c.moving && S.battles.includes(c.at) ? clusters.find(o => o.at === c.at && o !== c && !o.air && !o.moving && o.wx != null && atWar(o.owner, c.owner)) : null;
     let ang = foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // in a battle at the enemy; marching (or at rest) the way it went
     if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
+    if (FIG1 && !foe && mS && c.moving){ const L = figAhead(lead, mS.x, mS.y, 0.7*tmRW()*((TMG[want[0]] || [0, 1])[1])); if (L != null) ang = L; }   // (the test: the bearing of the way ahead, so it turns into each bend)
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B && Math.hypot(B.x - c.wx, B.y - c.wy) > 0.2) ang = Math.atan2(B.y - c.wy, B.x - c.wx); }   // ordered off but not yet under way
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
     if (!foe && !c.moving && !c.air){ const ua = unitAnim(c.list, now, ang); if (ua && ua.face != null) ang = ua.face; }   // (fx.js: a force firing at a target turns smoothly to face it, then back)
-    ang = tmFaceTurn(lead.id, ang, now); c.run = mS ? mS.run || 0 : 0; c.pv = mS ? Math.hypot(mS.vx, mS.vy)*view.s : 0;   // (the drawn facing turns onto it: a force stopping turns to its rest or to the enemy, never snaps; run: the march look)
-    const F = tmForm(want), d = want.map(t => tmDir(lead.id, t, ang, now)), src = want.src || {}, arts = want.map(t => tmOn() ? tmArt(t, src[t], c.owner) : null); let top = Infinity, ys = 0, ny = 0;
-    for (let i = 0; i < want.length; i++) if (F.slots[i]){ top = Math.min(top, F.slots[i][1] + (arts[i] ? -tmArtHalf(arts[i], ang)[1] : tmVB(want[i])[d[i]][1])); ys += F.slots[i][1]; ny++; }
+    ang = FIG1 ? figTurn(lead.id, ang, now, want[0]) : tmFaceTurn(lead.id, ang, now); c.run = mS ? mS.run || 0 : 0; c.pv = mS ? Math.hypot(mS.vx, mS.vy)*view.s : 0;   // (the drawn facing turns onto it: a force stopping turns to its rest or to the enemy, never snaps; run: the march look)
+    const F = tmForm(want), d = want.map(t => FIG1 ? figCell(t, ang)[0] : tmDir(lead.id, t, ang, now)), src = want.src || {}, arts = want.map(t => tmOn() ? tmArt(t, src[t], c.owner) : null); let top = Infinity, ys = 0, ny = 0;
+    for (let i = 0; i < want.length; i++) if (F.slots[i]){ top = Math.min(top, F.slots[i][1] + (arts[i] ? -tmArtHalf(arts[i], ang)[1] : tmVB(want[i])[FIG1 ? d[i]*((U3D.mapMeta(want[i]) || {}).frames || 1) : d[i]][1])); ys += F.slots[i][1]; ny++; }
     if (!isFinite(top)) top = 0; let E = TMTOP.get(lead.id);
     if (!E || E.S !== S || now - E.t > 1500){ E = {v:top, t:now, S}; TMTOP.set(lead.id, E); if (TMTOP.size > 3000) TMTOP.clear(); }
     else { const dt = Math.max(0, Math.min(100, now - E.t)); E.v += (top - E.v)*(1 - Math.exp(-dt/120)); if (Math.abs(top - E.v) < 1e-3) E.v = top; else animFast(); E.t = now; }
@@ -7215,7 +7354,7 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
       if (TMCEN.size > 3000) TMCEN.clear();
       if (!Q) Q = {v:want0, t:now, S}; else { Q = {v:Q.v, t:Q.t, S}; const dt = Math.max(0, Math.min(100, now - Q.t)), dv = want0 - Q.v, st = TMCEN_V*dt; Q.v = Math.abs(dv) <= st ? want0 : Q.v + Math.sign(dv)*st; if (Q.v !== want0) animFast(); Q.t = now; }   // (at an even, slow rate: about a px a frame, so the pictures never jump against the force's own motion)
       for (const q0 of c.list) TMCEN.set(q0.id, Q); c.wy -= Q.v; }
-    c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the anchor: where its diamond stands)
+    c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid, pv:want.pv || null}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the anchor: where its diamond stands)
 // the models each force shows this frame (from the zoom they are big enough to read: all of a group's models fade in together), planned before
 // the names, the HQ and the counters are placed (they keep clear of them): c.fm = {ents:[{t, d, s, x, y, box, slot}], box, a} in screen px
 function tmPlan(clusters, hexPx, now){
@@ -7231,8 +7370,13 @@ function tmPlan(clusters, hexPx, now){
     for (let i = 0; i < sl.length; i++){ const t = sl[i], M = U3D.mapMeta(t), A = c.form.arts && c.form.arts[i]; if ((!M && !A) || !F.slots[i]) continue;
       const [dx, dy] = tmGlide(c, id, t, F.slots[i], now), s = tmScale(t, hexPx), [x, y] = toScreen(c.wx + dx, c.wy + dy); let box;
       if (A){ const [hx, hy] = tmArtHalf(A, c.form.ang); box = [x - hx*view.s, y - hy*view.s, x + hx*view.s, y + hy*view.s]; }
-      else { const k = s/M.ppm, b = M.bb[d[i]]; box = [x + (b[0] - M.ox)*k, y + (b[1] - M.oy)*k, x + (b[2] - M.ox)*k, y + (b[3] - M.oy)*k]; }
-      ents.push({t, d:d[i], s, x, y, box, slot:i, sea:TM_CLS(t) === 's', air:TM_CLS(t) === 'a', art:A || null}); gb[0] = Math.min(gb[0], box[0]); gb[1] = Math.min(gb[1], box[1]); gb[2] = Math.max(gb[2], box[2]); gb[3] = Math.max(gb[3], box[3]); }
+      else { const k = s/M.ppm, b = M.bb[FIG1 ? d[i]*(M.frames || 1) : d[i]]; box = [x + (b[0] - M.ox)*k, y + (b[1] - M.oy)*k, x + (b[2] - M.ox)*k, y + (b[3] - M.oy)*k];
+        if (FIG1 && t === 'mot' && !c.moving){ const mm = U3D.mapMeta('mots'), fg = S.battles.includes(c.at), mn = figMan(c.form.ang, s, fg), k2 = mn.s/mm.ppm, b2 = mm.bb[figCell('mots', c.form.ang)[0]*(mm.frames || 1) + (fg ? 5 : 0)], X = x + mn.dx, Y = y + mn.dy;   // (the rifleman beside his transport)
+          box = [Math.min(box[0], X + (b2[0] - mm.ox)*k2), Math.min(box[1], Y + (b2[1] - mm.oy)*k2), Math.max(box[2], X + (b2[2] - mm.ox)*k2), Math.max(box[3], Y + (b2[3] - mm.oy)*k2)]; } }
+      ents.push({t, d:d[i], s, x, y, box, slot:i, sea:TM_CLS(t) === 's', air:TM_CLS(t) === 'a', art:A || null});
+      if (FIG1 && c.form.pv && i === 0){ const pv = c.form.pv, A2 = tmOn() ? tmArt(pv.t, pv.src, c.owner) : null, M2 = U3D.mapMeta(pv.t);   // (the test: the main unit that is fading out, on the same spot)
+        if (A2 || M2){ ents[ents.length - 1].fa = pv.k; ents.push({t:pv.t, d:figCell(pv.t, c.form.ang)[0], s:tmScale(pv.t, hexPx), x, y, box, slot:i, sea:TM_CLS(pv.t) === 's', air:TM_CLS(pv.t) === 'a', art:A2 || null, fa:1 - pv.k}); } }
+      gb[0] = Math.min(gb[0], box[0]); gb[1] = Math.min(gb[1], box[1]); gb[2] = Math.max(gb[2], box[2]); gb[3] = Math.max(gb[3], box[3]); }
     if (!ents.length) continue; left--;
     c.fm = {ents, box:gb, id, ang:c.form.ang, a:fa*c.form.ga*(ents.some(e => hudCover(e.box, hud)) ? PF_HUD : 1)}; } }
 // a model's place in its group, gliding (in world space, at most 1.6 px a frame on screen) when its slot changes as forces join or leave, and
@@ -7254,7 +7398,7 @@ function troopModels(clusters, clBox, hexPx, now){
   const lut = tmLut(viewLight()); TMNEW = 4;
   // (only the pictures on screen: each one's box, with a margin for its shadow and a ship's wake, must touch the view)
   const groups = []; for (const c of clusters) if (c.fm && c.fm.a > 0.003) for (const q of c.fm.ents){ const b = q.box, m = Math.max(4, 0.35*Math.max(b[2] - b[0], b[3] - b[1]));
-    if (b[2] < -m || b[3] < -m || b[0] > cw + m || b[1] > ch + m){ c.fm.cut = 1; continue; } groups.push({...q, c, id:c.fm.id, ang:c.fm.ang, a:c.fm.a}); }
+    if (b[2] < -m || b[3] < -m || b[0] > cw + m || b[1] > ch + m){ c.fm.cut = 1; continue; } groups.push({...q, c, id:c.fm.id, ang:c.fm.ang, a:c.fm.a*(q.fa ?? 1)}); }
   if (!groups.length) return;
   groups.sort((p, q) => p.y - q.y);   // back to front
   const ga0 = ctx.globalAlpha, sm0 = ctx.imageSmoothingQuality; ctx.imageSmoothingQuality = 'high'; ctx.imageSmoothingEnabled = true;
@@ -7266,13 +7410,13 @@ function troopModels(clusters, clBox, hexPx, now){
     // in the water, not on it: the hull's own footprint on the sea (the sheet's camera looks down at 0.82 rad, so the ground is squashed by its
     // sine; a ground ellipse along the hull, turned with the drawn view): a soft dark shade under it, a thin glow in the holder's tone and a
     // ring of white foam where the hull meets the water, all centred on the hull
-    const an = q.art ? q.ang : q.d*Math.PI/8, L = (q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2))*view.s*0.98, B = L*(TM_BEAM[q.t] || 0.15);
+    const an = q.art || FIG1 ? q.ang : q.d*Math.PI/8, L = (q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2))*view.s*0.98, B = L*(TM_BEAM[q.t] || 0.15);
     ctx.save(); ctx.translate(q.x, q.y); if (!q.art) ctx.transform(1, 0, 0, TM_SIN_EL, 0, 0); ctx.rotate(an);   // (a picture is seen from straight above: no squash)
     ctx.globalAlpha = 0.34*al; ctx.drawImage(tmShadow(), -L*0.56, -B*0.95, L*1.12, B*1.9);
     ctx.globalAlpha = al*(night ? 0.42 : 0.62); ctx.drawImage(tmFoam(), -L*0.555, -B*0.95, L*1.11, B*1.9); ctx.restore(); }
   ctx.globalAlpha = 1;
   const nightK = Math.round((1 - viewLight().day)*4)/4;
-  for (const q of groups){ let r = null; const ua = unitAnim(q.c.list, now); if (ua && (ua.dx || ua.dy || ua.rot)){ q.x += ua.dx; q.y += ua.dy; q.box = [q.box[0] + ua.dx, q.box[1] + ua.dy, q.box[2] + ua.dx, q.box[3] + ua.dy]; q.ang += ua.rot; }   // (fx.js: recoil, the hit shake, a ship's rock)
+  for (const q of groups){ if (FIG1){ figQ(q, lut, now, nightK, clBox); continue; } let r = null; const ua = unitAnim(q.c.list, now); if (ua && (ua.dx || ua.dy || ua.rot)){ q.x += ua.dx; q.y += ua.dy; q.box = [q.box[0] + ua.dx, q.box[1] + ua.dy, q.box[2] + ua.dx, q.box[3] + ua.dy]; q.ang += ua.rot; }   // (fx.js: recoil, the hit shake, a ship's rock)
     if (q.c.run > 0.02 && !q.air){ const wl = q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1.2), L = moveFig({id:q.id, key:q.id + '|' + q.slot, x:q.x, y:q.y, ang:q.art ? q.ang : q.d*Math.PI/8, len:wl*view.s, wl, run:q.c.run, pv:q.c.pv, sea:q.sea, foot:TM_FOOT.has(q.t), top:!!q.art, tn:dustTone(q.c.list[0].at)}, now);
       if (L.dy){ q.y += L.dy; q.box = [q.box[0], q.box[1] + L.dy, q.box[2], q.box[3] + L.dy]; } if (L.rot) q.ang += L.rot; }   // (fx.js: on the move, dust behind vehicles, a ship's wake, an infantry bob and a ship's rock)
     if (q.art){ ctx.globalAlpha = q.a; if (tmArtDraw(q, nightK)) r = {box:q.box, lvl:'art'}; ctx.globalAlpha = 1; } else r = tmDraw(q.t, q.d, q.x, q.y, q.s, lut, now, q.a, !q.c.moving);
@@ -8990,7 +9134,8 @@ const UCC = new Map(); let FLAGK = 0;
 // the stack's main unit type (by strength x hit points; troops embarked at sea: their transport) and whether it holds more than one type
 function ucTypes(L){ const wt = {}; for (const q of L){
     for (const t in q.u) if (q.u[t] > 0 && UNITS[t]) wt[t] = (wt[t] || 0) + q.u[t]*UNITS[t].hp; }
-  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); return [ts[0] || 'inf', ts.length > 1]; }
+  const ts = Object.keys(wt).sort((p1, p2) => wt[p2] - wt[p1]); if (FIG1) return [figBadge(L) || ts[0] || 'inf', ts.length > 1];   // (the one-figure test: the figure's own main unit)
+  return [ts[0] || 'inf', ts.length > 1]; }
 // the icon for unit type t of owner o (the armed UAV from UAV IV; embarked troops: the transport)
 const ucIcon = (t, o) => artT(t, o);
 // the badge's still parts, painted once per look into a device-pixel canvas: a rounded square in the side colour (a dark edge, red in battle; yours
@@ -10236,7 +10381,7 @@ function draw(now){ draw.now = now;
   const unkA = [], ROLES = new Map(); LAY_R = ROLES; SIDEC.clear(); TMAS = tmArtSig();
   if (GO.S !== S || GO.h !== S.hour) goScan();   // (the forces rolling on this hour: worked out in the first frame of the hour, so a column passing a city never stands, or lights its ring, for one frame)
   for (const a of S.armies){ if (!shownNow(a, vis)){ if (vis.locs && vis.locs.length && armyLocated(a, vis)) unkA.push(a); continue; }
-    if (!knowA(a, vis)){ if (!a.fly && !(a.owner === NEUTRAL && !rebArmy(a) && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at)){ unkA.push(a); tmRoleAdd(ROLES, a); } continue; }   // (its spot in the province is the one it would have identified: the '?' stands where it stands)   // spotted, not identified: only the '?' badge (no flag, count, type, name or 3D models)
+    if (!knowA(a, vis)){ if (!a.fly && !(a.owner === NEUTRAL && !rebArmy(a) && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at)){ unkA.push(a); tmRoleAdd(ROLES, a, FIG1); } continue; }   // (its spot in the province is the one it would have identified: the '?' stands where it stands)   // spotted, not identified: only the '?' badge (no flag, count, type, name or 3D models)
     tmRoleAdd(ROLES, a); if (a.owner === NEUTRAL && !rebArmy(a) && !(showNeutral && vis.has(a.at)) && sel.prov !== a.at && sel.target !== a.at && !S.battles.includes(a.at)) continue;   // (rebels show at the zoom every other force shows)
     if (a.fly) continue;
     let [wx, wy] = armyPos(a); const mv = a.to !== null || (!!a.sail && (G.P[a.at].sea || !S.battles.includes(a.at))) || (a.path.length > 0 && GO.S === S && GO.has(a.id));   // (a walk held by a battle where it stands: standing, laid out with the other side's counter, not faded under it)
@@ -10392,7 +10537,8 @@ function draw(now){ draw.now = now;
   try { drawRally(now); } catch (e) { if (!drawRally.err){ drawRally.err = 1; console.warn('rally', e); } }
   BFX.pts.clear();   // this frame's figures in battles (filled as they are drawn)
   try { drawBuildings(hexPx, now, kl, boxes0); } catch (e) { if (!drawBuildings.err){ drawBuildings.err = 1; console.warn('building models', e); } }   // the buildings at their cities, under the troop models, the names and the counters
-  ovIn(); try { troopModels(clusters, clBox, hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, HQ, paths and counters drawn below
+  const UNKG = FIG1 && unkA.length ? unkGroups(unkA, ROLES, now) : null;   // (the one-figure test: the unidentified contacts' spots, read back by their plates below)
+  ovIn(); try { troopModels(clusters, clBox, hexPx, now); if (FIG1) unkFigs(UNKG || new Map(), hexPx, now); } catch (e) { if (!troopModels.err){ troopModels.err = 1; console.warn('troop models', e); } } finally { ovOut(); }   // under the names, HQ, paths and counters drawn below
   // independent country names and sea names (after the counters and controls, so they keep clear of them)
   { const nk = [view.s, cw, ch, geoVer, HUDR.v || 0].join('|');   // (a pan keeps them: the spots are offsets from each name's anchor, and what lies under a spot moves with it)
     if (NAMEC.k !== nk){ NAMEC.k = nk; NAMEC.pn.clear(); NAMEC.cl.clear(); } }   // (map names: spot tests kept for this view)
@@ -10619,9 +10765,9 @@ function draw(now){ draw.now = now;
       ctx.restore(); } } else if (sel.army === null) SELFX.a = null;
   // unidentified contacts (spotted, or located by AWACS): one '?' plate per province (moving forces each get their own), no nation colour, type or size
   if (unkA.length){ const grp = new Map(); for (const a of unkA){ const key = a.to !== null ? 'm' + a.id : 'p' + a.at + heartKey(a); if (!grp.has(key)) grp.set(key, []); grp.get(key).push(a); }
-    for (const list of grp.values()){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkey(a0, pa) + a0.owner);
-      const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
-      const r = unkPlate(x, y, k, now, hp ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0);   /* (units in cities: a contact on the centre point has its dot on the marker, its plate above the ring) */ hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }   // (its dot on its spot, the plate above)
+    for (const [gk, list] of grp){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkey(a0, pa) + a0.owner), U0 = UNKG && UNKG.get(gk);
+      const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = U0 ? [U0.wx, U0.wy] : hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
+      const r = unkPlate(x, y, k, now, hp ? heartRingR(hexPx) + 3.2 - dotR() - 2 : (FIG1 && UNKF.get(gk)) || 0);   /* (units in cities: a contact on the centre point has its dot on the marker, its plate above the ring) */ hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }   // (its dot on its spot, the plate above)
   FXM.PLATECLIP = null; FXM.PLATEBOX = plateBoxes(hits);   // (this frame's plates; the aircraft below are not in it)
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
