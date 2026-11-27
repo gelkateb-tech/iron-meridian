@@ -708,7 +708,7 @@ $2.50 per million out, thinking tokens counted as out): about $0.003 a single ch
 1. Batch 1: the 5 look-1 side views, `--batch --review`. Then batch 2: the 10 look-2 and look-3 side views. Then batch 3: the 30 card scenes
    and top-downs, each from its own side view. One try per picture; every call in `assets/art-src/gen-art-log.jsonl`.
 2. After each batch: the single checks (inside `--review`), the three-way checks once all three of a look exist, and the running total:
-   `python3 -I tools/gen-art.py --cost` prints new spending since the $40.88 balance, and the estimated balance; a run that could take the
+   `python3 -I tools/gen-art.py --cost` prints new spending since the baseline (re-based 27 November 2026 to the owner's real $24.05), and the estimated balance; a run that could take the
    estimate below $5 is refused.
 3. Nothing is redone, even when flagged: every flag is listed for the owner.
 4. Cut-outs, no API call: `python3 -I tools/prep-art.py assets/art-src assets/art ul` writes `assets/art/ul-tank-<group>-<look>-side.webp`

@@ -1796,13 +1796,20 @@ def match(look):
 # ---- SPENDING (owner's decisions 2026-11-18): the log stood at 255 calls, $10.27 when the Gemini balance was $40.88. The $12 line is
 # removed. After every run the new spending since then, the running total and the estimated balance are printed; a run that could take
 # the estimated balance below $5 is refused. (Add the owner's top-ups to BALANCE_TOPUPS_USD when he says so.)
-BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 10.27, 255, 40.88, 9.70, 5.0   # was -0.30 (the owner's figure on 2026-11-19 was about $38.75, not $39.05); owner top-up $10, 2026-11-19 night -> 9.70
+# History: 10.27, 255, 40.88 with BALANCE_TOPUPS_USD -0.30 (owner's figure 2026-11-19 about $38.75), then 9.70 (owner's $10 top-up,
+# 2026-11-19 night); at 2475 calls / $54.24 in this log that estimated about $6.61 left, which was out of date.
+# RE-BASED 2026-11-27 on the owner's real figure: "my real balance is $24.05" (owner, 2026-11-27). This branch's log then stood at
+# 2475 calls, $54.239, so the baseline is that point and the balance $24.05; new spending is counted from here. $5 floor kept.
+# (Log rows on other branches made before 2026-11-27, e.g. master's 4 rebels-picture rows, about $0.21, are already inside the $24.05;
+# merged into this log they would count again and lower the estimate by that much: the safe direction.)
+BASELINE_USD, BASELINE_CALLS, BASELINE_BALANCE, BALANCE_TOPUPS_USD, BALANCE_FLOOR = 54.239, 2475, 24.05, 0.0, 5.0
+BASELINE_NOTE = "the owner's $24.05 (2026-11-27)"
 def spend_totals():
     rows = [json.loads(l) for l in open(LOG)] if os.path.exists(LOG) else []
     return sum(r.get('calls', 1) for r in rows), sum(r.get('usd_est', 0) for r in rows)
 def cost_line():
     calls, usd = spend_totals(); new = usd - BASELINE_USD
-    return (f'{calls} calls, about ${usd:.2f} in the log (estimate; the real bill is in Google AI Studio). New spending since the $40.88 balance: '
+    return (f'{calls} calls, about ${usd:.2f} in the log (estimate; the real bill is in Google AI Studio). New spending since {BASELINE_NOTE}: '
             f'{calls - BASELINE_CALLS} calls, about ${new:.2f}; estimated balance left about ${BASELINE_BALANCE + BALANCE_TOPUPS_USD - new:.2f} (stop below ${BALANCE_FLOOR:.0f}).')
 def balance_guard(planned_usd):
     calls, usd = spend_totals(); left = BASELINE_BALANCE + BALANCE_TOPUPS_USD - (usd - BASELINE_USD)
