@@ -165,24 +165,27 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
 // a starting force from START_ARMY's entries (rules/data.js), added together; a key that is not a unit (the recon slot's before the unit exists) is left out
 function startForce(...parts){ const u = {}; for (const f of parts) if (f) for (const t in f) if (UNITS[t] && f[t] > 0) u[t] = (u[t] || 0) + f[t]; return u; }
 // the cities of nation n that hold its outer starting stacks (START_ARMY.outerN of them; owner playtest 2026-11-27, the rule's numbers: START_OUTER):
-// the first in its biggest city outside the capital, the second in its biggest city on another side of the capital (at least `apart` degrees from the
-// first as seen from it); a city on a land border or on a highway counts as bigger (x border, x highway). Only cities the capital reaches over the
-// nation's own land count (no exclave, no other island), and none next to the capital or next to an earlier stack.
+// the first in its biggest city outside the capital, the second in its biggest city away from the first: on another side of the capital (at least
+// `apart` degrees from the first as seen from it) or far from it (at least `far` times the capital's distance to the first, from the first and from
+// the capital alike); a city on another nation's border (independent land does not count) or on a highway counts as bigger (x border, x highway),
+// and equal weights go to the more populous city. Only cities the capital reaches over the nation's own land count (no exclave, no other island),
+// and none next to the capital or next to an earlier stack.
 // Fallbacks, in turn: cities next to the capital (when fewer than outerN remain), the next-heaviest city not next to an earlier stack, any other
-// eligible city, the nation's most populous border provinces, the capital itself. The same in every game (no dice, not the seat)
+// eligible city, the nation's most populous border provinces (independent land counts here), the capital itself. The same in every game (no dice, not the seat)
 function startOuter(n){ const N = S.nations[n], c = N.capital, k = START_ARMY.outerN || 0, O = START_OUTER, P = G.P; if (k <= 0) return [];
   const home = new Set([c]), q = [c];
   for (let h = 0; h < q.length; h++) for (const v of P[q[h]].nbs) if (!home.has(v) && !P[v].sea && S.owner[v] === n){ home.add(v); q.push(v); }
-  const border = p => P[p].nbs.some(v => !P[v].sea && S.owner[v] !== n), hwy = p => [...P[p].lk.values()].some(r => r.r0 >= 3);
+  const nb = v => !P[v].sea && S.owner[v] >= 0 && S.owner[v] !== n, border = p => P[p].nbs.some(nb), hwy = p => [...P[p].lk.values()].some(r => r.r0 >= 3);
   const brg = p => Math.atan2(P[p].y - P[c].y, P[p].x - P[c].x)*180/Math.PI, gap = (x, y) => { const d = Math.abs(x - y) % 360; return d > 180 ? 360 - d : d; };
+  const km = (a, b) => kmBetween(P[a].x, P[a].y, P[b].x, P[b].y), away = (x, a) => gap(brg(x), brg(a)) >= O.apart || (km(x, a) >= O.far*km(c, a) && km(x, c) >= O.far*km(c, a));
   const all = [...home].filter(p => p !== c && P[p].city);
   let el = all.filter(p => !P[c].nbs.includes(p)); if (el.length < k) el = all;
-  const w = p => popOf(p)*(border(p) ? O.border : 1)*(hwy(p) ? O.highway : 1), by = (x, y) => w(y) - w(x) || x - y;
+  const w = p => popOf(p)*(border(p) ? O.border : 1)*(hwy(p) ? O.highway : 1), by = (x, y) => w(y) - w(x) || popOf(y) - popOf(x) || x - y;
   const picks = [], near = p => picks.some(a => a === p || P[a].nbs.includes(p));
   while (picks.length < k){ let p = null;
     if (!picks.length) p = el.slice().sort(by)[0] ?? null;
-    else { p = el.filter(x => !near(x) && picks.every(a => gap(brg(x), brg(a)) >= O.apart)).sort(by)[0] ?? el.filter(x => !near(x)).sort(by)[0] ?? el.filter(x => !picks.includes(x)).sort(by)[0] ?? null; }
-    if (p == null) p = [...home].filter(x => x !== c && !picks.includes(x) && border(x)).sort((x, y) => popOf(y) - popOf(x) || x - y)[0] ?? c;
+    else { p = el.filter(x => !near(x) && picks.every(a => away(x, a))).sort(by)[0] ?? el.filter(x => !near(x)).sort(by)[0] ?? el.filter(x => !picks.includes(x)).sort(by)[0] ?? null; }
+    if (p == null) p = [...home].filter(x => x !== c && !picks.includes(x) && P[x].nbs.some(v => !P[v].sea && S.owner[v] !== n)).sort((x, y) => popOf(y) - popOf(x) || x - y)[0] ?? c;
     picks.push(p); }
   return picks; }
 // the opening catch-up by tier: money and manpower a day are brought to the tier's targets by a multiplier on the nation's home provinces (boost

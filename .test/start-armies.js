@@ -4,7 +4,7 @@
 //    garrisons, no border guards
 // 2. the outer stacks (startOuter, rules/state.js): two different cities outside the capital, on land the capital reaches over the nation's own land, not
 //    next to the capital (except the fallback for nations with fewer than 2 other cities there), not next to each other; the same cities in every seed
-//    and whoever is the seat; the rule's own picks for Russia and Germany (recorded 2026-11-27); a nation with no city but its capital falls back to its
+//    and whoever is the seat; the rule's own picks for Russia, Germany, Canada and Colombia (recorded 2026-11-27); a nation with no city but its capital falls back to its
 //    border provinces, then to the capital
 // 3. the recon slot (START_ARMY.recon): null today, so the outer stacks hold infantry only; a key that is not a unit is skipped; once it names a unit,
 //    each outer stack gets it (tried with an existing unit) and nothing else changes
@@ -53,7 +53,9 @@ for (const mode of ['normal', 'competitive']){ const R = load(), api = R.IM.api;
   ok(!off.length, 'every outer stack stands in its own city outside the capital, on the capital\'s land, not next to the capital or the other stack', off.slice(0, 6));
   const names = k => picks12345[k].map(p => nameOf(G, p));
   ok(same(names('Russia'), ['Saint Petersburg', 'Rostov']), 'Russia: Saint Petersburg and Rostov', names('Russia'));
-  ok(same(names('Germany'), ['Cologne', 'Dresden']), 'Germany: Cologne and Dresden', names('Germany'));
+  ok(same(names('Germany'), ['Cologne', 'Munich']), 'Germany: Cologne and Munich', names('Germany'));
+  ok(same(names('Canada'), ['London', 'Vancouver']), 'Canada: London and Vancouver (far from the first, not a small town on the same bearing)', names('Canada'));
+  ok(same(names('Colombia'), ['Barranquilla', 'Cali']), 'Colombia: Barranquilla and Cali (independent land is no border)', names('Colombia'));
   console.log(`(the fallback "next to the capital" used by: ${notes.join(', ') || 'none'})`);
   // the same cities whatever the seed and the seat
   for (const [seed, pick] of [[7, 3], [2026, 40]]){ const R2 = load(), a2 = R2.IM.api; a2.useScenario('world64'); a2.newGame(seed, pick, [0]); const S2 = R2.S, p2 = {};

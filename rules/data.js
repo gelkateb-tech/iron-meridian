@@ -607,9 +607,10 @@ const START_AIR = 1, START_AIR_UNIT = 'asf';
 //   guards / guard: how many border guards and their force (0: none; facing the strongest neighbour first, as before)
 const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:null, cities:null, guards:0, guard:{inf:2}};
 // which cities hold the outer stacks (startOuter): only cities the capital reaches over the nation's own land, not next to the capital (unless fewer
-// than 2 remain); weight = people, times border for a city on a land border (another nation or independent land) and times highway for one on a
-// highway; the first stack the heaviest, the second the heaviest not next to the first and at least apart degrees from it as seen from the capital
-const START_OUTER = {apart:60, border:1.5, highway:1.5};
+// than 2 remain); weight = people, times border for a city on another nation's land border (independent land does not count) and times highway
+// for one on a highway (equal weights: the more populous); the first stack the heaviest, the second the heaviest not next to the first and away
+// from it: at least apart degrees from it as seen from the capital, or at least far times the capital's distance to it from both it and the capital
+const START_OUTER = {apart:60, far:0.75, border:1.5, highway:1.5};
 const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, recs:2};
 const TIER_FULL = {
   S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, recs:4},

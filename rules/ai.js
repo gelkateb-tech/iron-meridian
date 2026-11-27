@@ -720,7 +720,8 @@ function aiTurn0(n, N){
       if (p0 === N.capital && !warsOf(n).length && round === 0){ if (left.reduce((s0, a) => s0 + (a.u.inf || 0), 0) < 4) break;
         const g0 = left.find(a => (a.u.inf || 0) >= 4);
         if (g0){ addArmy(n, p0, {inf:2}); g0.u.inf -= 2; }
-        else { const keep = left.filter(a => (a.u.inf || 0) >= 2).sort((x, y) => count(x) - count(y) || x.id - y.id)[0]; used.add(keep); left = left.filter(a => a !== keep);
+        else { const keep = left.filter(a => (a.u.inf || 0) >= 2).sort((x, y) => count(x) - count(y) || x.id - y.id)[0]; if (!keep) break;   // (no stack holds 2: all stay home until they merge)
+          used.add(keep); left = left.filter(a => a !== keep);
           if (!left.length || left.reduce((s0, a) => s0 + power(a)*stackDmg(a), 0) < 14) break; } }
       // the force: strongest stacks first, until about twice what the target needs (the rest stay for another target), then helpers from other sides
       const need = defPower(best, n)*1.3 + 4, go = []; let sent = 0;
