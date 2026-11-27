@@ -1,7 +1,8 @@
 // Missiles in the page (owner point 12; docs/MISSILES.md 11: the launch picker's card, the zones and their panel lines): a nations game as Poland
 // on a desktop (1440 x 900) and a phone (440 px, dpr 2): the silo panel lists the chemical and nuclear missiles with their Launch buttons, a city
 // with only an Army Base offers cruise missiles, the missile strip counts every kind; a chemical and a nuclear missile are fired at Germany, fly
-// and land (the chem and tac blasts of fx.js), the gas and radiation zones exist in the rules; no page error anywhere.
+// and land (the chem and tac blasts of fx.js), the gas and radiation zones exist in the rules; no page error anywhere. Polish 2: a knocked-out
+// silo's cells in the strip say "Damaged"; on a desktop the aiming hint stands clear of the minimap.
 //   node .test/missiles-page.js [page.html] [shots dir]      (bash tools/mkpage.sh first; shots: the phone's silo panel and strip, PNG)
 // On a page from before this build (master) it only takes the shots (there are no chemical or nuclear missiles to check).
 const SC = require('./rebels2-scene.js');
@@ -32,11 +33,20 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
   if (SHOTS){ await toMsl(); await p.screenshot({path:path.join(SHOTS, `${tag}-armybase.png`)}); } await closeM();
   if (await p.locator('#mslbtn').count() && await p.locator('#mslbtn').isVisible()){ await p.click('#mslbtn'); await p.waitForTimeout(300); const mm = await p.evaluate(() => document.getElementById('mslmenu').innerText);
     if (s.neu) ok(await p.locator('#mslmenu [data-k="chem"]').count() === 1 && await p.locator('#mslmenu [data-k="nuc"]').count() === 1 && !/undefined|NaN/.test(mm), tag + ': the missile strip has Chemical and Nuclear cells: ' + mm.replace(/\s+/g, ' ').slice(0, 160));
-    if (SHOTS) await p.screenshot({path:path.join(SHOTS, `${tag}-strip.png`)}); await p.click('#mslbtn'); }
+    if (SHOTS) await p.screenshot({path:path.join(SHOTS, `${tag}-strip.png`)}); await p.click('#mslbtn');
+    // polish 2: the silo knocked out by a strike: its cells read "Damaged", not "Ready" (the chemical, nuclear and ballistic missiles in it)
+    if (s.neu){ await p.evaluate(w => knockOut(w, 'silo', 48), s.w); await p.click('#mslbtn'); await p.waitForTimeout(300);
+      const dm = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('#mslmenu .mcell')].map(e => [e.dataset.k, (e.querySelector('small') || {}).innerText || ''])));
+      ok(['chem', 'nuc', 'bm'].every(k => /Damaged/.test(dm[k]) && !/Ready/.test(dm[k])), tag + ': a knocked-out silo: its missile cells say Damaged: ' + JSON.stringify(dm));
+      if (SHOTS) await p.screenshot({path:path.join(SHOTS, `${tag}-strip-damaged.png`)}); await p.click('#mslbtn');
+      await p.evaluate(w => { delete window.__im.S.bdis[w]; }, s.w); } }
   if (s.neu){ // the screens (docs/MISSILES.md 11): a chemical missile aimed through the launch picker: a tap picks, the card asks, Launch fires
     const r0 = await p.evaluate(w => { const im = window.__im, S = im.S, G = im.G, DE = S.nations.findIndex(N => N.name === 'Germany'); setRel(0, DE, 'war');
       const tg = G.P.find(P => !P.sea && S.owner[P.id] === DE && hexDist(G.P[w].cc, P.cc) <= 40).id; addArmy(DE, tg, {inf:6}); im.selectProv(w); return tg; }, s.w);
     await p.evaluate(() => { const b = [...document.querySelectorAll('[data-act="msl-aim"][data-k="chem"]')].find(e => !e.disabled); if (b) b.click(); });
+    // polish 2: a desktop: the aiming hint stands clear of the minimap
+    if (!phone){ const hm = await p.evaluate(() => { const r = id => { const e = document.getElementById(id), b = e && e.getBoundingClientRect(); return b && b.width && getComputedStyle(e).display !== 'none' ? [b.left, b.top, b.right, b.bottom] : null; }; return {hint:r('hint'), mini:r('miniframe'), t:document.getElementById('hint').innerText}; });
+      ok(hm.hint && hm.mini && /Tap a target/.test(hm.t) && !(Math.min(hm.hint[2], hm.mini[2]) > Math.max(hm.hint[0], hm.mini[0]) && Math.min(hm.hint[3], hm.mini[3]) > Math.max(hm.hint[1], hm.mini[1])), tag + ': the aiming hint is clear of the minimap: ' + JSON.stringify(hm)); }
     await p.evaluate(tg => window.__im.msl.pick(tg), r0); await p.waitForTimeout(300);
     const cf = await p.evaluate(() => { const e = document.getElementById('mslcf'); return {on:!!e && !e.hidden, t:e ? e.innerText : '', aim:window.__im.msl.aim}; });
     ok(cf.on && /Chemical strike on/i.test(cf.t) && /think less of you/.test(cf.t) && cf.aim && cf.aim.to === r0, tag + ': the launch card for a chemical strike: ' + cf.t.replace(/\s+/g, ' ').slice(0, 120));

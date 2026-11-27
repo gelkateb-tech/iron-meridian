@@ -255,11 +255,11 @@ The computer plays by the same rules (AI-1) and fires no missile today (section 
 
 | Step | Rule (rules/ai.js) |
 |---|---|
-| Research | Chemical Warhead weight 0.3, **1 while at war with a nation whose army is 1.3 times its own or more**. Nuclear Warhead 0.15, **1 while at war with a nation that holds Nuclear Warhead** or after losing a fifth of its starting land. Persistent Agent 0.2. CBRN Defence 0.2, **2 while at war with a nation that has used gas or holds Chemical Warhead**. Missile upgrades still want a silo (as today) |
-| Silo | built in the capital once it holds **Conventional Warhead** (was Cruise Missiles) and is at war or has over $260M. Silo II only with Nuclear Warhead and over $500M |
-| Building | at war only; at most **one chemical missile per silo** and **one nuclear missile in all**; never while its money is under $250M |
-| Chemical use | at war; at an enemy-held province (never its own) where **enemy forces of 8 units and power 80 or more stand or will stand within 6 hours** (counting forces on the move, the IMP-8 fix); **none of its own forces there**; not twice at one province within 2 days |
-| Nuclear use | only **(a) in answer** to a chemical or nuclear strike on itself or an ally within 7 days, or **(b) when desperate**: it has lost a quarter of its starting land to that enemy, or enemy forces of 1.5 times its garrison's power stand in or next to its capital. Target: the strongest enemy stack in an enemy-held province, its own forces not there or next door; in an answer, the attacker's silo city if it is in range |
+| Research | Chemical Warhead weight 0.3, **1 while at war with a nation whose army is 1.3 times its own or more**. Nuclear Warhead 0.15, **1 while at war with a nation that holds Nuclear Warhead** or after losing a fifth of its starting land. Persistent Agent 0.2. CBRN Defence 0.2, **2 while at war with a nation that has used gas or holds Chemical Warhead**. Missile upgrades still want a silo (as today). **Cruise Missiles and Conventional Warhead 1 at peace, 20 and 30 at war, and saved for over 3 days at war** (polish 2, MS2) |
+| Silo | built in the capital once it holds **Conventional Warhead** (was Cruise Missiles) and is at war or has over $260M. **At war it saves for it (the price held back from recruiting) and builds it before anything else in the capital** (polish 2, MS2). Silo II only with Nuclear Warhead and over $500M |
+| Building | cruise and ballistic missiles: over $320M at peace, **at war over the missile's price + $100M; at war a first ballistic missile is saved for once the silo stands** (polish 2, MS2). Chemical and nuclear: at war only; at most **one chemical missile per silo** and **one nuclear missile in all**; never while its money is under $250M |
+| Chemical use | at war; at an enemy-held province (never its own) where **enemy forces of 8 units and power 80 or more stand or will stand within 6 hours** (counting forces on the move, the IMP-8 fix); **none of its own forces there**; not twice at one province within 2 days. **In answer to a chemical strike on itself or an ally within 7 days: the attacker's strongest stack from 4 units and power 40** (polish 2, MS1) |
+| Nuclear use | only **(a) in answer** to a **nuclear** strike on itself or an ally within 7 days (polish 2, MS1: a chemical strike is answered with a chemical one), or **(b) when desperate** against that enemy: **it holds its first capital, or half or more of its home cities**, or enemy forces of 1.5 times its garrison's power stand in or next to its capital (polish 2: was "a quarter of its starting land"). Target: the strongest enemy stack in an enemy-held province, its own forces not there or next door; in an answer, the attacker's silo city if it is in range |
 | Moving | a march route avoids gas and radiation provinces when a detour costs under a day; a force in one moves out unless it is holding a city under siege |
 | Peace | after a nuclear strike, the victim's offers of truce are refused for 3 days by everyone at war with the launcher |
 
@@ -431,7 +431,39 @@ Master moved to Dev Build v71 (UNITS IN CITIES) and was merged in first (one con
 
 ## 21. Open questions after polish round 1
 
+**Answered by the owner on 27 November 2026 (MS1 to MS5: the defaults): 1 a chemical strike is answered with a chemical one; 2 Conventional Warhead researched readily at war; 4 as built. See section 22.**
+
 1. **A nuclear answer to a chemical strike.** Section 10 (a) lets the computer answer a chemical strike on itself or an ally with a nuclear missile (at the attacker's silo city, usually its capital). In a forced test (12 nations given the research and a Silo II, six wars) every chemical strike drew a nuclear answer within hours. Keep it, or answer only a nuclear strike with a nuclear one?
 2. **Will the computer ever use these weapons?** In ordinary 60-day computer games no nation researches Conventional Warhead, so none builds a silo, and no chemical or nuclear missile is ever built. A higher research weight for Conventional Warhead at war would bring them in; leave it as it is?
 3. **Section 1 vs section 9:** the "Used nuclear weapons" line is −55 (section 9, as built), not −30 (section 1).
 4. **Peace after a nuclear strike:** as built, for 3 days after a nuclear launch every nation at war with the launcher refuses the launcher's peace offers (section 10 reads "the victim's offers"); confirm.
+
+## 22. Polish round 2 (branch `missiles`, the owner's answers of 27 November 2026)
+
+The owner: "MS1–MS5: your defaults" and two small fixes (the aiming hint behind the minimap, "Damaged" in the strip). Plan 2 (ranges, HP in flight, names, docs/MISSILES-PLAN2.md) is not part of this round.
+
+**Rules** (`rules/ai.js`, `rules/production.js`)
+- **MS1, a chemical strike is answered with a chemical one** (`aiChem`, `aiStruckBy`): a chemical strike on the nation or an ally within 7 days makes its next chemical missile go at that attacker's strongest stack in range, from 4 units and power 40 (the ordinary rule wants 8 units and power 80). A nuclear missile answers only a **nuclear** strike, or a desperate war (`aiDesperate`): the enemy holds its first capital, or half or more of its home cities, or enemy forces of 1.5 times its garrison stand in or next to its capital. In the forced test of polish 1 (12 nations given the research and a Silo II, six wars, 30 days, seed 12345) the 5 chemical strikes drew 8 nuclear launches before (5 answering a chemical strike, 3 answering those); now 6 chemical strikes and 1 nuclear launch, by Germany when desperate (Polish forces of power 125 next to Berlin against a garrison of 66, at a Polish stack at the front), none answering a chemical strike.
+- **MS2, Conventional Warhead at war** (`AI_MSLW`, `aiMslSave`, `aiMslCash`): at war Cruise Missiles weigh 20 and Conventional Warhead 30 in the computer's research (1 at peace) and a pick of them is saved for over 3 days; with Conventional Warhead and no silo the nation saves for one and builds it in its capital first; once it stands, a first ballistic missile is saved for; at war a city builds cruise and ballistic missiles once its money is over the missile's price + $100M (it was $320M, which a nation at war seldom holds). At peace nothing changes (the same dice).
+- 60-day computer games, 3 wars provoked every 10 days (the harness's `--provoke 3`), seeds 12345 / 2024 / 7 / 99, before / after:
+
+| | before | after |
+|---|---|---|
+| nations that built a missile, day 30 | 0 / 0 / 0 / 0 | 1 / 0 / 1 / 1 |
+| nations that fired one, day 30 | 0 / 0 / 0 / 0 | 1 / 0 / 0 / 1 |
+| nations that built a missile, day 60 | 0 / 0 / 0 / 0 | 8 / 4 / 5 / 3 |
+| nations that fired one, day 60 | 0 / 0 / 0 / 0 | 8 / 3 / 5 / 3 |
+| missiles built by day 60 (cruise + ballistic) | 0 | 17+2 / 12+2 / 18 / 6 |
+| Conventional Warhead held, day 60 | 0 / 0 / 0 / 1 | 2 / 6 / 6 / 4 |
+| silos standing, day 60 | 0 | 1 / 2 / 1 / 0 (more building) |
+| money of all nations, day 60 ($M) | 9115 / 8683 / 8288 / 8164 | 9552 / 8609 / 8834 / 9373 |
+| net income a day, day 60 ($M) | 4245 / 4326 / 4130 / 4191 | 4220 / 4321 / 4430 / 4511 |
+| army power of all nations, day 60 | 111184 / 110183 / 109856 / 107242 | 108419 / 109098 / 114389 / 107927 |
+
+  A handful of the 21 to 25 nations at war take up missiles; no nation went broke. No chemical or nuclear missile was built in these games (Chemical Warhead keeps its own weights).
+- **`mslUp(n, k)`**: the missiles of a kind a nation holds, how many can launch now (their launcher not knocked out, a silo kind in a silo) and the hours until a knocked-out launcher works again.
+
+**Screens** (`index.html`)
+- **The aiming hint on a desktop** stands in the clear band between the zoom stack and the minimap (`#map.aiming`: a missile, a move or an attack), no longer half under the minimap at 1280 x 720, 1366 x 768, 1440 x 900, 1536 x 864, 1920 x 1080 and 1280 x 800. Phones (no minimap) are unchanged.
+- **The missile strip** says **"Damaged"** (same small teal word) for a kind whose every stock sits in a knocked-out silo or launcher, or in a city whose silo is gone, instead of "Ready to launch"; the Silos cell says "Damaged" when every silo is knocked out; the tooltip gives the hours. The launch picker's reason ("The silo was knocked out by a strike: 48 h.") is unchanged.
+- **Tests:** `.test/missiles.js` section 12 (MS1 forced: a chemical strike on a computer nation holding both kinds is answered with a chemical missile and no nuclear one, a nuclear strike still draws a nuclear answer, an ally's chemical strike, desperation; MS2: weights, picks at war and at peace, the silo saved for and built first, the first ballistic missile, missiles from $260M at war; `mslUp`); the two old checks of a nuclear answer to a chemical strike now use a nuclear strike. `.test/missiles-page.js`: the strip's "Damaged" cells (desktop and phone) and the desktop aiming hint clear of the minimap.
