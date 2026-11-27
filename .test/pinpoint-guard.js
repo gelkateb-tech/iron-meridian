@@ -17,12 +17,15 @@
 //   of a force of yours joins it, one 4 km off it does not; an order to the centre does not join a force standing on a spot away from the city;
 //   a join order walks to the other force's spot and merges there, not at the border; a save made mid-plan, and an old save made by
 //   origin/master with moves, stops and walks in flight (.test/fixtures/pinpoint-oldsave.json), load and go on to the exact spots.
+//   A group of three forces sent by Move, or Waypoint with two stops, to one spot ends there as one force (two when the stack limit splits it).
 // Part 2, the page (Playwright), a player's taps, Germany's real start, at phone size (440 x 900, touch) and desktop size (1440 x 900, mouse) in
 // the nations world (page.html?start=nations), and on the desktop in the classic world:
 //   Move and a tap 25-45 km from a garrisoned neighbour city; Waypoint and two taps through garrisoned provinces; a fleet with Waypoint and two
 //   taps on water; troops in a port, Waypoint and a tap at sea (a stop at sea); Move and a tap on the city itself (it joins the garrison); at the
 //   closest zoom Move and Waypoint taps 17 px from the garrisoned city's mark, Move 4 px from a force of yours (it joins it) and 24 px off it (it
 //   stands apart); on the desktop a counter dragged onto a spot by a garrisoned city, and a save and load mid-plan. Each ends on the tapped spot.
+//   Round 3: a group of three selected together, Move and a tap, Waypoint and two taps: every force ends on the tapped spot, joined there
+//   (index.html sendToTarget and stopTap sent the others 43 to 52 km round it, and with the join on the very spot they stayed apart).
 //   node .test/pinpoint-guard.js [--rules]   (part 2 needs bash tools/mkpage.sh; exit 1 on any failed check or error, each FAIL says what broke)
 //   node .test/pinpoint-guard.js --make-fixture <checkout>   (writes the old-save fixture with the rules of that checkout: origin/master 9f01407)
 const fs = require('fs'), path = require('path');
@@ -110,6 +113,20 @@ run(T + 'join order', () => { const R = game(W), S = R.S, n = R.me, sc = scene(R
   ok(T + 'a join order: the force enters the province and walks on to the other force (not merged at the border)', crossed && crossed.alive && crossed.sail, crossed);
   ok(T + 'it merges there: the joined force stays on its spot, the garrison at the city as it was', R.count(t) === 3 && d(t.pos, sc.wB) < 1e-9 && R.count(sc.gB) === nB, { t: R.count(t), pos: t.pos, gB: R.count(sc.gB), nB }); });
 
+// 7. a group (index.html sendToTarget and stopTap hand every force of a selected group the same point, the tapped spot): three forces of
+// 2 infantry sent by Move, or by Waypoint with two stops, to one spot 30 km from a garrisoned city end there as one force of 6 (the arrival
+// join, JOIN_R), the garrison as it was; three of 4 infantry end on the spot as a force of 8 and one of 4 beside it on the same point (the
+// join keeps each within its stack limit, STACK_LIM). Until PINPOINT-3 round 3 the page sent the others 43 to 52 km off the tapped spot
+for (const kind of ['move', 'waypoint']) for (const k of [2, 4]) run(`${T}group ${kind} ${k}`, () => { const R = game(W), S = R.S, n = R.me, sc = scene(R, n, 30); if (!sc) return; const nB = R.count(sc.gB), nC = R.count(sc.gC);
+  const F = [0, 1, 2].map(() => { const f = R.addArmy(n, sc.A, { inf: k }); f.from = sc.A; f.lastAt = sc.A; return f; }), last = kind === 'move' ? sc.wB : sc.wC, P = kind === 'move' ? sc.B : sc.C, st = F.map(() => []);
+  for (const f of F){ if (kind === 'move') R.orderMove(f, sc.B, sc.wB.slice()); else { R.addStop(f, sc.B, sc.wB.slice()); R.addStop(f, sc.C, sc.wC.slice()); } }
+  for (let i = 0; i < 600 && F.some(f => S.armies.includes(f) && R.count(f) && !(idle(f) && !f.wp)); i++){ R.tick(); F.forEach((f, j) => { if (S.armies.includes(f) && idle(f) && f.pos) st[j].push(f.pos.slice()); }); }
+  const left = F.filter(f => S.armies.includes(f) && R.count(f)), on = left.filter(f => f.at === P && f.pos && d(f.pos, last) < 1e-6), sizes = left.map(f => R.count(f)).sort((u, v) => v - u);
+  ok(`${T}group of 3 x ${k} infantry, ${kind === 'move' ? 'Move' : 'Waypoint, two stops'}, to one spot 30 km from the city of ${place(R, P)}: every force ends on that spot, ${k === 2 ? 'joined into one force of 6' : 'a force of 8 and one of 4 (stack limit)'}`,
+    on.length === left.length && JSON.stringify(sizes) === JSON.stringify(k === 2 ? [6] : [8, 4]), { left: left.map(f => ({ n: R.count(f), at: f.at, offKm: f.pos ? +(d(f.pos, last)/R.KM_W).toFixed(2) : 'centre' })), last });
+  if (kind === 'waypoint') ok(`${T}group of 3 x ${k}, Waypoint: each force stood on the first stop exactly`, st.every(q => q.some(x => d(x, sc.wB) < 1e-6)), st.map(q => q.length));
+  ok(`${T}group of 3 x ${k}, ${kind}: the garrisons stay as they were, at their cities`, same(R, sc.gB, nB) && same(R, sc.gC, nC), { gB: R.count(sc.gB), nB, gC: R.count(sc.gC), nC }); });
+
 // 6. the nations world: moves and waypoints to spots 2, 4, 6 and 8 km from a garrisoned city of yours end exactly there (the arrival join took
 // everything within JOIN_R, about 9 km, into the garrison until PINPOINT-3 round 2: at the closest zoom a tap 7 to 9 km from a city is
 // 16 to 20 px from its mark, so index.html byCity leaves it on the tapped spot, and the rules then merged it into the garrison at the city);
@@ -189,7 +206,7 @@ async function pagePart(){ const pickNation = require('./pick-nation.js'), { chr
     const still = async () => { let q = null; for (let i = 0; i < 40; i++){ const v = await p.evaluate(() => { const v = window.__im.view; return [v.x, v.y, v.s, !!window.__im.camFly].join(); }); if (v === q && !/true$/.test(v)) return; q = v; await p.waitForTimeout(120); } };
     const view = (xy, hp) => p.evaluate(([x, y, hp, w, h]) => { const v = window.__im.view, s = hp/12; v.s = s; v.x = w/2 - x*s; v.y = h/2 - y*s; window.__im.clampView(); }, [xy[0], xy[1], hp, R.w, R.h*(PHONE ? 0.45 : 1)]);
     const scr = xy => p.evaluate(([x, y]) => window.__im.toScreen(x, y), xy), wOf = T => p.evaluate(([x, y]) => { const v = window.__im.view; return [(x - v.x)/v.s, (y - v.y)/v.s]; }, T);
-    const info = id => p.evaluate(id => { const f = window.__im.S.armies.find(q => q.id === id); return f && count(f) ? { at: f.at, pos: f.pos, n: count(f), idle: f.to === null && !f.path.length && !f.sail, wp: f.wp ? f.wp.length : 0, stops: stopsOf(f).map(q => ({ p: q.p, x: q.x, y: q.y })) } : null; }, id);
+    const info = id => p.evaluate(id => { const f = window.__im.S.armies.find(q => q.id === id); return f && count(f) ? { id: f.id, at: f.at, pos: f.pos, n: count(f), idle: f.to === null && !f.path.length && !f.sail, wp: f.wp ? f.wp.length : 0, stops: stopsOf(f).map(q => ({ p: q.p, x: q.x, y: q.y })) } : null; }, id);
     const btn = async act => { const el = await p.$(`#cmdbar [data-act="${act}"]`); if (!el) return false; if (PHONE) await el.tap(); else await el.click(); await p.waitForTimeout(150); return true; };
     const select = async id => { await p.evaluate(() => { window.__im.clearSel(); document.querySelectorAll('.toast,.ftip').forEach(t => t.remove()); }); await p.waitForTimeout(250);
       const h = await p.evaluate(id => { const h = window.__im.hits.find(h => h.own && h.own.includes(id) && !h.tag); return h && [h.x + h.w/2, h.y + h.h/2]; }, id);
@@ -289,6 +306,25 @@ async function pagePart(){ const pickNation = require('./pick-nation.js'), { chr
         if (side){ const a2 = await newForce({ inf: 1 }, 7); await select(a2); await btn('cm-move'); const w = await tapW(side); const r2 = await play(a2), e2 = await info(a2), e1 = await info(t.id);
           ok(`${TAG} closest zoom, Move + a tap 24 px from that force: it stands apart, exactly on the tapped spot`, !r2.gone && e2 && Math.hypot(e2.pos[0] - w[0], e2.pos[1] - w[1]) < 0.02 && e1 && e1.n === 2, { r2, e2, w, e1 }); await kill([a2]); } }
       await kill(sp.filter(q => q && q.id).map(q => q.id)); }
+
+    // P8. a group: three forces of 2 infantry selected together (as a box drawn round them does), Move and a tap
+    // 25-45 km from the garrisoned city, and Waypoint and two taps; every force's order goes to the tapped spot and they end there as one force of
+    // 6 (index.html sendToTarget and stopTap sent the others 43 to 52 km off it until PINPOINT-3 round 3; with the join on the very spot only they
+    // stayed there, as separate stacks)
+    for (const mode of ['cm-move', 'cm-wp']){ const M = mode === 'cm-move' ? 'Move' : 'Waypoint', ids = [await newForce({ inf: 2 }, 0), await newForce({ inf: 2 }, 1), await newForce({ inf: 2 }, 2)];
+      await view(mode === 'cm-move' ? mid(sc.Ac, sc.wB) : mid(sc.wB, sc.wC), mode === 'cm-move' ? 55 : 90); await p.waitForTimeout(900); await select(ids[0]);
+      await p.evaluate(ids => { const s = window.__im.sel; s.army = ids[0]; s.group = ids.slice(); }, ids);   // (as a box drawn round them does: index.html finishBox) await p.waitForTimeout(250);
+      const g = await p.evaluate(() => window.__im.sel.group.slice()); ok(`${TAG} group: the three forces are selected together`, ids.every(id => g.includes(id)), { g, ids });
+      await btn(mode); const w = [await tapW(sc.wB)]; if (mode === 'cm-wp'){ w.push(await tapW(sc.wC)); await btn('cm-wp'); }
+      const os = await Promise.all(ids.map(info)), last = w[w.length - 1], P = mode === 'cm-move' ? sc.B : sc.C;
+      ok(`${TAG} group, ${M} + ${w.length === 1 ? 'a tap' : 'two taps'}: every force's ${w.length === 1 ? 'order goes' : 'stops go'} to the tapped spot${w.length === 1 ? '' : 's'} (not round it)`, os.every(o => o && o.stops.length === w.length && o.stops.every((q, i) => Math.hypot(q.x - w[i][0], q.y - w[i][1]) < 0.05)), { stops: os.map(o => o && o.stops), w });
+      const r = await p.evaluate(ids => { const S = window.__im.S, F = ids.map(id => S.armies.find(q => q.id === id)), on = f => S.armies.includes(f) && count(f); let h = 0;
+        for (; h < 600 && F.some(f => on(f) && !(f.to === null && !f.path.length && !f.sail && !f.wp)); h++) tick(); return h; }, ids);
+      const e = (await Promise.all(ids.map(info))).filter(Boolean), gr = await garOk(), kmW = await p.evaluate(() => KM_W), Pc = P === sc.B ? sc.Bc : sc.Cc, km = Math.hypot(last[0] - Pc[0], last[1] - Pc[1])/kmW;
+      ok(`${TAG} group, ${M}: the three end on the tapped spot ${km.toFixed(0)} km from the city of ${P === sc.B ? sc.bName : sc.cName}, joined into one force of 6 (the garrison as it was)`, e.length === 1 && e[0].n === 6 && e[0].at === P && Math.hypot(e[0].pos[0] - last[0], e[0].pos[1] - last[1]) < 0.05 && gr.ok,
+        { hours: r, left: e.map(q => ({ n: q.n, at: q.at, offKm: q.pos ? +(Math.hypot(q.pos[0] - last[0], q.pos[1] - last[1])/kmW).toFixed(1) : 'centre' })), garrisons: gr });
+      if (e.length === 1){ const D = await dotOn(e[0].id, e[0].pos); ok(`${TAG} group, ${M}: its dot is drawn on the spot (within 3 px)`, D && D.off <= 3, D); }
+      await kill(ids); }
 
     // P6. the desktop: a counter dragged onto a spot by the garrisoned city
     if (!PHONE){ const id = await newForce({ inf: 2 }, 3); await view(mid(sc.Ac, sc.wB), 55); await p.waitForTimeout(1200); await p.evaluate(() => window.__im.clearSel()); await p.waitForTimeout(250);

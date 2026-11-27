@@ -11098,8 +11098,10 @@ function sendToTarget(a, keep = false){
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
   let ok = 0, g = [];
   if (sel.target !== null){ g = groupArmies(); const T = sel.target, P0 = sel.targetPt;
-    // the exact point (rules/movement.js orderMove): a group's forces stand round it, each on its own spot (the first on the point itself)
-    const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
+    // the exact point (rules/movement.js orderMove), the same one for every force of a group: they end on the spot that was tapped and join there
+    // (rules/tick.js, the arrival join, JOIN_R), each within its stack limit. Until PINPOINT-3 round 3 the others were sent round it, 6 and 5
+    // world units off (43 to 52 km), and with the join on the very spot only (round 2) they stayed there, as separate stacks
+    const ptOf = i => !P0 ? null : pinPt(g[i], T, P0);
     g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
   sel.target = null; targetPath = null;
   // as in Conflict of Nations the force (or the whole group) stays selected once the order is given, its route drawn to the point with the ETA:
@@ -11107,12 +11109,12 @@ function sendToTarget(a, keep = false){
   if (ok){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; hoverPath = null; cmdMode = null; }
   renderSide(true); }
 // Waypoint button on (or Shift): a tap adds a stop at that exact point (rules/movement.js addStop): an idle force sets off for it, one with orders
-// goes there after its last stop. A group: each force adds its own stop round the point (as sendToTarget spreads a group's points)
-function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '';
-  g.forEach((q, i) => { let pt = pinPt(q, p, i ? [w[0] + Math.cos(i*2.4)*6, w[1] + Math.sin(i*2.4)*5] : w);
+// goes there after its last stop. A group: every force adds a stop on the same point (as sendToTarget), and they join there at the end
+function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '', at = null;
+  g.forEach(q => { let pt = pinPt(q, p, at || w);   // (at: the point the first force given a stop took; the others take the same one)
     if (pt && ground(q) && !G.P[p].sea && byCity(p, w)) pt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city: its heart, where a province is captured)
-    else if (pt && !i){ const f = byForce(q, p, w); if (f) pt = f.slice(); }   // (on or by a force of yours standing there: its spot; the group's others stand round it)
-    if (pt && addStop(q, p, pt)){ ok++; delete q.join; return; }
+    else if (pt && !at){ const f = byForce(q, p, w); if (f) pt = f.slice(); }   // (on or by a force of yours standing there: its spot, where the group joins it)
+    if (pt && addStop(q, p, pt)){ ok++; delete q.join; if (!at) at = pt.slice(); return; }
     if (!why) why = !pt || (shipsOnly(q) && !G.P[p].sea) ? 'A fleet\'s stops are on water.' : !canEnter(PLAYER, p) ? `${placeOwner(p)} is not open to you: tap with Waypoint off to plan an attack.` : embarkWhy(q, p) || 'No route there from the last stop.'; });
   if (ok){ sfx('order'); visCache = null; sel.target = null; targetPath = null; hoverPath = null; sel.lastOrder = {ids:g.map(q => q.id), t:performance.now()}; ftipAsk('move'); }
   else toast(why, 'bad', null);
