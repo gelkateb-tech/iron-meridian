@@ -16,7 +16,7 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   if (U.coastal && !navalCity(p)) return {kind:'coast', why:`${U.name} train only in a coastal city (a naval city)`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
-    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${hoursTxt(c.h)}` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
+    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${hoursTxt(c.h)}` : r.b === 'fac' || r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};   // ('Needs Army Base I', 'Needs Army Base II', 'Needs Naval Yard III': Roman numerals on every base, owner 2026-11-27)
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
   return null; }
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words

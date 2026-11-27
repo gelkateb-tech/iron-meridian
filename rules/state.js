@@ -97,6 +97,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S.bk = 1;   // made under the Bunker rule (levels 1-5; see bunkerMigrate)
   S.mv = 1;   // made under the morale rule (owner points 8-11; see moraleMigrate)
   S.noAt = 1;   // made after Anti-Tank Infantry was removed (BUILD-REQS; see atMigrate)
+  S.yl = 1;   // made under the Naval Yard levels of BUILD-REQS round 2 (see yardMigrate)
   if (NAVAL_CITIES) S.nc = 1;   // made under the naval-cities rule (see restore: a save without it keeps routes given before the rule)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
@@ -279,6 +280,18 @@ function atResMigrate(){ if (S.noAt) return; S.noAt = 1; const got = AT_GOT || {
     if (r.res.length) parts.push(`refunded: ${r.res.join(', ')}`);
     const pay = r.paid >= 0.5 || r.metal || r.iron || r.rare ? ` You got back $${fmt(r.paid)}M${r.metal ? ', ' + fmt(r.metal) + ' materials' : ''}${r.iron ? ', ' + fmt(r.iron) + ' iron' : ''}${r.rare ? ', ' + fmt(r.rare) + ' rare materials' : ''}.` : '';
     D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Anti-Tank Infantry is no longer in the game: ${parts.join('; ')}.${pay} Infantry Kit (level 2) gives Motorized Infantry light anti-tank weapons; tanks, attack helicopters and strike aircraft are the main answer to armour.`}); } }
+// saves from before the Naval Yard's new levels (BUILD-REQS round 2, owner 2026-11-27: Frigates at I, Cruisers and Attack Submarines at III,
+// Aircraft Carriers at V; no S.yl). Nothing in the save changes: ships at sea stay, a yard keeps its level, and a ship queued or in training in a
+// yard that is now too low for it FINISHES AS QUEUED (the queue never checks the level again: prodHour); only new orders need the new level, and a
+// repeat order of such a ship pauses and says why (repeatHour) until the yard is upgraded. Each person's nation with such a ship or order is told once
+const yardLow = (p, t) => !!UNITS[t] && trainBase(t) === 'yard' && reqsOf(t).some(r => (S.bld[p][r.b] || 0) < r.l);
+function yardMigrate(){ if (S.yl) return; S.yl = 1;
+  for (const me of seats()){ const D = desk(me), RP = D.repeat || {}; if (!Array.isArray(D.log)) continue; let q = 0, rep = 0;
+    for (let p = 0; p < S.queue.length; p++){ if (S.owner[p] !== me || !Array.isArray(S.queue[p])) continue;
+      for (const it of S.queue[p]) if (!it.msl && yardLow(p, it.t)) q++;
+      if (RP[p] && yardLow(p, RP[p])) rep++; }
+    if (!q && !rep) continue;
+    D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New Naval Yard levels: ${baseUnits('yard', 1).join(' and ')} at level I, ${baseUnits('yard', BASE_LV.yard.crui).join(' and ')} at level ${ROMAN[BASE_LV.yard.crui]}, ${baseUnits('yard', BASE_LV.yard.carr).join(' and ')} at level ${ROMAN[BASE_LV.yard.carr]}; levels IV and V also build ships faster. Your ships at sea stay.${q ? ` ${q === 1 ? 'The ship' : 'The ' + q + ' ships'} already in training in a yard now too low for ${q === 1 ? 'it finishes' : 'them finish'} as queued; new ones need the new level.` : ''}${rep ? ` ${rep === 1 ? 'A repeat order' : rep + ' repeat orders'} of such ships ${rep === 1 ? 'pauses' : 'pause'} until the yard is upgraded.` : ''}`}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded.
@@ -345,6 +358,7 @@ function restore(data){
   researchMigrate();
   rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
   atResMigrate();   // Anti-Tank Infantry's research line (after the conversions above, which could still name its nodes)
+  yardMigrate();   // the Naval Yard's new levels: ships queued in a yard now too low finish as queued (the seat is told)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
   moraleMigrate();   // (after the other migrations)
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)

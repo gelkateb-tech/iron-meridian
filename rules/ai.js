@@ -219,7 +219,7 @@ let AIPC = {v:-1, S:null, m:[]};
 function aiCountsOf(n){ const kp = keep(); if (kp && (AIPC.v !== tickVer || AIPC.S !== S)) AIPC = {v:tickVer, S, m:[]}; let c = AIPC.v === tickVer && AIPC.S === S ? AIPC.m[n] : undefined; if (c) return c;
   let ships = 0, allU = 0, jamN = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } c = {ships, allU, jamN}; if (kp) AIPC.m[n] = c; return c; }
 function aiPickUnit(n, p){
-  const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4.5, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.7 + 3*mix.armored, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:0.5 + 4*mix.naval, crui:0.8};
+  const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4.5, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.7 + 3*mix.armored, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:1.6 + 4*mix.naval, crui:0.8};   // (sub 1.6, was 0.5: since BUILD-REQS round 2 only a Naval Yard III trains them, about half as many cities as had a yard I)
   // terrain counter-pick: rough fronts (forest, hills, mountains, marsh, ice) want infantry and special forces, open ones armor
   { const rg = frontRough(n); w.tank *= 1 - 0.5*rg; w.ifv *= 1 - 0.5*rg; w.inf *= 1 + 0.5*rg; w.art *= 1 - 0.2*rg; w.spec = 0.3 + 2.2*rg; }
   // trade war: convoys sunk lately want frigates (escorts); enemy trade routes in the world invite submarines (raiders)
@@ -228,7 +228,12 @@ function aiPickUnit(n, p){
   const trHit = S.trade ? Math.min(4, S.trade.hit[n] || 0) : 0, foeTr = S.trade && warsOf(n).length ? (AIT !== null && AIT.n === n ? AIT.foeTr ?? (AIT.foeTr = foeTr0()) : foeTr0()) : 0;
   w.frig += 1.3*trHit; w.crui += 0.3*trHit; w.sub += 0.2*Math.min(8, foeTr);
   // (the nation's ships, units and jammers: counted once an hour per nation; its forces do not change between the cities of one turn, which only queue)
-  const AC = aiCountsOf(n), allU = AC.allU, jamN = AC.jamN; if (AC.ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = 0; }
+  // Aircraft Carriers (BUILD-REQS round 2): only where a Naval Yard V stands (bldOk), one a nation (two with AI_YARD.two naval cities), mostly at war;
+  // on master the computer never built one
+  if (bldOk(p, 'sub')) w.frig *= 0.6;   // (a yard III city: its submarines and cruisers first; frigates come from the yards I as well)
+  w.carr = 0; if (bldOk(p, 'carr') && unlocked(n, 'carr')){ let k = 0; for (const a of armiesOf(n)) k += a.u.carr || 0; for (const q of ownedBy(n)) for (const it of S.queue[q]) if (it.t === 'carr') k++;
+    if (k < (ownedBy(n).filter(q => G.P[q].city && navalCity(q)).length >= AI_YARD.two ? 2 : 1)) w.carr = warsOf(n).length ? 0.6 : 0.2; }
+  const AC = aiCountsOf(n), allU = AC.allU, jamN = AC.jamN; if (AC.ships > allU*(trHit >= 1 ? 0.28 : 0.2)){ w.frig = w.sub = w.crui = w.carr = 0; }
   // V3 air: drones, the jammer, specialised aircraft, with counter-picks against what the enemy fields and what has been hitting us
   { const H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0}, mine = airMine(n);
     const rich = S.nations[n].cash > 400, wars = warsOf(n).length > 0, coast = G.P[p].coast;
@@ -428,6 +433,30 @@ const aiAirNeed = n => has(n, 'u_bomb') || has(n, 'u_awacs') || (has(n, 'u_mpa')
 function aiAirUp(n, p, N){ const l = S.bld[p].air || 0, need = aiAirNeed(n); if (l < 1 || l >= 3 || l + 1 > need) return false;
   if (ownedBy(n).filter(q => (S.bld[q].air || 0) > l || (S.cons[q] && S.cons[q].k === 'air' && S.cons[q].lvl > l)).length >= 2) return false;
   return N.cash > buildCost(n, 'air', l + 1, p).cash + (l === 1 ? 60 : 120) && rng() < (need === 3 ? 0.6 : 0.4); }
+// the Naval Yard (BUILD-REQS round 2, owner 2026-11-27: I Frigates, III Cruisers and Attack Submarines, V Aircraft Carriers; II and IV unlock nothing
+// of their own yet). The nation's main yard (aiYardMain: its highest, then the one in its biggest city) climbs through II to III (aiYard3): AT WAR
+// when it has two naval cities or more, or meets enemy ships (mix.naval) or raids on its convoys; AT PEACE a coastal power (AI_YARD.coast naval
+// cities or more) with AI_YARD.save in the bank. Like the Airbase it saves for the next level (N.ySave, held back from new units by aiReserve) and
+// builds it as soon as the money is there (aiTurn0); with money to spare it builds at once (aiYardUp: AI_YARD.war or AI_YARD.peace over the price).
+// A nation at war with AI_YARD.two naval cities or more may take a second yard to III. Levels IV and V (carriers) only with Carrier Aviation
+// researched, for the main yard, at war or rich (AI_YARD.v). On master a yard went to II whenever $220M were there, and that was all the computer
+// needed (subs at I, cruisers and carriers at II); without the saving no yard reached III in 60 days (3 seeds) and no submarine was built
+const AI_YARD = {coast:3, two:6, war:40, peace:160, pw:0.45, pp:0.2, save:150, v:{war:150, peace:450, rich:700, p:0.3}};
+const aiYardSea = n => warsOf(n).length > 0 && (ownedBy(n).filter(q => G.P[q].city && navalCity(q)).length >= 2 || enemyMix(n).naval > 0.05 || !!(S.trade && S.trade.hit[n] > 0));
+const aiYard3 = (n, N) => aiYardSea(n) || (ownedBy(n).filter(q => G.P[q].city && navalCity(q)).length >= AI_YARD.coast && N.cash > AI_YARD.save);
+function aiYardMain(n){ if (AIT && AIT.n === n && AIT.yard !== undefined) return AIT.yard;
+  const Y = ownedBy(n).filter(p => G.P[p].city && S.bld[p].yard > 0).sort((a, b) => S.bld[b].yard - S.bld[a].yard || popOf(b) - popOf(a) || a - b), r = Y.length ? Y[0] : -1;
+  if (AIT && AIT.n === n) AIT.yard = r; return r; }
+function aiYardUp(n, p, N){ const l = S.bld[p].yard || 0; if (l < 1 || l >= BUILD.yard.max) return false;
+  const war = warsOf(n).length > 0, nav = ownedBy(n).filter(q => G.P[q].city && navalCity(q)).length, c = buildCost(n, 'yard', l + 1, p).cash, main = aiYardMain(n) === p;
+  if (l < BASE_LV.yard.crui){
+    const sea = aiYardSea(n);
+    if (!sea && !(nav >= AI_YARD.coast && N.cash > c + AI_YARD.peace)) return false;
+    if (!main){ const at3 = ownedBy(n).filter(q => q !== p && ((S.bld[q].yard || 0) > l || (S.cons[q] && S.cons[q].k === 'yard' && S.cons[q].lvl > l))).length;
+      if (!(war && nav >= AI_YARD.two && at3 === 1)) return false; }
+    return N.cash > c + (sea ? AI_YARD.war : AI_YARD.peace) && rng() < (sea ? AI_YARD.pw : AI_YARD.pp); }
+  if (!main || !has(n, 'u_carr') || !(war || N.cash > AI_YARD.v.rich)) return false;
+  return N.cash > c + (war ? AI_YARD.v.war : AI_YARD.v.peace) && rng() < AI_YARD.v.p; }
 // the Recruiting Office is the main way to train faster now (BUILD-REQS): at war, or with money to spare, the capital and the Army Base cities
 // take their office to level III (a city with an Army Base and no office gets one), not only when a full queue is the limit (aiRecSlow)
 const AI_REC = {lv:3, peace:250, war:80, spare:180};
@@ -438,7 +467,8 @@ const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U 
   // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
   if (U && U.until > S.hour && UNITS[U.t]) r += (ucost(n, U.t)[k] || 0) + (k === 'cash' ? 15 : 0);
-  if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', N.bSave.lv || 2)[k] || 0;   // (lv: the Airbase level saved for; an old save's saving was for level II)
+  if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', N.bSave.lv || 2)[k] || 0;
+  if (N.ySave && N.ySave.until > S.hour) r += buildCost(n, 'yard', N.ySave.lv, N.ySave.p)[k] || 0;   // (the main Naval Yard's next level, on the way to III: aiYard3)   // (lv: the Airbase level saved for; an old save's saving was for level II)
   if (rFree(N) && N.rPick && N.rPick.until > S.hour && RN[N.rPick.id] && rNextLv(n, N.rPick.id) && (N.rPick.save || k === 'rare')) r += rCost(RN[N.rPick.id], rNextLv(n, N.rPick.id))[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
   return r; };
 // buy what a cost lacks in traded goods (plus a few spare) on the world market, if every price is at most mx times the base and the money covers it all
@@ -627,6 +657,11 @@ function aiTurn0(n, N){
   { const B2 = N.bSave, need = aiAirNeed(n); if (B2 && (B2.until <= S.hour || S.owner[B2.p] !== n || (S.bld[B2.p].air || 0) !== (B2.lv || 2) - 1)) N.bSave = null;
     if (!N.bSave && need >= 2 && (warsOf(n).length || N.cash > (need === 2 ? 120 : 300)) && !ownedBy(n).some(p => S.bld[p].air >= need)){ const p = ownedBy(n).filter(q => G.P[q].city && S.bld[q].air >= 1).sort((a, b) => S.bld[b].air - S.bld[a].air || a - b)[0]; if (p !== undefined) N.bSave = {p, lv:S.bld[p].air + 1, until:S.hour + 48}; }
     if (N.bSave && !S.cons[N.bSave.p] && build(n, N.bSave.p, 'air')) N.bSave = null; }
+  // the main Naval Yard to III (aiYard3: at war at sea, or a coastal power with money): save up for its next level and build it once the money is there
+  { const Y = N.ySave; if (Y && (Y.until <= S.hour || S.owner[Y.p] !== n || (S.bld[Y.p].yard || 0) !== Y.lv - 1)) N.ySave = null;
+    const p = aiYardMain(n);
+    if (!N.ySave && p >= 0 && S.bld[p].yard < BASE_LV.yard.crui && !(S.cons[p] && S.cons[p].k === 'yard') && aiYard3(n, N)) N.ySave = {p, lv:S.bld[p].yard + 1, until:S.hour + 48};
+    if (N.ySave && !S.cons[N.ySave.p] && build(n, N.ySave.p, 'yard')) N.ySave = null; }
   // fighters before bombers: an ASF want replaces a bomber saving (and anything but another counter)
   { const A3 = aiAsfWant(n, provs, inc), U0 = N.uSave && N.uSave.until > S.hour ? N.uSave : null; if (A3 && (!U0 || U0.t === 'bomb' || !AI_CTR.has(U0.t)) && rng() < 0.5) N.uSave = {t:'asf', until:S.hour + 48}; }
   { const B3 = aiBomberWant(n, provs, inc); if (B3 && !(N.uSave && N.uSave.until > S.hour) && rng() < 0.4) N.uSave = {t:'bomb', until:S.hour + 48}; }
@@ -647,7 +682,7 @@ function aiTurn0(n, N){
       else if ((has(n, 'u_jet') || has(n, 'u_int')) && !S.bld[p].air && N.cash > 140 && ownedBy(n).filter(p => S.bld[p].air).length < 2) build(n, p, 'air');
       else if (has(n, 'msl1') && p === N.capital && !S.bld[p].silo && N.cash > 260 && rng() < 0.3) build(n, p, 'silo');
       else if (canBuildHere(p, 'yard') && !S.bld[p].yard && N.cash > 170 && ownedBy(n).filter(p => S.bld[p].yard).length < 2 && rng() < 0.3) build(n, p, 'yard');
-      else if (S.bld[p].yard === 1 && N.cash > 220 && rng() < 0.2 && !ownedBy(n).some(q => S.bld[q].yard >= 2)) build(n, p, 'yard');
+      else if (aiYardUp(n, p, N)) build(n, p, 'yard');   // Naval Yard III for cruisers and submarines (at war, coastal powers), V for carriers (aiYardUp)
       else if (aiAirUp(n, p, N)) build(n, p, 'air');   // Airbase II for strike fighters and strike drones, III for the heavy aircraft (up to two at each level)
       else if (aiFacWant(n, p, N)) build(n, p, 'fac');   // Army Base II and III: the capital first, then the biggest Army Base cities (aiFacWant)
       else if (aiRecSlow(n, p) && rng() < 0.15) build(n, p, 'rec');   // training speed is the limit here: the next Recruiting Office level

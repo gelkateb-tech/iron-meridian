@@ -67,17 +67,22 @@ for (const t of INF_T){ const U = UNITS[t], air = U.req2 && U.req2.b === 'air' ?
 /* BUILD REQUIREMENTS (owner 2026-11-27, BUILD-REQS): the level of its base (b: fac Army Base, air Airbase, yard Naval Yard) each unit needs, one table
    for all three bases; it is written onto each unit's req (and the infantry's reqs) below, so mobBlock, the build lists, their texts and the computer
    read it from there. The Army Base and the Airbase exactly as the owner listed them; levels IV and V add no unit of their own (only the slot for
-   Missile Defence at Army Base V, and the Stealth Bomber at Airbase V): they build faster (BASE_SPD). The Naval Yard keeps its levels this round (a
-   spread over levels I-V is proposed to the owner and waits for the owner's OK). Units the owner's lists do not name keep the
-   level they had: Marines (Army Base I, coastal cities only) and the Interceptor (Airbase I). Paratroopers also keep their Airbase I (req2).
+   Missile Defence at Army Base V, and the Stealth Bomber at Airbase V): they build faster (BASE_SPD). The Naval Yard as the owner listed it in
+   round 2 (2026-11-27): I Corvette, Frigate; II Destroyer; III Cruiser, Attack Submarine; IV no new units; V Aircraft Carrier, Ballistic Missile
+   Submarine. Units the owner's lists do not name keep the level they had: Marines (Army Base I, coastal cities only) and the Interceptor
+   (Airbase I). Paratroopers also keep their Airbase I (req2). Ships already at sea stay, and ships already queued in a yard that is now too
+   low finish as queued (the queue never checks the level again: prodHour); only new orders need the new level (yardMigrate tells the seat).
    A key with no unit is a MARKED SLOT, skipped until that unit exists (nothing is made for it):
      rcn   THE RECON SLOT: the recon vehicle, Army Base I (proposed with the starting armies, branch start-armies, under the key 'rcn'; not in the game yet)
      maa   Mobile Anti-Air, Army Base II (no short-range air-defence vehicle in the game; the Mobile SAM, the nearest, is listed at level III)
-     mdef  Missile Defence, Army Base V (no such unit; today only the research Anti-Missile Shield, msl3, which works nation-wide with no building) */
+     mdef  Missile Defence, Army Base V (no such unit; today only the research Anti-Missile Shield, msl3, which works nation-wide with no building)
+     corv  Corvette, Naval Yard I (no such ship yet; docs/RESEARCH.md 'Patrol Boat' is the nearest proposal)
+     dest  Destroyer, Naval Yard II (no such ship yet; proposed in docs/RESEARCH.md, between the Frigate and the Cruiser)
+     ssbn  Ballistic Missile Submarine, Naval Yard V (no such ship yet; proposed in docs/RESEARCH.md) */
 const BASE_LV = {
   fac: {inf:1, rcn:1, art:1, mar:1,  ifv:2, tank:2, maa:2, para:2, swarm:2,  mlrs:3, sam:3, spec:3, jam:3,  mdef:5},
   air: {drone:1, heli:1, asf:1, int:1,  jet:2, sdrone:2,  mpa:3, awacs:3, bomb:3,  stealth:5},
-  yard:{frig:1, sub:1,  crui:2, carr:2},
+  yard:{corv:1, frig:1,  dest:2,  crui:3, sub:3,  carr:5, ssbn:5},
 };
 for (const b in BASE_LV) for (const t in BASE_LV[b]){ const U = UNITS[t]; if (!U) continue;   // (a marked slot: no unit yet)
   for (const r of U.reqs || [U.req, U.req2]) if (r && r.b === b) r.l = BASE_LV[b][t]; }
@@ -197,7 +202,7 @@ const BUILD = {
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
   fort: {name:'Bunker',            max:5, cost:36, metal:8, iron:8, days:2, where:'any',  lv:BUNKER_LV, desc:`Hidden from other nations. Your garrison here takes ${Math.round(BUNKER_LV[1].red*100)}% less damage at level I, up to ${Math.round(BUNKER_LV[5].red*100)}% at level V, and its morale counts ${Math.round(BUNKER_LV[1].mrl*100)}% to ${Math.round(BUNKER_LV[5].mrl*100)}% higher; the people here lose that much less to war, and the other buildings here take ${Math.round(BUNKER_LV[BUNKER_SHIELD_LV].red*100)}% less damage. Upkeep $${BUNKER_LV[1].upk.toFixed(1)}M to $${BUNKER_LV[5].upk.toFixed(1)}M a day.`},
   silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research). Levels II\u2013V: missiles build 10% faster per level above I.'},
-  yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
+  yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:''},   // (desc: written from BASE_LV and BASE_SPD, baseDesc below the table)
 };
 const BK = Object.keys(BUILD);
 /* ---- occupation, morale, annexing and rebels (owner points 8-11, 2026-11-25; docs/REBELS-PLAN.md with the owner's answers R1-R17 of 2026-11-26).
@@ -254,7 +259,7 @@ const baseLevelTxt = (b, l) => { const u = baseUnits(b, l), f = baseSpdPct(b, l)
 function baseDesc(b){ const L = []; for (let l = 1; l <= BUILD[b].max; l++) L.push(baseLevelTxt(b, l)); return L.join('. ') + '.'; }
 BUILD.fac.desc = `Unlocks and trains ground units, infantry included. ${baseDesc('fac')} Levels I–III only unlock units; the Recruiting Office is the main way to train faster. With a membership, Army Base I opens a second training line. No income. Level I is cheap (30 minutes) and costs the same in every city. Levels II–V: your first two cost the base price; from the third on, each other province where you already have level II or higher makes the next cost 40% more.`;
 BUILD.air.desc = `Unlocks and trains aircraft (with their research). ${baseDesc('air')} Levels I–III only unlock aircraft; the Recruiting Office is the main way to train faster. Wings based here reach 1 hex farther per level above I and repair faster.`;
-// (the Naval Yard's text in the table above is replaced here too, so all three bases read alike; its unlocks are unchanged this round)
+// (the Naval Yard's text in the table above is replaced here too, so all three bases read alike)
 BUILD.yard.desc = `Coastal cities only. ${baseDesc('yard')} Levels I–III only unlock ships; the Recruiting Office is the main way to train faster. Damaged ships repair fast here, 20% faster per level above II.`;
 // ---------- the research tree (docs/RESEARCH.md): organised by unit. Ten categories; inside a category one column ("line") per unit type.
 // A node sits on a day (it cannot be started before that day) and has one or more levels, each with its own day, price and research time.

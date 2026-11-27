@@ -69,7 +69,7 @@ const { chromium } = require('playwright');
     ok('level done: remaining time of the unit in training and the queued ones cut by the new ratio (a missile is not a unit)', r.lvl === 2 && r.consAfter === null && JSON.stringify(r.q1) === JSON.stringify(exp) && r.q1[0][1] < r.q0[0][1] && r.q1[1][1] < r.q0[1][1] && Math.abs(r.q1[1][1] - r.newInf) <= 1, { q0: r.q0, q1: r.q1, exp }); }
   ok('a level that reaches the 30% floor cuts the time to the floor, no further (0.30/0.36)', r.floorKeep[1] === Math.max(1, Math.round(r.floorKeep[0]*0.3/0.36)) && r.floorKeep[2] === 5, r.floorKeep);
   ok('another building finishing leaves the queue alone', r.other[0] === r.other[1], r.other);
-  ok('no level VI; infantry needs no office (Army Base I, no office: trainable; office III, no Army Base: "Needs Army Base level 1")', r.sixth === false && r.need === '' && r.need3 === 'Needs Army Base level 1', r);
+  ok('no level VI; infantry needs no office (Army Base I, no office: trainable; office III, no Army Base: "Needs Army Base I")', r.sixth === false && r.need === '' && r.need3 === 'Needs Army Base I', r);
   // ---- the whole thing through real game hours: queue, upgrade, watch the units come out sooner
   const flow = await p.evaluate(() => { const im = window.__im, N = S.nations[0], cap = N.capital, B = S.bld[cap]; B.fac = 0; B.rec = 1; S.queue[cap].length = 0; S.cons[cap] = null; N.cash = 5000; N.mp = 500; N.metal = 500*RES_K;
     for (let i = 0; i < 3; i++){ const h = trainH(cap, 'inf', 0); S.queue[cap].push({t:'inf', h, h0:h}); }   // (queued as recruit() does: no Army Base, so one training line; the rule refuses new infantry orders here)

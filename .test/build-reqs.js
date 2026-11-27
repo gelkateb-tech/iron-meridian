@@ -1,7 +1,8 @@
 // BUILD REQUIREMENTS (BUILD-REQS, owner 2026-11-27), in plain Node:   node .test/build-reqs.js   (exit 0 when every check holds)
 // 1. every unit's base and level, checked against the owner's lists as written here (not against the rules' own table): Army Base and Airbase
-//    as listed, the units the lists do not name where they were, the Naval Yard unchanged; the marked slots (recon vehicle, Mobile Anti-Air,
-//    Missile Defence) are there and skipped; the mobilize reasons and the building texts say the same
+//    as listed (round 1), the Naval Yard as listed in round 2 (I Frigate, III Cruiser and Attack Submarine, V Aircraft Carrier), the units the
+//    lists do not name where they were; the marked slots (recon vehicle, Mobile Anti-Air, Missile Defence; Corvette, Destroyer, Ballistic Missile
+//    Submarine) are there and skipped; the mobilize reasons ("Needs Army Base II", Roman numerals on every base) and the building texts say the same
 // 2. build speed: levels I-III of every base add none, IV 10%, V 20%, on all three; a unit counts only the base that trains it; the Recruiting Office
 //    is unchanged and multiplies; the 30% floor holds. Research days and costs of the unlocks are what they were. All three bases go to level V
 // 3. Anti-Tank Infantry is gone: no unit, no research node, no old-tree conversion, no computer pick
@@ -10,13 +11,18 @@
 //    the computer's saving), its research line carries over or is refunded at its old price, a project of it running is refunded and its slot
 //    freed, the seat is told once; it plays two days without an error; saved and loaded again nothing changes twice
 // 5. the computer: 20 days of an all-computer nations world: Army Bases II and III and Airbases II stand, tanks and strike fighters are built
+// 6. an old save made by master before the Naval Yard's new levels (.test/fixtures/yard-oldsave.json, made by .test/yard-oldsave-make.js): ships at
+//    sea stay, a Cruiser and a Carrier queued in a yard II and a Submarine in a yard I finish as queued, a repeat order of the Submarine pauses
+//    with "Needs Naval Yard III", the seat is told once; a new order needs the new level
+// 7. the computer and the Naval Yard: 30 days with wars provoked: yards III stand (nations at war and coastal powers), submarines and cruisers
+//    are built from them, frigates still from yards I
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-  + '\nreturn {IM, UNITS, UT, BUILD, BASE_LV, BASE_SPD, INF_T, RN, RNODES, R_LEGACY, R_FINAL, reqsOf, canMobilize, mobBlock, trainF, trainH, trainBase, buildCost, build, desk, aiPickUnit, recSpeed, TRAIN_MIN, UT_ROLL, count, armyHP, AT_OLD, get S(){ return S; }, get G(){ return G; }};';
+  + '\nreturn {IM, UNITS, UT, BUILD, BASE_LV, BASE_SPD, INF_T, RN, RNODES, R_LEGACY, R_FINAL, reqsOf, canMobilize, mobBlock, trainF, trainH, trainBase, buildCost, build, desk, aiPickUnit, recSpeed, TRAIN_MIN, UT_ROLL, count, armyHP, AT_OLD, atWar, warsOf, navalCity, get S(){ return S; }, get G(){ return G; }};';
 const load = () => new Function(SRC)();
 let bad = 0, n = 0; const ok = (c, msg, info) => { n++; if (!c){ bad++; console.log('FAIL  ' + msg + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 400) : '')); } };
 const near = (a, b) => Math.abs(a - b) < 1e-9;
@@ -24,9 +30,11 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
 // ---- 1. every unit's base and level (the owner's lists, 2026-11-27; units they do not name keep their place)
 const OWNER = {
   fac:{1:['inf', 'art'], 2:['ifv', 'tank', 'para', 'swarm'], 3:['mlrs', 'sam', 'spec', 'jam'], 4:[], 5:[]},
-  air:{1:['drone', 'heli', 'asf'], 2:['jet', 'sdrone'], 3:['mpa', 'awacs', 'bomb'], 4:[], 5:['stealth']}};
-const KEPT = {mar:['fac', 1], int:['air', 1], frig:['yard', 1], sub:['yard', 1], crui:['yard', 2], carr:['yard', 2]};
-const SLOTS = {rcn:['fac', 1], maa:['fac', 2], mdef:['fac', 5]};   // marked slots: no such unit yet
+  air:{1:['drone', 'heli', 'asf'], 2:['jet', 'sdrone'], 3:['mpa', 'awacs', 'bomb'], 4:[], 5:['stealth']},
+  yard:{1:['frig'], 2:[], 3:['crui', 'sub'], 4:[], 5:['carr']}};   // (round 2; the Corvette, Destroyer and Ballistic Missile Submarine are SLOTS)
+const KEPT = {mar:['fac', 1], int:['air', 1]};
+const SLOTS = {rcn:['fac', 1], maa:['fac', 2], mdef:['fac', 5], corv:['yard', 1], dest:['yard', 2], ssbn:['yard', 5]};   // marked slots: no such unit yet
+const ROM = ['', 'I', 'II', 'III', 'IV', 'V'];
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S, G = R.G;
   const want = {}; for (const b in OWNER) for (const l in OWNER[b]) for (const t of OWNER[b][l]) want[t] = [b, +l]; for (const t in KEPT) want[t] = KEPT[t];
   ok(Object.keys(R.UNITS).sort().join() === Object.keys(want).sort().join(), 'every unit is accounted for: the owner\'s lists plus the units they do not name', {units:Object.keys(R.UNITS), want:Object.keys(want)});
@@ -41,7 +49,15 @@ const SLOTS = {rcn:['fac', 1], maa:['fac', 2], mdef:['fac', 5]};   // marked slo
   for (const b of ['fac', 'air', 'yard']) for (let lv = 0; lv <= 5; lv++){ B.fac = B.air = B.yard = 0; B[b] = lv;
     for (const t in want){ if (want[t][0] !== b) continue; const need = want[t][1], why = R.canMobilize(0, city, t), k = R.mobBlock(0, city, t);
       if (lv >= need && t !== 'para') ok(why === '', `${b} ${lv}: ${t} can be mobilized`, why);
-      else if (lv < need) ok(k && k.kind === 'bld' && k.b === b && k.l === need && (b === 'fac' ? why === `Needs Army Base level ${need}` : need > 1 ? why === `Needs ${R.BUILD[b].name} ${['', 'I', 'II', 'III', 'IV', 'V'][need]}` : /^Build an? /.test(why)), `${b} ${lv}: ${t} says it needs ${b} ${need}`, why); } }
+      else if (lv < need) ok(k && k.kind === 'bld' && k.b === b && k.l === need && (b === 'fac' || need > 1 ? why === `Needs ${R.BUILD[b].name} ${ROM[need]}` : /^Build an? /.test(why)), `${b} ${lv}: ${t} says it needs ${b} ${need}`, why); } }
+  // the wording (owner 2026-11-27, point 4): Roman numerals on every base, like the Airbase and the Naval Yard; never "level 2"
+  B.fac = B.air = B.yard = 0; ok(R.canMobilize(0, city, 'inf') === 'Needs Army Base I', 'no Army Base: infantry says "Needs Army Base I"', R.canMobilize(0, city, 'inf'));
+  B.fac = 1; ok(R.canMobilize(0, city, 'tank') === 'Needs Army Base II' && R.canMobilize(0, city, 'ifv') === 'Needs Army Base II', 'Army Base I: tanks and IFVs say "Needs Army Base II"', [R.canMobilize(0, city, 'tank'), R.canMobilize(0, city, 'ifv')]);
+  B.fac = 2; ok(R.canMobilize(0, city, 'sam') === 'Needs Army Base III', 'Army Base II: Mobile SAMs say "Needs Army Base III"', R.canMobilize(0, city, 'sam'));
+  B.yard = 1; ok(R.canMobilize(0, city, 'sub') === 'Needs Naval Yard III' && R.canMobilize(0, city, 'crui') === 'Needs Naval Yard III' && R.canMobilize(0, city, 'carr') === 'Needs Naval Yard V' && R.canMobilize(0, city, 'frig') === '', 'Naval Yard I: frigates train, submarines and cruisers say "Needs Naval Yard III", carriers "Needs Naval Yard V"', ['sub', 'crui', 'carr', 'frig'].map(t => R.canMobilize(0, city, t)));
+  B.yard = 0; ok(/^Build a Naval Yard first$/.test(R.canMobilize(0, city, 'frig')), 'no Naval Yard: a frigate says to build one', R.canMobilize(0, city, 'frig'));
+  { let lvl = []; for (const b of ['fac', 'air', 'yard']) for (let lv = 0; lv <= 5; lv++){ B.fac = B.air = B.yard = 0; B[b] = lv; for (const t of R.UT){ const w = R.canMobilize(0, city, t); if (/level \d/.test(w)) lvl.push(w); } }
+    ok(!lvl.length, 'no reason anywhere says "level 1/2/3" any more', [...new Set(lvl)]); }
   B.fac = 2; B.air = 0; ok(/^Build an Airbase first$/.test(R.canMobilize(0, city, 'para')), 'Paratroopers at Army Base II without an Airbase: build one', R.canMobilize(0, city, 'para'));
   B.air = 1; ok(R.canMobilize(0, city, 'para') === '', 'and with an Airbase I they train');
   // the building texts: every level's units, the speed of IV and V
@@ -50,7 +66,8 @@ const SLOTS = {rcn:['fac', 1], maa:['fac', 2], mdef:['fac', 5]};   // marked slo
     && /Level III: Rocket Artillery, Mobile SAM, Special Forces, Mobile Jammer/.test(D) && /Level IV: no new units; units train 10% faster here/.test(D) && /Level V: no new units; units train 20% faster here/.test(D) && !/Anti-Tank/.test(D), 'the Army Base text lists every level', D);
   ok(/Level I: Recon UAV, Attack Helicopter, Air Superiority Fighter, Interceptor/.test(A) && /Level II: Strike Fighter, Strike Drone/.test(A) && /Level III: Maritime Patrol Aircraft, AWACS, Heavy Bomber/.test(A)
     && /Level IV: no new units; units train 10% faster/.test(A) && /Level V: Stealth Bomber; units train 20% faster/.test(A), 'the Airbase text lists every level', A);
-  ok(/Level I: Frigate, Attack Submarine/.test(Y) && /Level II: Cruiser, Aircraft Carrier/.test(Y) && /Level IV: no new units; units train 10% faster/.test(Y), 'the Naval Yard text (unlocks unchanged, IV and V faster)', Y);
+  ok(/Level I: Frigate\. /.test(Y) && /Level II: no new units\. /.test(Y) && /Level III: Cruiser, Attack Submarine\. /.test(Y) && /Level IV: no new units; units train 10% faster/.test(Y) && /Level V: Aircraft Carrier; units train 20% faster/.test(Y)
+    && !/Corvette|Destroyer|Ballistic/.test(Y), 'the Naval Yard text lists every level (round 2), the marked slots left out', Y);
   ok(!/Anti-Tank/.test(R.BUILD.rec.desc) && /Unlocks no units/.test(R.BUILD.rec.desc), 'the Recruiting Office text names no Anti-Tank Infantry', R.BUILD.rec.desc); }
 
 // ---- 2. build speed, max levels, research days and prices
@@ -137,7 +154,45 @@ const SLOTS = {rcn:['fac', 1], maa:['fac', 2], mdef:['fac', 5]};   // marked slo
   ok(F[2] + F[3] >= 40, 'Army Bases II and III stand (the capitals first)', F);
   ok(A[2] + A[3] >= 5, 'Airbases II stand', A);
   ok((built.tank || 0) >= 50 && (built.jet || 0) >= 3 && !built.at, 'tanks and strike fighters are built, Anti-Tank Infantry never', built);
-  ok(S.nations.filter(N => N.alive).every(N => S.bld[N.capital].fac >= 1), 'every living nation has an Army Base in its capital'); }
+  ok(S.nations.filter(N => N.alive).every(N => S.bld[N.capital].fac >= 1), 'every living nation has an Army Base in its capital');
+  // ---- 7. the same world on to day 30, with 3 wars provoked on days 20 and 25 (neighbours, as .test/ai-wars.js does): the Naval Yard
+  let x = 12345; const rnd = () => ((x = (x*1664525 + 1013904223) >>> 0)/4294967296);
+  const provoke = k => { const pairs = new Set(); for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (o < 0 || G.P[p].sea) continue; for (const v of G.P[p].nbs){ const q = S.owner[v]; if (q >= 0 && q !== o && !G.P[v].sea) pairs.add(o < q ? o + ',' + q : q + ',' + o); } }
+    const L = [...pairs].sort().map(t => t.split(',').map(Number)).filter(([a, b]) => S.nations[a].alive && S.nations[b].alive && !R.atWar(a, b)); for (let i = 0; i < k && L.length; i++){ const [a, b] = L.splice(Math.floor(rnd()*L.length), 1)[0]; api.declareWar(a, b); } };
+  const sh = {frig:0, sub:0, crui:0, carr:0}, low = [];
+  for (let h = 20*24; h < 30*24; h++){ if (h === 20*24 || h === 25*24) provoke(3); api.tick();
+    for (let p = 0; p < S.queue.length; p++) for (const it of S.queue[p]) if (!it.msl && !seen.has(it)){ seen.add(it); if (it.t in sh){ sh[it.t]++; const y = S.bld[p].yard || 0; if (y < R.BASE_LV.yard[it.t]) low.push([it.t, p, y]); } } }
+  const Y = lv('yard'), coast = S.nations.filter(N => N.alive && G.P.filter(P => S.owner[P.id] === N.id && P.city && R.navalCity(P.id)).length >= 3), best = n => Math.max(0, ...G.P.filter(P => S.owner[P.id] === n && P.city).map(P => S.bld[P.id].yard || 0));
+  const sea = S.nations.filter(N => N.alive && R.warsOf(N.id).length && G.P.filter(P => S.owner[P.id] === N.id && P.city && R.navalCity(P.id)).length >= 2);
+  ok(Y[3] + Y[4] + Y[5] >= 8, 'Naval Yards III stand by day 30 (cruisers and submarines)', Y);
+  ok(coast.filter(N => best(N.id) >= 2).length >= coast.length/4, 'a quarter or more of the coastal powers have their main yard at II or higher, on the way to III', [coast.filter(N => best(N.id) >= 2).length, coast.length]);
+  { const sy = sea.filter(N => best(N.id) >= 1), going = N => best(N.id) >= 3 || (N.ySave && N.ySave.until > S.hour) || G.P.some(P => S.owner[P.id] === N.id && S.cons[P.id] && S.cons[P.id].k === 'yard');
+    ok(sy.length >= 3 && sy.every(going), 'every nation at war with a coast and a yard has a yard III, or is building or saving for the next level', sy.map(N => [N.name, best(N.id), N.ySave])); }
+  ok(sh.sub + sh.crui >= 3 && sh.frig >= 40, 'submarines and cruisers are built (days 20-30), frigates still plenty', sh);
+  ok(!low.length, 'no ship is ever queued in a yard below its level', low.slice(0, 5)); }
 
-console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: build requirements, build speed, Anti-Tank Infantry removed, old saves, the computer`);
+// ---- 6. an old save with ships queued in a yard that is now too low (made by master: .test/yard-oldsave-make.js)
+{ const FIX = path.join(__dirname, 'fixtures', 'yard-oldsave.json'), old = fs.readFileSync(FIX, 'utf8'), O = JSON.parse(old), me = O.nations.findIndex(N => N.ai === false);
+  const A = O.queue.findIndex(q => Array.isArray(q) && q.some(it => it.t === 'crui')), B = O.queue.findIndex(q => Array.isArray(q) && q.some(it => it.t === 'sub'));
+  ok(O.yl == null && A >= 0 && B >= 0 && O.bld[A].yard === 2 && O.bld[B].yard === 1 && O.queue[A].map(it => it.t).join() === 'crui,carr', 'the fixture is a master save: a Cruiser and a Carrier queued at Naval Yard II, a Submarine at Naval Yard I', {A, B, qA:O.queue[A], qB:O.queue[B]});
+  const ships = o => { const c = {frig:0, sub:0, crui:0, carr:0}; for (const a of o.armies) if (a.owner === me) for (const t in c) c[t] += (a.u && a.u[t]) || 0; return c; };
+  const R = load(), api = R.IM.api; ok(api.restore(JSON.parse(old)) !== false, 'the old save loads'); const S = R.S;
+  ok(S.yl === 1, 'it is marked as read under the new levels');
+  ok(JSON.stringify(ships(S)) === JSON.stringify(ships(O)), 'every ship at sea stays', [ships(S), ships(O)]);
+  ok(JSON.stringify(S.queue[A]) === JSON.stringify(O.queue[A]) && JSON.stringify(S.queue[B]) === JSON.stringify(O.queue[B]), 'the queues are as they were (nothing dropped, refunded or retimed)', [S.queue[A], S.queue[B]]);
+  ok(S.bld[A].yard === 2 && S.bld[B].yard === 1, 'the yards keep their levels');
+  ok(R.canMobilize(me, A, 'crui') === 'Needs Naval Yard III' && R.canMobilize(me, A, 'carr') === 'Needs Naval Yard V' && R.canMobilize(me, B, 'sub') === 'Needs Naval Yard III' && R.canMobilize(me, B, 'frig') === '', 'a new order needs the new level (frigates still train at I)', [R.canMobilize(me, A, 'crui'), R.canMobilize(me, A, 'carr'), R.canMobilize(me, B, 'sub')]);
+  const told = d => (d.log || []).filter(e => /New Naval Yard levels/.test(e.text || ''));
+  { const L = told(R.desk(me)); ok(L.length === 1 && /Frigate at level I, Cruiser and Attack Submarine at level III, Aircraft Carrier at level V/.test(L[0].text) && /The 3 ships already in training in a yard now too low for them finish as queued/.test(L[0].text) && /A repeat order of such ships pauses/.test(L[0].text) && /ships at sea stay/.test(L[0].text), 'the seat is told once: the new levels, the 3 ships finish as queued, the repeat order pauses', L.map(e => e.text)); }
+  ok(S.nations.every((N, i) => i === me || !told(R.desk(i)).length), 'no other nation is told');
+  // play until all three are out: they finish as queued
+  const s0 = ships(S); let err = null; try { for (let h = 0; h < 200; h++) api.tick(); } catch (e){ err = e.message; }
+  const s1 = ships(S); ok(!err, 'the save plays on', err);
+  ok(s1.crui === s0.crui + 1 && s1.carr === s0.carr + 1 && s1.sub >= s0.sub + 1, 'the Cruiser, the Carrier and the Submarine came out of their yards (II and I)', [s0, s1]);
+  ok(!S.queue[B].some(it => it.t === 'sub'), 'the repeat order queued no new Submarine at Naval Yard I', S.queue[B]);
+  ok((R.desk(me).log || []).some(e => /Repeat production paused in .*needs Naval Yard III for Attack Submarine/.test(e.text || '')), 'the repeat order paused and said why', (R.desk(me).log || []).filter(e => /Repeat/.test(e.text || '')).map(e => e.text));
+  const js = api.saveJSON(), R2 = load(); ok(R2.IM.api.restore(JSON.parse(js)) !== false && told(R2.desk(me)).length === 1, 'saved and loaded again: told once, not twice');
+  const R3 = load(); R3.IM.api.useScenario('world64'); R3.IM.api.newGame(12345, 0, [0]); ok(R3.S.yl === 1 && !told(R3.desk(0)).length, 'a new game is made under the new levels (nothing to tell)'); }
+
+console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: build requirements (the Naval Yard of round 2 included), build speed, Anti-Tank Infantry removed, old saves, the computer`);
 process.exit(bad ? 1 : 0);
