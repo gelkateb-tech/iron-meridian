@@ -137,6 +137,15 @@ const mslQueued = (p, k) => S.queue[p].reduce((c, it) => c + (it.msl && it.t ===
 const mslStored = (p, k) => { const m = S.mstock && S.mstock[p], v = (m && m[k]) || 0; return v > 0 && MSL_WMD[k] && m.wo !== S.owner[p] ? 0 : v; };
 const mslHeld = (p, k) => mslStored(p, k) + mslQueued(p, k);
 const mslNation = (n, k) => ownedBy(n).reduce((c, p) => c + mslHeld(p, k), 0);
+// nation n's stored missiles of kind k (held), how many of them stand where they can launch now (up: a silo kind in a working silo, a cruise
+// missile with a working launcher) and, when none can, the hours until the first knocked-out launcher that holds them works again (h; 0: none
+// will, the silo is gone). The missile strip reads "Damaged" for a kind with held > 0 and up 0
+const mslUp = (n, k) => { const M0 = MISSILES[k]; let held = 0, up = 0, h = 0;
+  for (const p of ownedBy(n)){ const v = mslStored(p, k); if (!v) continue; held += v; const sl = S.bld[p].silo || 0;
+    if (M0.silo && !sl) continue;
+    if (!mslDown(p)){ up += v; continue; }
+    const t = sl ? bdisH(p, 'silo') : bdisH(p); if (t > 0 && (!h || t < h)) h = t; }
+  return {held, up, h:up ? 0 : h}; };
 // why nation n cannot start missile k in city p, resources aside ('' when it can)
 function mslWhy(n, p, k){ const M0 = MISSILES[k], W = MSL_WMD[k]; if (!M0) return 'Unknown missile';
   if (S.owner[p] !== n) return 'Not your city';

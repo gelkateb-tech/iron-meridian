@@ -140,9 +140,11 @@ function aiMissiles(n){ let FP = null;
    The computer plays by the same rules (AI-1) with a strict doctrine, so that a computer game does not become a gas war: it builds them only at
    war (one chemical missile a silo, one nuclear missile in all, never with under $250M left), fires a chemical missile only at an enemy-held province
    where enemy forces of 8 units and power 80 stand or will stand within 6 hours (forces on the move counted: IMP-8), with none of its own there and
-   not twice at one province within 2 days; a nuclear one only in answer to a chemical or nuclear strike on itself or an ally within 7 days, or when
-   desperate (a quarter of its home land lost to that enemy, or enemy forces of 1.5 times its garrison's power in or next to its capital) */
-const AI_CHEM = {units:8, power:80, soon:6, again:48}, AI_NUC = {answer:7*24, lost:0.25, cap:1.5, units:8, power:80}, AI_WMD_CASH = 250;
+   not twice at one province within 2 days. A chemical strike on itself or an ally within 7 days is answered with a chemical one (MS1, owner
+   2026-11-27): first at that attacker's forces, from 4 units and power 40. A nuclear one only in answer to a nuclear strike on itself or an ally
+   within 7 days, or when desperate against that enemy: its first capital held by it, half or more of its home cities held by it, or its forces of
+   1.5 times the garrison's power in or next to its capital (the capital about to fall) */
+const AI_CHEM = {units:8, power:80, soon:6, again:48, ansUnits:4, ansPower:40}, AI_NUC = {answer:7*24, cities:0.5, cap:1.5, units:8, power:80}, AI_WMD_CASH = 250;
 // enemy forces of n standing in q, or arriving within `soon` hours: [units, power] by province (enemy-held provinces only; only: those nations' forces)
 function aiFoeMass(n, soon, only){ const M = new Map(), add = (q, b) => { if (!(S.owner[q] >= 0) || !atWar(n, S.owner[q]) || (only && !only.has(b.owner))) return; const e = M.get(q) || {u:0, pw:0, own:false}; e.u += count(b); e.pw += power(b); M.set(q, e); };
   for (const b of S.armies){ if (b.fly || b.air || !count(b)) continue;
@@ -150,23 +152,39 @@ function aiFoeMass(n, soon, only){ const M = new Map(), add = (q, b) => { if (!(
     if (b.owner < 0 || !atWar(n, b.owner)) continue;
     if (b.to === null) add(b.at, b); else if ((1 - b.t)*legH(b) <= soon) add(b.to, b); }
   return M; }
+// the nations that struck n or an ally of n with a missile of kind k within 7 days and are at war with n (the ones an answer is owed)
+function aiStruckBy(n, k){ const s = new Set();
+  for (const e of S.wmd || []) if (e.k === k && S.hour - e.h <= AI_NUC.answer && e.by !== n && (e.on === n || (e.on >= 0 && rel(n, e.on).st === 'ally')) && atWar(n, e.by)) s.add(e.by);
+  return s; }
 function aiChem(n, p){ if (!warsOf(n).length) return; const N = S.nations[n], seen = N.aiChem || (N.aiChem = {}); let best = -1, bs = 0;
-  for (const [q, e] of aiFoeMass(n, AI_CHEM.soon)){ if (e.own || e.u < AI_CHEM.units || e.pw < AI_CHEM.power || S.owner[q] === n || (seen[q] != null && S.hour - seen[q] < AI_CHEM.again)) continue;
+  const free = (q, e) => !e.own && S.owner[q] !== n && !(seen[q] != null && S.hour - seen[q] < AI_CHEM.again);
+  // an answer to a chemical strike (MS1): the attacker's strongest stack in range, from 4 units and power 40
+  const ans = aiStruckBy(n, 'chem');
+  if (ans.size) for (const [q, e] of aiFoeMass(n, AI_CHEM.soon, ans)){ if (!free(q, e) || e.u < AI_CHEM.ansUnits || e.pw < AI_CHEM.ansPower) continue;
+    if (e.pw > bs && missileCheck(n, p, q, 'chem').ok){ bs = e.pw; best = q; } }
+  if (best < 0) for (const [q, e] of aiFoeMass(n, AI_CHEM.soon)){ if (!free(q, e) || e.u < AI_CHEM.units || e.pw < AI_CHEM.power) continue;
     if (e.pw > bs && missileCheck(n, p, q, 'chem').ok){ bs = e.pw; best = q; } }
   for (const q in seen) if (S.hour - seen[q] >= AI_CHEM.again) delete seen[q];
   if (best >= 0 && launchMissile(n, p, best, 'chem')) seen[best] = S.hour; }
-const homeLostTo = (n, e) => { let k = 0, h = 0; for (let p = 0; p < G.P.length; p++) if (S.home[p] === n){ h++; if (S.owner[p] === e) k++; } return h ? k/h : 0; };
-function aiNuc(n, p){ const wars = warsOf(n); if (!wars.length) return; const N = S.nations[n], foes = new Set(), ans = new Set();
-  for (const e of S.wmd || []) if (S.hour - e.h <= AI_NUC.answer && e.by !== n && (e.on === n || (e.on >= 0 && rel(n, e.on).st === 'ally')) && atWar(n, e.by)){ foes.add(e.by); ans.add(e.by); }
-  const cap = N.capital, pp = provPowers(), near = S.owner[cap] === n ? [cap, ...G.P[cap].nbs] : [];
-  const gar = (pp.get(cap) || []).reduce((s0, [o, pw]) => s0 + (o === n ? pw : 0), 0);
-  for (const e of wars){ if (foes.has(e)) continue; let th = 0; for (const q of near) for (const [o, pw] of pp.get(q) || []) if (o === e) th += pw;
-    if (homeLostTo(n, e) >= AI_NUC.lost || (th > 0 && th >= AI_NUC.cap*gar)) foes.add(e); }
+// the share of n's home cities that e holds
+const homeCitiesLostTo = (n, e) => { let k = 0, h = 0; for (let p = 0; p < G.P.length; p++) if (S.home[p] === n && G.P[p].city){ h++; if (S.owner[p] === e) k++; } return h ? k/h : 0; };
+// n is desperate against e (a nuclear missile without an answer to give): e holds n's first capital, or half or more of its home cities, or e's
+// forces of 1.5 times the garrison's power stand in or next to its capital
+function aiDesperate(n, e, pp = provPowers()){ const N = S.nations[n], cap = N.capital;
+  if (N.cap0 != null && S.owner[N.cap0] === e) return true;
+  if (homeCitiesLostTo(n, e) >= AI_NUC.cities) return true;
+  if (S.owner[cap] !== n) return false;
+  const gar = (pp.get(cap) || []).reduce((s0, [o, pw]) => s0 + (o === n ? pw : 0), 0); let th = 0;
+  for (const q of [cap, ...G.P[cap].nbs]) for (const [o, pw] of pp.get(q) || []) if (o === e) th += pw;
+  return th > 0 && th >= AI_NUC.cap*gar; }
+function aiNuc(n, p){ const wars = warsOf(n); if (!wars.length) return; const foes = new Set(), ans = aiStruckBy(n, 'nuc');   // (a chemical strike is answered with a chemical one: MS1)
+  for (const e of ans) foes.add(e);
+  const pp = provPowers(); for (const e of wars) if (!foes.has(e) && aiDesperate(n, e, pp)) foes.add(e);
   if (!foes.size) return;
   const clear = q => ![q, ...G.P[q].nbs].some(v => S.armies.some(a => a.owner === n && a.at === v && !a.fly && count(a)));   // none of its own forces there or next door
   let best = -1, bs = 0;
   // in an answer: the attacker's silo city when it is in range (the one the strike came from first, then any of the attacker's)
-  const fromQ = (S.wmd || []).filter(e => ans.has(e.by) && e.f != null && S.hour - e.h <= AI_NUC.answer).map(e => e.f);
+  const fromQ = (S.wmd || []).filter(e => e.k === 'nuc' && ans.has(e.by) && e.f != null && S.hour - e.h <= AI_NUC.answer).map(e => e.f);
   for (const q of fromQ) if (best < 0 && S.bld[q].silo > 0 && ans.has(S.owner[q]) && clear(q) && missileCheck(n, p, q, 'nuc').ok) best = q;
   for (let q = 0; q < G.P.length && best < 0; q++) if (S.bld[q].silo > 0 && ans.has(S.owner[q]) && clear(q) && missileCheck(n, p, q, 'nuc').ok) best = q;
   // otherwise the strongest stack of those enemies, 8 units and power 80 or more (forces arriving within 6 h counted), in an enemy-held province; when
@@ -468,11 +486,18 @@ function aiRecSite(n){ let best = -1, bl = 99;
   return best; }
 // training speed limits the AI in city p: it is at war, the city's queue is full (two or more waiting) and the money for the next level is spare
 function aiRecSlow(n, p){ const l = S.bld[p].rec || 0; return l >= 1 && l < BUILD.rec.max && S.queue[p].length >= 2 && warsOf(n).length > 0 && S.nations[n].cash > buildCost(n, 'rec', l + 1, p).cash + 300; }
+// what a nation at war with Conventional Warhead saves for (MS2, owner 2026-11-27): a Missile Silo while it has none built or building ('silo'),
+// then a first ballistic missile while it holds none, stored or building ('bm'); null otherwise (aiReserve holds the price back from recruiting)
+const aiMslSave = n => { if (!warsOf(n).length || !has(n, 'msl2')) return null; const P = ownedBy(n);
+  if (!P.some(p => S.bld[p].silo > 0 || (S.cons[p] && S.cons[p].k === 'silo'))) return 'silo';
+  return P.some(p => S.bld[p].silo > 0) && !P.some(p => mslHeld(p, 'bm') > 0) ? 'bm' : null; };
+const aiSiloWant = n => aiMslSave(n) === 'silo';
 const aiReserve = (n, k = 'cash') => { const N = S.nations[n], L0 = N.lkSave, U = N.uSave;
   // at war, troops come first: the link project only holds its money back once there is twice that much in the bank
   let r = k === 'cash' && L0 && L0.until > S.hour && !(N.cash < L0.c*2 && warsOf(n).length) ? L0.c : 0;
   if (U && U.until > S.hour && UNITS[U.t]) r += (ucost(n, U.t)[k] || 0) + (k === 'cash' ? 15 : 0);
   if (N.bSave && N.bSave.until > S.hour) r += buildCost(n, 'air', 2)[k] || 0;
+  { const ms = aiMslSave(n); if (ms === 'silo') r += buildCost(n, 'silo', 1)[k] || 0; else if (ms === 'bm' && k === 'cash') r += MISSILES.bm.cost; }   // (MS2: at war, a silo, then a first ballistic missile)
   if (rFree(N) && N.rPick && N.rPick.until > S.hour && RN[N.rPick.id] && rNextLv(n, N.rPick.id) && (N.rPick.save || k === 'rare')) r += rCost(RN[N.rPick.id], rNextLv(n, N.rPick.id))[k] || 0;   // saving for a counter tech (all of it); rare materials always wait for the next research
   return r; };
 // buy what a cost lacks in traded goods (plus a few spare) on the world market, if every price is at most mx times the base and the money covers it all
@@ -501,6 +526,14 @@ const AI_WMDW0 = {msl_chem:0.3, msl_nuc:0.15, chem_long:0.2, cbrn:0.2};
 function aiWmdW(n){ const ws = warsOf(n), mine = natPower(n); let h = 0, lost = 0; for (let p = 0; p < G.P.length; p++) if (S.home[p] === n){ h++; if (S.owner[p] !== n) lost++; }
   return {msl_chem:ws.some(e => natPower(e) >= 1.3*mine) ? 1 : AI_WMDW0.msl_chem, msl_nuc:ws.some(e => has(e, 'msl_nuc')) || (h && lost >= 0.2*h) ? 1 : AI_WMDW0.msl_nuc,
     chem_long:AI_WMDW0.chem_long, cbrn:ws.some(e => (S.nations[e].wmdT && S.nations[e].wmdT.chem != null) || has(e, 'msl_chem')) ? 2 : AI_WMDW0.cbrn}; }
+// Cruise Missiles and Conventional Warhead (the silo, the ballistic missile and the way to the chemical and nuclear ones): 1 each at peace, 20
+// and 30 at war (a fifth to a quarter of a warring nation's science pool each), and at war a pick of them is saved for over three days (aiReserve holds
+// its price back from recruiting), so that some nations at war take up missiles (MS2, owner 2026-11-27: at the old weight 1 no computer nation
+// got a silo in 60 days)
+const AI_MSLW = [{msl1:1, msl2:1}, {msl1:20, msl2:30}];
+// the money over which a city builds a cruise or ballistic missile: $320M at peace; at war the missile's price and $100M more (MS2: a nation at
+// war seldom holds $320M, so before it built none)
+const AI_MSL_CASH = {peace:320, war:100}, aiMslCash = (n, k) => warsOf(n).length ? MISSILES[k].cost + AI_MSL_CASH.war : AI_MSL_CASH.peace;
 function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   const av = rOpenSteps(n); if (!av.length) return;
   const mx = enemyMix(n), H = (S.airHit && S.airHit[n]) || {drone:0, bomb:0, air:0};
@@ -511,7 +544,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   // the weights the projects had before the redesign, carried over to the nodes they became
   const NW = {u_jet:3, u_int:3, jet_pgm:pgm, int_msl:pgm, u_drone:2.5, drone_g2:2, drone_g3:1.5, drone_g4:2, drone_g5:1.5, u_swarm:3, u_sdrone:2.5, u_jam:jamW, jam_band:jamW,
     u_asf:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + awv, u_mpa:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), u_awacs:wr ? 2.2 : 1.5, u_bomb:wr ? (ab2 ? 11 : 8) : 3,
-    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15, ...(NAVAL_CITIES ? {u_mar:ownedBy(n).some(navalCity) ? (wr ? 1.2 : 0.6) : 0.05} : {})};   // (Marines: for a nation with a coast)   // stealth bombers: only late, at war with a power that fields SAM stacks
+    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15, ...AI_MSLW[wr ? 1 : 0], ...(NAVAL_CITIES ? {u_mar:ownedBy(n).some(navalCity) ? (wr ? 1.2 : 0.6) : 0.05} : {})};   // (Marines: for a nation with a coast)   // stealth bombers: only late, at war with a power that fields SAM stacks
   // what the nation fields: units in service and in training, and their money value (the old Mark rule: count x unit price)
   const cnt = {}; let val = 0; for (const a of armiesOf(n)) for (const t of UT) if (a.u[t]) cnt[t] = (cnt[t] || 0) + a.u[t];
   for (const p of ownedBy(n)) for (const it of S.queue[p]) if (!it.msl && UNITS[it.t]) cnt[it.t] = (cnt[it.t] || 0) + rPack(n, it.t);   // (a card is as many units as spawn makes of it)
@@ -550,7 +583,8 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   if (!pick){ pick = roll(pool(want)) || roll(pool(want === 'sci' ? 'eng' : 'sci')); if (!pick){ N.rPick = null; return; }
     // a counter that is badly needed (Air Superiority Fighters) is saved for over four days, a generation of a unit type that makes up a fifth
     // or more of the forces for two: aiReserve holds its price back from recruiting
-    const save = (pick.nd.id === 'u_asf' && awv >= 2.5) || (pick.nd.kind === 'gen' && share(pick.nd.u) >= 0.2) || (pick.nd.id === 'bomb_up' && bombs >= 2);
+    // (and at war, Cruise Missiles and Conventional Warhead for three days: MS2, recruiting at war otherwise eats their price every day)
+    const save = (pick.nd.id === 'u_asf' && awv >= 2.5) || (pick.nd.kind === 'gen' && share(pick.nd.u) >= 0.2) || (pick.nd.id === 'bomb_up' && bombs >= 2) || (wr && pick.nd.id in AI_MSLW[1]);
     N.rPick = {id:pick.nd.id, until:S.hour + (save ? (pick.nd.id === 'u_asf' ? 96 : 72) : 24), save}; }
   if (go(pick)){ N.rPick = null; return; }
   // the pick must wait for its price, but a free slot does not sit idle meanwhile: with both slots free one of them takes a cheaper step (a level
@@ -683,7 +717,8 @@ function aiTurn0(n, N){
   for (const p of ownedBy(n)){
     if (!G.P[p].city) continue;
     if (!S.cons[p]){
-      if (S.bld[p].fort < aiBunkerWant(n, p, N, provs) && (p === N.capital || rng() < 0.25)) build(n, p, 'fort');
+      if (p === N.capital && aiSiloWant(n) && N.cash > buildCost(n, 'silo', 1, p).cash + 20 && canBuildHere(p, 'silo')) build(n, p, 'silo');   // MS2: at war, the silo it saved for comes first
+      else if (S.bld[p].fort < aiBunkerWant(n, p, N, provs) && (p === N.capital || rng() < 0.25)) build(n, p, 'fort');
       else if (INF_NEEDS.includes('rec') && !S.bld[p].rec && N.cash > (p === N.capital ? 40 : 80) && (p === N.capital || rng() < 0.3)) build(n, p, 'rec');   // (INF_NEEDS with 'rec': infantry also needs a Recruiting Office)
       else if (!S.bld[p].fac && (p === N.capital ? N.cash > 40 : N.cash > 110 && (S.bld[p].rec || rng() < 0.15) && aiBases(n) < Math.max(2, Math.ceil(ownedBy(n).filter(p => G.P[p].city).length*AI_BASE_Q)))) build(n, p, 'fac');   // infantry and every ground unit come from an Army Base: the capital first (a capital moved after a loss gets one at once), then about one city in three (they pay nothing), Recruiting Office cities first
       else if ((has(n, 'u_jet') || has(n, 'u_int')) && !S.bld[p].air && N.cash > 140 && ownedBy(n).filter(p => S.bld[p].air).length < 2) build(n, p, 'air');
@@ -697,9 +732,10 @@ function aiTurn0(n, N){
       else if (S.bld[p].air >= 1 && S.bld[p].air < 3 && N.cash > 300 + 120*S.bld[p].air && rng() < 0.2 && armiesOf(n).filter(w => w.air && w.air.base === p && count(w)).length >= 2 && armiesOf(n).some(w => w.air && w.air.base === p && (w.air.wear || 0) > 0.2)) build(n, p, 'air');   // worn wings: faster repairs
       else if ((canGrow || N.cash > 900) && N.cash > 700 && rng() < (N.cash > 1000 ? 0.2 : 0.08)){ const up = ['fac', 'air', 'yard', 'silo'].find(k => S.bld[p][k] > 0 && S.bld[p][k] < BUILD[k].max && (k !== 'silo' || (has(n, 'msl_nuc') && S.bld[p][k] < 2)) && N.cash > buildCost(n, k, S.bld[p][k] + 1, p).cash + 450); if (up) build(n, p, up); }
     }
-    if (S.bld[p].silo && S.queue[p].length < 2 && N.cash > 320 && rng() < 0.25){ const k = has(n, 'msl2') && rng() < 0.4 ? 'bm' : 'cm'; if (mstock(p)[k] < 3) buildMissile(n, p, k); }
+    if (S.bld[p].silo && S.queue[p].length < 2 && aiMslSave(n) === 'bm' && N.cash > MISSILES.bm.cost + 20 && canBuildMissile(n, p, 'bm')) buildMissile(n, p, 'bm');   // MS2: the first ballistic missile it saved for
+    else if (S.bld[p].silo && S.queue[p].length < 2 && N.cash > aiMslCash(n, 'cm') && rng() < 0.25){ const k = has(n, 'msl2') && rng() < 0.4 ? 'bm' : 'cm'; if (mstock(p)[k] < 3 && N.cash > aiMslCash(n, k)) buildMissile(n, p, k); }
     if (S.bld[p].silo && S.queue[p].length < 2) aiWmdBuild(n, p, N);
-    else if (!S.bld[p].silo && S.queue[p].length < 2 && N.cash > 320 && warsOf(n).length && has(n, MISSILES.cm.tech) && mslHost(p) && rng() < 0.1 && mstock(p).cm < MSL_CITY) buildMissile(n, p, 'cm');   // cruise missiles without a silo too (AI-1: owner point 12), at war only
+    else if (!S.bld[p].silo && S.queue[p].length < 2 && warsOf(n).length && N.cash > aiMslCash(n, 'cm') && has(n, MISSILES.cm.tech) && mslHost(p) && rng() < 0.1 && mstock(p).cm < MSL_CITY) buildMissile(n, p, 'cm');   // cruise missiles without a silo too (AI-1: owner point 12), at war only
     if (p === N.capital && S.queue[p].length < 3 && (threatNear(p, n) || enemiesAt(p, n)) && canAfford(n, 'inf')) recruit(n, p, 'inf');   // capital under threat: infantry first, savings or not
     else if (p === N.capital && S.queue[p].length < 2 && warsOf(n).length && canAfford(n, 'inf') && N.cash > 60){ const keep = Math.max(4, Math.min(12, Math.round(units*0.07)));   // at war: keep the garrison topped up
       if (stationaryAt(p).filter(b => b.owner === n && !b.air).reduce((s0, b) => s0 + count(b), 0) + S.queue[p].length < keep) recruit(n, p, 'inf'); }

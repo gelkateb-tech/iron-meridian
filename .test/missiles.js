@@ -9,7 +9,9 @@
 // docs/MISSILES.md 7.3 (mean dice); 7 intercepted: nothing; at peace in flight: self-destructs; a captured city: chemical and nuclear stock
 // destroyed, cruise and ballistic stock passes (Q19); 8 diplomacy: memory, the two opinion lines, allies joining, a computer ally leaving, fallout
 // on a third nation, every seat told, peace refused for 3 days, opinions back after 60 days; 9 the computer: research weights, silo rule, its
-// building and firing rules (scripted); 10 an old save of master 0fb9d76 (silo with Cruise Missiles only, stocks {cm, bm}) loads and plays 5 days.
+// building and firing rules (scripted); 10 an old save of master 0fb9d76 (silo with Cruise Missiles only, stocks {cm, bm}) loads and plays 5 days;
+// 11 polish round 1; 12 polish round 2: MS1 (a chemical strike answered with a chemical one, nuclear only for a nuclear strike or desperation), MS2
+// (Conventional Warhead at war, missiles from $220M at war), mslUp (the strip's "Damaged").
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
@@ -256,7 +258,8 @@ const strike = (k, from, to, n = PL) => { f('missileImpact')({id:S.nid++, owner:
   fresh([PL]); X('interceptChance = () => 0'); grant(DE, 'msl1', 'msl2', 'bm_pow', 'msl_nuc'); api.declareWar(PL, DE); const dn = S.nations[DE].capital; S.bld[dn].silo = 2; const sn = f('mstock')(dn); sn.nuc = 1; sn.wo = DE;
   const pn = G.P.filter(P => !P.sea && S.owner[P.id] === PL && f('hexDist')(G.P[dn].cc, P.cc) <= 80 && P.nbs.every(v => !S.armies.some(a => a.owner === DE && a.at === v)))[0].id; strip(pn); f('addArmy')(PL, pn, {inf:20});
   f('aiNuc')(DE, dn); ok(sn.nuc === 1, 'no nuclear missile without an answer to give or a desperate war');
-  S.wmd = [{by:PL, on:DE, k:'chem', h:S.hour - 10, p:dn}]; f('aiNuc')(DE, dn); ok(sn.nuc === 0 && S.inflight.some(m => m.k === 'nuc' && m.owner === DE), 'in answer to a chemical strike on itself within 7 days');
+  S.wmd = [{by:PL, on:DE, k:'chem', h:S.hour - 10, p:dn}]; f('aiNuc')(DE, dn); ok(sn.nuc === 1, 'not in answer to a chemical strike (MS1: that is answered with a chemical one)');
+  S.wmd = [{by:PL, on:DE, k:'nuc', h:S.hour - 10, p:dn}]; f('aiNuc')(DE, dn); ok(sn.nuc === 0 && S.inflight.some(m => m.k === 'nuc' && m.owner === DE), 'in answer to a nuclear strike on itself within 7 days');
   // research weights
   fresh([]); const w0 = f('aiWmdW')(PL); ok(w0.msl_chem === 0.3 && w0.msl_nuc === 0.15 && w0.chem_long === 0.2 && w0.cbrn === 0.2, 'research weights at peace: 0.3, 0.15, 0.2, 0.2');
   api.declareWar(RU, PL); const w1 = f('aiWmdW')(PL); ok(w1.msl_chem === (f('natPower')(RU) >= 1.3*f('natPower')(PL) ? 1 : 0.3), `Chemical Warhead 1 at war with an army 1.3 times its own (Russia ${Math.round(f('natPower')(RU))} against ${Math.round(f('natPower')(PL))}: ${w1.msl_chem})`);
@@ -310,7 +313,7 @@ const strike = (k, from, to, n = PL) => { f('missileImpact')({id:S.nid++, owner:
   fresh([PL]); X('interceptChance = () => 0'); grant(DE, 'msl1', 'msl2', 'bm_pow', 'msl_nuc'); api.declareWar(PL, DE); const dn2 = S.nations[DE].capital; S.bld[dn2].silo = 2; const sn = f('mstock')(dn2); sn.nuc = 1; sn.wo = DE;
   for (const P of G.P) if (S.owner[P.id] === PL) strip(P.id);
   const pn = G.P.filter(P => !P.sea && S.owner[P.id] === PL && f('hexDist')(G.P[dn2].cc, P.cc) <= 80 && P.nbs.every(v => !S.armies.some(a => a.owner === DE && a.at === v)))[0].id; f('addArmy')(PL, pn, {inf:1});
-  S.wmd = [{by:PL, on:DE, k:'chem', h:S.hour - 10, p:dn2}]; f('aiNuc')(DE, dn2); ok(sn.nuc === 1, 'an answer, but only a 1-unit enemy force in range: no nuclear missile');
+  S.wmd = [{by:PL, on:DE, k:'nuc', h:S.hour - 10, p:dn2}]; f('aiNuc')(DE, dn2); ok(sn.nuc === 1, 'an answer, but only a 1-unit enemy force in range: no nuclear missile');
   strip(pn); f('addArmy')(PL, pn, {inf:12, tank:6}); f('aiNuc')(DE, dn2); ok(sn.nuc === 0, '...one at 18 units of power 80 or more');
   // the computer aims cruise missiles at a column arriving within 4 hours (IMP-8), and builds them in a city with an Army Base (at war)
   fresh([PL]); X('interceptChance = () => 0'); grant(DE, 'msl1'); api.declareWar(PL, DE); const dc2 = S.nations[DE].capital, sc = f('mstock')(dc2); S.bld[dc2].silo = 1; sc.cm = 1;
@@ -319,6 +322,55 @@ const strike = (k, from, to, n = PL) => { f('missileImpact')({id:S.nid++, owner:
     const colm = f('addArmy')(PL, fr, {inf:12, tank:6}); colm.to = tgt.id; colm.t = 0.9; f('aiMissiles')(DE); ok(sc.cm === 0 && S.inflight.some(m => m.k === 'cm' && m.owner === DE && m.to === tgt.id), 'a cruise missile at a column arriving within 4 hours'); }
   fresh([]); rich(DE); grant(DE, 'msl1'); api.declareWar(PL, DE); const hc = G.P.filter(P => P.city && S.owner[P.id] === DE && !S.bld[P.id].silo).map(P => P.id); for (const p of hc){ S.bld[p].fac = Math.max(1, S.bld[p].fac || 0); S.queue[p] = []; }
   for (let i = 0; i < 40; i++) f('aiTurn')(DE); ok(hc.some(p => S.queue[p].some(it => it.msl && it.t === 'cm') || f('mstock')(p).cm > 0), 'at war, the computer builds cruise missiles in an Army Base city without a silo (AI-1)'); }
+
+// ---- 12. polish round 2 (owner 2026-11-27: MS1, MS2, the strip's "Damaged")
+{ // MS1: a chemical strike on a computer nation that holds both kinds is answered with a chemical missile, not a nuclear one; a nuclear strike still
+  // draws a nuclear answer; desperation (its first capital held, half its home cities held, its capital about to fall) still allows one
+  const setup = () => { fresh([PL]); X('interceptChance = () => 0'); grant(DE, 'msl1', 'msl2', 'msl_chem', 'bm_pow', 'msl_nuc'); api.declareWar(PL, DE);
+    const ds = S.nations[DE].capital; S.bld[ds].silo = 2; const st = f('mstock')(ds); st.chem = 1; st.nuc = 1; st.wo = DE;
+    for (const P of G.P) if (S.owner[P.id] === PL) strip(P.id);
+    const ws = siloAt(PL, 'Warsaw', 1);   // (the Polish silo the strike came from: the old rule's nuclear target)
+    const pq = G.P.filter(P => !P.sea && !P.city && S.owner[P.id] === PL && f('hexDist')(G.P[ds].cc, P.cc) <= 60 && P.nbs.every(v => !S.armies.some(a => a.owner === DE && a.at === v)))[0].id;
+    f('addArmy')(PL, pq, {inf:4, tank:2}); return {ds, st, ws, pq}; };
+  const fl = k => (S.inflight || []).filter(m => m.owner === DE && m.k === k);
+  { const {st, pq} = setup(); f('aiMissiles')(DE); ok(st.chem === 1 && !fl('chem').length && !fl('nuc').length, 'no strike to answer: no chemical missile at a 6-unit force, no nuclear one'); }
+  { const {st, ws, pq} = setup(); S.wmd = [{by:PL, on:DE, k:'chem', h:S.hour - 10, p:S.nations[DE].capital, f:ws}]; f('aiMissiles')(DE);
+    ok(fl('chem').length === 1 && fl('chem')[0].to === pq && st.chem === 0, 'MS1: a chemical strike on it: it answers with a chemical missile at the attacker\'s forces (6 units are enough for an answer)');
+    ok(!fl('nuc').length && st.nuc === 1, 'MS1: ...and not with a nuclear one (it holds one; the attacker\'s silo city is in range)');
+    S.hour += 5; f('aiMissiles')(DE); ok(!fl('nuc').length && st.nuc === 1, 'MS1: nor a nuclear one later, while the chemical strike is the only one'); }
+  { const {st, ws} = setup(); S.wmd = [{by:PL, on:DE, k:'nuc', h:S.hour - 10, p:S.nations[DE].capital, f:ws}]; f('aiMissiles')(DE);
+    ok(fl('nuc').length === 1 && fl('nuc')[0].to === ws && st.nuc === 0, 'a nuclear strike on it: a nuclear answer at the attacker\'s silo city, as before'); }
+  { const {st} = setup(); S.wmd = [{by:PL, on:IT, k:'chem', h:S.hour - 10, p:S.nations[IT].capital}]; f('setRel')(DE, IT, 'ally'); f('aiMissiles')(DE);
+    ok(fl('chem').length === 1 && !fl('nuc').length, 'a chemical strike on an ally: answered with a chemical missile too, no nuclear one'); }
+  { setup(); const N = S.nations[DE]; ok(!f('aiDesperate')(DE, PL), 'not desperate at the start of a war');
+    const c0 = N.cap0, o0 = S.owner[c0]; S.owner[c0] = PL; X('ownChanged()'); ok(f('aiDesperate')(DE, PL), 'desperate: its first capital held by the enemy'); S.owner[c0] = o0; X('ownChanged()');
+    const hc = G.P.filter(P => P.city && S.home[P.id] === DE && P.id !== c0).map(P => P.id), half = Math.ceil(G.P.filter(P => P.city && S.home[P.id] === DE).length/2);
+    for (const q of hc.slice(0, half - 1)) S.owner[q] = PL; X('ownChanged()'); ok(!f('aiDesperate')(DE, PL), 'not desperate with under half its home cities lost');
+    S.owner[hc[half - 1]] = PL; X('ownChanged()'); ok(f('aiDesperate')(DE, PL), 'desperate: half its home cities held by the enemy'); }
+  // MS2: Conventional Warhead (and Cruise Missiles) researched readily at war; a silo at war builds missiles from $220M
+  const W = f('AI_MSLW'); ok(W[0].msl1 === 1 && W[0].msl2 === 1 && W[1].msl1 === 20 && W[1].msl2 === 30, 'MS2: research weights 1 / 1 at peace, 20 / 30 at war');
+  const picks = war => { fresh([]); S.hour = 10*24; if (war) api.declareWar(PL, DE); const N = S.nations[DE]; grant(DE, 'msl1'); let k = 0;
+    for (let i = 0; i < 300; i++){ N.research = null; N.research2 = null; N.rPick = null; rich(DE); f('aiResearch')(DE); if ([N.research, N.research2].some(r => r && r.id === 'msl2')) k++; } return k; };
+  const kp = picks(false), kw = picks(true); ok(kw >= 3*Math.max(1, kp) && kw >= 15, `MS2: Conventional Warhead picked ${kw} times in 300 at war, ${kp} at peace`);
+  const mb = war => { fresh([]); grant(DE, 'msl1', 'msl2'); if (war) api.declareWar(PL, DE); const c = S.nations[DE].capital; S.bld[c].silo = 1; let k = 0;
+    for (let i = 0; i < 60; i++){ S.queue[c] = []; rich(DE); S.nations[DE].cash = 260; f('aiTurn')(DE); if (S.queue[c].some(it => it.msl && (it.t === 'cm' || it.t === 'bm'))) k++; } return k; };
+  const mp = mb(false), mw = mb(true); console.log(`MS2 measured: Conventional Warhead started ${kw} times in 300 rolls at war, ${kp} at peace; a silo with $260M builds missiles in ${mw} of 60 turns at war, ${mp} at peace`); ok(mp === 0 && mw > 0, `MS2: with $260M a silo builds cruise or ballistic missiles at war (${mw} turns in 60), not at peace (${mp})`);
+  // MS2: at war with Conventional Warhead and no silo, it saves for one and builds it in its capital before a Bunker; then a first ballistic missile
+  { fresh([]); grant(DE, 'msl1', 'msl2'); const N = S.nations[DE], c = N.capital; S.bld[c].silo = 0; S.bld[c].fac = Math.max(1, S.bld[c].fac); S.cons[c] = null; rich(DE); N.cash = 200;
+    ok(f('aiMslSave')(DE) === null, 'MS2: at peace it saves for nothing');
+    f('aiTurn')(DE); ok(!(S.cons[c] && S.cons[c].k === 'silo') && !S.bld[c].silo, 'MS2: at peace with $200M: no silo (that needs over $260M)');
+    api.declareWar(PL, DE); S.cons[c] = null; N.cash = 100; const r0 = f('aiReserve')(DE); ok(f('aiMslSave')(DE) === 'silo' && r0 >= f('buildCost')(DE, 'silo', 1, c).cash, 'MS2: at war it saves for a silo (reserve ' + Math.round(r0) + ')');
+    rich(DE); N.cash = 200; f('aiTurn')(DE); ok(S.cons[c] && S.cons[c].k === 'silo', 'MS2: at war with $200M: the silo goes up in its capital first');
+    S.cons[c] = null; S.bld[c].silo = 1; S.queue[c] = []; ok(f('aiMslSave')(DE) === 'bm', 'MS2: the silo stands: it saves for a first ballistic missile');
+    N.cash = 200; f('aiTurn')(DE); ok(S.queue[c].some(it => it.msl && it.t === 'bm') && f('aiMslSave')(DE) === null, 'MS2: ...builds it from $160M and saves no more'); }
+  // the strip's "Damaged": mslUp counts the missiles that can launch now
+  fresh(); grant(PL, 'msl1', 'msl2', 'msl_chem'); const w = siloAt(PL, 'Warsaw', 1), M = f('mstock')(w); M.chem = 1; M.bm = 1; M.wo = PL;
+  const kr = G.P.find(P => P.city && S.owner[P.id] === PL && P.id !== w).id; S.bld[kr].silo = 0; S.bld[kr].fac = 1; f('mstock')(kr).cm = 2;
+  let u = f('mslUp')(PL, 'chem'); ok(u.held === 1 && u.up === 1 && u.h === 0, 'mslUp: a chemical missile in a working silo is up');
+  f('knockOut')(w, 'silo', 48); u = f('mslUp')(PL, 'chem'); const ub = f('mslUp')(PL, 'bm'), uc = f('mslUp')(PL, 'cm');
+  ok(u.held === 1 && u.up === 0 && u.h === 48 && ub.up === 0 && uc.up === 2, 'mslUp: the silo knocked out: its chemical and ballistic missiles are down (48 h), the cruise missiles in an Army Base city are not');
+  ok(/knocked out/.test(f('missileCheck')(PL, w, deLand(), 'chem').why), '...and the picker still gives the reason');
+  S.bld[w].silo = 0; u = f('mslUp')(PL, 'chem'); ok(u.held === 1 && u.up === 0 && u.h === 0, 'mslUp: the silo gone: down, no hours'); }
 
 // ---- 10. an old save (master 0fb9d76: a silo built with Cruise Missiles only, stocks {cm, bm})
 { const fx = path.join(__dirname, 'fixtures', 'missiles-oldsave.json');
