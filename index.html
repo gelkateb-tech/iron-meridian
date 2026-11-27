@@ -10616,7 +10616,6 @@ function draw(now){ draw.now = now;
   // capital and big-city names boxed in by stacks, drawn over them so they stay readable
   for (const m of ncLate) ncMark(m);
   if (lateLabs.length){ ctx.textBaseline = 'top'; for (const [L, lx, ly, font] of lateLabs){ if (L.a <= 0.01) continue; ctx.font = font; labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city || L.cap ? 1 : 0.85); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(3,6,8,.92)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city || L.cap ? '#f4eedc' : '#d6d0bf'; ctx.fillText(L.t, lx, ly); } ctx.globalAlpha = 1; ctx.textBaseline = 'middle'; }
-  fightPills(now);   // the fight labels of the counters in battle, over the counters and the names (combat display)
   /*@TEST*/if (window.__dbgBoxes) window.__dbgBoxes = {b:boxes0.map(q => [...q.slice(0, 4), q.unit ? 1 : 0]), core:boxes0.filter(q => q.core).map(q => q.core.map(Math.round)), h:hits.map(h => [h.x, h.y, h.w, h.h]), tag:tagDbg, tagcc:tagDbg && tagDbg.cc, hqg:tagDbg && tagDbg.g, hqd:tagDbg && [tagDbg.th, tagDbg.d, tagDbg.e], tb:null, tba:null,
     pn:pnDbg, lab:labDbg, mk:cityPts.map(m => [m.x, m.y, m.r, m.p].map(Math.round)), cap:S.nations[PLAYER].capital, kl, bbar:[]};/*@ENDTEST*/
   // the selected force: a ring pulses out from its counter (a stronger one right after selecting it)
@@ -10631,6 +10630,7 @@ function draw(now){ draw.now = now;
     for (const list of grp.values()){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkey(a0, pa) + a0.owner);
       const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
       const r = unkPlate(x, y, k, now, hp ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0);   /* (units in cities: a contact on the centre point has its dot on the marker, its plate above the ring) */ hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }   // (its dot on its spot, the plate above)
+  fightPills(now, hits.filter(h => h.unk));   // the fight labels of the counters in battle, over the counters, the names and the '?' contacts, never on one (combat display)
   FXM.PLATECLIP = null; FXM.PLATEBOX = plateBoxes(hits);   // (this frame's plates; the aircraft below are not in it)
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
@@ -12472,13 +12472,18 @@ function statusText(a){
 // ---- the fight readout (combat display, owner 2026-11-27: fights read as in Conflict of Nations): while a force fights, its army bar and its map
 // label say "Fighting" and the enemy force it fights, count down to the next damage round and, after each round, show what each side lost in it.
 // Display only. The rounds are the rules' own battle steps (rules/tick.js battleStep: every 15 game minutes, BATTLE_Q a game hour, so damage
-// already lands on a fixed tick); a round's damage is what a force's health fell by in the step (a._h, set at its start, against effHP after it).
+// already lands on a fixed tick); a round's damage is what a force's health fell by since the round before: the battle step itself and any ranged
+// fire, air strike or missile that hit it between the two (rangedStep, airTick, missileTick run before battleStep sets a._h). Its first round: a._h.
 // Nothing here reads rng() or changes rule state. Fog (P3-01): a foe is named only once the player has identified it (knowA; a battle with your
 // or an ally's force identifies the other side); others are "? Unidentified" (never named, counted or measured); a foe not seen is left out.
-const CBR = new Map();   // the last round of each battle: p -> {k: its step (cbStamp), t: performance.now(), f: Map(force id -> {lost, h0})}; UI only, not saved
+const CBR = new Map();   // the last round of each battle: p -> {k: its step (cbStamp), t: performance.now(), nid: S.nid then, f: Map(force id -> {lost, h0, h1})}; UI only, not saved
 const cbStamp = () => S.hour*BATTLE_Q + (S.q || 0);
-IM.on('fxBattle', (p, owners, sides) => { const f = new Map(); for (const o of owners) for (const a of sides.get(o)){ const h0 = a._h || 0; f.set(a.id, {lost:Math.max(0, h0 - effHP(a)), h0}); }
-  CBR.delete(p); CBR.set(p, {k:cbStamp(), t:performance.now(), f}); if (CBR.size > 300) CBR.delete(CBR.keys().next().value); });
+// each force's health at the end of the round before (h1) is the start of this one, or its health as the step began (a._h) where that is more (a force
+// joined it) or there was no round just before; a side with a force made here since then (a split) starts from a._h too (the health went with it, not to fire)
+IM.on('fxBattle', (p, owners, sides) => { const P0 = CBR.get(p), prev = P0 && P0.k === cbStamp() - 1 ? P0 : null, f = new Map();
+  for (const o of owners){ const split = !!prev && S.armies.some(b => b.owner === o && b.id >= prev.nid && b.at === p);
+    for (const a of sides.get(o)){ const e = prev && !split ? prev.f.get(a.id) : null, h1 = effHP(a), h0 = Math.max(a._h || 0, e ? e.h1 : 0); f.set(a.id, {lost:Math.max(0, h0 - h1), h0, h1}); } }
+  CBR.delete(p); CBR.set(p, {k:cbStamp(), t:performance.now(), nid:S.nid, f}); if (CBR.size > 300) CBR.delete(CBR.keys().next().value); });
 // the foes force a fights (null when it is not fighting): every hostile force at war with it standing in its province that the player sees.
 // main: the strongest identified one (by strength), more: how many others (all unidentified ones count as one, as the map shows them: one '?')
 function fightFoes(a, vis = visibleSet(PLAYER)){
@@ -12495,7 +12500,7 @@ const fightPct = e => { const v = e && e.h0 > 0 ? e.lost/e.h0*100 : 0; return '�
 // round's losses: this force's in health points and as a share (a foreign force's as a share only, as its bar shows its health), the identified foes' as a share
 function fightRowHTML(a, ro){ const F = fightFoes(a); if (!F) return ''; const me = fightLost(a.at, [a]), fo = F.known.length ? fightLost(a.at, F.known) : null, m = F.main;
   const nm = m ? `${m.owner >= 0 ? flagHTML(m.owner, 14) : ''}<b>${armyLabel(m, PLAYER)}</b>` : '<b class="unk">? Unidentified</b>';
-  return `<div class="ab-fight" title="In battle: both sides deal damage every 15 game minutes (a round). The next round is in the time shown; after it, what each side lost in it."><canvas class="ab-sw" aria-hidden="true"></canvas><div class="abf-t">
+  return `<div class="ab-fight" title="In battle: both sides deal damage every 15 game minutes (a round). The next round is in the time shown. Last round: what each side lost since the round before, in the battle and to any artillery, air strike or missile that hit it."><canvas class="ab-sw" aria-hidden="true"></canvas><div class="abf-t">
     <div class="abf-l1"><span class="abf-k">Fighting</span> ${nm}${F.more ? ` <span class="abf-more">+${F.more}</span>` : ''}</div>
     <div class="abf-l2">Next round <b class="ab-tick">${abTickText()}</b>${me ? ` · last round: ${ro ? 'it' : 'this force'} <b class="abf-d">${ro ? fightPct(me) : `−${me.lost < 9.95 ? me.lost.toFixed(1) : Math.round(me.lost)} (${fightPct(me).slice(1)})`}</b>${fo ? ` · enemy <b class="abf-d">${fightPct(fo)}</b>` : ''}` : ''}</div></div></div>`; }
 // the map label of a force in battle: a small dark pill over its counter with the round ring (the share of the round gone) and the countdown; for
@@ -12504,35 +12509,38 @@ function fightRowHTML(a, ro){ const F = fightFoes(a); if (!F) return ''; const m
 // drawn (FPILL), drawn over them and the late names (fightPills)
 const FPILL = [];
 /*@TEST*/const FPDBG = []; if (location.protocol === 'file:') window.__imFight = {pills:FPDBG, foes:id => { const F = fightFoes(armyById(id)); return F && {main:F.main ? F.main.id : null, more:F.more, unk:F.unk, ids:F.all.map(b => b.id)}; }, cbr:p => { const R = CBR.get(p); return R && {k:R.k, now:cbStamp(), f:[...R.f]}; }};/*@ENDTEST*/
-function fightPills(now){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!FPILL.length) return;
+function fightPills(now, unk = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!FPILL.length) return;
   const vis = visibleSet(PLAYER), Q = BATTLE_Q, left = Math.min(1/Q, Math.max(0, ((S.q || 0) + 1)/Q - acc)), done = 1 - left*Q, tt = abTickText(), run = S.speed > 0 && !S.over, mine = o => o === PLAYER || isAlly(PLAYER, o);
   const H = 16, f1 = `700 10.5px ${BODY}`, f0 = `800 9px ${BODY}`, boxes = [], plates = [], ov = (q, b) => q[0] < b[2] + 2 && q[2] > b[0] - 2 && q[1] < b[3] + 1 && q[3] > b[1] - 1, hit = (q, me) => q[0] < 0 || q[2] > cw || boxes.some(b => ov(q, b)) || plates.some(b => b !== me && ov(q, b));   // (labels never cover one another, nor another fighting counter)
-  const cut = t => (t = t.replace(/ Division$/, ' Div.').replace(/ Brigade$/, ' Bde.')).length > 18 ? t.slice(0, 17).trimEnd() + '…' : t;
-  // each label: its force, its foes, what it says; the selected force's first, then yours and your allies' battles, then the rest (the first placed get the spots next to their counters)
+  const cut = t => (t = t.replace(/ Division$/, ' Div.').replace(/ Brigade$/, ' Bde.')).length > 18 ? t.slice(0, 17).trimEnd() + '…' : t, mw = (t, f) => (ctx.font = f, mtw(t, f));   // (mtw measures in the current font: f is only its cache key)
+  // each label: its force, its foes, what it says; the selected force's first, then yours and your allies' battles, then the rest (the first placed get the spots
+  // next to their counters); within each, your own forces first, then your allies', then the others
   const J = []; for (const {c, r, sl, al} of FPILL){ const here = c.list.filter(a => a.at === c.at && a.to === null && count(a) > 0); if (!here.length) continue;
     const lead = here.reduce((b, a) => count(a) > count(b) ? a : b, here[0]), F = fightFoes(lead, vis); if (!F) continue;
-    const full = mine(c.owner) || F.all.some(b => mine(b.owner)) || sl; J.push({c, r, sl, al, here, lead, F, full, pr:sl ? 0 : full ? 1 : 2}); }
-  J.sort((x, y) => x.pr - y.pr); for (const j of J){ j.pb = [j.r.x, j.r.y, j.r.x + j.r.w, j.r.y + j.r.h]; plates.push(j.pb); }
+    const full = mine(c.owner) || F.all.some(b => mine(b.owner)) || sl; J.push({c, r, sl, al, here, lead, F, full, pr:sl ? 0 : full ? 1 : 2, ow:c.owner === PLAYER ? 0 : mine(c.owner) ? 1 : 2}); }
+  J.sort((x, y) => x.pr - y.pr || x.ow - y.ow); for (const j of J){ j.pb = [j.r.x, j.r.y, j.r.x + j.r.w, j.r.y + j.r.h]; plates.push(j.pb); }
+  for (const h of unk) plates.push([h.x, h.y, h.x + h.w, h.y + h.h]);   // (the '?' contacts: no label over one)
   let fade = false; ctx.save(); ctx.textBaseline = 'middle';
   for (const {c, r, sl, al, here, lead, F, full, pr, pb} of J){ if (r.x + r.w < 0 || r.x > cw || r.y + r.h < 0 || r.y > ch) continue;   // (a counter off the screen: no label pulled onto it)
-    const L0 = fightLost(c.at, here); /*@TEST*/if (L0 && (window.__imFight || {}).hold) L0.age = 0;/*@ENDTEST*/ const chip = L0 && L0.age < 2000 && L0.lost > 0.05 ? 'lost ' + fightPct(L0) : '', ca = chip ? (L0.age < 1300 ? 1 : 1 - (L0.age - 1300)/700) : 0; if (chip) fade = true;
-    const cx = r.x + (r.bg ? r.w - r.bg.w - 2 : r.w)/2, up = Math.round(r.y - H - 4), dn = Math.round(r.y + r.h + 7), cW = chip ? (ctx.font = f1, mtw(chip, f1) + 10) : 0;
-    const dims = fl => { const nm = !fl ? '' : F.main ? cut(armyName(F.main)) : '? Unidentified', more = fl && F.more ? ` +${F.more}` : ''; const wK = fl ? mtw('FIGHTING', f0) + 4 : 0, wN = nm ? mtw(nm + more, f1) + 11 : 0;
-      return {fl, nm, more, wK, wN, W:5 + 10 + 4 + wK + wN + mtw(tt, f1) + 6}; };
+    const L0 = fightLost(c.at, here); /*@TEST*/if (L0 && (window.__imFight || {}).hold) L0.age = 0;/*@ENDTEST*/ let chip = L0 && L0.age < 2000 && L0.lost > 0.05 ? 'lost ' + fightPct(L0) : '', ca = chip ? (L0.age < 1300 ? 1 : 1 - (L0.age - 1300)/700) : 0; if (chip) fade = true;
+    const cx = r.x + (r.bg ? r.w - r.bg.w - 2 : r.w)/2, up = Math.round(r.y - H - 4), dn = Math.round(r.y + r.h + 7); let cW = chip ? mw(chip, f1) + 10 : 0;
+    const dims = fl => { const nm = !fl ? '' : F.main ? cut(armyName(F.main)) : '? Unidentified', more = fl && F.more ? ` +${F.more}` : ''; const wK = fl ? mw('FIGHTING', f0) + 4 : 0, wN = nm ? mw(nm + more, f1) + 11 : 0;
+      return {fl, nm, more, wK, wN, W:5 + 10 + 4 + wK + wN + mw(tt, f1) + 6}; };
     // over its counter; where another label stands there, under it (two sides side by side: one over, one under); with no room for the whole
-    // label next to its counter, the ring and the countdown alone (zoomed out, crowded), a row further out at most; still no room: a battle of
-    // others gets none, yours and the selected force's the short one over the counter
-    let D = null, x0 = 0, y0 = up;
-    for (const fl of full ? [true, false] : [false]){ const d = dims(fl), xx = Math.max(2, Math.min(cw - d.W - cW - 5, Math.round(cx - (d.W + (chip ? cW + 3 : 0))/2)));
+    // label next to its counter, the ring and the countdown alone (zoomed out, crowded), a row further out at most, then the same without the round's
+    // chip; still no room: a battle of others gets none, yours and the selected force's the short one (with its chip) over the counter
+    let D = null, x0 = 0, y0 = up; const chip0 = chip, cW0 = cW;
+    for (const [fl, ck] of full ? [[true, 1], [false, 1], [false, 0]] : [[false, 1], [false, 0]]){ if (!ck){ if (!chip0) break; chip = ''; cW = 0; }
+      const d = dims(fl), xx = Math.max(2, Math.min(cw - d.W - cW - 5, Math.round(cx - (d.W + (chip ? cW + 3 : 0))/2)));
       for (const y of fl ? [up, dn] : [up, dn, up - H - 3, dn + H + 3]) if (!hit([xx, y, xx + d.W + cW + 3, y + H], pb)){ D = d; x0 = xx; y0 = y; break; } if (D) break; }
-    if (!D){ if (pr > 1) continue; D = dims(false); x0 = Math.max(2, Math.min(cw - D.W - cW - 5, Math.round(cx - (D.W + (chip ? cW + 3 : 0))/2))); y0 = up; }
+    if (!D){ if (pr > 1) continue; chip = chip0; cW = cW0; D = dims(false); x0 = Math.max(2, Math.min(cw - D.W - cW - 5, Math.round(cx - (D.W + (chip ? cW + 3 : 0))/2))); y0 = up; }
     const W = D.W; boxes.push([x0, y0, x0 + W + cW + 3, y0 + H]);
     const CT = sideT(forceSide(lead)); ctx.globalAlpha = al; roundRect(ctx, x0, y0, W, H, H/2); ctx.fillStyle = 'rgba(16,9,8,.88)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = CT[0]; ctx.stroke();   // (its edge in its side's colour, as its counter)
     const rx = x0 + 5 + 5, ry = y0 + H/2; ctx.beginPath(); ctx.arc(rx, ry, 4.2, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; ctx.stroke();
     ctx.beginPath(); ctx.arc(rx, ry, 4.2, -Math.PI/2, -Math.PI/2 + Math.max(0.05, done)*Math.PI*2); ctx.strokeStyle = '#ff8a7a'; ctx.stroke();
     let tx = x0 + 19; ctx.textAlign = 'left';
     if (D.fl){ ctx.font = f0; ctx.fillStyle = '#ff9a90'; ctx.fillText('FIGHTING', tx, ry + 0.5); tx += D.wK; ctx.font = f1; ctx.fillStyle = F.main ? '#f4efe4' : '#9fd8ff'; ctx.fillText(D.nm, tx, ry + 0.5);
-      if (D.more){ ctx.fillStyle = '#b9aea6'; ctx.fillText(D.more, tx + mtw(D.nm, f1), ry + 0.5); } tx += D.wN; ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(tx - 6, y0 + 4, 1, H - 8); }   // (a thin line between the foe and the countdown)
+      if (D.more){ ctx.fillStyle = '#b9aea6'; ctx.fillText(D.more, tx + mw(D.nm, f1), ry + 0.5); } tx += D.wN; ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(tx - 6, y0 + 4, 1, H - 8); }   // (a thin line between the foe and the countdown)
     ctx.font = f1; ctx.fillStyle = '#ffd9a8'; ctx.fillText(tt, tx, ry + 0.5);
     if (chip){ const kx = x0 + W + 3; ctx.globalAlpha = al*Math.max(0, ca); roundRect(ctx, kx, y0, cW, H, 4); ctx.fillStyle = '#b8302a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,190,180,.8)'; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText(chip, kx + 5, ry + 0.5); }
     /*@TEST*/FPDBG.push({ids:here.map(a => a.id), owner:c.owner, at:c.at, x:x0, y:y0, w:W, h:H, full:D.fl, name:D.nm, more:F.more, time:tt, chip, chipA:+ca.toFixed(2), ring:+done.toFixed(3), plate:[r.x, r.y, r.w, r.h], sel:!!sl});/*@ENDTEST*/ }
@@ -12659,7 +12667,7 @@ let abUnit = null;   // {id, t}: the unit type whose details are open under the 
 const abSpd = a => Math.round((shipsOnly(a) ? seaSpeed(a) : landSpeed(a))*KM_HEX/10)*10;
 // game time to the next battle step (every 15 game minutes), as real seconds at the running speed, or game minutes when paused
 function abTickText(){ const Q = BATTLE_Q; let left = (((S.q || 0) + 1)/Q) - acc; left = Math.min(1/Q, Math.max(0, left));
-  if (S.speed && !S.over){ const sec = left/HOURS_PER_SEC[S.speed]; return sec < 1 ? (1/Q/HOURS_PER_SEC[S.speed] < 1.5 ? '<1 s' : 'now') : Math.ceil(sec) + ' s'; }
+  if (S.speed && !S.over){ const sec = left/HOURS_PER_SEC[S.speed]; return sec < 1 ? (1/Q/HOURS_PER_SEC[S.speed] < 1.5 || sec < 1e-6 ? '<1 s' : '1 s') : Math.ceil(sec) + ' s'; }   // (under a second left: "1 s" until the step runs; "<1 s" at 4x and 8x, a round under 1.5 s, and while the step itself runs)
   return Math.max(1, Math.ceil(left*60 - 1e-6)) + ' min'; }
 function abTickPatch(){ const els = document.querySelectorAll('.ab-tick'); if (!els.length) return; const t = abTickText(); for (const e of els) if (e.textContent !== t) e.textContent = t; }
 // the crossed swords of the map (battleBadge: the one function) on the small canvases of the army bar

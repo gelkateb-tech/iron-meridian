@@ -10,7 +10,10 @@
 //  (L) the map labels of both armies: full ("FIGHTING", the foe's name: yours names theirs, theirs names yours), the countdown, the ring
 //  (D) just after a round: a red chip with each side's loss (−x%) on its label, gone again after about 2 s; the bar's "last round" line with
 //      this force's loss in health points and as a share and the enemy's as a share; the numbers are what each side's health fell by in the round
-//  (C) the countdown and the ring move with the game's time (1x: seconds) and read "N min" while paused; 8x: "<1 s", not a flickering "now"
+//  (C) the countdown and the ring move with the game's time (1x: seconds, down to "1 s", never "now" before the round) and read "N min" while
+//      paused; 8x: "<1 s", not a flickering "now"
+//  (R) the round's loss counts fire that hit the force between two rounds (artillery, air strikes, missiles: before the battle step); a force
+//      split off in the battle is no loss
 //  (U) fog: the foreign force fighting an unidentified one: its bar "Fighting ? Unidentified", never the other's nation or size; its label when
 //      selected "? Unidentified"; no label on the unidentified contact itself; your own label never names it
 //  (E) no console or page error
@@ -71,7 +74,9 @@ const PAGE = process.env.CD_PAGE || path.join(__dirname, 'page.html'); fs.mkdirS
   let s1 = await nextRound(50); ok('setup: both battles are on (started on the hour)', s1.battles.includes(C.A) && s1.battles.includes(C.B), { s1, C });
   await p.evaluate(id => window.__im.selectArmy(id), C.own); await view(ZP, C.cA, dy);
   s1 = await nextRound(300);
-  const P1 = await pills(), b1 = await bar();
+  // (the bar's countdown is refreshed every 180 ms, abTickPatch: read once it has caught up with the pause, 400 ms; held: the chips stay on while it waits)
+  await p.evaluate(() => { window.__imFight.hold = true; }); await p.waitForTimeout(400);
+  const P1 = await pills(), b1 = await bar(); await p.evaluate(() => { window.__imFight.hold = false; });
   shots.push(await shot('panel-after-round'));
   if (!SHOTS){
     ok('(P) your bar: "Fighting" and the enemy army by name', !!b1.fight && /^Fighting/.test(b1.fight) && b1.fight.includes(foeLabel), { b1, foeLabel });
@@ -105,7 +110,17 @@ const PAGE = process.env.CD_PAGE || path.join(__dirname, 'page.html'); fs.mkdirS
     ok('(C) 1x: the label counts down with it and its ring fills', !!q0 && !!q1 && /^\d+ s$/.test(q1.time) && +q1.time.split(' ')[0] < +q0.time.split(' ')[0] && q1.ring > q0.ring, [q0, q1]);
     await p.evaluate(() => { window.__im.S.speed = 4; }); await p.waitForTimeout(700); const f8 = await pills(), b8 = await bar(); await p.evaluate(() => { window.__im.S.speed = 0; });
     const q8 = f8.find(q => q.ids.includes(C.own)); ok('(C) 8x (a round every half second): "<1 s", not "now"', !!q8 && q8.time === '<1 s' && b8.tick === '<1 s', [q8, b8.tick]);
+    // 1x through two rounds, every animation frame: the label's countdown reads 4 s, 3 s, 2 s, 1 s, never "now"
+    const seq = await p.evaluate(async own => { const out = []; window.__im.S.speed = 1; const t0 = performance.now();
+      await new Promise(res => { const f = () => { const q = (window.__imFight.pills || []).find(z => z.ids.includes(own)), e = document.querySelector('.ab-fight .ab-tick'); out.push([q ? q.time : null, e ? e.textContent : null]); if (performance.now() - t0 < 8500) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+      window.__im.S.speed = 0; return out; }, C.own);
+    const tx = new Set(seq.flatMap(v => v).filter(Boolean)); ok('(C) 1x: the countdown runs down to "1 s" and never reads "now"', tx.has('1 s') && tx.has('2 s') && !tx.has('now') && seq.filter(v => v[0] === '<1 s').length < 6, { texts:[...tx], lt1:seq.filter(v => v[0] === '<1 s').length });   // ("<1 s" only for the few frames the hour's own step runs over)
     await p.evaluate(() => window.__im.clearSel()); }
+  // ---- (R) fire between rounds: a hit on your force while the clock is paused (as ranged fire, an air strike or a missile lands before the battle step)
+  if (!SHOTS){ await nextRound(100); const hit = await p.evaluate(id => { const a = window.__im.S.armies.find(q => q.id === id), h = effHP(a); a.w.tank = (a.w.tank || 0) + 6; return h - effHP(a); }, C.own);
+    await nextRound(100); const R2 = await p.evaluate(([o, A]) => new Map(window.__imFight.cbr(A).f).get(o), [C.own, C.A]);
+    ok('(R) the round\'s loss counts the fire that hit your force since the round before', !!R2 && hit > 5.9 && R2.lost >= hit && R2.lost < hit + 15, { hit, R2 });
+  }
   // ---- (U) a fight with an unidentified enemy: the other battle, the identified force selected
   await view(ZU, C.cB, PHONE ? -H*0.2 : 0); await p.waitForTimeout(600);
   await p.evaluate(id => window.__im.selectFoe(id), C.xa); await view(ZU, C.cB, PHONE ? -H*0.2 : 0); await p.waitForTimeout(300);
@@ -118,7 +133,11 @@ const PAGE = process.env.CD_PAGE || path.join(__dirname, 'page.html'); fs.mkdirS
     ok('(U) no label on the unidentified contact', !PU.some(q => q.ids.includes(C.ya)), PU);
     // not selected: another power's battle you only watch gets the ring and the countdown alone
     await p.evaluate(() => window.__im.clearSel()); await p.waitForTimeout(400); const PV = await pills(), pv = PV.find(q => q.ids.includes(C.xa));
-    ok('(U) not selected: a battle of others shows the ring and countdown only', !!pv && !pv.full && pv.name === '', pv); }
+    ok('(U) not selected: a battle of others shows the ring and countdown only', !!pv && !pv.full && pv.name === '', pv || PV); }
+  // ---- (R) a force split off in your battle (last: it changes the scene)
+  if (!SHOTS && !CLIP){ const sp = await p.evaluate(id => { const a = window.__im.S.armies.find(q => q.id === id), h = effHP(a), b = splitArmy(a); return { off: b ? effHP(b) : 0, b: b && b.id, h }; }, C.own);
+    await nextRound(100); const R3 = await p.evaluate(([o, A]) => new Map(window.__imFight.cbr(A).f).get(o), [C.own, C.A]);
+    ok('(R) a force split off in the battle is no loss of the one it left', sp.off > 5 && !!R3 && R3.lost < sp.off/2 && R3.h0 < sp.h - sp.off/2, { sp, R3 }); }
   // ---- a short clip: the fight with the countdown and two rounds (desktop)
   let clip = null;
   if (CLIP){ await p.evaluate(() => window.__im.clearSel()); await view(170, C.cA, 0); await p.evaluate(id => window.__im.selectArmy(id), C.own); await view(170, C.cA, 0); await clean();
