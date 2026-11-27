@@ -6789,9 +6789,9 @@ function bnBox(nm, mir){ const M = BNMETA[nm]; if (!M) return [-0.5, -0.4, 0.5, 
      dock basin under its piers. A town inland has none.
    - Army Base, Bunker and Recruiting Office: among the inner blocks, as near the centre as there is room (the Army Base looks west first,
      the Bunker east); then the Arms Industry, from a third of the radius out (round 3: nearer the core, the town not scattered).
-   - Airbase and Missile Silo: the first open ground past the built-up edge (swept out from half the radius; no dense blocks round the lot
-     nor between it and the town: densE), off every road: open ground.
-   - Round the HQ's lot and its picture its grounds and a ring road's line (rg; cityHqRings): no other lot over it, nor a neighbour's, nor
+   - Airbase and Missile Silo: the first open ground past the built-up edge (swept out from half the radius; the town's blocks covering
+     little round the lot: densE), off every road: open ground.
+   - Round the HQ's lot and the lower part of its picture its grounds and a ring road's line (rg; cityHqRings): no other lot over it, nor a neighbour's, nor
      the Naval Yard's (placed first: the HQ's spot keeps its ring clear of it). Of the line only the stretches a map road takes round the
      HQ are drawn (cityRingArcs), from hex 100 px.
    No lot over a road, a railway or a river where there is any room off them (then a smaller lot, its pictures drawn at 0.85, 0.7, 0.55 or
@@ -6811,7 +6811,9 @@ const BN_LOTRG = 1.2*KM_W, BN_LOTRW = 1.2*KM_W, BN_LOTRR = 6*KM_W;
 // (polish 1 of round 3, look critic: the ring round the whole square read as a frame, a badge round the HQ, and the town's name sat on its
 // bottom line: the ring goes round the HQ's lot and its picture alone, the paved square round the point stays the town's own as in every
 // town, and the ring is only a way round: of its line only the stretches a map road takes round the HQ are drawn (cityRingArcs))
-const cityRingOf = (q, B) => { const g = BN_LOTRG, R = [Math.min(q[0], B[0]) - g, Math.min(q[1], B[1]) - g, Math.max(q[2], B[2]) + g, Math.max(q[3], B[3]) + g]; R.push(Math.min(BN_LOTRR, 0.4*Math.min(R[2] - R[0], R[3] - R[1]))); return R; };
+// (round its lot and the lower part of its picture (to 0.4 of its height above the ground: the roof and the dome stand over the ring's
+// line, a road behind them, as behind any building)
+const cityRingOf = (q, B) => { const g = BN_LOTRG, fr = 0.4, R = [Math.min(q[0], B[0]) - g, Math.min(q[1], q[1] + (B[1] - q[1])*fr) - g, Math.max(q[2], B[2]) + g, Math.max(q[3], B[3]) + g]; R.push(Math.min(BN_LOTRR, 0.4*Math.min(R[2] - R[0], R[3] - R[1]))); return R; };
 const cityRingBox = R => [R[0] - BN_LOTRW, R[1] - BN_LOTRW, R[2] + BN_LOTRW, R[3] + BN_LOTRW];
 // per building: t, how far out (share of the town's radius; 0: as near the centre as there is room), a, the direction looked at first
 // (screen angle: 0 east, -pi/2 north; sec: the open sector between the town's roads instead, 0 the widest), out: the ring past t first
@@ -6899,11 +6901,12 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   const DG = yield* cityDensGrid(p, 48), BD = DG.D.map(v => sstep(0.25, 0.75, v));   // (BD: about the share of the ground its blocks cover)
   const dens = (x, y) => { const u = Math.floor((x/DG.E + 1)*24), v = Math.floor((y/DG.E + 1)*24); return u < 0 || v < 0 || u > 47 || v > 47 ? 0 : BD[v*48 + u]; };
   const densQ = q => { let t = 0; for (const [a, b] of [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) t += dens(q[0] + (q[2] - q[0])*a, q[1] + (q[3] - q[1])*b); return t/5; };
-  // (a field's lot out past the built-up edge: no dense blocks within half its short side round it, nor within its short side towards the
-  // point; look critic, polish 1 of round 3: Riyadh's Airbase in a gap among its blocks, which the lot's middle alone took for open ground)
-  const densE = q => { const w = Math.min(q[2] - q[0], q[3] - q[1]), e = 0.5*w, cx = (q[0] + q[2])/2, cy = (q[1] + q[3])/2, d = Math.hypot(cx, cy) || 1, hr = Math.hypot(q[2] - q[0], q[3] - q[1])/2; let mx = 0;
-    for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) mx = Math.max(mx, dens(q[0] - e + (q[2] - q[0] + 2*e)*i/4, q[1] - e + (q[3] - q[1] + 2*e)*j/4));
-    for (const t of [hr + 0.5*w, hr + w]) mx = Math.max(mx, dens(cx - cx/d*t, cy - cy/d*t)); return mx; };
+  // (a field's lot out past the built-up edge: round it, half its short side out, the town's blocks cover little on the whole (on one side
+  // at most, the town's); look critic, polish 1 of round 3: Riyadh's Airbase in a gap among its blocks, which the lot's middle alone took
+  // for open ground)
+  const densE = q => { const w = Math.min(q[2] - q[0], q[3] - q[1]), e = 0.5*w, x0 = q[0] - e, y0 = q[1] - e, x1 = q[2] + e, y1 = q[3] + e; let t = 0, n = 0;
+    for (let i = 0; i < 4; i++){ const u = i/4; for (const [x, y] of [[x0 + (x1 - x0)*u, y0], [x1, y0 + (y1 - y0)*u], [x1 - (x1 - x0)*u, y1], [x0, y1 - (y1 - y0)*u]]){ t += dens(x, y); n++; } }
+    return t/n; };
   let am = null; { let sx = 0, sy = 0, sw = 0; for (let j = -8; j <= 8; j++) for (let i = -8; i <= 8; i++){ const x = i*r/8, y = j*r/8; if (x*x + y*y > r*r) continue; const w = dens(x, y); sx += w*x; sy += w*y; sw += w; } if (sw > 0 && Math.hypot(sx, sy)/sw > 0.12*r) am = Math.atan2(sy, sx); }
   /*@TEST*/out.am = am;/*@ENDTEST*/ yield;
   // the other towns round it (world px from its point, this town's radius over theirs; their names): a lot stays nearer this town than any
@@ -6951,7 +6954,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
   // the first spot where it fits off the map's lines, else the first on a road (or railway) and the first over a river ([lv 0, 1, 2]: the
   // sweep stops at the first off them); FB: the anchors whose lot would reach another lot, or whose pictures the town's name or the square
   // round its point (boxes, tested before the rest); wide: the overflow, out to 1.5 times the square
-  function* ring(k, pics, m, f, wide, rx, dq = 0, dm = 2, hf = 0, rmx = Infinity){ const R0 = BN_LOTR[k], a0 = R0.sec != null ? sec[Math.min(R0.sec, sec.length - 1)] : am != null && BN_LOTDN[k] ? am + BN_LOTDN[k][1] : R0.a, e = wide ? 1.5*E : E*0.97, Rm = wide ? 1.45*E : Math.min(E*0.92, R0.t*r + Math.max(1.1*r, 2.4*BN_WPX)), t = wide ? Math.min(Math.max(R0.t*r, E*0.6), Rm) : Math.min(R0.t*r, Rm), rl = lotR(pics, m, f), rad = [t], g = BN_LOTG + (dq || dm < 2 || BN_LOTCK[k] ? 0.2*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : 0);   // (polish 1 of round 3, look critic: lots side by side read as one compound; a street and a row of blocks between them again, a fifth of a lot's short side and the street's own gap)   // (among the blocks: a row of the town's blocks kept between it and the next lot; a field out of them: open ground between it and the next lot, no compound of lots side by side)
+  function* ring(k, pics, m, f, wide, rx, dq = 0, dm = 2, hf = 0, rmx = Infinity){ const R0 = BN_LOTR[k], a0 = R0.sec != null ? sec[Math.min(R0.sec, sec.length - 1)] : am != null && BN_LOTDN[k] ? am + BN_LOTDN[k][1] : R0.a, e = wide ? 1.5*E : E*0.97, Rm = wide ? 1.45*E : Math.min(E*0.92, R0.t*r + Math.max(1.1*r, 2.4*BN_WPX)), t = wide ? Math.min(Math.max(R0.t*r, E*0.6), Rm) : Math.min(R0.t*r, Rm), rl = lotR(pics, m, f), rad = [t], g = BN_LOTG + (dq || dm < 2 || BN_LOTCK[k] ? 0.15*Math.min(rl[2] - rl[0], rl[3] - rl[1]) : 0);   // (polish 1 of round 3, look critic: lots side by side read as one compound; a street and a row of blocks between them again, 0.15 of a lot's short side and the street's own gap, and the next lot clear of the lower half of its picture)   // (among the blocks: a row of the town's blocks kept between it and the next lot; a field out of them: open ground between it and the next lot, no compound of lots side by side)
     const FB = (rx > 2 ? placed.filter((b, i) => i < iN0 || i >= iN1) : placed).map(b => [b[0] - g - rl[2], b[1] - g - rl[3], b[2] + g - rl[0], b[3] + g - rl[1]]), br = boxR(pics, m, f); for (const b of nb ? [nb, pt] : [pt]) FB.push([b[0] - br[2], b[1] - br[3], b[2] - br[0], b[3] - br[1]]);   // (the name and the point's square clear of its pictures' whole boxes)
     const sx0 = -e - rl[0], sx1 = e - rl[2], sy0 = -e - rl[1], sy1 = e - rl[3], o = [null, null, null], fld = BN_LOTSTY[k] === 'field', rlk = !!BN_LOTCK[k]; let nc = 0;   // (fld: a field's pictures, the runways, BN_LOTRD clear of every road, off the railways: round 3, Berlin's Airbase across the highway; rlk: the middle's buildings may stand over a railway, which ends at their fence (a siding into the compound, cityLotHoles), never over a road: round 3, the lots nearer the core)
     if (R0.out){ for (let v = t + st; v <= Rm; v += st) rad.push(v); for (let v = t - st; v >= 0; v -= st) rad.push(v); }   // (out first: past the target ring to the edge of the room, only then back in)
@@ -6960,7 +6963,7 @@ function* cityLotsGen(p, P){ const {r, E} = cityR(p), nd = bnNear(p), cw = nd*2.
       for (let i = 0; i < n; i++){ const da = Math.ceil(i/2)*2*Math.PI/n; if (hf && rho > 1e-6 && da > hf) break; const a = a0 + (i & 1 ? -1 : 1)*da, x = Math.cos(a)*rho, y = Math.sin(a)*rho; if (x <= sx0 || x >= sx1 || y <= sy0 || y >= sy1) continue;   // (hf: only so far either side of a0)
         let bad = false; for (const F of FB) if (x > F[0] && x < F[2] && y > F[1] && y < F[3]){ bad = true; break; } if (bad) continue;
         if ((nc += 1) >= 24){ nc = 0; yield; }
-        const q = at(rl, x, y); if ((dq && densQ(q) < dq) || (dm < 2 && (densQ(q) > dm || (fld && densE(q) > 0.5)))) continue; const bq = at(br, x, y), lv = Math.max(lines(q, rlk), (rlk ? RA.rdo(bq) : RA.road(bq)) || (fld && RA.rdo([bq[0] - BN_LOTRD, bq[1] - BN_LOTRD, bq[2] + BN_LOTRD, bq[3] + BN_LOTRD])) ? 1 : 0); if ((lv === 1 && o[1]) || (lv === 2 && (o[1] || o[2]))) continue;   // (dq: among the town's blocks, dm: a field's out of them; every picture's whole box off the map's roads, a road behind a building not under its picture: look critic, polish 1)
+        const q = at(rl, x, y); if ((dq && densQ(q) < dq) || (dm < 2 && (densQ(q) > dm || (fld && densE(q) > 0.35)))) continue; const bq = at(br, x, y), lv = Math.max(lines(q, rlk), (rlk ? RA.rdo(bq) : RA.road(bq)) || (fld && RA.rdo([bq[0] - BN_LOTRD, bq[1] - BN_LOTRD, bq[2] + BN_LOTRD, bq[3] + BN_LOTRD])) ? 1 : 0); if ((lv === 1 && o[1]) || (lv === 2 && (o[1] || o[2]))) continue;   // (dq: among the town's blocks, dm: a field's out of them; every picture's whole box off the map's roads, a road behind a building not under its picture: look critic, polish 1)
         if (k === 'hq' && !(rx >= 2)){ const RB = cityRingBox(cityRingOf(q, bq)); if (placed.some(b => ov(RB, b)) || (nb && ov(RB, nb))) continue; }   // (an HQ off the point too: its ring clear of the lots and names round it)
         nc += 3; if ((rx < 2 && !(rx ? mineR(q) : mine(q))) || !ctry(q) || !ctry([bq[0] - BN_LOTBD, bq[1] - BN_LOTBD, bq[2] + BN_LOTBD, bq[3] + BN_LOTBD]) || wetIn(q) > 0.12) continue;   // (its pictures clear of the border's ribbon)
         nc += 6; if (!dry(pics, x, y, m, f) || (k === 'yard' && wNear && !nearW(x, y))) continue;   // (nc: the work done since the last yield, the footprint tests counted heavier)
