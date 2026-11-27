@@ -1,0 +1,75 @@
+START-ARMIES: the two outer starting stacks of every nation (branch start-armies, rules/state.js startOuter; the same in every seed, mode and seat)
+Rule: the first stack goes to the biggest city outside the capital, the second to the biggest city away from the first: on another side of the capital (at least 60 degrees
+apart as seen from it) or far from the first (at least 3/4 of the capital-to-first distance from both the first and the capital). A city on another nation's land border
+(independent land does not count) or on a highway counts as 50% bigger; ties go to the more populous city. Only cities the capital reaches over its own land count (no exclaves or islands),
+never a city next to the capital or next to the other stack. Fallbacks: cities next to the capital, a second city on the same side, any other city, border provinces, the capital.
+Each stack: 2 infantry now; + 1 recon vehicle once the owner approves it (START_ARMY.recon in rules/data.js). #n = size rank among the nation's other cities; [next to: ...] = the foreign land the city touches (only another nation counts for the weight).
+
+Afghanistan            B  capital Kabul             9 other cities | 1: Kandahar #2 [next to: Pakistan] | 2: Herat #5 [next to: independent/Iran] | 45 deg apart | same side but far from the first (0.89x the capital-first distance)
+Algeria                B  capital Algiers          10 other cities | 1: Oran #1 [highway] | 2: Constantine #2 [highway] | 143 deg apart
+Angola                 C  capital Luanda            9 other cities | 1: Huambo #2 | 2: Dundo #7 [next to: DR Congo] | 67 deg apart
+Argentina              B  capital Buenos Aires     10 other cities | 1: Mendoza #2 [next to: Chile] | 2: Posadas #6 [next to: Brazil/independent] | 99 deg apart
+Australia              B  capital Canberra         10 other cities | 1: Melbourne #1 [highway] | 2: Brisbane #2 | 140 deg apart | cut off from the capital's land: Hobart
+Bangladesh             C  capital Dhaka             7 other cities | 1: Chattogram #2 [next to: India/Myanmar] | 2: Barisal #7 | 60 deg apart | the two are neighbours (fallback)
+Belarus                C  capital Minsk             7 other cities | 1: Vitebsk #3 [next to: Russia] [highway] | 2: Gomel #2 [next to: Russia/Ukraine] | 69 deg apart
+Bolivia                C  capital La Paz            7 other cities | 1: Santa Cruz #1 | 2: Tarija #7 [next to: independent/Argentina] | 39 deg apart | same side but far from the first (0.86x the capital-first distance)
+Brazil                 A  capital Brasília         13 other cities | 1: São Paulo #1 [highway] | 2: Porto Alegre #2 | 21 deg apart | same side but far from the first (0.97x the capital-first distance)
+Cameroon               C  capital Yaoundé           7 other cities | 1: Kumba #3 [next to: Nigeria] | 2: Garoua #4 [next to: Nigeria/Chad/independent] | 97 deg apart
+Canada                 A  capital Ottawa           11 other cities | 1: London #2 [next to: United States] [highway] | 2: Vancouver #4 [next to: United States] [highway] | 36 deg apart | same side but far from the first (6.68x the capital-first distance); cut off from the capital's land: Halifax
+Chad                   C  capital N'Djamena         8 other cities | 1: Abéché #5 [next to: Sudan] | 2: Mao #6 [next to: independent] | 75 deg apart
+Chile                  C  capital Santiago          8 other cities | 1: Talca #4 [next to: Argentina] [highway] | 2: Coquimbo #3 [next to: Argentina] | 159 deg apart
+China                  S  capital Beijing          13 other cities | 1: Guangzhou #1 [highway] | 2: Shenyang #4 [highway] | 123 deg apart
+Colombia               B  capital Bogotá           10 other cities | 1: Barranquilla #2 | 2: Cali #3 | 118 deg apart
+Cuba                   C  capital Havana            7 other cities | 1: Camagüey #1 | 2: Guantánamo #3 | 0 deg apart | same side (fallback)
+DR Congo               B  capital Kinshasa         10 other cities | 1: Lubumbashi #1 [next to: independent] | 2: Kisangani #7 | 54 deg apart | same side but far from the first (0.84x the capital-first distance)
+Ecuador                C  capital Quito             8 other cities | 1: Guayaquil #1 | 2: Macas #8 [next to: Peru] | 60 deg apart
+Egypt                  B  capital Cairo            10 other cities | 1: Mansoura #4 [highway] | 2: Arish #5 [next to: Israel/independent/Saudi Arabia] | 76 deg apart
+Ethiopia               B  capital Addis Ababa      10 other cities | 1: Mekelle #7 [next to: independent/Sudan] | 2: Degehabur #8 [next to: independent] | 89 deg apart
+Finland                C  capital Helsinki          6 other cities | 1: Oulu #3 [next to: Russia] | 2: Rovaniemi #4 [next to: Norway/Russia] | 9 deg apart | the two are neighbours (fallback)
+France                 A  capital Paris            10 other cities | 1: Lyon #1 [next to: independent] [highway] | 2: Metz #4 [next to: Germany] [highway] | 54 deg apart | same side but far from the first (0.87x the capital-first distance); cut off from the capital's land: Cayenne
+Germany                A  capital Berlin           10 other cities | 1: Cologne #1 [next to: independent] [highway] | 2: Munich #5 [next to: independent] [highway] | 56 deg apart | same side but far from the first (0.91x the capital-first distance)
+Greece                 C  capital Athens            7 other cities | 1: Thessaloniki #1 [next to: independent] [highway] | 2: Kavala #3 [next to: independent/Turkey] [highway] | 51 deg apart | same side but far from the first (0.92x the capital-first distance); cut off from the capital's land: Chios, Heraklion
+India                  S  capital New Delhi        13 other cities | 1: Kolkata #1 [next to: Bangladesh] [highway] | 2: Mumbai #2 [highway] | 85 deg apart | cut off from the capital's land: Guwahati
+Indonesia              A  capital Jakarta          12 other cities | 1: Surabaya #2 | 2: Medan #3 | 145 deg apart | cut off from the capital's land: Samarinda, Manado, Makassar, Jayapura, Ambon, Mataram
+Iran                   A  capital Tehran           11 other cities | 1: Isfahan #1 [highway] | 2: Mashhad #2 [next to: independent] | 101 deg apart
+Iraq                   B  capital Baghdad           9 other cities | 1: Mosul #1 [next to: Turkey/Syria] [highway] | 2: Basra #4 [next to: Iran/independent/Saudi Arabia] [highway] | 172 deg apart
+Israel                 C  capital Tel Aviv          6 other cities | 1: Nitzana #5 [next to: independent/Egypt] | 2: Dimona #4 [next to: independent] | 30 deg apart | the two are neighbours (fallback); cut off from the capital's land: Haifa, Tiberias
+Italy                  B  capital Rome             10 other cities | 1: Turin #3 [next to: independent/France] [highway] | 2: Naples #4 [highway] | 169 deg apart | cut off from the capital's land: Cagliari, Palermo
+Japan                  A  capital Tokyo            11 other cities | 1: Osaka #1 [highway] | 2: Sendai #7 [highway] | 113 deg apart | cut off from the capital's land: Sapporo
+Kazakhstan             B  capital Astana            9 other cities | 1: Shymkent #1 [next to: Uzbekistan/independent] [highway] | 2: Aktobe #4 [next to: Russia] | 65 deg apart
+Kenya                  C  capital Nairobi           6 other cities | 1: Mombasa #1 [next to: Tanzania] | 2: Kisumu #4 [next to: independent/Tanzania] | 169 deg apart | next to the capital (fallback: no 2 cities further out)
+Libya                  C  capital Tripoli           7 other cities | 1: Benghazi #1 | 2: Sabha #7 [next to: Algeria] | 89 deg apart
+Malaysia               C  capital Kuala Lumpur      8 other cities | 1: Johor Bahru #1 [next to: Indonesia] [highway] | 2: Alor Setar #2 [next to: Thailand] [highway] | 166 deg apart | cut off from the capital's land: Kota Kinabalu, Sibu
+Mali                   C  capital Bamako            8 other cities | 1: Mopti #4 [next to: independent] | 2: Taoudenni #8 [next to: independent/Algeria] | 39 deg apart | same side but far from the first (1.66x the capital-first distance)
+Mexico                 A  capital Mexico City      11 other cities | 1: Monterrey #4 [next to: United States] [highway] | 2: Guadalajara #1 [highway] | 66 deg apart
+Mongolia               C  capital Ulaanbaatar       6 other cities | 1: Choibalsan #2 [next to: Russia/China] | 2: Ölgii #3 [next to: Russia/China] | 170 deg apart
+Morocco                C  capital Casablanca        9 other cities | 1: Tangier #1 [next to: Spain] [highway] | 2: Oujda #4 [next to: Algeria] [highway] | 68 deg apart
+Mozambique             C  capital Maputo            8 other cities | 1: Nampula #1 | 2: Beira #2 | 15 deg apart | same side (fallback)
+Myanmar                B  capital Yangon            9 other cities | 1: Mandalay #1 [highway] | 2: Myeik #8 [next to: Thailand] | 158 deg apart
+New Zealand            C  capital Wellington        6 other cities | 1: Christchurch #3 | 2: Dunedin #6 | 1 deg apart | next to the capital (fallback: no 2 cities further out); the two are neighbours (fallback); cut off from the capital's land: Auckland, Hamilton, Tauranga, Palmerston North
+Nigeria                A  capital Abuja            11 other cities | 1: Lagos #1 [next to: independent] [highway] | 2: Kaduna #3 | 105 deg apart
+North Korea            C  capital Pyongyang         6 other cities | 1: Chongjin #4 [next to: China/Russia] | 2: Chongju #5 [next to: China] | 66 deg apart
+Norway                 C  capital Oslo              6 other cities | 1: Tromsø #6 [next to: Finland/Sweden] | 2: Kristiansand #5 | 171 deg apart
+Pakistan               A  capital Islamabad        11 other cities | 1: Lahore #1 [next to: India] [highway] | 2: Multan #5 [next to: India] | 55 deg apart | same side but far from the first (1.13x the capital-first distance)
+Peru                   B  capital Lima              9 other cities | 1: Piura #2 [next to: Ecuador] | 2: Arequipa #3 | 165 deg apart
+Philippines            B  capital Manila           10 other cities | 1: Calapan #4 | 2: Baguio #5 | 150 deg apart | cut off from the capital's land: Legazpi, Tacloban, Bacolod, Zamboanga, Davao
+Poland                 B  capital Warsaw            9 other cities | 1: Katowice #1 [next to: independent] [highway] | 2: Wrocław #6 [next to: Germany/independent] [highway] | 32 deg apart | same side but far from the first (0.78x the capital-first distance)
+Romania                C  capital Bucharest         8 other cities | 1: Iași #4 [next to: independent/Ukraine] | 2: Oradea #6 [next to: independent] [highway] | 77 deg apart
+Russia                 S  capital Moscow           13 other cities | 1: Saint Petersburg #1 [next to: Finland] | 2: Rostov #4 [next to: Ukraine] [highway] | 154 deg apart
+Saudi Arabia           B  capital Riyadh            9 other cities | 1: Jeddah #1 [highway] | 2: Tabuk #7 [next to: independent/Egypt] [highway] | 51 deg apart | same side but far from the first (1.16x the capital-first distance)
+South Africa           B  capital Pretoria         10 other cities | 1: Durban #1 [next to: independent] [highway] | 2: Thohoyandou #9 [next to: independent/Mozambique] | 111 deg apart
+South Korea            B  capital Seoul             7 other cities | 1: Busan #1 [highway] | 2: Gwangju #4 [highway] | 30 deg apart | same side (fallback)
+Spain                  B  capital Madrid           10 other cities | 1: Barcelona #1 [highway] | 2: Málaga #3 [next to: Morocco] [highway] | 118 deg apart
+Sudan                  B  capital Khartoum          9 other cities | 1: Port Sudan #6 [next to: Egypt/independent] | 2: Sennar #9 [next to: Ethiopia] | 112 deg apart
+Sweden                 C  capital Stockholm         7 other cities | 1: Jönköping #2 [next to: Norway] [highway] | 2: Luleå #7 [next to: Finland/Norway] | 168 deg apart
+Syria                  C  capital Damascus          7 other cities | 1: Aleppo #1 [next to: Turkey] [highway] | 2: Al-Hasakah #6 [next to: Turkey/Iraq] | 30 deg apart | same side but far from the first (1.00x the capital-first distance)
+Tanzania               B  capital Dar es Salaam    10 other cities | 1: Arusha #2 [next to: Kenya] | 2: Morogoro #1 | 87 deg apart
+Thailand               B  capital Bangkok          10 other cities | 1: Nakhon Ratchasima #4 | 2: Chiang Mai #9 [next to: Myanmar] | 55 deg apart | same side but far from the first (2.22x the capital-first distance); cut off from the capital's land: Trang, Hat Yai
+Turkey                 A  capital Ankara           11 other cities | 1: Istanbul #1 [highway] | 2: Izmir #3 [next to: Greece] [highway] | 37 deg apart | same side but far from the first (0.86x the capital-first distance)
+Ukraine                B  capital Kyiv              9 other cities | 1: Kharkiv #2 [next to: Russia] [highway] | 2: Odessa #4 [next to: independent/Romania] | 101 deg apart
+United Kingdom         A  capital London           10 other cities | 1: Leeds #1 [highway] | 2: Bournemouth #6 [highway] | 79 deg apart | cut off from the capital's land: Belfast
+United States          S  capital Washington       13 other cities | 1: Los Angeles #1 [highway] | 2: New York #2 [highway] | 137 deg apart | cut off from the capital's land: Anchorage
+Uzbekistan             C  capital Tashkent          8 other cities | 1: Nukus #3 [next to: Kazakhstan/independent] | 2: Denau #7 [next to: independent/Afghanistan] | 76 deg apart
+Venezuela              C  capital Caracas           9 other cities | 1: Valencia #1 [highway] | 2: San Cristóbal #7 [next to: Colombia] [highway] | 25 deg apart | same side but far from the first (2.60x the capital-first distance); cut off from the capital's land: Porlamar
+Vietnam                B  capital Hanoi            10 other cities | 1: Biên Hòa #1 | 2: Sơn La #10 [next to: China/independent] | 110 deg apart
+Yemen                  C  capital Sana'a            8 other cities | 1: Aden #2 | 2: Mukalla #6 [next to: Saudi Arabia] | 91 deg apart
