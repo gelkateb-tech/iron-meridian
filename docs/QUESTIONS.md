@@ -340,6 +340,8 @@ So: RB1-RB5 = my defaults (RB5 in its new wording); REBELS merged. M13 = approve
 - RB5. The builder's own calls: sabotage no longer destroys an annexing in progress; ceded land keeps its old home country, but rebels in it lay down their arms (Q27 A); gifted land arrives as the receiver's home land (Q28 B); land bought in a sale arrives annexed (not occupied) unless it was the buyer's own home land; Poland in the europe theatre starts with 2 trade routes, not 4. OK? (yes) [updated 2026-11-26 after the REBELS refresh reconciled Q27/Q28]
 
 ## MISSILES questions, 2026-11-27 (missiles bcb7067, recheck READY after polish 1; sheets in shots/2026-11-27/missiles/; my default in brackets)
+
+**Owner's answer, 2026-11-27: "MS1–MS5: your defaults."** (Code changes for MS1 and MS2 go into MISSILES POLISH 2.)
 - **MS1.** Should the computer answer a chemical strike with a nuclear one (plan 10(a))? In a forced test every chemical strike drew a nuclear answer at the attacker's silo city within hours, and it can escalate. (no: answer chemical with chemical, keep nuclear answers for nuclear strikes or desperation)
 - **MS2.** The computer almost never researches Conventional Warhead, so in normal games it builds and fires no missiles at all (0 nations by day 60). Raise that research priority while at war? (yes)
 - **MS3.** For 3 days after a nuclear launch, the launcher's own peace offers are refused. Right, or should the victim's offers be refused? (launcher's, as built)
