@@ -8678,6 +8678,7 @@ function bdMove(o, dx, dy){ const M = new Map(), B = o.B.map(b => { const r = Ob
 const bdSiteSt = c => { const pf = Math.max(0, Math.min(1, 1 - c.h/Math.max(1, c.h0))); return pf < 1/3 ? 0 : pf < 2/3 ? 1 : 2; };
 // the parts of a town's own open lots for its canvases (cityPlanDraw): {B, G, X, lots (the lots with parts), box (their grounds: no lot tree on them)}
 function bdTownParts(I, P, om){ const p = I.p, out = {B:[], G:[], X:[], lots:new Set(), box:[]}; if (!S || !P.LT) return out; const Ek = I.E/KM_W;
+  const ck = om + '|' + cityGrowSig(p) + bdSig(p); if (P.bdc && P.bdc.k === ck) return P.bdc.o; P.bdc = {k:ck, o:out};   // (the same for each chunk and the night's canvases of the same state: worked out once)
   const B = bldSeen(p, PLAYER), c = S.owner[p] >= 0 ? consSeen(p, PLAYER) : null, hq = bnHqAt(p);
   for (const l of P.LT){ if (!(l.bit & om) || l.nq >= 0 || l.cr || l.st === 'ring' || l.st === 'fc') continue; const k = l.k; let lv = 0, site = -1, st = null;
     if (k === 'hq'){ if (hq < 0) continue; lv = 1; st = bnHqStyle(hq); }
