@@ -13,7 +13,7 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Messages to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule: every message you send me, also save word for word to the shots branch, in a separate top-level folder: messages/<date>/<HH-MM>-<job>.md, one file per message, with the folder names of any pictures it refers to. Keep the picture folders (shots/<date>/<job>/) pictures only. Same 14-day cleanup for both." Done with `python3 -I tools/push-shots.py --msg <date> <HH-MM> <job> <file.md> --pics <folders>` (times UTC), before the message is sent.
 - **New messages never cancel running jobs (owner, 2026-11-19):** a new message from the owner never cancels or replaces a running job unless the owner says "cancel" or "stop" with the job's name. Each new block is extra work added to the queue. If a message seems to change a running job, ask the owner before stopping it. Every job brief quotes the owner's request it comes from, so a worker never mistakes a newer, unrelated message for its own task.
 
-Last updated: 2026-11-27 (owner missiles/Gemini/combat block logged; 5 of 5 running: BUILD-REQS, PINPOINT-3, FIGHTER-ASF, START-ARMIES + recon, CITY LOTS 3; next free slots listed below).
+Last updated: 2026-11-27 (PROVINCE BUILDINGS AND HOSPITALS queued to follow CITY LOTS 3; 5 of 5 running; next free slots listed below).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -32,6 +32,34 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 | **CITY LOTS 3** (2026-11-26; owner verbatim in docs/QUESTIONS.md "second set": roads curve round the HQ square, no visible lot outline, lots closer to the core, Airbase at the edge and off the highway, yard on the water) | on cities-redo c09d832 (A6/A7 done, recheck 2 READY, sheets sent: shots/2026-11-26/city-lots-a6a7/); plus the independent PASTED-ON CHECK on c09d832 (honest yes/partly/no on ground pad, light/angle, detail; an Army Base test picture only if needed, then wait for the owner); at most 2 polish rounds | Opus | cities-redo |
 
 ## Next free slots (in this order)
+
+**FIRST, when CITY LOTS 3 (round 3 and the pasted-on check) has finished, before the list below:** PROVINCE BUILDINGS AND HOSPITALS (Opus; proposals first, one round, then wait; takes the slot city lots frees, as its own job). Owner 2026-11-27, verbatim:
+
+```
+QUEUE THIS: don't start until the city lots job (round 3 and the pasted-on check) has finished. Then run it on its own. Don't cancel or change any running job.
+
+Province buildings and hospitals (proposals first, then wait for my OK; one round only):
+
+1. RULE: a building in a province must never look the same as its city version. Province versions are plainer and lower-key. Add this rule to docs/ART-BIBLE.md.
+
+2. RECRUITING OFFICE: cities only. Remove it from provinces, and tell me what happens to ones already built there.
+
+3. BUNKER:
+- Save the bunker art option sheets from 2026-11-18 (A, B, C, levels 1 and 5, with map previews) to the shots branch so I can pick one.
+- Propose a separate, plainer province Bunker (like sandbags and a dugout) that's different from the city one.
+
+4. CITY HOSPITAL (city building, levels 1–5):
+- Use the 5 hospital pictures we already have.
+- Heals armies in or next to the city faster, more at each level.
+- Add one Hospital lot to the city lots plan. Leave every other lot as it is.
+
+5. FIELD HOSPITAL (any province, levels 1–3):
+- Low-key look: a small tent with a red cross, much plainer than the city Hospital, growing slightly with each level.
+- Heals armies in that province, less than a city Hospital, more at each level.
+
+For the hospitals: propose cost, build time and healing amounts, and how they stack with the healing research. The computer should build them sensibly. Any new pictures: tell me the Gemini cost and wait for my OK. Screenshots on desktop and phone, saved to the shots branch as usual.
+```
+Notes: the 2026-11-18 bunker option sheets are in docs/bunker-options (bunker-art branch). The Hospital lot is added on cities-redo, so this job waits for city lots to finish.
 
 Set 2026-11-27 (owner block above). Each starts when a slot frees up (at most 5 at once):
 1. **UNIT-ART-3 FINISH** (unit-art-3; Opus): the sets that stopped at the floor (AWACS, Stealth Bomber, Marines, the 5 uniques; about $3.6 by the 2026-11-19 estimate, to be re-priced exactly). Cost of each batch to the owner first, run only on the OK. Not merged until the owner has seen it (and the open unit-art-3 decisions stand). Then the RECON VEHICLE pictures once the owner OKs its proposal (start-armies job).
