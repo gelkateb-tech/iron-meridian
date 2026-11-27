@@ -129,9 +129,10 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
 // ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
 // Every nation: its tier's stocks, Fortifications I, an Airbase I with one fighter (startAir) and a Recruiting Office in the capital (no Army Base: level I is cheap and takes 30 minutes, and the
 // computer builds one in its capital on its first turn; infantry trains only where one stands), more
-// offices in its biggest cities, the capital force, 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest
-// neighbour first (no forts: only the capital starts with them), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards).
-// Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
+// offices in its biggest cities, a Naval Yard in the biggest port for coastal nations of tiers S and A, and the starting army of START_ARMY
+// (rules/data.js; owner playtest 2026-11-27): the same for every nation, whatever its tier and the mode: the capital's force, the outer stacks in the
+// cities startOuter picks (each with the recon slot once the recon vehicle exists), and the city garrisons and border guards the table asks for (none
+// today; no forts: only the capital starts with them). Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
 function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L.map(powerStrength), nbs = L.map((_, i) => powerNeighbours(L, i));   // by nation id
   for (const N of S.nations){ const n = N.id, kit = tierKit(N.tier, mode);
     N.cap0 = N.capital;
@@ -141,23 +142,49 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
     for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25)
     S.bld[N.capital].fort = START_FORT;   // only the capital starts with Fortifications, in every tier
-    addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
+    const SA = START_ARMY;
+    addArmy(n, N.capital, startForce(SA.capital));
     startAir(n);   // the capital's Airbase and its fighter wing
-    cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
-    let guards = kit.guards;
-    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
+    const outer = startOuter(n);   // the outer stacks, each with the recon slot (START_ARMY.recon: skipped until the recon vehicle exists)
+    for (const p of outer) addArmy(n, p, startForce(SA.outer, SA.recon));
+    if (SA.cities) for (const P of cities) if (!outer.includes(P.id)) addArmy(n, P.id, startForce(SA.cities));
+    const guards = SA.guards || 0;
+    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port) S.bld[port.id].yard = 1; }
     // border provinces that are not cities, by the neighbour they face: playable neighbours strongest first, then independent land; one guard per neighbour in turn
     const face = new Map();
     for (const P of G.P){ if (S.owner[P.id] !== n || P.city) continue; for (const v of P.nbs){ const o = S.owner[v]; if (G.P[v].sea || o === n || o === SEA) continue; const f = face.get(o) || face.set(o, []).get(o); if (!f.includes(P.id)) f.push(P.id); } }
     const order = [...face.keys()].sort((a, b) => (b < 0 ? -1 : str[b]) - (a < 0 ? -1 : str[a]) || a - b), used = new Set();
     for (const f of face.values()) f.sort((a, b) => popOf(b) - popOf(a) || a - b);
     for (let g = 0, turn = 0, idle = 0; g < guards && order.length && idle < order.length; turn++){ const p = face.get(order[turn % order.length]).find(q => !used.has(q));
-      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, {inf:2}); g++; }
+      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, startForce(SA.guard)); g++; }
   }
   // friends of a shared giant
   const giants = S.nations.map(N => nbs[N.id].filter(k => str[k] > 3*str[N.id]));
   for (const A of S.nations) for (const B of S.nations) if (A.id < B.id && giants[A.id].some(k => giants[B.id].includes(k))){ addMem(A.id, B.id, 25); addMem(B.id, A.id, 25); }
 }
+// a starting force from START_ARMY's entries (rules/data.js), added together; a key that is not a unit (the recon slot's before the unit exists) is left out
+function startForce(...parts){ const u = {}; for (const f of parts) if (f) for (const t in f) if (UNITS[t] && f[t] > 0) u[t] = (u[t] || 0) + f[t]; return u; }
+// the cities of nation n that hold its outer starting stacks (START_ARMY.outerN of them; owner playtest 2026-11-27, the rule's numbers: START_OUTER):
+// the first in its biggest city outside the capital, the second in its biggest city on another side of the capital (at least `apart` degrees from the
+// first as seen from it); a city on a land border or on a highway counts as bigger (x border, x highway). Only cities the capital reaches over the
+// nation's own land count (no exclave, no other island), and none next to the capital or next to an earlier stack.
+// Fallbacks, in turn: cities next to the capital (when fewer than outerN remain), the next-heaviest city not next to an earlier stack, any other
+// eligible city, the nation's most populous border provinces, the capital itself. The same in every game (no dice, not the seat)
+function startOuter(n){ const N = S.nations[n], c = N.capital, k = START_ARMY.outerN || 0, O = START_OUTER, P = G.P; if (k <= 0) return [];
+  const home = new Set([c]), q = [c];
+  for (let h = 0; h < q.length; h++) for (const v of P[q[h]].nbs) if (!home.has(v) && !P[v].sea && S.owner[v] === n){ home.add(v); q.push(v); }
+  const border = p => P[p].nbs.some(v => !P[v].sea && S.owner[v] !== n), hwy = p => [...P[p].lk.values()].some(r => r.r0 >= 3);
+  const brg = p => Math.atan2(P[p].y - P[c].y, P[p].x - P[c].x)*180/Math.PI, gap = (x, y) => { const d = Math.abs(x - y) % 360; return d > 180 ? 360 - d : d; };
+  const all = [...home].filter(p => p !== c && P[p].city);
+  let el = all.filter(p => !P[c].nbs.includes(p)); if (el.length < k) el = all;
+  const w = p => popOf(p)*(border(p) ? O.border : 1)*(hwy(p) ? O.highway : 1), by = (x, y) => w(y) - w(x) || x - y;
+  const picks = [], near = p => picks.some(a => a === p || P[a].nbs.includes(p));
+  while (picks.length < k){ let p = null;
+    if (!picks.length) p = el.slice().sort(by)[0] ?? null;
+    else { p = el.filter(x => !near(x) && picks.every(a => gap(brg(x), brg(a)) >= O.apart)).sort(by)[0] ?? el.filter(x => !near(x)).sort(by)[0] ?? el.filter(x => !picks.includes(x)).sort(by)[0] ?? null; }
+    if (p == null) p = [...home].filter(x => x !== c && !picks.includes(x) && border(x)).sort((x, y) => popOf(y) - popOf(x) || x - y)[0] ?? c;
+    picks.push(p); }
+  return picks; }
 // the opening catch-up by tier: money and manpower a day are brought to the tier's targets by a multiplier on the nation's home provinces (boost
 // for money and goods, boostM for manpower), between the mode's floor and 2.5; a nation already between its target and 10% above is left alone,
 // a richer one is held to 10% above (as far as the floor allows). Conquests are worth the same to everyone.
