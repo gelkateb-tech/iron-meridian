@@ -6831,8 +6831,10 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E
    Motorized Infantry is one rifleman with his transport (units3d.js mApc4, mRifleman: code-drawn, baked to m-mot, m-motr, m-mots): on the move
    he rides in the roof hatch, at rest he stands by the front left wheel, in a battle he kneels at the nose and fires, the roof gun with him.
    Paratroopers and marines are the rifleman alone (a four-frame walk cycle on the move).
-   The figure turns smoothly: it aims at a point 0.7 of its length further along the road or railway it follows (figAhead), so it starts each
-   bend before the corner, and its heading follows a critically damped spring under a turn-rate cap by kind (figTurn). A 3D figure is drawn from
+   The figure turns smoothly: on the move it faces its own way of travel (the drawn spot's velocity), leaning at most 15 degrees toward the road
+   or railway a third of a second ahead (figAhead), so it eases into each bend as it reaches it, never more than 25 degrees off the way it goes
+   (no sliding sideways or backwards round a bend or a hook); its heading follows a critically damped spring under a turn-rate cap by kind
+   (figTurn). A 3D figure is drawn from
    the nearest of its views (32 for the new transport, 16 for the others) turned by the angle left over, so it never snaps.
    Idle: vehicles heave a little and puff a wisp of exhaust every 2-3 s, soldiers shift their weight; moving: the walk cycle, a vehicle's body
    pitches as it sets off and brakes; fighting: the kneeling aim, the muzzle flashes and recoil of the battle fire (BFX). None of it with Low
@@ -6881,12 +6883,19 @@ function figAhead(a, x, y, D){ const W = [];
 // the heading spring: critically damped (w 8/s) toward the wanted heading, its turn rate capped by kind (rad/s; times the square root of the game
 // speed, at most twice, so a fast game never leaves the figure a whole bend behind). Tracked vehicles may pivot in place
 const FIG_TURN = {foot:4, wheel:2.5, track:2, ship:0.7}, FIGT = new Map();
+// on the move: the lead into a bend looks FIG_LEAD_T s of travel ahead (at most FIG_LEAD_MAX of the model's length), leans at most FIG_LEAN
+// toward it, and the drawn heading, once more than FIG_DEV off the real way of travel (the drawn spot's velocity), turns back at up to 1.5 times its turn rate
+const FIG_LEAD_T = 0.35, FIG_LEAD_MAX = 0.3, FIG_LEAN = 0.26, FIG_DEV = 0.44, FIGV = new Map();
+// the way of travel: the drawn spot's velocity, smoothed over about 0.2 s (a seam's one-frame step never turns the figure)
+function figVel(id, m, now){ let E = FIGV.get(id); if (!E || E.S !== S || now - E.t > 500){ E = {vx:m.vx, vy:m.vy, t:now, S}; FIGV.set(id, E); if (FIGV.size > 3000) FIGV.clear(); return E; }
+  const k = 1 - Math.exp(-Math.max(0, Math.min(100, now - E.t))/200); E.vx += (m.vx - E.vx)*k; E.vy += (m.vy - E.vy)*k; E.t = now; return E; }
 const figKind = t => TM_CLS(t) === 's' ? 'ship' : TM_FOOT.has(t) ? 'foot' : t === 'tank' || t === 'ifv' ? 'track' : 'wheel';
-function figTurn(id, want, now, t){ let E = FIGT.get(id);
+function figTurn(id, want, now, t, td){ let E = FIGT.get(id);
   if (!E || E.S !== S || now - E.t > 1500 || !isFinite(E.a)){ E = {a:want, v:0, t:now, S}; FIGT.set(id, E); if (FIGT.size > 3000) FIGT.clear(); return want; }
   const dt = Math.min(0.1, Math.max(0, (now - E.t)/1000)); E.t = now; if (!(dt > 0)) return E.a;
   const sp = S.speed ? Math.min(2, Math.sqrt(HOURS_PER_SEC[S.speed]/HOURS_PER_SEC[1])) : 1, cap = FIG_TURN[figKind(t)]*sp, w = 8, d = Math.atan2(Math.sin(want - E.a), Math.cos(want - E.a));
   E.v += (w*w*d - 2*w*E.v)*dt; E.v = Math.max(-cap, Math.min(cap, E.v)); E.a += E.v*dt; E.a = Math.atan2(Math.sin(E.a), Math.cos(E.a));
+  if (td != null){ const e = Math.atan2(Math.sin(E.a - td), Math.cos(E.a - td)); if (Math.abs(e) > FIG_DEV){ const k = Math.min(1, (Math.abs(e) - FIG_DEV)/0.17), st = -Math.sign(e)*E.v*dt, r = Math.max(0, cap*(1 + 0.5*k)*dt - Math.max(0, st)); E.a += -Math.sign(e)*Math.min(r, Math.abs(e) - FIG_DEV*0.9); E.v = -Math.sign(e)*cap; } }   // on the move, more than FIG_DEV off its way of travel: it turns back toward it at its full rate, up to 1.5 times it when further off (never a snap)
   if (Math.abs(d) < 2e-3 && Math.abs(E.v) < 2e-3){ E.a = want; E.v = 0; } else animFast(); return E.a; }
 // the view of a model for a heading: its nearest baked direction and the angle left over (drawn turned by it)
 function figCell(t, ang){ const M = U3D.mapMeta(t), n = (M && M.dirs) || 16, st = Math.PI*2/n, d = ((Math.round(ang/st) % n) + n) % n; return [d, Math.atan2(Math.sin(ang - d*st), Math.cos(ang - d*st)), (M && M.frames) || 1]; }
@@ -6897,9 +6906,16 @@ function figDraw(t, ci, x, y, s, lut, now, alpha, rot){ const L = tmLevel(t, s*d
     ctx.globalAlpha = ga; }
   const b = E.L.bb[ci] || E.L.bb[0]; return {box:[x + (b[0] - E.L.ox)*k, y + (b[1] - E.L.oy)*k, x + (b[2] - E.L.ox)*k, y + (b[3] - E.L.oy)*k], lvl:E.L.lvl}; }
 // the rifleman beside his transport (not on the move): where he stands (css px from the vehicle's ground origin, its view squashed like the
-// sheets), at which scale, and whether he is behind the hull (drawn before it). fight: kneeling at the nose; else standing by the front left wheel
-function figMan(ang, s, fight){ const f = fight ? 3.7 : 1.75, l = fight ? -0.75 : -1.8, ca = Math.cos(ang), sa = Math.sin(ang), dx = (f*ca - l*sa)*s, dy = (f*sa + l*ca)*s*TM_SIN_EL;
-  return {dx, dy, s:s*FIG_MAN, back:dy < 0}; }
+// sheets), at which scale, and whether he is behind the hull (drawn before it). On the side of the hull nearer the camera, so the hull never
+// hides him and the smoke rising behind it never buries him, and clear of the force's position dot (the vehicle's ground origin), which his
+// height would otherwise cover: in a fight kneeling at the near front corner (or beside the hull when it faces away), at rest standing by
+// the near side's front wheel. Each figure keeps its spot until another is clearly better (FIGMN), so he never hops while it turns a little
+const FIG_MANP = {fight:[[2.6, 1.9], [2.6, -1.9], [0.6, 2.4], [0.6, -2.4]], rest:[[1.4, 2.4], [1.4, -2.4], [-1.4, 2.4], [-1.4, -2.4]]}, FIGMN = new Map();
+function figMan(ang, s, fight, id){ const P = FIG_MANP[fight ? 'fight' : 'rest'], ca = Math.cos(ang), sa = Math.sin(ang), at = q => [(q[0]*ca - q[1]*sa), (q[0]*sa + q[1]*ca)*TM_SIN_EL];
+  const sc = i => { const [x, y] = at(P[i]); return y + 0.5*Math.abs(x) + 0.12*P[i][0]; }, key = id + (fight ? 'f' : 'r');
+  let bi = 0; for (let i = 1; i < P.length; i++) if (sc(i) > sc(bi)) bi = i;
+  const E = FIGMN.get(key); if (E != null && E !== bi && sc(E) > sc(bi) - 0.3) bi = E; FIGMN.set(key, bi); if (FIGMN.size > 2000) FIGMN.clear();
+  const [x, y] = at(P[bi]); return {dx:x*s, dy:y*s, s:s*FIG_MAN, back:y < 0}; }
 // the per-figure motion state (walk phase, body pitch, the exhaust's next wisp)
 const FIGA = new Map();
 function figAnim(id, now){ let E = FIGA.get(id); if (!E){ E = {ph:0, pt:now, pv:0, pitch:0, wisp:now + 800 + ((parseInt(id, 10) || 0) % 7)*300}; FIGA.set(id, E); if (FIGA.size > 600) FIGA.delete(FIGA.keys().next().value); } return E; }
@@ -6938,7 +6954,7 @@ function figQ(q, lut, now, nightK, clBox){ const c = q.c, ua = unitAnim(c.list, 
   let r = null, man = null;
   if (q.art){ const a0 = q.ang; q.ang += rot; ctx.globalAlpha = q.a; if (tmArtDraw(q, nightK)) r = {box:q.box, lvl:'art'}; ctx.globalAlpha = 1; q.ang = a0; }
   else { const t = q.t === 'mot' && mv ? 'motr' : q.t, [d0, rr, nf] = figCell(t, q.ang), ci = d0*nf + Math.min(nf - 1, fr);
-    if (q.t === 'mot' && !mv){ man = figMan(q.ang, q.s, fight); man.x = q.x + man.dx; man.y = q.y + man.dy; const [md, mr, mf] = figCell('mots', q.ang); man.ci = md*mf + (fight ? 5 : 0);
+    if (q.t === 'mot' && !mv){ man = figMan(q.ang, q.s, fight, q.id); man.x = q.x + man.dx; man.y = q.y + man.dy; const [md, mr, mf] = figCell('mots', q.ang); man.ci = md*mf + (fight ? 5 : 0);
       man.rr = mr + (fight || calm ? 0 : 0.026*Math.sin((now/1000 + (q.id % 17)*0.37)*Math.PI*2/3.2)); }
     if (man && man.back) man.r = figDraw('mots', man.ci, man.x, man.y, man.s, lut, now, q.a, man.rr);
     r = figDraw(t, ci, q.x, q.y, q.s, lut, now, q.a, rr + rot);
@@ -6946,7 +6962,7 @@ function figQ(q, lut, now, nightK, clBox){ const c = q.c, ua = unitAnim(c.list, 
     if (r && man && man.r){ const b = man.r.box; r.box = [Math.min(r.box[0], b[0]), Math.min(r.box[1], b[1]), Math.max(r.box[2], b[2]), Math.max(r.box[3], b[3])]; } }
   if (ua && ua.red > 0.02) unitHitMark(q.box[0], q.box[1], q.box[2] - q.box[0], q.box[3] - q.box[1], ua.red*q.a);
   const box = r ? r.box : q.box; if (r && TMBX.length < 200) TMBX.push(box);
-  if (r){ bfxFigure(c, q.t, q.x, q.y, q.ang, q.a, q.art ? {top:true, len:q.art.Lw} : undefined); if (man) bfxFigure(c, 'mots', man.x, man.y, q.ang, q.a, {len:1.8*man.s/view.s}); }   // (the battle fire: the roof gun and the rifleman's rifle)
+  if (r){ bfxFigure(c, q.t, q.x, q.y, q.ang, q.a, q.art ? {top:true, len:q.art.Lw, one:1} : {one:1}); if (man) bfxFigure(c, 'mots', man.x, man.y, q.ang, q.a, {len:1.8*man.s/view.s, one:1, man:1}); }   // (the battle fire: the roof gun and the rifleman's rifle)
   /*@TEST*/if (TMDBG.on){ const [wx, wy] = screenToWorld(q.x, q.y); TMDBG.push({t:q.t, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:+wx.toFixed(3), wy:+wy.toFixed(3), box:box.map(v => +v.toFixed(1)), w:Math.round(box[2] - box[0]), h:Math.round(box[3] - box[1]), d:q.d, fr, lvl:r ? r.lvl : null, art:q.art ? q.art.n : null, a:+q.a.toFixed(3), ang:+q.ang.toFixed(4), man:man ? 1 : 0,
     id:q.id, ids:c.list.map(a => a.id), owner:c.owner, moving:c.moving ? 1 : 0, air:c.air ? 1 : 0, sea:q.sea ? 1 : 0, core:clBox(c).core.map(v => +v.toFixed(1)), tp:[c.x, c.y].map(v => +v.toFixed(1)), spot:q.slot, aw:[+c.wx.toFixed(3), +c.wy.toFixed(3)]}); }/*@ENDTEST*/ }
 // the unidentified contacts' groups (one per province, a moving one each), their spots as the '?' plates stand (the plates' loop reads them back)
@@ -7332,11 +7348,18 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     const foe = !c.air && !c.moving && S.battles.includes(c.at) ? clusters.find(o => o.at === c.at && o !== c && !o.air && !o.moving && o.wx != null && atWar(o.owner, c.owner)) : null;
     let ang = foe ? Math.atan2(foe.wy - c.wy, foe.wx - c.wx) : mS && (c.moving || mS.halt != null) ? mS.hd : TMH.get(lead.id) ?? null;   // in a battle at the enemy; marching (or at rest) the way it went
     if (mS && (c.moving || mS.halt != null) && isFinite(mS.hd)){ TMH.set(lead.id, mS.hd); if (TMH.size > 3000) TMH.clear(); }
-    if (FIG1 && !foe && mS && c.moving){ const L = figAhead(lead, mS.x, mS.y, 0.7*tmRW()*((TMG[want[0]] || [0, 1])[1])); if (L != null) ang = L; }   // (the test: the bearing of the way ahead, so it turns into each bend)
+    let td = null; if (FIG1 && !foe && mS && c.moving){ const sp = Math.hypot(mS.vx, mS.vy), Lw = tmRW()*((TMG[want[0]] || [0, 1])[1]);   // (the test: the figure faces its own way of travel, leaning a little into the bend just ahead)
+      const V = figVel(lead.id, mS, now), vs = Math.hypot(V.vx, V.vy), H = FIGT.get(lead.id);
+      if (vs > Math.max(0.05, 0.25*(mS.vr || 0))){ td = Math.atan2(V.vy, V.vx);
+        const R = figAhead(lead, mS.x, mS.y, 0.02*Lw), rv = Math.atan2(mS.vy, mS.vx);   // (the bearing of the stretch of route it is on, and its unsmoothed way)
+        if (R != null && Math.abs(Math.atan2(Math.sin(rv - R), Math.cos(rv - R))) > 1.75) V.slip = now + 350;
+        if (now < (V.slip || 0)){ td = null; ang = H && H.S === S ? H.a : R ?? ang; }   // (a drawn spot that slips back along its route for a moment, at a seam of the march: it holds its heading a little past it, never swings round or wobbles)
+        else { const L = figAhead(lead, mS.x, mS.y, Math.min(FIG_LEAD_MAX*Lw, sp*FIG_LEAD_T)), e = L == null ? 0 : Math.atan2(Math.sin(L - td), Math.cos(L - td));
+          ang = td + (Math.abs(e) > 1.05 ? 0 : Math.max(-FIG_LEAN, Math.min(FIG_LEAN, e))); } } }   // (a way ahead that doubles back (a hook) is no lead: it faces the way it goes)
     if (ang == null && c.moving){ const B = G.P[lead.path.length && lead.to === null ? lead.path[0] : lead.to ?? lead.at]; if (B && Math.hypot(B.x - c.wx, B.y - c.wy) > 0.2) ang = Math.atan2(B.y - c.wy, B.x - c.wx); }   // ordered off but not yet under way
     if (ang == null || !isFinite(ang)) ang = c.air ? -Math.PI*0.75 + (tmRest(lead.id) - Math.PI/2)*0.5 : tmRest(lead.id);
     if (!foe && !c.moving && !c.air){ const ua = unitAnim(c.list, now, ang); if (ua && ua.face != null) ang = ua.face; }   // (fx.js: a force firing at a target turns smoothly to face it, then back)
-    ang = FIG1 ? figTurn(lead.id, ang, now, want[0]) : tmFaceTurn(lead.id, ang, now); c.run = mS ? mS.run || 0 : 0; c.pv = mS ? Math.hypot(mS.vx, mS.vy)*view.s : 0;   // (the drawn facing turns onto it: a force stopping turns to its rest or to the enemy, never snaps; run: the march look)
+    ang = FIG1 ? figTurn(lead.id, ang, now, want[0], td) : tmFaceTurn(lead.id, ang, now); c.run = mS ? mS.run || 0 : 0; c.pv = mS ? Math.hypot(mS.vx, mS.vy)*view.s : 0;   // (the drawn facing turns onto it: a force stopping turns to its rest or to the enemy, never snaps; run: the march look)
     const F = tmForm(want), d = want.map(t => FIG1 ? figCell(t, ang)[0] : tmDir(lead.id, t, ang, now)), src = want.src || {}, arts = want.map(t => tmOn() ? tmArt(t, src[t], c.owner) : null); let top = Infinity, ys = 0, ny = 0;
     for (let i = 0; i < want.length; i++) if (F.slots[i]){ top = Math.min(top, F.slots[i][1] + (arts[i] ? -tmArtHalf(arts[i], ang)[1] : tmVB(want[i])[FIG1 ? d[i]*((U3D.mapMeta(want[i]) || {}).frames || 1) : d[i]][1])); ys += F.slots[i][1]; ny++; }
     if (!isFinite(top)) top = 0; let E = TMTOP.get(lead.id);
@@ -7371,7 +7394,7 @@ function tmPlan(clusters, hexPx, now){
       const [dx, dy] = tmGlide(c, id, t, F.slots[i], now), s = tmScale(t, hexPx), [x, y] = toScreen(c.wx + dx, c.wy + dy); let box;
       if (A){ const [hx, hy] = tmArtHalf(A, c.form.ang); box = [x - hx*view.s, y - hy*view.s, x + hx*view.s, y + hy*view.s]; }
       else { const k = s/M.ppm, b = M.bb[FIG1 ? d[i]*(M.frames || 1) : d[i]]; box = [x + (b[0] - M.ox)*k, y + (b[1] - M.oy)*k, x + (b[2] - M.ox)*k, y + (b[3] - M.oy)*k];
-        if (FIG1 && t === 'mot' && !c.moving){ const mm = U3D.mapMeta('mots'), fg = S.battles.includes(c.at), mn = figMan(c.form.ang, s, fg), k2 = mn.s/mm.ppm, b2 = mm.bb[figCell('mots', c.form.ang)[0]*(mm.frames || 1) + (fg ? 5 : 0)], X = x + mn.dx, Y = y + mn.dy;   // (the rifleman beside his transport)
+        if (FIG1 && t === 'mot' && !c.moving){ const mm = U3D.mapMeta('mots'), fg = S.battles.includes(c.at), mn = figMan(c.form.ang, s, fg, c.form.id), k2 = mn.s/mm.ppm, b2 = mm.bb[figCell('mots', c.form.ang)[0]*(mm.frames || 1) + (fg ? 5 : 0)], X = x + mn.dx, Y = y + mn.dy;   // (the rifleman beside his transport)
           box = [Math.min(box[0], X + (b2[0] - mm.ox)*k2), Math.min(box[1], Y + (b2[1] - mm.oy)*k2), Math.max(box[2], X + (b2[2] - mm.ox)*k2), Math.max(box[3], Y + (b2[3] - mm.oy)*k2)]; } }
       ents.push({t, d:d[i], s, x, y, box, slot:i, sea:TM_CLS(t) === 's', air:TM_CLS(t) === 'a', art:A || null});
       if (FIG1 && c.form.pv && i === 0){ const pv = c.form.pv, A2 = tmOn() ? tmArt(pv.t, pv.src, c.owner) : null, M2 = U3D.mapMeta(pv.t);   // (the test: the main unit that is fading out, on the same spot)
@@ -10677,6 +10700,8 @@ function draw(now){ draw.now = now;
         if (nb){ for (let i = 0; i < 4; i++) b[i] = nb[i]; lx = b[0] + w0/2; ly = b[1] + 1; } }
       if (L.city || L.cap){ b.city = true; cityNames.push({p:L.p, b}); } if (L.p != null && G.P[L.p]){ const [qx, qy] = toScreen(G.P[L.p].x, G.P[L.p].y); NMLAST.set(L.p, [b[0] - qx, b[1] - qy, b[2] - qx, b[3] - qy]); } boxes.push(b); LPL.set(L.p, b); if (L.cap && L.p === S.nations[PLAYER].capital){ capLab = {x:lx, y:ly, f, w, b}; }   // (NMLAST: the box relative to its province's point)
       { const hid = wfxCover(lx, ly + f/2, w); if (hid > 0) L.a *= 1 - Math.min(1, hid*1.15); }   // (a name under a live blast or cloud fades with it; its place is kept)
+      if (FIG1 && TMBX.length){ const A = Math.max(1, (b[2] - b[0])*(b[3] - b[1])); let o = 0; for (const m of TMBX){ const ox = Math.min(b[2], m[2]) - Math.max(b[0], m[0]), oy = Math.min(b[3], m[3]) - Math.max(b[1], m[1]); if (ox > 0 && oy > 0) o += ox*oy; }
+        if (o > 0) L.a *= Math.max(0.1, 1 - 3*o/A); }   // (the one-figure test: a name a figure passes under fades while it covers the figure; its place is kept, so it never jumps)
       /*@TEST*/if (labDbg) labDbg.push({t:L.t, b:b.slice(0, 4).map(Math.round), late:late ? 1 : 0, a:+L.a.toFixed(3)});/*@ENDTEST*/
       if (late) lateLabs.push([L, lx, ly, ctx.font]);
       else if (L.a > 0.01){ labNight(L, lx, ly); ctx.globalAlpha = L.a*(L.city ? 1 : 0.8); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(3,6,8,.8)'; ctx.strokeText(L.t, lx, ly); ctx.fillStyle = L.city ? '#ece6d4' : '#cfc9b8'; ctx.fillText(L.t, lx, ly); }

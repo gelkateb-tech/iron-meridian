@@ -4,7 +4,9 @@
 //  (O) with ?fig=1 the same army stands as ONE figure, its main unit by the badge's rule (count x hit points: 3 Tanks 42 > 4 Anti-Tank 36), a tank
 //  (M) Motorized Infantry at rest: one transport with its rifleman beside it; on the move: the transport alone (he rides in the hatch)
 //  (H) on the road (Wiesbaden > Karlsruhe, the German road leg with the most bends, clock 2x) the drawn heading turns smoothly: never faster than the
-//      tracked turn-rate cap (2 rad/s x sqrt 2), and it turns through the bends (more than 0.6 rad in all over 6 s); its back-and-forth reversals are reported
+//      tracked turn-rate cap (2 rad/s x sqrt 2), 1.5 times it while catching up with its way of travel (more than 25 degrees off it), and it turns through the bends (more than 0.6 rad in all over 6 s); its back-and-forth reversals are reported
+//  (T) the same road at 1x, hex 240, the view following it: the heading stays within 30 degrees of the figure's way of travel (no stretch over
+//      0.6 s) and never swings more than 120 degrees within 1.5 s
 //  (U) an unidentified tank-led Polish army: no figure of its own type (no troop model for its id) but the neutral figure, its '?' plate lifted over it
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
@@ -35,10 +37,26 @@ const settle = async p => { for (let i = 0; i < 30; i++){ await p.waitForTimeout
   { const I = await p.evaluate(() => { const im = window.__im, S = im.S; S.armies.length = 0; S.battles.length = 0; const a = im.addArmy(0, 631, {tank:3, inf:1}); im.orderMove(a, 632); im.air.visibleSet(); return {id:a.id, x:im.G.P[631].x, y:im.G.P[631].y}; });
     await at(p, I.x, I.y, 150); await settle(p);
     const H = await p.evaluate(id => new Promise(res => { const im = window.__im; im.S.speed = 2; const A = []; const t0 = performance.now(); const f = () => { const E = window.__fig.FIGT.get(id); if (E) A.push([E.a, E.t]); if (performance.now() - t0 < 6000) requestAnimationFrame(f); else { im.S.speed = 0; res(A); } }; requestAnimationFrame(f); }), I.id);
-    // the turn rate never above the tracked cap (2 rad/s, times the square root of the game speed: 2.83 at 2x) and no reversal back and forth (a wobble)
+    // the turn rate never above the tracked cap (2 rad/s, times the square root of the game speed: 2.83 at 2x; 1.5 times it, 4.24, while catching up with its way of travel) and no reversal back and forth (a wobble)
     let mx = 0, tot = 0, rev = 0, pd = 0; for (let i = 1; i < H.length; i++){ const dt = (H[i][1] - H[i - 1][1])/1000; if (!(dt > 0)) continue; const d = Math.atan2(Math.sin(H[i][0] - H[i - 1][0]), Math.cos(H[i][0] - H[i - 1][0])); mx = Math.max(mx, Math.abs(d)/dt); tot += Math.abs(d);
       if (Math.abs(d) > 0.01){ if (pd && Math.sign(d) !== Math.sign(pd)) rev++; pd = d; } }
-    out.H = {frames:H.length, maxRate:+mx.toFixed(2), total:+tot.toFixed(2), reversals:rev}; if (!(H.length > 20) || mx > 2.9 || tot < 0.6) fail('H smooth heading through the bends', out.H); }
+    out.H = {frames:H.length, maxRate:+mx.toFixed(2), total:+tot.toFixed(2), reversals:rev}; if (!(H.length > 20) || mx > 4.3 || tot < 0.6) fail('H smooth heading through the bends', out.H); }
+  // (T) on the same road at 1x and hex 240, the view following it: the drawn heading against the figure's own way of travel (its drawn ground
+  //     point over 0.3 s, while it moves): never more than 30 degrees off for longer than 0.6 s at a stretch (a moment's slip of the drawn spot at
+  //     a seam of the march is held, not turned into), and never a swing of more than 120 degrees within 1.5 s (a sharp bend takes longer)
+  { const I = await p.evaluate(() => { const im = window.__im, S = im.S; S.armies.length = 0; S.battles.length = 0; const a = im.addArmy(0, 631, {tank:3, inf:1}); im.orderMove(a, 632); im.air.visibleSet(); return {id:a.id, x:im.G.P[631].x, y:im.G.P[631].y}; });
+    await at(p, I.x, I.y, 240); await settle(p);
+    const L = await p.evaluate(id => new Promise(res => { const im = window.__im, A = [], t0 = performance.now(); im.S.speed = 1;
+      const f = () => { const t = performance.now(), a = im.S.armies.find(q => q.id === id); if (a){ const pos = im.dispPos(a), r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = 20; v.s = s; v.x = r.width/2 - pos[0]*s; v.y = r.height/2 - pos[1]*s; }
+        const q = window.__fig.TMDBG.find(z => z.ids.includes(id)); if (q) A.push([t - t0, q.wx, q.wy, q.ang]);
+        if (t - t0 < 26000 && a && (a.to !== null || a.path.length)) requestAnimationFrame(f); else { im.S.speed = 0; res(A); } }; requestAnimationFrame(f); }), I.id);
+    let j = 0, run = 0, worstRun = 0, over = 0, n = 0, pt = null; const O = [];
+    for (let i = 0; i < L.length; i++){ while (L[i][0] - L[j][0] > 300) j++; const dt = (L[i][0] - L[j][0])/1000; if (dt < 0.2) continue; const dx = L[i][1] - L[j][1], dy = L[i][2] - L[j][2]; if (Math.hypot(dx, dy)/dt < 0.15){ pt = null; run = 0; continue; }
+      const e = Math.abs(Math.atan2(Math.sin(L[i][3] - Math.atan2(dy, dx)), Math.cos(L[i][3] - Math.atan2(dy, dx)))), st = pt == null ? 0 : (L[i][0] - pt)/1000; pt = L[i][0]; n++; O.push([L[i][0], L[i][3]]);
+      if (e > Math.PI/6){ run += st; over += st; worstRun = Math.max(worstRun, run); } else run = 0; }
+    let swing = 0; for (let i = 0; i < O.length; i++) for (let k = i + 1; k < O.length && O[k][0] - O[i][0] < 1500; k++) swing = Math.max(swing, Math.abs(Math.atan2(Math.sin(O[k][1] - O[i][1]), Math.cos(O[k][1] - O[i][1]))));
+    out.T = {samples:n, over30s:+over.toFixed(2), worstRun30s:+worstRun.toFixed(2), swingDeg:Math.round(swing*180/Math.PI)};
+    if (n < 200 || worstRun > 0.6 || swing > Math.PI*2/3) fail('T heading follows the way of travel', out.T); }
   { const I = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.battles.length = 0; const pol = S.nations.findIndex(q => q.name === 'Poland'), rk = (a, b) => Math.min(a, b) + ',' + Math.max(a, b); S.rel[rk(0, pol)] = {st:'war', since:S.hour, until:null};
       const Po = G.P.find(P => P.cityName === 'Poznań' && !P.sea), U = G.P[Po.nbs.filter(n => !G.P[n].sea && S.owner[n] === pol && !G.P[n].city).sort((m, n) => G.P[n].cells.length - G.P[m].cells.length)[0]] || Po;
       const u = im.addArmy(pol, U.id, {tank:4, inf:1}), ue = im.addArmy(0, U.id, {inf:1}); ue.pos = [U.x + 2.5, U.y + 2.0]; im.air.visibleSet(); return {id:u.id, x:U.x, y:U.y, known:im.intel.knowA(u)}; });

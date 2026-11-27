@@ -721,7 +721,7 @@ function bfxFigure(c, t, x, y, ang, a, o = {}){ const G0 = BFX_GUN[t]; if (!G0 |
   const wpm = o.len ? o.len/((PG.TMG[t] || [8])[0]) : PG.tmWpm(t), [gx, gy] = PG.screenToWorld(x, y), sq = o.top ? 1 : PG.TM_SIN_EL, up = o.top ? 0 : Math.cos(0.82);
   const ca = Math.cos(ang), sa = Math.sin(ang), mx = gx + ca*G0[0]*wpm, my = gy + sa*G0[0]*wpm*sq - G0[1]*wpm*up;
   let M = BFX.pts.get(c.at); if (!M) BFX.pts.set(c.at, M = new Map()); let L = M.get(c.owner); if (!L) M.set(c.owner, L = []);
-  L.push({wx:gx, wy:gy, mx, my, ang, t, k:G0[2], fl:G0[3]*wpm, r:(o.len || PG.tmRW()*((PG.TMG[t] || [0, 1])[1]))*0.5, a, c}); }
+  L.push({wx:gx, wy:gy, mx, my, ang, t, k:G0[2], fl:G0[3]*wpm, r:(o.len || PG.tmRW()*((PG.TMG[t] || [0, 1])[1]))*0.5, a, c, one:o.one ? 1 : 0, man:o.man ? 1 : 0}); }
 // a side's own figures and the figures of everyone it is at war with in that battle
 const bfxOwn = c => { const M = BFX.pts.get(c.at); return M && M.get(c.owner) || null; };
 function bfxFoes(c){ const M = BFX.pts.get(c.at); if (!M) return null; let T = null; for (const [o, L] of M) if (o !== c.owner && atWar(o, c.owner)) T = T ? T.concat(L) : L; return T; }
@@ -736,8 +736,10 @@ function figVolley(c, main, now, F, T){
   const a = c.list[0], seed = a.id % 13, lo = PG.SET.fx !== 'high' || PG.saverOn(), period = (420 + (seed*977 % 420))*(lo ? 2 : 1), cyc = Math.floor((now + seed*131)/period);
   if (lastVolley.get(a.id) === cyc) return false; lastVolley.set(a.id, cyc);
   const want = UNITS[main] && UNITS[main].cls === 'naval' ? 'ship' : BFX_WANT[main], cand = F.filter(f => f.k === want || (want === 'gun' && f.k === 'rocket'));
+  const T1 = T.filter(q => !q.man); if (T1.length) T = T1;   // (the one-figure test: the rifleman beside his transport is no target of his own: the shots fall round the pair)
   const f = (cand.length ? cand : F)[Math.floor(Math.random()*(cand.length || F.length))], k = f.k, tq = T[Math.floor(Math.random()*T.length)];
-  const tgt = (q = tq) => { const th = Math.random()*Math.PI*2, d = q.r*(0.45 + 0.9*Math.random()); return [q.wx + Math.cos(th)*d, q.wy + Math.sin(th)*d*0.7]; };   // round the figure, not on it
+  const tgt = (q = tq) => { if (q.one){ const th = -Math.PI*(0.08 + 0.84*Math.random()), d = q.r*(1.05 + 0.75*Math.random()); return [q.wx + Math.cos(th)*d*1.15, q.wy + Math.sin(th)*d*0.75]; }   // (one figure: on the ground beyond it, so the smoke rises behind it, never over it)
+    const th = Math.random()*Math.PI*2, d = q.r*(0.45 + 0.9*Math.random()); return [q.wx + Math.cos(th)*d, q.wy + Math.sin(th)*d*0.7]; };   // round the figure, not on it
   const A0 = Math.min(1, f.a), dist = Math.hypot(tq.wx - f.mx, tq.wy - f.my), an = Math.atan2(tq.wy - f.my, tq.wx - f.mx), sx = PG.wrapSX(f.mx*PG.view.s + PG.view.x), nt0 = fxNight(f.mx, f.my);
   VOLA = A0; const sh = (kind, to, o) => shoot(kind, [f.mx, f.my], to, Object.assign(o, {ws:true})), sh2 = (kind, to, o) => { const pr = shot2(kind, [f.mx, f.my], to, o); if (pr){ pr.a = A0; pr.ws = true; } return pr; };   // (ws: a figure's shot)
   const fsea = (() => { const q = tgt(); return seaAt(q[0], q[1]); })();
@@ -764,9 +766,11 @@ function bfxHit(wx, wy, kind){ const sea = (() => { const c = worldToCell(wx, wy
   afxBoom(wx, wy, R, false, R); emit('flash', wx, wy, {ws:1, s0:R*1.9, s1:R*0.8, life:140, vx:0, vy:0}); emit('core', wx, wy, {ws:1, s0:R*0.45, s1:R*0.15, life:60, vx:0, vy:0});
   for (let i = 0; i < (kind === 'small' ? 1 : lo ? 2 : 4); i++) emit('fire', wx, wy, {ws:1, vx:(Math.random() - 0.5)*R*5, vy:-(1 + Math.random()*3)*R, s0:R*0.55, s1:R*0.15, life:380 + Math.random()*260});
   if (kind !== 'small') for (let i = 0; i < (lo ? 3 : 6); i++) emit('debris', wx, wy, {ws:1, vx:(Math.random() - 0.5)*R*9, vy:-(3 + Math.random()*6)*R, s0:0.1, s1:0.08, life:600 + Math.random()*400, g:18*R});
-  const nS = kind === 'small' ? 1 : lo ? 1 : kind === 'art' ? 3 : 2;
-  for (let i = 0; i < nS; i++) bsmPuff(wx + (Math.random() - 0.5)*R*0.8, wy + (Math.random() - 0.5)*R*0.4, {delay:80 + i*140, r0:R*0.35, r1:R*(1 + 0.4*Math.random()), dur:2600 + Math.random()*1600, vx:(Math.random() - 0.5)*0.5, vy:-(0.5 + Math.random()*0.6), tone:sea ? 'spray' : 'dark', a:0.85});
-  if (!sea && kind !== 'small'){ bsmPuff(wx, wy + R*0.2, {r0:R*0.5, r1:R*1.6, dur:1900, vx:(Math.random() - 0.5)*0.8, vy:-0.1, tone:'dust', a:0.5, sq:0.5}); if (kind === 'art') afxCrater(wx, wy, 1.3 + 0.5*Math.random()); }}
+  // (the one-figure test: a hit next to a lone figure leaves a thinner, shorter smoke, so a long fight never buries the one model a force has)
+  let one = false; for (const M of BFX.pts.values()){ for (const L of M.values()) for (const q of L) if (q.one && !q.man && Math.hypot(q.wx - wx, (q.wy - wy)/0.75) < q.r*2.4){ one = true; break; } if (one) break; }
+  const nS = kind === 'small' || one ? 1 : lo ? 1 : kind === 'art' ? 3 : 2, ks = one ? 0.7 : 1;
+  for (let i = 0; i < nS; i++) bsmPuff(wx + (Math.random() - 0.5)*R*0.8, wy + (Math.random() - 0.5)*R*0.4, {delay:80 + i*140, r0:R*0.35*ks, r1:R*(1 + 0.4*Math.random())*ks, dur:(2600 + Math.random()*1600)*(one ? 0.6 : 1), vx:(Math.random() - 0.5)*0.5, vy:-(0.5 + Math.random()*0.6), tone:sea ? 'spray' : 'dark', a:one ? 0.6 : 0.85});
+  if (!sea && kind !== 'small'){ bsmPuff(wx, wy + R*0.2, {r0:R*0.5*ks, r1:R*1.6*ks, dur:1900*(one ? 0.6 : 1), vx:(Math.random() - 0.5)*0.8, vy:-0.1, tone:'dust', a:one ? 0.35 : 0.5, sq:0.5}); if (kind === 'art') afxCrater(wx, wy, 1.3 + 0.5*Math.random()); }}
 /* ---- battle smoke and fire (BSM): world-anchored and world-sized, drawn as vector puffs at the current zoom ----
    Every puff is a cluster of round lobes filled in three crisp layers (its shadow side, a lit layer shifted toward the light from the upper
    left, a small highlight), so it has hard, clean edges and is sharp at every zoom (no scaled bitmaps, no blur). A battle's smoke stands in a
