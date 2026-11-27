@@ -1,4 +1,4 @@
-**Missiles is done and READY. The 7 sheets are above, and nothing is merged.** Each sheet shows master (Version 71) on the left and the missiles branch on the right, with the same scene and camera: phone at 440 px, plus desktop rows. The sheets are tall, so the chat shows scaled-down copies. The shots folder has them at 1600 px wide.
+**Missiles is done and READY. The 7 sheets are above, and nothing is merged.** Each sheet shows master (Version 71) on the left and the missiles branch on the right, with the same scene and camera: phone at 440 px, plus desktop rows. The sheets are tall, so the chat shows scaled-down copies of sheets 1, 2, 4 and 7, and sheets 5 and 6 each in 3 parts. The shots folder has every sheet whole, at 1600 px wide, and I can send the full-size originals in a .zip.
 
 Pictures: `shots/2026-11-27/missiles/`
 
