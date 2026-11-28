@@ -142,7 +142,7 @@ function unitStrength(n, t, T){
   const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
   const atk = stat('atk'), def = stat('def'), uavK = [1, 1.15, 1.3][lv('drone_sens')] || 1;
   const vis = uav ? Math.round(uav.vis*uavK) : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
-    : U.vis*(t === 'spec' && hasT('spec_eye') ? 1.5 : 1);
+    : U.vis*(R_SIGHT[t] && hasT(R_SIGHT[t][0]) ? R_SIGHT[t][1] : 1);   // (Night Optics, Mast-Mounted Sensors: rSightF's table)
   const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
   const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)
   const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};

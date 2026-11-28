@@ -1,13 +1,13 @@
 // The starting army in the nations world (START-ARMIES, owner playtest 2026-11-27, item 3), in plain Node:   node .test/start-armies.js   (exit 0 when every check holds)
 // 1. every nation, seats and computer nations alike, in both game modes, starts with START_ARMY (rules/data.js) and nothing else: the capital 2 infantry
-//    and 1 artillery, the capital's Air Superiority Fighter at its Airbase (startAir, unchanged), and two outer stacks of 2 infantry; no tanks, no city
-//    garrisons, no border guards
+//    and 1 artillery, the capital's Air Superiority Fighter at its Airbase (startAir, unchanged), and two outer stacks of 1 Recon Vehicle and 2 infantry
+//    (item 3: "1 recon vehicle + 2 infantry each", with the recon vehicle of item 4); no tanks, no city garrisons, no border guards
 // 2. the outer stacks (startOuter, rules/state.js): two different cities outside the capital, on land the capital reaches over the nation's own land, not
 //    next to the capital (except the fallback for nations with fewer than 2 other cities there), not next to each other; the same cities in every seed
 //    and whoever is the seat; the rule's own picks for Russia, Germany, Canada and Colombia (recorded 2026-11-27); a nation with no city but its capital falls back to its
 //    border provinces, then to the capital
-// 3. the recon slot (START_ARMY.recon): null today, so the outer stacks hold infantry only; a key that is not a unit is skipped; once it names a unit,
-//    each outer stack gets it (tried with an existing unit) and nothing else changes
+// 3. the recon slot (START_ARMY.recon): {rcn:1}, one Recon Vehicle an outer stack; null (the start before the recon vehicle) leaves the outer stacks
+//    with infantry only, a key that is not a unit is skipped, and the slot changes nothing else (the same cities)
 // 4. old saves keep their armies: a save whose start had other forces (the old start's tanks and city garrisons) loads with every army as saved
 // 5. the computer keeps its capital held: with the smaller start no computer capital stands without ground units after 24 and 72 hours (all-computer
 //    games, seeds 12345 and 7); its capital force (2 infantry and 1 artillery) stays home in peace until there are 4 infantry to leave 2 behind
@@ -23,19 +23,19 @@ let bad = 0, n = 0; const ok = (c, msg, info) => { n++; if (!c){ bad++; console.
 const forces = (S, k) => S.armies.filter(a => a.owner === k).map(a => ({at:a.at, air:!!a.air, u:Object.fromEntries(Object.entries(a.u).filter(([, v]) => v > 0))}));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const nameOf = (G, p) => G.P[p].cityName || G.P[p].name;
-const START0 = "const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:null, cities:null, guards:0, guard:{inf:2}};";
+const START0 = "const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:{rcn:1}, cities:null, guards:0, guard:{inf:2}};";
 
 // ---- 1. the same army for every nation, in both modes
 let picks12345 = null;
 for (const mode of ['normal', 'competitive']){ const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame.mode = mode; api.newGame(12345, 0, [0]); const S = R.S, G = R.G;
-  ok(same(R.START_ARMY, {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:null, cities:null, guards:0, guard:{inf:2}}), 'START_ARMY is the owner\'s start with the recon slot empty', R.START_ARMY);
+  ok(same(R.START_ARMY, {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:{rcn:1}, cities:null, guards:0, guard:{inf:2}}), 'START_ARMY is the owner\'s start with one Recon Vehicle in the recon slot', R.START_ARMY);
   const off = [], picks = {};
   for (const N of S.nations){ const f = forces(S, N.id), cap = f.filter(x => x.at === N.capital), air = f.filter(x => x.air), out = f.filter(x => x.at !== N.capital);
-    const good = f.length === 4 && cap.length === 2 && air.length === 1 && same(air[0].u, {[R.START_AIR_UNIT]:1}) && same(cap.find(x => !x.air).u, {inf:2, art:1}) && out.length === 2 && out.every(x => !x.air && same(x.u, {inf:2}));
+    const good = f.length === 4 && cap.length === 2 && air.length === 1 && same(air[0].u, {[R.START_AIR_UNIT]:1}) && same(cap.find(x => !x.air).u, {inf:2, art:1}) && out.length === 2 && out.every(x => !x.air && same(x.u, {inf:2, rcn:1}));
     if (!good) off.push({nation:N.name, f}); picks[N.name] = out.map(x => x.at); }
-  ok(!off.length, `${mode}: every nation (${S.nations.length}) starts with 2 infantry and 1 artillery in its capital, its fighter at the capital's Airbase and two stacks of 2 infantry outside it`, off.slice(0, 3));
+  ok(!off.length, `${mode}: every nation (${S.nations.length}) starts with 2 infantry and 1 artillery in its capital, its fighter at the capital's Airbase and two stacks of 1 Recon Vehicle and 2 infantry outside it`, off.slice(0, 3));
   ok(!S.armies.some(a => a.owner >= 0 && a.u.tank > 0), `${mode}: no nation starts with a tank`);
-  ok(S.armies.filter(a => a.owner >= 0).reduce((s, a) => s + R.count(a), 0) === 8*S.nations.length, `${mode}: 8 units a nation`);
+  ok(S.armies.filter(a => a.owner >= 0).reduce((s, a) => s + R.count(a), 0) === 10*S.nations.length, `${mode}: 10 units a nation`);
   if (mode === 'normal') picks12345 = picks; else ok(Object.keys(picks12345).every(k => same(picks[k], picks12345[k])), 'the outer cities are the same in both modes'); }
 
 // ---- 2. where the outer stacks stand
@@ -69,13 +69,15 @@ for (const mode of ['normal', 'competitive']){ const R = load(), api = R.IM.api;
     const g = R.startOuter(N.id); ok(same(g, [N.capital, N.capital]), 'nothing but the capital: the stacks stay in the capital', g.map(p => nameOf(G, p))); } }
 
 // ---- 3. the recon slot
-{ const R = load([START0, START0.replace('recon:null', "recon:{rcn:1}")]), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S;
-  ok(!R.UNITS.rcn, 'there is no recon vehicle yet (the proposal waits for the owner)');
-  ok(S.nations.every(N => S.armies.filter(a => a.owner === N.id && a.at !== N.capital).every(a => same(forces(S, N.id).find(x => x.at === a.at).u, {inf:2}))), 'the slot naming a unit that does not exist yet is skipped: 2 infantry an outer stack'); }
-{ const R = load([START0, START0.replace('recon:null', 'recon:{jam:1}')]), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S;
+{ const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S;
+  ok(!!R.UNITS.rcn && R.UNITS.rcn.name === 'Recon Vehicle', 'the recon vehicle exists (rcn)');
   const outs = S.nations.flatMap(N => forces(S, N.id).filter(x => x.at !== N.capital));
-  ok(outs.length === 2*S.nations.length && outs.every(x => same(x.u, {inf:2, jam:1})), 'once the slot names a unit (tried with the Mobile Jammer), every outer stack gets one beside its 2 infantry', outs.slice(0, 2));
-  ok(picks12345 && S.nations.every(N => same(S.armies.filter(a => a.owner === N.id && a.at !== N.capital).map(a => a.at), picks12345[N.name])), 'and the outer cities stay the same'); }
+  ok(outs.length === 2*S.nations.length && outs.every(x => same(x.u, {inf:2, rcn:1})), 'every outer stack holds 1 Recon Vehicle beside its 2 infantry', outs.slice(0, 2)); }
+for (const [slot, why] of [['recon:null', 'the slot empty (null)'], ['recon:{zzz:1}', 'the slot naming a key that is no unit']]){
+  const R = load([START0, START0.replace('recon:{rcn:1}', slot)]), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S;
+  const outs = S.nations.flatMap(N => forces(S, N.id).filter(x => x.at !== N.capital));
+  ok(outs.length === 2*S.nations.length && outs.every(x => same(x.u, {inf:2})), `${why}: 2 infantry an outer stack`, outs.slice(0, 2));
+  ok(picks12345 && S.nations.every(N => same(S.armies.filter(a => a.owner === N.id && a.at !== N.capital).map(a => a.at), picks12345[N.name])), `${why}: the outer cities stay the same`); }
 
 // ---- 4. an old save keeps its armies
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(4242, 5, [0]); let S = R.S, G = R.G; S.started = true;

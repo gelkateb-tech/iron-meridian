@@ -86,8 +86,8 @@ function jumpTo(a, d){ atMove(a, d); a.to = null; a.t = 0; a.path = []; if (a.ca
 function strandedHour(){ for (const a of S.armies){ if (a.owner < 0 || a.air || a.fly || a.to !== null || a.path.length || !count(a) || G.P[a.at].sea || shipsN(a)) continue;
     const o = S.owner[a.at]; if (o === a.owner) continue;
     const peaceful = o >= 0 && !atWar(a.owner, o) && !['pass', 'ally'].includes(rel(a.owner, o).st);
-    const tooSmall = !isSeat(a.owner) && groundN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
-    if (peaceful || tooSmall) sendHome(a); } }
+    const tooSmall = !isSeat(a.owner) && capN(a) < CAP_MIN && !S.battles.includes(a.at) && !S.armies.some(b => b !== a && b.owner === a.owner && b.at === a.at);
+    if (peaceful || tooSmall) sendHome(a); } }   // (tooSmall: a computer force that cannot take the land it stands in, a recon vehicle left alone there: capN)
 function evict(n, host){
   // forces of n standing in host's land go to their nearest own province (jumpDest: a fleet to the sea, troops ashore only at a naval city when
   // the way home crosses water; jumpTo drops any landing or boarding under way)

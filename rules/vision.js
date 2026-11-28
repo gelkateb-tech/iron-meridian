@@ -11,8 +11,8 @@
      2026-11-25, "enemy armies outside my territory ... shouldn't show at all. I only see them once they cross into my land, or when one of my
      units sees them within its sight range"; the 80 / 100 km of VIS-1 are kept in VIS_KM, unused)
    - ground force or fleet: the farthest-seeing unit type in it, 50 (UNITS[t].vis), not the province it is moving to. Recon/scout units 100:
-     Special Forces (VIS_RECON; the game has no recon vehicle or scout helicopter). Night Optics: Special Forces see
-     50% farther (rSightF)
+     Special Forces (VIS_RECON). The Recon Vehicle 70 (its own UNITS.rcn.vis; owner 2026-11-27, sight option A). Night Optics: Special Forces
+     see 50% farther; Mast-Mounted Sensors: the Recon Vehicle 70 to exactly 80 km (rSightF)
    - aircraft in flight 150; drones 200 (VIS_DRONE: the Recon UAV, and the armed drones: Strike Drones and Swarm Drones); fighter patrols and any
      wing on a recon mission see at least 200 (VIS_KM.patrol)
    - UAV on station, by its level (UAV I-V): 250, 300, 350, 400, 500; it marks what it sees as identified by UAV (vis.uav) and leaves the provinces
@@ -102,7 +102,8 @@ function visibleSet(n){
       const dr = a.air && VIS_DRONE.some(t => a.u[t] > 0); circ(x, y, km, VK.id, dr); continue; }   // (a drone in flight is recon: it identifies what it sees)
     if (a.air) continue;
     const [x, y] = armyXY(a); circ(x, y, armyVisKm(a), VK.gf);   // a force: around its spot (not the province it is moving to: owner 2026-11-25)
-    if (a.u.spec > 0) idn.push([x, y, x, y, UNITS.spec.vis*rSightF(a.owner, 'spec')*KM_W, VK.gf]); }   // Special Forces (the recon unit) identify within their own sight
+    // the ground recon units (VIS_ID_GROUND: Special Forces, the Recon Vehicle) identify within their own sight, measured from the stack's spot
+    for (const t of VIS_ID_GROUND) if (a.u[t] > 0) idn.push([x, y, x, y, UNITS[t].vis*rSightF(a.owner, t)*KM_W, VK.gf]); }
   for (const st of (S.sats || [])) if (al.has(st.owner)){ const s = [...satStrip(st), VK.id]; ids.push(s); idn.push(s); }   // (a reconnaissance satellite identifies along its strip)
   const idp = new Set(); if (S.intel) for (const m of al){ const I = S.intel[m]; if (I) for (const k in I) if (I[k] > S.hour) idp.add(+k); }   // recon reveals still running (intelNote)
   /*@DEV*/if (DEV.reveal) for (let p = 0; p < G.P.length; p++) whole.add(p);/*@ENDDEV*/   // (in sight = identified; armyVisible shows hidden subs and special forces too)
@@ -116,6 +117,9 @@ function visibleSet(n){
 }
 const subOnly = a => a.u.sub > 0 && a.u.sub === count(a);
 const specOnly = a => a.u.spec > 0 && a.u.spec === count(a);
+// Signature Reduction (the Recon Vehicle's line): a force of recon vehicles alone, of a nation that has it, is spotted by enemy ground forces and
+// fleets (their VK.gf ranges) only within half their sight; aircraft, UAVs, satellites, radar and own land see it as usual
+const rcnLow = a => a.owner >= 0 && a.u.rcn > 0 && a.u.rcn === count(a) && has(a.owner, 'rcn_camo');
 // does the nation whose view `vis` is (vis.n) see force a (cached in the set for the hour)
 function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   if (a.owner === vis.n) return true;
@@ -137,7 +141,8 @@ function armySeen(a, vis, dp = null){ const me = vis.n;
   // marching in shows the moment it crosses the border, not when it sets off (owner 2026-11-25)
   if (!a.fly && a.to === null && !a.sail){ if (W0.has(a.at)) return true; }
   else { const p0 = dp != null ? dp : provOfPt(x, y); if (p0 >= 0 && W0.has(p0)) return true; }   // (dp: where the screen draws it, armyVisibleAt)
-  for (const s of ids) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
+  const low = rcnLow(a);
+  for (const s of ids) if ((s[5] !== VK.sea || sea) && (low && s[5] === VK.gf ? visD2(s, x, y) <= s[4]*s[4]/4 : visIn(s, x, y))) return true;
   return false; }
 /* Identified or only spotted (owner's rule, 2026-11-18, as in Conflict of Nations): seeing a foreign force (armyVisible) only tells that something
    is there. Its nation, size, unit types and name are known only once it is identified (armyKnown), by proper recon or by fighting it:
@@ -147,7 +152,8 @@ function armySeen(a, vis, dp = null){ const me = vis.n;
    - a reconnaissance satellite: its strip this hour; the Phased-Array AWACS: within half its radar range (a plain AWACS only locates: '?')
    - a maritime patrol on a hunt (its range, ships at sea) and warships' sonar (their own sea zone and the ones next to it): ships at sea
    - a Mobile SAM or jammer (radar): aircraft in flight over its province or the ones next to it
-   - Special Forces: inside their own sight (100 km, 150 with Night Optics)
+   - Special Forces: inside their own sight (100 km, 150 with Night Optics); the Recon Vehicle: inside its own (70 km, 80 with Mast-Mounted
+     Sensors; owner 2026-11-27: "anything inside its sight range is fully identified"), the same code path (VIS_ID_GROUND), for allies too
    - battle: a force in a province where a force of yours (or an ally's) is fighting, for as long as the battle lasts
    Ordinary sight (any other unit, infantry included, own land, a revealed province, aircraft, a plain AWACS) only spots.
    Own and allied forces are always known. Nothing is remembered once the recon has gone, except the UAV's and the agent's span.

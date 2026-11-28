@@ -70,6 +70,12 @@ const UNITS = {
   // bmb: bomb load as a share of the Heavy Bomber's (bombers wreck cities, buildings and roads); lo: low-observable airframe, the share of hits that find it
   // (ad: Mobile SAMs, frigates and cruisers; air: fighters and other aircraft), each measured against what the same shooter does to a Heavy Bomber
   stealth:{name:'Stealth Bomber', short:'STB', cls:'air', bmb:0.6, lo:{ad:0.35, air:0.4}, cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, atk:8, def:4, hp:12, spd:10, build:168, upk:14, fuel:3.5, req:{b:'air', l:3}, tech:'bomb3', vs:{soft:1.0, armored:0.7, naval:0.6, air:0.2}, role:'Long-range bomber that is hard to detect.'},
+  // RECON VEHICLE (owner playtest 2026-11-27, item 4; docs/RECON-VEHICLE-PROPOSAL.md, sight option A): a fast, lightly armed wheeled 4x4 scout car.
+  // Its sight (vis, 70 km; 80 km with Mast-Mounted Sensors, rSightF) IDENTIFIES the enemy forces inside it (rules/vision.js visibleSet, as Special
+  // Forces do), for its nation and its allies; any other ground unit only spots ('?'). Soft, so it shares the damage with the infantry it travels with
+  // (rules/combat.js hurt); its damage is the soft class's (2 / 1 / 0.4 / 0.4). noCap: a force of recon vehicles alone does not capture (capN,
+  // rules/state.js): it scouts, it does not hold (owner 2026-11-27). Known from day one, Army Base I (BASE_LV)
+  rcn:  {name:'Recon Vehicle',     short:'RCN', cls:'soft',    cost:30, oil:2, metal:3, iron:2, elec:3, rare:0, mp:6,  atk:2, def:2, hp:7,  spd:8,  build:30, upk:1.5, fuel:0.3, req:{b:'fac', l:1}, tech:null, vis:70, noCap:1, role:'Fast wheeled scout car: fully identifies the enemy armies inside its sight (types and counts). Lightly armed, weak in a fight, and cannot capture a province on its own.'},
 };
 // Marines (NAVAL CITIES): amphibious infantry, a little stronger and dearer than Motorized Infantry; trained at an Army Base in a coastal city
 // (coastal: mobBlock, rules/production.js); a force of Marines alone boards and lands on any coast (amphib, rules/movement.js)
@@ -92,7 +98,7 @@ for (const t of INF_T){ const U = UNITS[t], air = U.req2 && U.req2.b === 'air' ?
    (Airbase I). Paratroopers also keep their Airbase I (req2). Ships already at sea stay, and ships already queued in a yard that is now too
    low finish as queued (the queue never checks the level again: prodHour); only new orders need the new level (yardMigrate tells the seat).
    A key with no unit is a MARKED SLOT, skipped until that unit exists (nothing is made for it):
-     rcn   THE RECON SLOT: the recon vehicle, Army Base I (proposed with the starting armies, branch start-armies, under the key 'rcn'; not in the game yet)
+     (rcn, the recon vehicle, Army Base I, was a marked slot until the unit was added, owner 2026-11-27: it is a unit now)
      maa   Mobile Anti-Air, Army Base II (no short-range air-defence vehicle in the game; the Mobile SAM, the nearest, is listed at level III)
      mdef  Missile Defence, Army Base V (no such unit; today only the research Anti-Missile Shield, msl3, which works nation-wide with no building)
      corv  Corvette, Naval Yard I (no such ship yet; docs/RESEARCH.md 'Patrol Boat' is the nearest proposal)
@@ -110,7 +116,7 @@ for (const b in BASE_LV) for (const t in BASE_LV[b]){ const U = UNITS[t]; if (!U
 // the Army Base for ground units, Swarm Drones and Paratroopers, the Airbase for aircraft, the Naval Yard for ships), by level 0 to V. The Recruiting
 // Office (10% faster a level, 50% at level V) stays the main way to speed up training. Option B, closer to the old top levels: 0.85 and 0.7
 const BASE_SPD = {fac:[1, 1, 1, 1, 0.9, 0.8], air:[1, 1, 1, 1, 0.9, 0.8], yard:[1, 1, 1, 1, 0.9, 0.8]};
-const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', mar:'Marines', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber'};
+const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', mar:'Marines', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber', rcn:'Recon'};
 const MISSILES = {
   cm: {name:'Cruise Missile',    short:'CM', cost:60,  oil:10, metal:10, iron:4, elec:8, rare:3, build:36, range:28, speed:9,  power:7,  tech:'msl1', desc:'Flies low and fast. Devastates the forces in one province.'},
   bm: {name:'Ballistic Missile', short:'BM', cost:140, oil:20, metal:24, iron:10, elec:16, rare:8, build:72, range:90, speed:22, power:16, tech:'msl2', desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
@@ -333,6 +339,14 @@ const R_LINES = [
     ['spd', 'Uprated Powerpack', 'engine', [[8, {spd:1}, 'speed +1']]],
     ['terr', 'Amphibious Kit', 'wave', [[10, {}, 'no penalty for attacking across a river']]]],
    g:[[2, 13, 'Heavy IFV', {atk:1, def:1, hp:3}, 'attack +1, defense +1, health +3']]},
+  // Recon Vehicle (docs/RECON-VEHICLE-PROPOSAL.md section 3): known from day one, a dashed family line from the IFV. Mast-Mounted Sensors: sight
+  // 70 to exactly 80 km (rSightF x8/7: the artillery's reach, never past it); Signature Reduction: a force of recon vehicles alone is spotted by
+  // enemy ground forces and fleets only within half their sight (rules/vision.js armySeen)
+  {u:'rcn', cat:'arm', day:1, std:1, fam:'ifv', k:[
+    ['optics', 'Mast-Mounted Sensors', 'scope', [[4, {}, 'sight 70 to 80 km']]],
+    ['spd', 'Uprated Powerpack', 'engine', [[7, {spd:1}, 'speed +1']]],
+    ['camo', 'Signature Reduction', 'stealth', [[10, {}, 'a force of recon vehicles alone is spotted by enemy ground forces only within half their sight']]]],
+   g:[[2, 13, 'Recon Vehicle II · Networked Scout', {def:1, hp:2}, 'defense +1, health +2']]},
   {u:'tank', cat:'arm', day:1, std:1, k:[
     ['armor', 'Composite Armour', 'armor', [[1, {def:2}, 'defense +2']]],
     ['gun', 'Smoothbore Main Gun', 'cannon', [[7, {atk:3}, 'attack +3']]],
@@ -577,7 +591,7 @@ const UNIT_NAMES = {
   carr:{nato:['CV-41', 'CVN-68', 'CVN-78'], east:['Project 1143', 'Project 1143.5', 'Project 23000E'], china:['Type 001', 'Type 003', 'Type 004'], europe:['Clemenceau', 'Charles de Gaulle', 'Queen Elizabeth'], export:['Colossus', 'Project 1143.4', 'Type 002']},
   cm:{nato:['AGM-86B', 'AGM-158A', 'AGM-158B'], east:['Kh-55', 'Kh-101', '3M22'], china:['CJ-10', 'CJ-100', 'YJ-21'], europe:['AS-30L', 'KEPD 350', 'FC/ASW'], export:['P-15M', '3M-14E', 'CJ-10']},
   bm:{nato:['MGM-31A', 'MGM-140B', 'LRHW'], east:['R-17', '9K720', 'Kh-47M2'], china:['DF-11', 'DF-16', 'DF-17'], europe:['Pluton', 'MGM-140B', 'LRHW'], export:['R-17E', '9K720E', 'DF-11A']}};
-const UNIT_NAME_OF = {para:'inf'};
+const UNIT_NAME_OF = {para:'inf'};   // (the Recon Vehicle has no model names: its pictures are original, generic designs, so the screens show the unit type)
 // a unit's research level (docs/RESEARCH.md 14.1): 1 + every step done in its own line, up to 8; its look: 1 at levels 1-3, 2 at 4-6, 3 at 7-8
 const UL_MAX = 8, ulLook = lv => lv >= 7 ? 3 : lv >= 4 ? 2 : 1;
 // the model name of unit (or missile line) key u for group g at look k (1-3), or null
@@ -588,11 +602,12 @@ const NEUTRAL = -1, SEA = -2;
 const W = WORLD.W, H = WORLD.H, GS = WORLD.GS || 1, HS0 = 12, HS = HS0/GS, SQ3 = Math.sqrt(3);   // GS: cells per old map hex
 const KM_W = HS0*SQ3/KM_HEX;          // world units per km (an old map hex is about 180 km across; one world unit is about 8.7 km)
 // sight ranges in km (rules/vision.js measures them from where each unit, city or mission actually is). Places and missions here; each unit type
-// carries its own (UNITS[t].vis): ground forces and fleets 50, recon/scout units (VIS_RECON) 100, aircraft in flight 150, drones (VIS_DRONE) 200.
+// carries its own (UNITS[t].vis): ground forces and fleets 50, recon/scout units (VIS_RECON: Special Forces) 100, aircraft in flight 150, drones (VIS_DRONE) 200.
+// The Recon Vehicle sets its own, 70 (UNITS.rcn.vis; it is not in VIS_RECON, which would give it 100): it identifies too (VIS_ID_GROUND, rules/vision.js).
 // patrol: fighter patrols and any wing on a recon mission see at least this far; aew/mpa: AWACS orbit (location only) and maritime patrol (sea only)
 // before research; sat: half the width of a satellite's strip. The UAV on station sees by its level (UAV_LV vis, rules/air.js).
 const VIS_KM = {city:80, airbase:100, ground:50, recon:100, air:150, drone:200, patrol:200, aew:500, mpa:400, sat:150};
-const VIS_RECON = ['spec'], VIS_DRONE = ['drone', 'sdrone', 'swarm'];
+const VIS_RECON = ['spec'], VIS_ID_GROUND = ['spec', 'rcn'], VIS_DRONE = ['drone', 'sdrone', 'swarm'];
 for (const t in UNITS) if (UNITS[t].vis == null) UNITS[t].vis = VIS_RECON.includes(t) ? VIS_KM.recon : VIS_DRONE.includes(t) ? VIS_KM.drone : UNITS[t].cls === 'air' ? VIS_KM.air : VIS_KM.ground;
 // Attack range (km, Conflict of Nations style): these units fire from where they stand (armyXY) at enemy forces whose spot lies within this distance AND
 // that their side can see (rules/vision.js armyVisible), without moving into the province (rules/combat.js rangedStep; the table and the reasons:
@@ -661,12 +676,11 @@ const START_AIR = 1, START_AIR_UNIT = 'asf';
 // game mode; no tanks. New games only (tierStart, rules/state.js; old saves keep their armies). The whole start is this one table:
 //   capital: the capital's force (beside START_AIR's fighter at its Airbase, made by startAir as before)
 //   outer:   the force of each of the outerN stacks that stand in cities outside the capital (which cities: startOuter, rules/state.js, by START_OUTER)
-//   recon:   THE RECON SLOT of every outer stack: added to each outer stack once the recon vehicle exists. It does not exist yet (proposal sent to the
-//            owner, not approved), so it is null and skipped; on approval it becomes the new unit's key and count, e.g. {rcn:1}. A key that is not
-//            a unit yet is skipped too (startForce)
+//   recon:   THE RECON SLOT of every outer stack: one Recon Vehicle each (owner playtest 2026-11-27, item 3: "1 recon vehicle + 2 infantry each";
+//            the unit came in with item 4). null skips it (the start before the recon vehicle); a key that is not a unit is skipped too (startForce)
 //   cities:  a garrison for every other city (null: none; the start before 2026-11-27 had {inf:2})
 //   guards / guard: how many border guards and their force (0: none; facing the strongest neighbour first, as before)
-const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:null, cities:null, guards:0, guard:{inf:2}};
+const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:{rcn:1}, cities:null, guards:0, guard:{inf:2}};
 // which cities hold the outer stacks (startOuter): only cities the capital reaches over the nation's own land, not next to the capital (unless fewer
 // than 2 remain); weight = people, times border for a city on another nation's land border (independent land does not count) and times highway
 // for one on a highway (equal weights: the more populous); the first stack the heaviest, the second the heaviest not next to the first and away

@@ -119,10 +119,10 @@ function* tickHourG(){
     if (hostileToOwner.length > 1 && !hostileToOwner.some(x => hostileToOwner.some(y => x !== y && atWar(x, y)))){ const sz = o => list.filter(a => a.owner === o).reduce((s0, a) => s0 + groundN(a), 0); hostileToOwner = [hostileToOwner.sort((x, y) => sz(y) - sz(x))[0]]; }
     if (owners.size >= 1 && hostileToOwner.length === 1 && ![...owners].some(o => o !== hostileToOwner[0] && atWar(o, hostileToOwner[0]))){
       const O = hostileToOwner[0];
-      const gN = list.filter(a => a.owner === O).reduce((s, a) => s + groundN(a), 0);
+      const gN = list.filter(a => a.owner === O).reduce((s, a) => s + capN(a), 0);   // (ground units that can capture: a recon vehicle alone cannot, capN)
       // (the nations world: a computer nation that has grown enough for now, isSated, takes back its own lost land but no more: in the step 4
       // repair Chad, sated at 28 provinces in the middle of overrunning Sudan, took 3 more with the forces already standing in them)
-      if (O !== NEUTRAL && gN >= CAP_MIN && !(S.home[p] !== O && isSated(O)) && list.some(a => a.owner === O && atHeart(a))) capture(p, O);
+      if (O !== NEUTRAL && gN >= CAP_MIN && !(S.home[p] !== O && isSated(O)) && list.some(a => a.owner === O && atHeart(a) && capN(a) > 0)) capture(p, O);
     }
   }
   yield;

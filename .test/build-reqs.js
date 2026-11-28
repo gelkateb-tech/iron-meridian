@@ -1,8 +1,8 @@
 // BUILD REQUIREMENTS (BUILD-REQS, owner 2026-11-27), in plain Node:   node .test/build-reqs.js   (exit 0 when every check holds)
 // 1. every unit's base and level, checked against the owner's lists as written here (not against the rules' own table): Army Base and Airbase
 //    as listed (round 1), the Naval Yard as listed in round 2 (I Frigate, III Cruiser and Attack Submarine, V Aircraft Carrier), the units the
-//    lists do not name where they were; the marked slots (recon vehicle, Mobile Anti-Air, Missile Defence; Corvette, Destroyer, Ballistic Missile
-//    Submarine) are there and skipped; the mobilize reasons ("Needs Army Base II", Roman numerals on every base) and the building texts say the same
+//    lists do not name where they were (the Recon Vehicle, a unit since the owner's item 4 of 2026-11-27, at Army Base I as listed); the marked slots
+//    (Mobile Anti-Air, Missile Defence; Corvette, Destroyer, Ballistic Missile Submarine) are there and skipped; the mobilize reasons ("Needs Army Base II", Roman numerals on every base) and the building texts say the same
 // 2. build speed: levels I-III of every base add none, IV 10%, V 20%, on all three; a unit counts only the base that trains it; the Recruiting Office
 //    is unchanged and multiplies; the 30% floor holds. Research days and costs of the unlocks are what they were. All three bases go to level V
 // 3. Anti-Tank Infantry is gone: no unit, no research node, no old-tree conversion, no computer pick
@@ -29,11 +29,11 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 // ---- 1. every unit's base and level (the owner's lists, 2026-11-27; units they do not name keep their place)
 const OWNER = {
-  fac:{1:['inf', 'art'], 2:['ifv', 'tank', 'para', 'swarm'], 3:['mlrs', 'sam', 'spec', 'jam'], 4:[], 5:[]},
+  fac:{1:['inf', 'rcn', 'art'], 2:['ifv', 'tank', 'para', 'swarm'], 3:['mlrs', 'sam', 'spec', 'jam'], 4:[], 5:[]},
   air:{1:['drone', 'heli', 'asf'], 2:['jet', 'sdrone'], 3:['mpa', 'awacs', 'bomb'], 4:[], 5:['stealth']},
   yard:{1:['frig'], 2:[], 3:['crui', 'sub'], 4:[], 5:['carr']}};   // (round 2; the Corvette, Destroyer and Ballistic Missile Submarine are SLOTS)
 const KEPT = {mar:['fac', 1], int:['air', 1]};
-const SLOTS = {rcn:['fac', 1], maa:['fac', 2], mdef:['fac', 5], corv:['yard', 1], dest:['yard', 2], ssbn:['yard', 5]};   // marked slots: no such unit yet
+const SLOTS = {maa:['fac', 2], mdef:['fac', 5], corv:['yard', 1], dest:['yard', 2], ssbn:['yard', 5]};   // marked slots: no such unit yet (the recon vehicle's, rcn, was one until the unit was added)
 const ROM = ['', 'I', 'II', 'III', 'IV', 'V'];
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S, G = R.G;
   const want = {}; for (const b in OWNER) for (const l in OWNER[b]) for (const t of OWNER[b][l]) want[t] = [b, +l]; for (const t in KEPT) want[t] = KEPT[t];
@@ -62,7 +62,7 @@ const ROM = ['', 'I', 'II', 'III', 'IV', 'V'];
   B.air = 1; ok(R.canMobilize(0, city, 'para') === '', 'and with an Airbase I they train');
   // the building texts: every level's units, the speed of IV and V
   const D = R.BUILD.fac.desc, A = R.BUILD.air.desc, Y = R.BUILD.yard.desc;
-  ok(/Level I: Motorized Infantry, Mobile Artillery/.test(D) && /Level II: Infantry Fighting Vehicle, Main Battle Tank, Paratroopers \(also need an Airbase\), Swarm Drones/.test(D)
+  ok(/Level I: Motorized Infantry, Recon Vehicle, Mobile Artillery/.test(D) && /Level II: Infantry Fighting Vehicle, Main Battle Tank, Paratroopers \(also need an Airbase\), Swarm Drones/.test(D)
     && /Level III: Rocket Artillery, Mobile SAM, Special Forces, Mobile Jammer/.test(D) && /Level IV: no new units; units train 10% faster here/.test(D) && /Level V: no new units; units train 20% faster here/.test(D) && !/Anti-Tank/.test(D), 'the Army Base text lists every level', D);
   ok(/Level I: Recon UAV, Attack Helicopter, Air Superiority Fighter, Interceptor/.test(A) && /Level II: Strike Fighter, Strike Drone/.test(A) && /Level III: Maritime Patrol Aircraft, AWACS, Heavy Bomber/.test(A)
     && /Level IV: no new units; units train 10% faster/.test(A) && /Level V: Stealth Bomber; units train 20% faster/.test(A), 'the Airbase text lists every level', A);

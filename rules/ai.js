@@ -155,7 +155,7 @@ function aiGarrison(n, idleBy){ const want = [], gar = AIT ? AIT.gar : new Set()
     const need = Math.max(m <= MOR.aiGar ? rebelSize(p) : 0, r ? count(r) + 1 : 0); want.push([p, need, m - (r ? 100 : 0)]); }
   if (!want.length) return;
   want.sort((x, y) => x[2] - y[2] || x[0] - y[0]);
-  const ok = a => !a.air && !shipsOnly(a) && !gunsOnly(a) && groundN(a) > 0 && count(a) > 0;
+  const ok = a => !a.air && !shipsOnly(a) && !gunsOnly(a) && groundN(a) > 0 && count(a) > 0 && !scoutOnly(a);   // (a recon vehicle alone is no garrison)
   const keep = (a, L) => { gar.add(a); if (L){ const i = L.indexOf(a); if (i >= 0) L.splice(i, 1); } };
   for (const [p, need] of want){
     // (already on its way there)
@@ -215,9 +215,16 @@ let AIRM = {v:-1, S:null, m:new Map()};
 function airMine(n){ const kp = keep(); if (kp && (AIRM.v !== tickVer || AIRM.S !== S)) AIRM = {v:tickVer, S, m:new Map()}; let m = AIRM.v === tickVer && AIRM.S === S ? AIRM.m.get(n) : undefined; if (m) return m; m = {};
   for (const a of armiesOf(n)) if (a.air) for (const t of AIR_T) if (a.u[t]) m[t] = (m[t] || 0) + a.u[t]; if (kp) AIRM.m.set(n, m); return m; }
 const AI_SCARCE = ['iron', 'elec', 'rare'];
+// the Recon Vehicle (docs/RECON-VEHICLE-PROPOSAL.md 5): the computer plays on the full state, so a recon gives it only a weak unit: a small quota,
+// weight w while it fields (and trains) fewer than one per `per` ground units, at most max, built in Army Base cities (bldOk); kept inside stacks
+// (aiTurn: one left alone drives to the nearest own province within `join` provinces holding an idle stack, and is never sent to attack alone)
+const AI_RCN = {w:0.5, per:10, max:6, join:4};
+// a force's strength for deciding to go on an offensive: its power without its recon vehicles (a starting stack of 2 infantry and 1 recon vehicle
+// is no stronger an attacker than the 2 infantry it was before the recon vehicle, and goes for no more land: .test/start-armies.js check 5)
+const aiPunch = a => a.u.rcn > 0 ? power({...a, u:{...a.u, rcn:0}}) : power(a);
 let AIPC = {v:-1, S:null, m:[]};
 function aiCountsOf(n){ const kp = keep(); if (kp && (AIPC.v !== tickVer || AIPC.S !== S)) AIPC = {v:tickVer, S, m:[]}; let c = AIPC.v === tickVer && AIPC.S === S ? AIPC.m[n] : undefined; if (c) return c;
-  let ships = 0, allU = 0, jamN = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; } c = {ships, allU, jamN}; if (kp) AIPC.m[n] = c; return c; }
+  let ships = 0, allU = 0, jamN = 0, rcnN = 0, gndN = 0; for (const a of S.armies) if (a.owner === n){ ships += shipsN(a); allU += count(a); jamN += a.u.jam || 0; rcnN += a.u.rcn || 0; gndN += groundN(a); } c = {ships, allU, jamN, rcnN, gndN}; if (kp) AIPC.m[n] = c; return c; }
 function aiPickUnit(n, p){
   const mix = enemyMix(n), am = mix.airm ?? mix.air, w = {inf:4.5, art:1.5, sam:0.3 + 8*am + 3*mix.drone, ifv:1.2, tank:2.7 + 3*mix.armored, jet:2.6 + 3*mix.armored, int:1.2 + 6*am, frig:1.2, sub:1.6 + 4*mix.naval, crui:0.8};   // (sub 1.6, was 0.5: since BUILD-REQS round 2 only a Naval Yard III trains them, about half as many cities as had a yard I)
   // terrain counter-pick: rough fronts (forest, hills, mountains, marsh, ice) want infantry and special forces, open ones armor
@@ -254,6 +261,8 @@ function aiPickUnit(n, p){
     const manned = ['int', 'asf', 'jet', 'bomb', 'stealth', 'awacs', 'mpa', 'heli'].reduce((s0, t) => s0 + (mine[t] || 0), 0);
     if (manned > Math.max(4, allU*(H.bomb + H.air > 1 ? 0.16 : 0.1))){ const quota = {asf:H.bomb + H.air > 0 ? 6 : 4, awacs:1, mpa:2};
       for (const t of ['int', 'asf', 'jet', 'awacs', 'mpa', 'heli']) if (!((mine[t] || 0) < (quota[t] || 0))) w[t] = (w[t] || 0)*0.25; w.sam *= 0.7; } }
+  // the Recon Vehicle's quota (AI_RCN): the ones in training count too (the queues change city by city within a turn, so they are counted here)
+  w.rcn = 0; if (AC.rcnN < AI_RCN.max && AC.rcnN*AI_RCN.per < AC.gndN){ let k = AC.rcnN; for (const q of ownedBy(n)) for (const it of S.queue[q]) if (it.t === 'rcn') k++; if (k < AI_RCN.max && k*AI_RCN.per < AC.gndN) w.rcn = AI_RCN.w; }
   { const N = S.nations[n], inc = income(n); if (inc.net.oil < 0 || (N.short && N.short.oil)){ w.tank *= 0.3; w.jet *= 0.3; w.int *= 0.5; w.crui *= 0.5; w.ifv *= 0.5; w.bomb *= 0.2; w.asf *= 0.5; w.mpa *= 0.5; w.awacs *= 0.5; }
     else if (N.oil > 450*RES_K && inc.net.oil > 4*RES_K){ w.tank *= 1.35; w.ifv *= 1.35; w.jet *= 1.3; w.frig *= 1.2; w.crui *= 1.2; } }   // fuel to spare: more of the units that burn it
   { const N = S.nations[n], inc = income(n);   // iron or electronics running out (a shortage, or maintenance eating the last two weeks of stock): fewer of the units that use most of it
@@ -500,7 +509,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   // the weights the projects had before the redesign, carried over to the nodes they became
   const NW = {u_jet:3, u_int:3, jet_pgm:pgm, int_msl:pgm, u_drone:2.5, drone_g2:2, drone_g3:1.5, drone_g4:2, drone_g5:1.5, u_swarm:3, u_sdrone:2.5, u_jam:jamW, jam_band:jamW,
     u_asf:3 + 5*(mx.air + mx.bomb) + Math.min(3, H.bomb) + hb + 8*mx.bomb + awv, u_mpa:0.5 + 8*mx.sub + 1.2*Math.min(3, (S.trade && S.trade.hit[n]) || 0), u_awacs:wr ? 2.2 : 1.5, u_bomb:wr ? (ab2 ? 11 : 8) : 3,
-    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15, ...(NAVAL_CITIES ? {u_mar:ownedBy(n).some(navalCity) ? (wr ? 1.2 : 0.6) : 0.05} : {})};   // (Marines: for a nation with a coast)   // stealth bombers: only late, at war with a power that fields SAM stacks
+    bomb_up:0.8, u_stealth:aiStealthOk(n) ? 3 : 0.15, rcn_optics:0.4, rcn_spd:0.3, rcn_camo:0.15, ...(NAVAL_CITIES ? {u_mar:ownedBy(n).some(navalCity) ? (wr ? 1.2 : 0.6) : 0.05} : {})};   // (Marines: for a nation with a coast)   // stealth bombers: only late, at war with a power that fields SAM stacks
   // what the nation fields: units in service and in training, and their money value (the old Mark rule: count x unit price)
   const cnt = {}; let val = 0; for (const a of armiesOf(n)) for (const t of UT) if (a.u[t]) cnt[t] = (cnt[t] || 0) + a.u[t];
   for (const p of ownedBy(n)) for (const it of S.queue[p]) if (!it.msl && UNITS[it.t]) cnt[it.t] = (cnt[it.t] || 0) + rPack(n, it.t);   // (a card is as many units as spawn makes of it)
@@ -513,7 +522,7 @@ function aiResearch(n){ const N = S.nations[n]; if (!rFree(N)) return;
   const rInc = Math.max(0, income(n).net.rare), rOk = c => N.rare + 5*rInc >= c.rare;   // fundable in about five days of rare-material income
   // the Stealth Bomber's path: a nation that flies Heavy Bombers wants the Strategic Bomber Upgrade (range +720 km) as soon as it opens, and
   // once it has it, the Strike Fighter's Stealth Airframes that open the Stealth Bomber with it (weights that are not scaled by the fleet's share)
-  const bombs = cnt.bomb || 0, NWD = {bomb_up:bombs ? 30 + 4*Math.min(4, bombs) : has(n, 'u_bomb') ? (ab2 ? 16 : 6) : 0, jet_lo:has(n, 'bomb_up') ? 8 : 0};
+  const bombs = cnt.bomb || 0, NWD = {bomb_up:bombs ? 30 + 4*Math.min(4, bombs) : has(n, 'u_bomb') ? (ab2 ? 16 : 6) : 0, jet_lo:has(n, 'bomb_up') ? 8 : 0, rcn_g2:cnt.rcn ? 0.6 : 0};   // (the Recon Vehicle II: a small step for a scout it fields, not a main-arm generation)
   const weigh = ({nd, lv}) => { const u = nd.u, c = rCost(nd, lv); let w;
     if (NWD[nd.id]) w = NWD[nd.id];
     else if (nd.kind === 'eng') w = cnt[u] ? 0.2 + 10*share(u) : 0;                                   // hone the big arm first; nothing for a unit it does not field
@@ -713,6 +722,14 @@ function aiTurn0(n, N){
     const into = list.find(b => count(b) && gunsOnly(b) === gunsOnly(a) && shipsOnly(b) === shipsOnly(a) && !stackPenaltyIf(b, a).over); if (into) merge(into, a); else list.push(a); }   // (batteries stay batteries, fleets stay fleets)
   removeEmpty();
   for (const list of idleBy.values()){ for (const a of list.slice()) list.push(...aiSplitToLimit(a)); }
+  // a recon force left alone (no idle stack to merge with in its province) is taken out of the idle lists, so it is never sent to attack, garrison
+  // or spread out alone, and drives to the nearest own province within AI_RCN.join holding an idle ground stack, which it joins there (above, next turn)
+  for (const [p0, list] of idleBy) for (const a of list.slice()){ if (!scoutOnly(a)) continue; list.splice(list.indexOf(a), 1);
+    const seen = new Map([[p0, 0]]), q = [p0]; let dst = -1;
+    for (let h = 0; h < q.length && dst < 0; h++){ const u = q[h], du = seen.get(u); if (du >= AI_RCN.join) continue;
+      for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v);
+        if ((idleBy.get(v) || []).some(b => count(b) && !scoutOnly(b) && !gunsOnly(b) && !shipsOnly(b))){ dst = v; break; } } }
+    if (dst >= 0){ const pth = pathFor(a, a.at, dst); if (pth.length && !pth.some(w => G.P[w].sea)) a.path = pth; } }
   aiGarrison(n, idleBy);   // (burning cities and cities with rebels keep their garrison: habit 1)
   const idleAll = () => [...idleBy.values()].flat().filter(a => count(a) && !a.path.length && a.to === null);
   // at war the capital's infantry garrison (4-10 by army size) is set apart first: neither the offensive planner nor the idle moves below take it
@@ -780,7 +797,7 @@ function aiTurn0(n, N){
   const used = new Set(), byAt = new Map(); for (const a of ready){ let l = byAt.get(a.at); if (!l) byAt.set(a.at, l = []); l.push(a); }
   for (const [p0, grp0] of byAt){ let left = grp0.filter(a => !used.has(a));
     for (let round = 0; round < 3 && left.length; round++){
-      const pw = left.reduce((s0, a) => s0 + power(a)*stackDmg(a), 0); if (pw < 14) break;
+      const pw = left.reduce((s0, a) => s0 + aiPunch(a)*stackDmg(a), 0); if (pw < 14) break;   // (aiPunch: a recon vehicle adds eyes, not punch)
       const lead = left.reduce((x, y) => power(y) > power(x) ? y : x, left[0]);
       const maxD = warsOf(n).length ? 10 : 7, fw = fitW(lead), cold = !arctic(n), fc = {}, foc = focusOf(n);
       const fitAt = v => { const k = G.P[v].terrain || 'plains'; return fc[k] ?? (fc[k] = fitOf(fw, k, true, cold)); };
@@ -848,7 +865,7 @@ function aiGunsStay(a, t){ if (a.air || a.to !== null || G.P[a.at].sea || S.owne
   const foes = S.armies.filter(b => b.at === t && b.to === null && rangedFoe(a.owner, b)); if (!foes.length) return a;   // nobody to shell: the guns go along
   const sp = aiFireSpot({owner:a.owner, at:a.at, u:g, air:null, fly:null}, a.at, foes); if (!sp) return a;
   if (gn >= count(a)){ aiSetSpot(a, sp); return null; }
-  if (groundN(a) - gn < CAP_MIN) return a;   // (the rest must still be able to take the province)
+  if (capN(a) - gn < CAP_MIN) return a;   // (the rest must still be able to take the province: a recon vehicle alone cannot, capN)
   const plan = {}; for (const k in g) Object.assign(plan, aiTakePlan(a, k, g[k])); const [bat] = splitPlan(a, [plan]); if (bat) aiSetSpot(bat, sp);
   return a; }
 // each AI turn: batteries and idle fleets take firing spots; batteries with nothing in reach move up to the front
@@ -857,7 +874,7 @@ function aiGuns(n){ if (!warsOf(n).length) return;
     const fleet = shipsOnly(a); if (fleet ? a.escort != null || a.raid || a.blk || a.sail || !G.P[a.at].sea || healthFrac(a) < 0.5 : S.owner[a.at] !== n) continue;
     if (!fleet && !gunsOnly(a)){   // a mixed stack on the front: its guns become a battery on a firing spot when an enemy force they can see is in reach
       const g = {}; let gn = 0; for (const k of UT) if (a.u[k] && RANGE_HIT[k] === 'land'){ g[k] = a.u[k]; gn += a.u[k]; }
-      if (!gn || groundN(a) - gn < CAP_MIN || !G.P[a.at].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && atWar(n, S.owner[w]))) continue;
+      if (!gn || capN(a) - gn < CAP_MIN || !G.P[a.at].nbs.some(w => !G.P[w].sea && S.owner[w] >= 0 && atWar(n, S.owner[w]))) continue;
       const sp = aiFireSpot({owner:n, at:a.at, u:g, air:null, fly:null}, a.at); if (!sp) continue;
       const plan = {}; for (const k in g) Object.assign(plan, aiTakePlan(a, k, g[k])); const [bat] = splitPlan(a, [plan]); if (bat) aiSetSpot(bat, sp); continue; }
     if (!rangeOf(a)) continue;

@@ -71,7 +71,10 @@ function rDrilled(a, terrain){ const o = a.owner; if (o < 0) return false; let a
   for (const t of UT){ if (!a.u[t]) continue; if (t === 'spec') continue; if (t === 'inf'){ const D = R_DRILL[rLevel(o, 'inf_terr')]; if (!D || !D[terrain]) return false; any = true; } else if (t === 'tank'){ if (!has(o, 'tank_terr')) return false; any = true; } else return false; }
   return any; }
 const rSpecTerr = (n, f) => f > 1 ? 1 + (f - 1)*[1, 1.25, 1.5][rLevel(n, 'spec_terr')] : f;             // Mountain & Arctic Training: the rough-terrain attack bonus 40% -> 50% -> 60%
-const rSightF = (n, t) => n >= 0 && t === 'spec' && has(n, 'spec_eye') ? 1.5 : 1;   // Night Optics: Special Forces see 50% farther
+// Night Optics: Special Forces see 50% farther. Mast-Mounted Sensors: the Recon Vehicle sees 70 to exactly 80 km (x8/7, the artillery's reach
+// RANGE_KM.art, never past it; not x1.15, which would give 80.5)
+const R_SIGHT = {spec:['spec_eye', 1.5], rcn:['rcn_optics', 8/7]};
+const rSightF = (n, t) => { const r = R_SIGHT[t]; return r && n >= 0 && has(n, r[0]) ? r[1] : 1; };
 const rRangeKm = (n, t) => (RANGE_KM[t] || 0) + (t === 'mlrs' && n >= 0 && has(n, 'mlrs_rng') ? RANGE_ER : 0);   // attack range in km (RANGE_KM); Extended-Range Rockets: Rocket Artillery +50 km
 const rSamNear = n => has(n, 'sam_g2') ? 1 : 0.35;                                                    // Long-Range SAM: neighbouring provinces at full strength
 const rJamF = n => [1, 1.2, 1.4][rLevel(n, 'jam_band')] || 1;                                         // Wideband Jamming
