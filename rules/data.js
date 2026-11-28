@@ -341,7 +341,7 @@ const R_LINES = [
    g:[[2, 13, 'Heavy IFV', {atk:1, def:1, hp:3}, 'attack +1, defense +1, health +3']]},
   // Recon Vehicle (docs/RECON-VEHICLE-PROPOSAL.md section 3): known from day one, a dashed family line from the IFV. Mast-Mounted Sensors: sight
   // 70 to exactly 80 km (rSightF x8/7: the artillery's reach, never past it); Signature Reduction: a force of recon vehicles alone is spotted by
-  // enemy ground forces and fleets only within half their sight (rules/vision.js armySeen)
+  // enemy ground forces only within half their sight; fleets, aircraft and the rest see it as usual (rules/vision.js armySeen)
   {u:'rcn', cat:'arm', day:1, std:1, fam:'ifv', k:[
     ['optics', 'Mast-Mounted Sensors', 'scope', [[4, {}, 'sight 70 to 80 km']]],
     ['spd', 'Uprated Powerpack', 'engine', [[7, {spd:1}, 'speed +1']]],

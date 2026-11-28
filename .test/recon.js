@@ -9,6 +9,7 @@
 // 5. sight never past 80 km: the recon vehicle with every step of its line (and any mix with ordinary units) sees and identifies at most 80 km,
 //    the artillery's reach (RANGE_KM.art)
 // 6. Signature Reduction: a force of recon vehicles alone of a nation that has it is spotted by enemy ground forces only within half their sight
+//    (a fleet's sight is not halved)
 // 7. speed: wheels (MOVE_T), x1.6 on roads: on a road the recon vehicle takes 7/8 of an IFV's time (same wheels, speed 8 against 7) and well under
 //    half of infantry's; a stack of 2 infantry and a recon vehicle marches at infantry pace
 // 8. capture: a recon vehicle alone at a province's heart does not take it ("it scouts, it doesn't hold"); with infantry it does
@@ -111,7 +112,10 @@ const sees = (R, n, sc) => Object.fromEntries(Object.entries(sc.foes).map(([km, 
   ok(v[20] === '?' && v[40] === '?', 'enemy recon vehicles alone: spotted by infantry within its 50 km', v);
   R.rGrant(S.nations[sc.kz], 'rcn_camo', 1); S.nations[sc.kz].tv = (S.nations[sc.kz].tv || 0) + 1; v = sees(R, sc.me, sc);
   ok(v[20] === '?' && v[40] === 'none', 'with Signature Reduction only within half of it: 20 km spotted, 40 km not', v);
-  sc.foes[40].u.inf = 1; v = sees(R, sc.me, sc); ok(v[40] === '?', 'a recon vehicle with infantry is spotted as usual', v); }
+  const fl = S.armies.find(a => a.owner === sc.me); fl.u = {...fl.u, inf:0, frig:2}; v = sees(R, sc.me, sc);
+  ok(v[20] === '?' && v[40] === '?', 'a fleet\'s sight (ships only, 50 km) is not halved: 20 and 40 km spotted (the proposal: ground forces only)', v);
+  fl.u = {...fl.u, inf:1}; v = sees(R, sc.me, sc); ok(v[20] === '?' && v[40] === 'none', 'ships with ground units aboard count as a ground force: halved', v);
+  fl.u = {...fl.u, inf:2, frig:0}; sc.foes[40].u.inf = 1; v = sees(R, sc.me, sc); ok(v[40] === '?', 'a recon vehicle with infantry is spotted as usual', v); }
 
 // ---- 7. speed: wheels on roads
 { const R = game(), S = R.S, G = R.G; S.armies.length = 0; let link = null;

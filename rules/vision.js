@@ -101,9 +101,10 @@ function visibleSet(n){
       if (f.ph === 'patrol' || f.kind === 'recon') km = Math.max(km, VIS_KM.patrol);
       const dr = a.air && VIS_DRONE.some(t => a.u[t] > 0); circ(x, y, km, VK.id, dr); continue; }   // (a drone in flight is recon: it identifies what it sees)
     if (a.air) continue;
-    const [x, y] = armyXY(a); circ(x, y, armyVisKm(a), VK.gf);   // a force: around its spot (not the province it is moving to: owner 2026-11-25)
+    const [x, y] = armyXY(a), km0 = armyVisKm(a); if (km0 > 0) ids.push([x, y, x, y, km0*KM_W, VK.gf, shipsOnly(a) ? 0 : 1]);   // a force: around its spot (not the province it is moving to: owner 2026-11-25)
+    // (s[6]: 1 for a force with ground units, whose sight Signature Reduction halves, rcnLow; 0 for a fleet)
     // the ground recon units (VIS_ID_GROUND: Special Forces, the Recon Vehicle) identify within their own sight, measured from the stack's spot
-    for (const t of VIS_ID_GROUND) if (a.u[t] > 0) idn.push([x, y, x, y, UNITS[t].vis*rSightF(a.owner, t)*KM_W, VK.gf]); }
+    for (const t of VIS_ID_GROUND) if (a.u[t] > 0) idn.push([x, y, x, y, UNITS[t].vis*rSightF(a.owner, t)*KM_W, VK.gf, t]); }   // (s[6]: which unit, for the page's 'Identified by' line)
   for (const st of (S.sats || [])) if (al.has(st.owner)){ const s = [...satStrip(st), VK.id]; ids.push(s); idn.push(s); }   // (a reconnaissance satellite identifies along its strip)
   const idp = new Set(); if (S.intel) for (const m of al){ const I = S.intel[m]; if (I) for (const k in I) if (I[k] > S.hour) idp.add(+k); }   // recon reveals still running (intelNote)
   /*@DEV*/if (DEV.reveal) for (let p = 0; p < G.P.length; p++) whole.add(p);/*@ENDDEV*/   // (in sight = identified; armyVisible shows hidden subs and special forces too)
@@ -117,8 +118,9 @@ function visibleSet(n){
 }
 const subOnly = a => a.u.sub > 0 && a.u.sub === count(a);
 const specOnly = a => a.u.spec > 0 && a.u.spec === count(a);
-// Signature Reduction (the Recon Vehicle's line): a force of recon vehicles alone, of a nation that has it, is spotted by enemy ground forces and
-// fleets (their VK.gf ranges) only within half their sight; aircraft, UAVs, satellites, radar and own land see it as usual
+// Signature Reduction (the Recon Vehicle's line): a force of recon vehicles alone, of a nation that has it, is spotted by enemy ground forces
+// (their VK.gf ranges marked s[6], any force with ground units in it) only within half their sight; fleets, aircraft, UAVs, satellites, radar and
+// own land see it as usual (the proposal's table: "spotted by enemy ground forces only within half their sight")
 const rcnLow = a => a.owner >= 0 && a.u.rcn > 0 && a.u.rcn === count(a) && has(a.owner, 'rcn_camo');
 // does the nation whose view `vis` is (vis.n) see force a (cached in the set for the hour)
 function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
@@ -142,7 +144,7 @@ function armySeen(a, vis, dp = null){ const me = vis.n;
   if (!a.fly && a.to === null && !a.sail){ if (W0.has(a.at)) return true; }
   else { const p0 = dp != null ? dp : provOfPt(x, y); if (p0 >= 0 && W0.has(p0)) return true; }   // (dp: where the screen draws it, armyVisibleAt)
   const low = rcnLow(a);
-  for (const s of ids) if ((s[5] !== VK.sea || sea) && (low && s[5] === VK.gf ? visD2(s, x, y) <= s[4]*s[4]/4 : visIn(s, x, y))) return true;
+  for (const s of ids) if ((s[5] !== VK.sea || sea) && (low && s[5] === VK.gf && s[6] ? visD2(s, x, y) <= s[4]*s[4]/4 : visIn(s, x, y))) return true;
   return false; }
 /* Identified or only spotted (owner's rule, 2026-11-18, as in Conflict of Nations): seeing a foreign force (armyVisible) only tells that something
    is there. Its nation, size, unit types and name are known only once it is identified (armyKnown), by proper recon or by fighting it:
