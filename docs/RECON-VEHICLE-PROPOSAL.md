@@ -3,6 +3,8 @@
 
 **RECON VEHICLE: proposal only. Nothing is added and no Gemini or image calls were made.**
 
+> **Built (2026-11-28, branch recon-vehicle)** with the owner's answers: sight option A (70 km, 80 km with Mast-Mounted Sensors, x8/7), Special Forces keep identifying at 100 km, a lone recon vehicle does not capture, Army Base I (BUILD-REQS), START_ARMY.recon = {rcn:1}. The pictures are the unit-art-3 set (no new pictures). Differences from the text below: identification goes through VIS_ID_GROUND = ['spec', 'rcn'] (rules/data.js) with UNITS.rcn.vis = 70 (option (a): rcn is not in VIS_RECON); the computer's offensive strength leaves recon vehicles out (aiPunch, rules/ai.js), so the starting stacks of 2 infantry and 1 recon vehicle go for no more land than the 2-infantry start did; a computer's lone recon vehicle in land it cannot take is sent home (strandedHour). Tests: .test/recon.js.
+
 Confirmed: the game has no recon vehicle today. VIS_RECON is ['spec'] (rules/data.js:534), and the rules/vision.js header says "the game has no recon vehicle or scout helicopter". The suggested code key is **rcn**, because 'recon' is already used as a flight-mission kind and as VIS_KM.recon. Cost figures come from tools/gen-art.py prices and the art logs only; the only gen-art command used was `--cost`, which just adds up the log.
 
 **Note on BUILD-REQS** (queued by the owner on 2026-11-27, not landed yet). It removes Anti-Tank Infantry and its Thermal Sights, moves the IFV to Army Base level 2, and moves Special Forces and the Jammer to level 3. It lists "Recon vehicle" at Army Base level 1, which matches this proposal. The "Built at" row and the Anti-Tank Infantry argument in section 1 describe the rules as they are today and change once BUILD-REQS lands.
