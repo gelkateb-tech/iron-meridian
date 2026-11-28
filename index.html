@@ -207,6 +207,10 @@ main{grid-column:2; grid-row:2; min-height:0; min-width:0; display:grid; grid-te
 /* a desktop, aiming (a missile, a move or an attack): the hint stands in the clear band between the zoom stack (left, to 60px) and the minimap
    (right, its 250px frame from 5px), not half under the minimap (owner, 2026-11-27); a phone has no minimap and keeps its place */
 @media (min-width:821px) and (min-height:501px){ #mapwrap:has(#map.aiming) #hint{left:calc(50% - 102px); max-width:calc(100% - 340px)} }
+/* ...and with the tutorial card open (bottom left, to 68px + its width): the band between the card and the minimap (its 250px frame from 5px),
+   not half under the card at 1280 x 800 (owner, 2026-11-28); a desktop too narrow for that band (under 1260px) puts the hint at the top of the map */
+@media (min-width:1260px) and (min-height:501px){ #mapwrap:has(#tut:not([hidden])):has(#map.aiming) #hint{left:calc(68px + min(360px, 100% - 70px)); transform:none; max-width:calc(100% - 68px - min(360px, 100% - 70px) - 268px)} }
+@media (min-width:821px) and (max-width:1259px) and (min-height:501px){ #mapwrap:has(#tut:not([hidden])):has(#map.aiming) #hint{top:10px; bottom:auto; left:50%; transform:translateX(-50%); max-width:calc(100% - 140px)} }
 @media (max-width:820px){ #mapwrap:has(#cmdbar:not([hidden])) #hint{bottom:auto} #cmdbar{bottom:44px; gap:2px; padding:4px; max-width:calc(100% - 16px); overflow-x:auto} #cmdbar .cb{min-width:46px; font-size:9.5px} #cmdbar .cb kbd{display:none} }
 #miniframe{position:absolute; right:5px; bottom:5px; width:250px; height:136px; border-radius:6px; pointer-events:none; background:linear-gradient(180deg, rgba(92,98,100,.55), rgba(58,63,66,.7)), var(--tex) center / cover, #4c5154; border:1px solid rgba(255,255,255,.1); box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08)}
 #mini{position:absolute; right:10px; bottom:10px; width:240px; height:126px; border:1px solid var(--line); border-radius:4px; background:#05090b; cursor:pointer; touch-action:none; box-shadow:0 6px 20px rgba(0,0,0,.5)}

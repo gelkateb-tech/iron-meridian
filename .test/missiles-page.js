@@ -2,7 +2,8 @@
 // on a desktop (1440 x 900) and a phone (440 px, dpr 2): the silo panel lists the chemical and nuclear missiles with their Launch buttons, a city
 // with only an Army Base offers cruise missiles, the missile strip counts every kind; a chemical and a nuclear missile are fired at Germany, fly
 // and land (the chem and tac blasts of fx.js), the gas and radiation zones exist in the rules; no page error anywhere. Polish 2: a knocked-out
-// silo's cells in the strip say "Damaged"; on a desktop the aiming hint stands clear of the minimap.
+// silo's cells in the strip say "Damaged"; on a desktop the aiming hint stands clear of the minimap (and, with the tutorial
+// card open, of the card too, at 1280 x 800 and 1440 x 900).
 //   node .test/missiles-page.js [page.html] [shots dir]      (bash tools/mkpage.sh first; shots: the phone's silo panel and strip, PNG)
 // On a page from before this build (master) it only takes the shots (there are no chemical or nuclear missiles to check).
 const SC = require('./rebels2-scene.js');
@@ -47,6 +48,14 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
     // polish 2: a desktop: the aiming hint stands clear of the minimap
     if (!phone){ const hm = await p.evaluate(() => { const r = id => { const e = document.getElementById(id), b = e && e.getBoundingClientRect(); return b && b.width && getComputedStyle(e).display !== 'none' ? [b.left, b.top, b.right, b.bottom] : null; }; return {hint:r('hint'), mini:r('miniframe'), t:document.getElementById('hint').innerText}; });
       ok(hm.hint && hm.mini && /Tap a target/.test(hm.t) && !(Math.min(hm.hint[2], hm.mini[2]) > Math.max(hm.hint[0], hm.mini[0]) && Math.min(hm.hint[3], hm.mini[3]) > Math.max(hm.hint[1], hm.mini[1])), tag + ': the aiming hint is clear of the minimap: ' + JSON.stringify(hm)); }
+    // the tutorial card open too (owner 2026-11-28): the aiming hint clear of the card and of the minimap, at 1280 x 800 and 1440 x 900
+    if (!phone){ const act = a => p.evaluate(a => { const b = document.createElement('button'); b.dataset.act = a; document.body.appendChild(b); b.click(); b.remove(); }, a);
+      await act('tut-start');
+      for (const [w, h] of [[1280, 800], [1440, 900]]){ await p.setViewportSize({width:w, height:h}); await p.waitForTimeout(1500);
+        const ht = await p.evaluate(() => { const r = id => { const e = document.getElementById(id), b = e && e.getBoundingClientRect(); return b && b.width && !e.hidden && getComputedStyle(e).display !== 'none' ? [b.left, b.top, b.right, b.bottom] : null; }; return {hint:r('hint'), tut:r('tut'), mini:r('miniframe'), map:r('mapwrap'), t:document.getElementById('hint').innerText}; });
+        const ov = (a, b) => !!a && !!b && Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
+        ok(ht.hint && ht.tut && /Tap a target/.test(ht.t) && !ov(ht.hint, ht.tut) && !ov(ht.hint, ht.mini) && ht.hint[0] >= ht.map[0] && ht.hint[2] <= ht.map[2], `${tag} ${w}x${h}: the tutorial card open: the aiming hint is clear of the card and the minimap: ` + JSON.stringify(ht)); }
+      await act('tut-end'); await p.setViewportSize({width:1440, height:900}); await p.waitForTimeout(400); }
     await p.evaluate(tg => window.__im.msl.pick(tg), r0); await p.waitForTimeout(300);
     const cf = await p.evaluate(() => { const e = document.getElementById('mslcf'); return {on:!!e && !e.hidden, t:e ? e.innerText : '', aim:window.__im.msl.aim}; });
     ok(cf.on && /Chemical strike on/i.test(cf.t) && /think less of you/.test(cf.t) && cf.aim && cf.aim.to === r0, tag + ': the launch card for a chemical strike: ' + cf.t.replace(/\s+/g, ' ').slice(0, 120));
