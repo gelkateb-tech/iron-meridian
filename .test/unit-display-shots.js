@@ -18,7 +18,7 @@ const OUT = process.argv[2] || __dirname, W = +(process.argv[3] || 1440), H = +(
     S.rel[rk(0, fr)] = { st: 'war', since: S.hour, until: null };
     if (uk >= 0) S.rel[rk(0, uk)] = { st: 'ally', since: S.hour, until: null };
     const ber = by('Berlin'), mun = by('Munich'), ham = by('Hamburg'), WI = 631, KA = 632, SEA = 3346;
-    im.addArmy(0, ber.id, { tank: 3, inf: 3, ifv: 2 }); im.addArmy(0, ber.id, { mlrs: 2, sam: 1, inf: 1 }); im.addArmy(0, ber.id, { art: 2, at: 2 });
+    im.addArmy(0, ber.id, { tank: 3, inf: 3, ifv: 2 }); im.addArmy(0, ber.id, { mlrs: 2, sam: 1, inf: 1 }); im.addArmy(0, ber.id, { art: 2 });
     if (uk >= 0) im.addArmy(uk, ber.id, { inf: 2, tank: 1 });
     try { im.air.spawn(0, ber.id, 'jet'); im.air.spawn(0, ber.id, 'heli'); } catch (e) {}
     im.addArmy(0, WI, { inf: 3, tank: 1 }); im.addArmy(fr, WI, { tank: 3, inf: 2 }); im.addArmy(fr, KA, { inf: 2, sam: 1 });

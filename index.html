@@ -84,6 +84,8 @@ img.ri.wide{width:auto !important}   /* a wide resource picture (electronics): a
 .bkt .bkhd > *{border-top:0; color:var(--ink, #e8eef0); font-weight:600; font-size:10.5px; background:rgba(0,0,0,.18)}
 .bkt .bkr.on > *{background:rgba(79,208,222,.16); color:var(--ink, #e8eef0)} .bkt .bkr.had > *{opacity:.7}
 @media (max-width:440px){ .bkt{font-size:10px} .bkt .bkr > *{padding:3px 2px} }
+/* the Army Base, Airbase and Naval Yard levels in the Build list (baseLvHTML): level, what it unlocks (wraps), how much faster */
+.bkt.blv{grid-template-columns:auto 1fr auto} .bkt.blv .bkr > *:nth-child(2){white-space:normal}
 .bld .lv{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted)}
 .bld .btn{font-size:11.5px; padding:5px 8px; white-space:normal; line-height:1.2; text-align:center; max-width:150px} .bld{grid-template-columns:minmax(0,1fr) auto}
 .bi{--bs:22px; display:inline-block; flex:none; width:var(--bs); height:var(--bs); border-radius:calc(var(--bs)*.18); background:var(--bi) center / 128% no-repeat, radial-gradient(circle at 50% 45%, #46503f, #262d27 72%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.55); vertical-align:middle; margin:-3px 6px -3px 0; image-rendering:auto}
@@ -2081,7 +2083,7 @@ html.reduced .cs-mi.live .cs-mf::after{animation:none}
 .cs-bpic > .cs-bl{position:absolute; right:3px; bottom:2px; z-index:1; font:700 11px/1 var(--body); color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000}
 @media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
 @media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
-/* a unit the city cannot mobilize yet (no Army Base, its level, research...): greyed, the reason in amber ('Needs Army Base level 1'); a tap says why */
+/* a unit the city cannot mobilize yet (no Army Base, its level, research...): greyed, the reason in amber ('Needs Army Base I'); a tap says why */
 .unit.blk{cursor:not-allowed}
 .unit.blk > .ut, .unit.blk > .nm, .unit.blk > .st{opacity:.42} .unit.blk > .ut{filter:grayscale(.85)}
 .unit.blk > .cost{color:#ffd27a; font-weight:600; transform-origin:0 50%}
@@ -10911,7 +10913,10 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
     sfx('order'); toast(`Merged ${pluN(n0, 'unit')} into ${armyName(b)}: ${pluN(count(b), 'unit')}.${warn}`, sp.over ? 'bad' : 'good', null); renderSide(true); return true; }
-  const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
+  // (to the spot where the other force stands, not the centre of its province: it merges there, rules/combat.js joinHour; one on the move is
+  // followed province by province)
+  const dest = b.to ?? b.at, spot = b.to !== null || b.path.length ? null : b.sail ? (b.sail.nx || b.sail.to) : b.pos;
+  orderMove(a, dest, spot); if (!a.path.length && a.to === null && !a.sail){ toast('No route to that force.', 'bad', null); return false; }
   a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.${warn}`, sp.over ? 'bad' : 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
 // a move to a spot in the force's own province (rules/movement.js orderMove → orderSpot): it walks, or a fleet sails, there and takes the time
@@ -11019,8 +11024,11 @@ function tap(x, y, shift = false, long = false){
   const p = mk ? mk.p : provAt(x, y);
   if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
-  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
+  // the Waypoint button on: a tap on water is a stop too (a fleet's stops are on water; troops embark through a port). Before PINPOINT-3 the
+  // line below deselected first (c67d74a, "a tap only selects"), so no fleet could be given a stop by a tap, and a phone had no other way
+  if (a && wpMode && !a.air && !long && p >= 0 && G.P[p].sea){ stopTap(a, p, x, y); return; }
+  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   if (a){
     // a tap is only a selection: it never moves the force (owner's rule). Move or Attack in the command bar (M, K), then a tap, gives the order;
     // the Waypoint button on makes each tap a stop. Anything else: a city or building tapped opens its panel with the force deselected, empty land deselects
@@ -11116,8 +11124,19 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
 const PIN_CITY = 26*KM_W;   // (about 3 world units)
 function byCity(p, w){ const P = G.P[p]; if (!P || P.sea || !w) return false; const [hx, hy] = toScreen(P.x, P.y), [tx, ty] = toScreen(w[0], w[1]);
   return Math.hypot(tx - hx, ty - hy) < 16 && Math.hypot(wdx(P.x, w[0]), w[1] - P.y) <= PIN_CITY; }
+// the exact spot of a force of yours standing still in province (or sea zone) p that the tapped point w is "on or by", for force a sent there:
+// the tap is inside its counter, or within 16 css px of its spot on screen and PIN_CITY on the map, as byCity. A force arriving joins only a
+// force standing on its very point (rules/movement.js JOIN_R, 0.1 km), so a tap meant for one of yours goes to that point (PINPOINT-3 round 2:
+// with JOIN_R about 9 km a tap near a force of yours ended in it whatever the zoom; now what you tap on screen is what you get)
+function byForce(a, p, w){ if (!a || a.air || !w || !G.P[p]) return null; const [tx, ty] = toScreen(w[0], w[1]), mine = new Set(groupArmies().map(q => q.id)); mine.add(a.id);
+  const ok = b => b && !mine.has(b.id) && b.owner === a.owner && b.at === p && !b.air && !b.fly && b.to === null && !b.path.length && !b.sail && !(b.wp && b.wp.length) && count(b) && shipsOnly(b) === shipsOnly(a);
+  const spot = b => b.pos ? b.pos : [G.P[p].x, G.P[p].y];
+  for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (h.unk || tx < h.x || tx > h.x + h.w || ty < h.y || ty > h.y + h.h) continue; const b = h.ids.map(armyById).filter(ok).sort((u, v) => count(v) - count(u))[0]; if (b) return spot(b); }
+  let best = null, bd = 16; for (const b of S.armies){ if (!ok(b)) continue; const q = spot(b), [bx, by] = toScreen(q[0], q[1]), d = Math.hypot(bx - tx, by - ty); if (d < bd && Math.hypot(wdx(q[0], w[0]), w[1] - q[1]) <= PIN_CITY){ bd = d; best = q; } }
+  return best; }
 function setTarget(a, p, want = null){ sel.target = p; sel.want = a.air ? want : null; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
   if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea && byCity(p, sel.targetPt)) sel.targetPt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
+  else if (sel.targetPt){ const f = byForce(a, p, sel.targetPt); if (f) sel.targetPt = f.slice(); }   // (a tap on or by a force of yours standing there: its spot, where it joins it)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && ((isStriker(a) && sel.want !== 'patrol') || (sel.want === 'strike' && asfStrike(a))) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
@@ -11191,8 +11210,10 @@ function sendToTarget(a, keep = false){
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
   let ok = 0, g = [];
   if (sel.target !== null){ g = groupArmies(); const T = sel.target, P0 = sel.targetPt;
-    // the exact point (rules/movement.js orderMove): a group's forces stand round it, each on its own spot (the first on the point itself)
-    const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
+    // the exact point (rules/movement.js orderMove), the same one for every force of a group: they end on the spot that was tapped and join there
+    // (rules/tick.js, the arrival join, JOIN_R), each within its stack limit. Until PINPOINT-3 round 3 the others were sent round it, 6 and 5
+    // world units off (43 to 52 km), and with the join on the very spot only (round 2) they stayed there, as separate stacks
+    const ptOf = i => !P0 ? null : pinPt(g[i], T, P0);
     g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T, sel.want)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
   sel.target = null; sel.want = null; targetPath = null;
   // as in Conflict of Nations the force (or the whole group) stays selected once the order is given, its route drawn to the point with the ETA:
@@ -11200,11 +11221,12 @@ function sendToTarget(a, keep = false){
   if (ok){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; hoverPath = null; cmdMode = null; }
   renderSide(true); }
 // Waypoint button on (or Shift): a tap adds a stop at that exact point (rules/movement.js addStop): an idle force sets off for it, one with orders
-// goes there after its last stop. A group: each force adds its own stop round the point (as sendToTarget spreads a group's points)
-function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '';
-  g.forEach((q, i) => { let pt = pinPt(q, p, i ? [w[0] + Math.cos(i*2.4)*6, w[1] + Math.sin(i*2.4)*5] : w);
+// goes there after its last stop. A group: every force adds a stop on the same point (as sendToTarget), and they join there at the end
+function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '', at = null;
+  g.forEach(q => { let pt = pinPt(q, p, at || w);   // (at: the point the first force given a stop took; the others take the same one)
     if (pt && ground(q) && !G.P[p].sea && byCity(p, w)) pt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city: its heart, where a province is captured)
-    if (pt && addStop(q, p, pt)){ ok++; delete q.join; return; }
+    else if (pt && !at){ const f = byForce(q, p, w); if (f) pt = f.slice(); }   // (on or by a force of yours standing there: its spot, where the group joins it)
+    if (pt && addStop(q, p, pt)){ ok++; delete q.join; if (!at) at = pt.slice(); return; }
     if (!why) why = !pt || (shipsOnly(q) && !G.P[p].sea) ? 'A fleet\'s stops are on water.' : !canEnter(PLAYER, p) ? `${placeOwner(p)} is not open to you: tap with Waypoint off to plan an attack.` : embarkWhy(q, p) || 'No route there from the last stop.'; });
   if (ok){ sfx('order'); visCache = null; sel.target = null; targetPath = null; hoverPath = null; sel.lastOrder = {ids:g.map(q => q.id), t:performance.now()}; ftipAsk('move'); }
   else toast(why, 'bad', null);
@@ -11558,7 +11580,7 @@ const mainLabel = p => { const k = cityMain(p); return k ? cap1(MAIN_NAME[k]) + 
 const mainOutTxt = o => o.k === 'cash' ? '$' + Math.round(o.y) + 'M' : fmt(Math.round(o.y)) + ' ' + MAIN_NAME[o.k];
 function mainChip(p){ const o = cityOut(p); if (!o) return ''; const A = BUILD.arms;
   return `<span class="cs-main res-${o.k}" title="Main resource: ${MAIN_NAME[o.k]}, ${mainOutTxt(o)} a day.&#10;${A.name}${o.lv ? ' ' + ROMAN[o.lv] + ': +' + Math.round(ARMS_PCT*100*o.lv) + '% of it' : ': +' + Math.round(ARMS_PCT*100) + '% of it per level'}.">${icon(o.k, 12)}<b>${o.k === 'rare' ? 'Rare mat.' : cap1(MAIN_NAME[o.k])}</b></span>`; }
-// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a building (no Army Base: infantry's reason, 'Needs Army Base level 1') says so
+// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a building (no Army Base: infantry's reason, 'Needs Army Base I') says so
 const csMobIdle = p => { if (UT.some(t => !canMobilize(PLAYER, p, t))) return 'Nothing in training'; const k = mobBlock(PLAYER, p, 'inf'); return k && (k.kind === 'bld' || k.kind === 'occ') ? k.why : 'Nothing in training'; };   // (an occupied city: 'Occupied: annex the city to mobilize here')
 const CS_ICO = {
   flag:`<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><g fill="currentColor"><rect x="4" y="2" width="1.8" height="16" rx=".9"/><path d="M5.8 3.2h10l-2.6 3.6 2.6 3.6h-10z"/></g></svg>`,
@@ -11724,7 +11746,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   // the capital's card: its headquarters (one regional building, no level); a city has no card of its own (no city level)
   const hqCard = () => { const A = hqArt(o); return `<button class="cs-c cs-hq" data-act="cs-card" data-k="city" title="${hqTip(o)}&#10;Province details"><span class="cs-ci${A.art ? ' ba' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span><span class="cs-cn">Capital</span></button>`; };
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = BUILD[k].name, tag = o0.btn ? 'button' : 'span', need = mine && k === 'fac' && !l && P.city;
-    const busy = c && c.k === k, ttl = `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : mine && k === 'fort' ? '\n' + bunkerTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
+    const busy = c && c.k === k, ttl = `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && (k === 'air' || k === 'yard') ? '\n' + baseTip(p, k) : mine && k === 'arms' ? '\n' + armsTip(p) : mine && k === 'fort' ? '\n' + bunkerTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${need ? ' need' : ''}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const B = bldSeen(p, PLAYER), built = BK.filter(k => B[k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [], first = P.city && can[0] === 'fac' ? can.shift() : null;   // (no Army Base yet: its card comes first; a foreign Bunker is hidden)
@@ -11775,16 +11797,30 @@ function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = inco
 const recK = l => '+' + (+recMp(l).toFixed(1)) + 'k';
 const recTip = p => { const l = S.bld[p].rec || 0, M = BUILD.rec.max;
   return l ? `${BUILD.rec.name} ${ROMAN[l]}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here' : 'unlocks no units (infantry comes from the Army Base)'}. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
-    : `${BUILD.rec.name}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers)' : 'unlocks no units (infantry comes from the Army Base)'}. Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
+    : `${BUILD.rec.name}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here (Motorized Infantry, Special Forces and, with an Airbase, Paratroopers)' : 'unlocks no units (infantry comes from the Army Base)'}. The main way to train faster. Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
 const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}% faster training` : '';
 // Army Base and Arms Industry in city p, in words: what the next level does here and what it costs (the city strip's hover text, built or not)
 const bldPrice = (p, k) => { const l = S.bld[p][k] || 0; if (l >= BUILD[k].max) return 'Highest level.'; const c = buildCost(PLAYER, k, l + 1, p); return `Level ${ROMAN[l + 1]} costs ${costTxt(c, ', ')} and takes ${csTime(c.h)}.`; };
-const facUnits = l => UT.filter(t => reqsOf(t).some(r => r.b === 'fac' && r.l === l)).map(t => UNITS[t].name).join(', ');
-const facPct = l => Math.round((1 - facF(l))*100);
+// the base levels in words (BUILD-REQS, owner 2026-11-27; from the rules' BASE_LV and BASE_SPD): what level l of base k unlocks and how much faster it trains
+const facUnits = (l, k = 'fac') => baseUnits(k, l).join(', ');
+const facPct = l => baseSpdPct('fac', l);
+const lvGives = (k, l) => { const u = facUnits(l, k), f = baseSpdPct(k, l); return [u ? 'unlocks ' + u : '', f ? `units train ${f}% faster` : ''].filter(Boolean).join(' and ') || 'no new units'; };
+const needTxt = t => reqsOf(t).map(r => BUILD[r.b].name + ' ' + ROMAN[r.l]).join(' and ');   // 'Army Base II and Airbase I'
+const lanes = p => Math.min(queueMax(PLAYER), 1 + (S.bld[p].fac || 0));   // training lines in use: a queue holds at most queueMax
 const facTip = p => { const l = S.bld[p].fac || 0, M = BUILD.fac.max, others = riseCnt(PLAYER, 'fac', p, l + 1), mem = queueMax(PLAYER) > 1;
-  return (l ? `${BUILD.fac.name} ${ROMAN[l]}: ground units train ${facPct(l)}% faster here${mem ? `, ${1 + l} training lines` : ''}.${l < M ? ` Level ${ROMAN[l + 1]}: ${facPct(l + 1)}% faster${mem ? ', one more training line' : ''}${l === 1 ? `, and unlocks ${facUnits(2)}` : ''}.` : ''}`
-    : `${BUILD.fac.name}: needed to mobilize ground units here, infantry included. Level I unlocks ${facUnits(1)}; ground units train ${facPct(1)}% faster${mem ? ' and a second training line opens' : ''}. Level II unlocks ${facUnits(2)}. Up to level ${ROMAN[M]} (${facPct(M)}% faster). No income.`)
-    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other city where you have an Army Base II or higher, beyond the first two: ${others} now.)` : !l ? ' Level I costs the same in every city.' : l === 1 ? ' Levels II\u2013V: your first two cost the base price; each one after that costs 40% more.' : ''); };
+  return (l ? `${BUILD.fac.name} ${ROMAN[l]}${facPct(l) ? `: ground units train ${facPct(l)}% faster here` : ''}${mem ? `${facPct(l) ? ',' : ':'} ${lanes(p)} training lines` : ''}.${l < M ? ` Level ${ROMAN[l + 1]} ${lvGives('fac', l + 1)}.` : ''}`
+    : `${BUILD.fac.name}: needed to mobilize ground units here, infantry included. ${[1, 2, 3, 4, 5].filter(i => i <= M).map(i => `Level ${ROMAN[i]} ${lvGives('fac', i)}`).join('; ')}.${mem ? ' Army Base I opens a second training line.' : ''} No income.`)
+    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other city where you have an Army Base II or higher, beyond the first two: ${others} now.)` : !l ? ' Level I costs the same in every city.' : l === 1 ? ' Levels II–V: your first two cost the base price; each one after that costs 40% more.' : ''); };
+// the Airbase and the Naval Yard on a city card: their level, what the next one gives, and its price
+const baseTip = (p, k) => { const l = S.bld[p][k] || 0, M = BUILD[k].max, f = baseSpdPct(k, l);
+  return (l ? `${BUILD[k].name} ${ROMAN[l]}${f ? `: units train ${f}% faster here` : ''}.${l < M ? ` Level ${ROMAN[l + 1]} ${lvGives(k, l + 1)}.` : ''}`
+    : `${BUILD[k].name}: ${[1, 2, 3, 4, 5].filter(i => i <= M).map(i => `level ${ROMAN[i]} ${lvGives(k, i)}`).join('; ')}.`) + ' ' + bldPrice(p, k); };
+// the three bases in the Build list: a short line, then one row a level (what it unlocks, how much faster it trains), this city's level marked
+const BASE_HEAD = {fac:'Unlocks and trains ground units, infantry included. No income.', air:'Unlocks and trains aircraft (with their research). Wings based here reach 1 hex farther per level above I and repair faster.', yard:'Coastal cities only: unlocks and trains ships. Damaged ships repair fast here, 20% faster per level above II.'};
+const baseLvHTML = (p, k) => { const l = S.bld[p][k] || 0, rows = [];
+  for (let i = 1; i <= BUILD[k].max; i++){ const u = baseUnits(k, i), f = baseSpdPct(k, i); rows.push(`<span class="bkr${i === l ? ' on' : i < l ? ' had' : ''}" role="row"><b>${ROMAN[i]}</b><span>${u.length ? u.join(', ') : '<span class="muted">no new units</span>'}</span><span>${f ? f + '% faster' : '–'}</span></span>`); }
+  const top = baseUnits(k, 5);   // (Airbase V: the Stealth Bomber; Naval Yard V: the Aircraft Carrier)
+  return `<span class="bkt-w"><span class="bkt-h">${BASE_HEAD[k]} Levels I–III unlock units; IV and V train faster${top.length ? ` (V also unlocks ${top.join(', ')})` : ''}. The Recruiting Office is the main way to train faster${k === 'fac' && queueMax(PLAYER) > 1 ? '; Army Base I opens a second training line' : ''}.</span><span class="bkt blv" role="table" aria-label="${BUILD[k].name} levels"><span class="bkr bkhd" role="row"><b>Lv</b><b>Unlocks</b><b>Speed</b></span>${rows.join('')}</span></span>`; };
 const armsTip = p => { const o = cityOut(p); if (!o) return BUILD.arms.desc; const l = S.bld[p].arms || 0, M = BUILD.arms.max, pc = Math.round(ARMS_PCT*100), nm = MAIN_NAME[o.k], others = facOthers(PLAYER, p, 'arms');
   const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), out = y => o.k === 'cash' ? '$' + d1(y) + 'M' : fmt(Math.round(y)) + ' ' + nm, at = lv => out(o.base*(1 + ARMS_PCT*lv)), gain = o.base*ARMS_PCT, c = l < M ? buildCost(PLAYER, 'arms', l + 1, p) : null;
   const pay = c && gain > 0 ? Math.max(1, Math.round((c.cash + lotCash(c.metal, mkt().p.metal) + lotCash(c.iron, mkt().p.iron) + lotCash(c.elec || 0, mkt().p.elec))/(o.k === 'cash' ? gain : lotCash(gain, mkt().p[o.k])))) : 0;
@@ -11798,7 +11834,7 @@ const bunkerTip = p => { const l = S.bld[p].fort || 0, L = BUNKER_LV[l], M = BUI
 const bunkerLvHTML = p => { const l = S.bld[p].fort || 0, pc = v => Math.round(v*100) + '%', T = bunkerTable(PLAYER), hp = bunkerHp(p);
   return `<span class="bkt-w"><span class="bkt-h">${BUILD.fort.name}: hidden from other nations. Your garrison takes less damage (with dug-in: in the open, in a city); the people of the province are spared as much; the other buildings here take ${pc(BUNKER_LV[BUNKER_SHIELD_LV].red)} less damage at every level.${l ? ` Health now ${Math.round(hp)}/${BUNKER_LV[l].hp}.` : ''}</span>
     <span class="bkt" role="table" aria-label="${BUILD.fort.name} levels"><span class="bkr bkhd" role="row"><b>Lv</b><b>Damage</b><b>Dug in</b><b>Health</b><b>Morale</b><b>Upkeep</b><b>Price</b></span>${T.map(r => `<span class="bkr${r.lv === l ? ' on' : r.lv < l ? ' had' : ''}" role="row"><b>${ROMAN[r.lv]}</b><span>−${pc(r.less)}</span><span>−${pc(r.lessOpen)} / −${pc(r.lessCity)}</span><span>${r.hp}</span><span>+${pc(r.mrl)}</span><span>$${r.upk.toFixed(1)}M</span><span>$${r.cost.cash}M, ${+(r.cost.h/24).toFixed(1)} d</span></span>`).join('')}</span></span>`; };
-const bldDesc = (p, k) => k === 'rec' ? recTip(p) : k === 'fort' ? bunkerLvHTML(p) : BUILD[k].desc;
+const bldDesc = (p, k) => k === 'rec' ? recTip(p) : k === 'fort' ? bunkerLvHTML(p) : BASE_LV[k] ? baseLvHTML(p, k) : BUILD[k].desc;
 const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
 const mobHTML = p => `${cmodHead(p, 'Mobilize unit')}<div class="cs-mbody cs-mmod">${cityRecruitHTML(p)}</div>`;
 const cbldHTML = p => `${cmodHead(p, 'Build')}<div class="cs-mbody cs-bmod">${cityConsHTML(p, true)}${S.bld[p].silo ? citySiloHTML(p) : ''}</div>`;
@@ -12425,7 +12461,7 @@ function rCardHTML(nd){ if (!nd) return '';
   // the one-line note under the header, the unit box and the description
   const note = nd.kind === 'unlock' ? 'Starting level military unit or technology.' : nd.kind === 'gen' ? `<b>${nd.name}</b>: a new generation${U ? ' of the ' + U.name : ''}.` : `<b>${step}</b>${U ? ` for every ${U.name}` : ''}.`;
   const box = U ? U.name : RK_MSL[nd.line] ? nd.line : nd.cat === 'cmd' ? C.name : rLineName(nd);
-  const desc = nd.kind === 'unlock' && U ? `${U.role}${nd.elite ? ' Elite unit.' : ''}` : `${rTxt(nd, lvN)}.`;
+  const desc = nd.kind === 'unlock' && U ? `${U.role}${nd.elite ? ' Elite unit.' : ''}${reqsOf(nd.u).length ? ` Trained at: ${needTxt(nd.u)}.` : ''}` : `${rTxt(nd, lvN)}.`;   // (where it trains: BUILD-REQS)
   const tagIc = U ? uiconSVG(nd.u, 20) : RK_MSL[nd.line] ? uiconSVG(RK_MSL[nd.line], 20) : rkCat(nd.cat, 10);
   const stripe = K.fld.map(k => `<span class="rk-gi" style="--gc:${(RK_BAN[k] || RK_BAN.export)[1]};--gl:${(RK_BAN[k] || RK_BAN.export)[2]}" title="${NGROUP_BY[k].name}">${rkEmb(k, 34)}</span>`).join('');
   const scene = U ? K.art.scene : `assets/art/ri-${rKey(nd)}.webp`;
@@ -12894,7 +12930,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
         html += `<div class="mobneed"><span>${going ? `<b>Army Base going up</b>: ready in ${dayTxt(c0.h)}. Infantry and the other ground units can be trained here once it stands.` : `<b>No Army Base in ${P.cityName} yet.</b> Infantry and every other ground unit train only in a city with an Army Base (level I: $${cc.cash}M, ${dayTxt(cc.h)}).`}</span>${going ? '' : c0 ? `<span class="small muted">Busy building ${BUILD[c0.k].name}</span>` : `<button class="btn${hasC(N, cc) ? ' can' : ''}" data-act="build" data-k="fac" ${hasC(N, cc) ? '' : `disabled title="Needs ${missTxt(N, cc)}"`}>Build Army Base</button>`}</div>`; } }
     html += `<div class="eyebrow">Recruit<span class="rec-b"> · ${queueMax(PLAYER) > 1 ? `${queueUsed(p)}/${queueMax(PLAYER)} in training` : queueUsed(p) ? 'training' : 'one at a time'}</span>${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div>${qOne ? `<div class="small mobone" style="margin:2px 0 6px"><b>One unit at a time.</b> The next one can be mobilized here when ${(UNITS[q0.t] || MISSILES[q0.t]).name} is ready (${q0.h} h).</div>` : ''}<div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
-    html += `<div class="small muted">${queueMax(PLAYER) > 1 ? `${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city).` : `One unit at a time in each city. With a membership: a queue of ${QUEUE_MAX} per city, trained side by side on the Army Base's training lines.`} <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
+    html += `<div class="small muted">${queueMax(PLAYER) > 1 ? `${lanes(p)} training line${lanes(p) > 1 ? 's' : ''}${S.bld[p].fac ? '' : ' (Army Base I opens a second)'}. Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city).` : `One unit at a time in each city. With a membership: a queue of ${QUEUE_MAX} per city, trained side by side on the Army Base's training lines.`} <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
     html += rallyRowHTML(p);
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}><i aria-hidden="true"></i><span>Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</span></label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
@@ -13431,7 +13467,7 @@ const HELP_SEC = [
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> A city's chip and the Cities tab show its main resource, and hovering a province shows its yields, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
-    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry). No city starts with one: build level I in your capital first (cheap, ready in 30 minutes, the same price in every city; for levels II\u2013V your first two cost the base price, each later one 40% more); units take a day or more to train. A city trains one unit at a time; with a membership it holds a queue of ${QUEUE_MAX}, and each Army Base level adds a training line. Cities can have a rally point for new units.</li>
+    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry). No city starts with one: build level I in your capital first (cheap, ready in 30 minutes, the same price in every city; for levels II\u2013V your first two cost the base price, each later one 40% more); units take a day or more to train. Army Base levels I–III unlock units (tanks and IFVs at level II, rocket artillery, SAMs, special forces and jammers at III); levels IV and V train faster, and the Recruiting Office is the main way to speed training up. A city trains one unit at a time; with a membership it holds a queue of ${QUEUE_MAX}, and Army Base I opens a second training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
     <li><b>Capture</b>: a province is yours the moment your ground units reach its centre point, the city (or, without a city, the crossroads in its middle where its roads meet), with no defenders left: there is no capture timer, and ${CAP_MIN === 1 ? 'one ground unit is enough' : CAP_MIN + ' ground units are needed'}. Every province's roads meet at that point, and a march into a province ends on it. Crossing the border or stopping anywhere else in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more. Enemy columns on the move that come into the same province or sea zone stop where they meet and fight; a force that meets the enemy in the province it was going to walks on to its point once it has won.</li>
@@ -13457,10 +13493,10 @@ const HELP_SEC = [
     <li><b>Capture</b>: trains run only through provinces held by you or an ally, so a captured line serves its new owner. Works on a link are abandoned if either end is lost.</li></ul>`],
   ['air', 'Air power and new aircraft', `<ul>
     <li><b>Wings</b> live at your airbases (or on a carrier). Select one and tap a target inside its range ring: strike missions hit everything hostile there and fly home to rearm; patrols guard a province for 12 h.</li>
-    <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (Airbase II): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
-    <li><b>Heavy Bomber</b> (Airbase II): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
-    <li><b>Stealth Bomber</b> (Airbase III; research the Strategic Bomber Upgrade on the Heavy Bomber's line and Stealth Airframes on the Strike Fighter's, then the Stealth Bomber itself, from day 14): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
-    <li><b>AWACS</b> (Airbase II) locates enemy forces within 500 km (up to 650 km with radar research) and lets your fighters inside that radius cover the neighbouring provinces and fight better. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
+    <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (${needTxt('asf')}): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
+    <li><b>Heavy Bomber</b> (${needTxt('bomb')}): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
+    <li><b>Stealth Bomber</b> (${needTxt('stealth')}; research the Strategic Bomber Upgrade on the Heavy Bomber's line and Stealth Airframes on the Strike Fighter's, then the Stealth Bomber itself, from day 14): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
+    <li><b>AWACS</b> (${needTxt('awacs')}) locates enemy forces within 500 km (up to 650 km with radar research) and lets your fighters inside that radius cover the neighbouring provinces and fight better. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
     <li><b>Wear and maintenance</b>: every mission wears a wing 3–6% (more for long or loitering missions), even unopposed. Wings repair only on the ground at your airbases (10% + 6% per base level a day) or on a carrier (20%), and not in the 6 h after a sortie, so back-to-back strikes grind them down. Below 50% they show <b>Needs maintenance</b> and fight worse; below 20% they are grounded.</li></ul>`],
   ['drones', 'Drones, UAVs, AWACS and jammers', `<ul>
     <li><b>UAV levels</b> (Drones research): UAV I–III are <b>recon only</b>: they reveal what is around them, with more vision, loiter time, range and stealth each level. UAV IV and V are <b>armed</b> and fire missile salvos at units and buildings.</li>
@@ -13469,7 +13505,7 @@ const HELP_SEC = [
     <li><b>Static Jammers</b> (anti-drone) down drones over their province and its neighbours, swarms best, and blunt the drones that get through; they cannot fight anything else. SAMs and fighters also kill drones; a bigger swarm loses more drones.</li>
     <li>The <b>Air &amp; drone guide</b> (button in any city panel) lists every air unit, its range and its counters.</li></ul>`],
   ['navy', 'Navy, speeds and transports', `<ul>
-    <li><b>Ships</b> come from a Naval Yard in a coastal city: frigates (air defence, find submarines nearby), submarines (hidden convoy and fleet killers), cruisers, carriers (a mobile airbase).</li>
+    <li><b>Ships</b> come from a Naval Yard in a coastal city: frigates (air defence, find submarines nearby) at ${needTxt('frig')}, cruisers and submarines (hidden convoy and fleet killers) at ${needTxt('crui')}, carriers (a mobile airbase) at ${needTxt('carr')}; levels IV and V train ships faster.</li>
     <li><b>Naval cities</b>: every coastal city is a naval city, marked with an anchor beside its name. Only there can a Naval Yard be built, and only there do troops board ships and come ashore.</li>
     <li><b>Transports</b>: ground troops board ships only at a <b>naval city</b> of yours or a friend's; from a coast without one the order to sea is refused (march to a naval city). Embarking takes ${durTxt(EMBARK_H)} in the port; then they ride slow transports, about 650 km a day. Ships in the same zone escort them: they take less damage.</li>
     <li><b>Landings</b> only at a naval city: your own or a friend's, or an enemy's or independent one taken by an <b>assault landing</b>. A route to other land over the sea lands at the nearest naval city and marches on. <b>Marines</b> (amphibious infantry, trained at an Army Base in a coastal city once researched in the Infantry Corps) land on any coast, when the force is Marines alone. ${durTxt(LAND_H)} to come ashore (${durTxt(LAND_PORT_H)} into a naval city you or a friend hold; Amphibious Doctrine halves both). Meanwhile the troops cannot move on or capture, and fight at a disadvantage on their first day ashore. The army bar counts the time down.</li>

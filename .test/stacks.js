@@ -38,12 +38,12 @@ ck(near(R.stackEffN(10, 5), 0.612) && R.stackEffN(25, 5) === 0.25, 'air and sea:
   ck(R.landSpeed(b) < spd0, 'old save: the big stack is slower'); }
 // 6. the AI splits an idle 128-stack into limit-sized stacks and spreads them
 { api.newGame(777, 0, []); const S2 = R.S, n = 3, p = S2.nations[n].capital; S2.started = true;
-  const a = R.addArmy(n, p, {inf:70, tank:30, art:14, at:14}); const before = S2.armies.filter(x => x.owner === n && !x.air).length;
+  const a = R.addArmy(n, p, {inf:84, tank:30, art:14}); const before = S2.armies.filter(x => x.owner === n && !x.air).length;
   S2.hour = 4*24 - n; R.aiTurn(n); R.removeEmpty();
   const mine = S2.armies.filter(x => x.owner === n && !x.air && R.count(x)), big = Math.max(...mine.map(x => R.stackSizes(x).land));
   ck(big <= 10, `AI: biggest stack after its turn ${big}`); ck(mine.length >= before + 12, `AI: ${mine.length} stacks (was ${before})`); }
 // 7. the duel
 { const out = cp.execFileSync(process.execPath, [path.join(ROOT, 'tools/stack-duel.js'), '--json'], {encoding:'utf8', maxBuffer:1 << 24}), cases = JSON.parse(out);
-  for (const c of cases){ if (c.label.startsWith('128') || c.label.startsWith('13')) ck(c.winner === c.split, `duel ${c.label} (${c.place}): ${c.winner}`); else ck(c.ok, `duel ${c.label} (${c.place}): ${c.winner}`); }
+  for (const c of cases){ if ((c.label.startsWith('128') || c.label.startsWith('13')) && !c.info) ck(c.winner === c.split, `duel ${c.label} (${c.place}): ${c.winner}`); else ck(c.ok, `duel ${c.label} (${c.place}): ${c.winner}`); }   // (c.info: informational, tools/stack-duel.js)
   const c1 = cases.find(c => c.label === '13 stacks attack 128 (one side)' && c.place === 'open'); ck(c1 && c1.atkLeft > 70 && c1.atkLeft - c1.defLeft >= 20, 'duel: the split side wins clearly ' + (c1 && `${c1.atkLeft}% vs ${c1.defLeft}%`)); }
 console.log(bad ? 'FAILED' : 'OK', 'errors', []); process.exit(bad ? 1 : 0);

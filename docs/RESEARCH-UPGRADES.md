@@ -82,6 +82,8 @@ Base: attack 3, defence 3, health 10, speed 4. Unlock: standard issue (day 1). F
 
 ### 2.2 Anti-Tank Infantry (`at`)
 
+(Removed 2026-11-27, BUILD-REQS: the unit and this line are gone; see docs/ECONOMY.md section 15 for old saves.)
+
 Base: attack 3, defence 3, health 9, speed 4. Unlock: standard issue (day 1). Final level: **Protection 3** (day 17).
 
 | Day | Node (id) | Level | What it does | Mark |

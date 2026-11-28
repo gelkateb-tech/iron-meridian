@@ -32,17 +32,17 @@ const out = n => __dirname + '/stealth-' + n + '.png';
   ck('research starts in a slot', await p.evaluate(() => { const N = window.__im.S.nations[0]; return [N.research, N.research2].some(r => r && r.id === 'u_stealth'); }));
   await p.evaluate(() => { const N = window.__im.S.nations[0]; N.research = N.research2 = null; N.tech.u_stealth = 1; N.tv++; window.__im.S.hour = window.__h0; });   // back to the game's own hour for the map checks
   await p.click('#sheet [data-act="resume"]').catch(() => {}); await p.waitForTimeout(200);
-  // ---- Mobilize list in the capital: greyed with Airbase II, live with Airbase III
-  const cap = await p.evaluate(() => { const im = window.__im, S = im.S, c = S.nations[0].capital; S.bld[c].air = 2; S.bld[c].fac = Math.max(1, S.bld[c].fac); im.selectProv(c); return c; });
+  // ---- Mobilize list in the capital: greyed with Airbase IV, live with Airbase V (the Stealth Bomber's level since BUILD-REQS)
+  const cap = await p.evaluate(() => { const im = window.__im, S = im.S, c = S.nations[0].capital; S.bld[c].air = 4; S.bld[c].fac = Math.max(1, S.bld[c].fac); im.selectProv(c); return c; });
   await p.waitForTimeout(300); await p.click('#csheet [data-act="cs-mob"]'); await p.waitForTimeout(400);
   const card = () => p.evaluate(() => { const e = document.querySelector('#sheet .unit[data-t="stealth"]'); return e ? { cls: e.className, title: e.title, text: e.innerText.replace(/\s+/g, ' ').trim(), pic: !!e.querySelector('.ut') } : null; });
-  let c1 = await card(); ck('Mobilize: the Stealth Bomber is listed, blocked: needs Airbase III', c1 && /blk/.test(c1.cls) && /Airbase III/.test(c1.title + c1.text) && c1.pic, c1);
+  let c1 = await card(); ck('Mobilize: the Stealth Bomber is listed, blocked: needs Airbase V', c1 && /blk/.test(c1.cls) && /Airbase V/.test(c1.title + c1.text) && c1.pic, c1);
   await p.screenshot({ path: out('mobilize-blocked') });
   await p.click('#sheet [data-act="resume"]').catch(() => {}); await p.waitForTimeout(150);
-  await p.evaluate(c => { const im = window.__im; im.S.bld[c].air = 3; im.selectProv(c); }, cap); await p.waitForTimeout(250);
+  await p.evaluate(c => { const im = window.__im; im.S.bld[c].air = 5; im.selectProv(c); }, cap); await p.waitForTimeout(250);
   await p.click('#csheet [data-act="cs-mob"]'); await p.waitForTimeout(400);
   // (the card tooltip is now the neutral one-line role plus the upkeep (commit 3550feb); the '35% as often' air-defence detail is no longer on the card)
-  c1 = await card(); ck('Mobilize: with Airbase III it can be ordered; the tooltip gives the role and upkeep', c1 && !/blk/.test(c1.cls) && /hard to detect/.test(c1.title) && /Daily upkeep/.test(c1.title) && /330/.test(c1.text), c1);
+  c1 = await card(); ck('Mobilize: with Airbase V it can be ordered; the tooltip gives the role and upkeep', c1 && !/blk/.test(c1.cls) && /hard to detect/.test(c1.title) && /Daily upkeep/.test(c1.title) && /330/.test(c1.text), c1);
   await p.hover('#sheet .unit[data-t="stealth"]'); await p.waitForTimeout(500); await p.screenshot({ path: out('mobilize') });
   await p.click('#sheet .unit[data-t="stealth"]', { force: true }); await p.waitForTimeout(300);
   ck('Mobilize: queued in the capital', await p.evaluate(c => window.__im.S.queue[c].some(j => j.t === 'stealth'), cap));
@@ -53,7 +53,7 @@ const out = n => __dirname + '/stealth-' + n + '.png';
     const w = im.addArmy(0, c, { stealth: 3 }); w.air = { base: c, cd: 0 };
     const tg = G.P.filter(P => S.owner[P.id] === E && P.city && !P.sea).sort((x, y) => Math.hypot(x.x - G.P[c].x, x.y - G.P[c].y) - Math.hypot(y.x - G.P[c].x, y.y - G.P[c].y))[0].id;
     im.selectArmy ? im.selectArmy(w.id) : null; return { id: w.id, E, tg, name: armyName(w), range: wingRange(w), kind: airCheck(w, tg, [E]) }; }, cap);
-  ck('wing: named, 36 hexes from an Airbase III, plans a strike', /Stealth Bomber Wing/.test(R.name) && R.range === 36 && (R.kind.kind === 'strike' || /range/i.test(R.kind.why || '')), R);
+  ck('wing: named, 38 hexes from an Airbase V, plans a strike', /Stealth Bomber Wing/.test(R.name) && R.range === 38 && (R.kind.kind === 'strike' || /range/i.test(R.kind.why || '')), R);
   // ---- fog on the map (the page records what each frame did with every wing in flight: window.__airSeen[id] = drawn / unk (spotted, a ? plate) / hidden / contact)
   await p.keyboard.press('Escape'); await p.waitForTimeout(150);
   const F = await p.evaluate(({ c, E }) => { const im = window.__im, S = im.S, G = im.G;
