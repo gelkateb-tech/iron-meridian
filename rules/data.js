@@ -629,8 +629,8 @@ const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 
 // Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
 // start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
 // (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
-//   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; inf/tank/art: the capital's force;
-//   cityTanks: that many of the biggest other cities get a tank; guards: border guards (2 infantry each); recs: Recruiting Offices outside the capital
+//   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; recs: Recruiting Offices outside the capital.
+//   (The starting army is no longer by tier: START_ARMY below, the same for every nation; owner playtest 2026-11-27, item 3)
 const TIER_RANK = {S:0, A:1, B:2, C:3};
 // The Bunker at the start (owner, 2026-11-14, as Fortifications): every nation's capital starts with a Bunker of this level, and no other province has any
 // (before, a tier C capital and the border guards' provinces of tiers B and C had level I, and the classic world's small powers their capital and borders: about 150 forts)
@@ -638,21 +638,35 @@ const START_FORT = 1;
 // The Airbase at the start (owner, 2026-11-25): every nation's capital also starts with an Airbase of this level and one wing of START_AIR_UNIT based
 // there (one Air Superiority Fighter), so every nation can patrol and scout from day one; computer nations alike. New games only (startAir, rules/state.js)
 const START_AIR = 1, START_AIR_UNIT = 'asf';
-const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
+// The starting army in the nations world (owner playtest 2026-11-27, item 3): the same for every nation, seats and computer nations alike, in every
+// game mode; no tanks. New games only (tierStart, rules/state.js; old saves keep their armies). The whole start is this one table:
+//   capital: the capital's force (beside START_AIR's fighter at its Airbase, made by startAir as before)
+//   outer:   the force of each of the outerN stacks that stand in cities outside the capital (which cities: startOuter, rules/state.js, by START_OUTER)
+//   recon:   THE RECON SLOT of every outer stack: added to each outer stack once the recon vehicle exists. It does not exist yet (proposal sent to the
+//            owner, not approved), so it is null and skipped; on approval it becomes the new unit's key and count, e.g. {rcn:1}. A key that is not
+//            a unit yet is skipped too (startForce)
+//   cities:  a garrison for every other city (null: none; the start before 2026-11-27 had {inf:2})
+//   guards / guard: how many border guards and their force (0: none; facing the strongest neighbour first, as before)
+const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:null, cities:null, guards:0, guard:{inf:2}};
+// which cities hold the outer stacks (startOuter): only cities the capital reaches over the nation's own land, not next to the capital (unless fewer
+// than 2 remain); weight = people, times border for a city on another nation's land border (independent land does not count) and times highway
+// for one on a highway (equal weights: the more populous); the first stack the heaviest, the second the heaviest not next to the first and away
+// from it: at least apart degrees from it as seen from the capital, or at least far times the capital's distance to it from both it and the capital
+const START_OUTER = {apart:60, far:0.75, border:1.5, highway:1.5};
+const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, recs:2};
 const TIER_FULL = {
-  S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, inf:6, tank:3, art:2, cityTanks:4, guards:5, recs:4},
-  A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, inf:5, tank:2, art:1, cityTanks:2, guards:4, recs:3},
-  B:{day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:1, cityTanks:0, guards:3, recs:2},
-  C:{day:201, mpDay:52, cash:200, mp:80, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2}};
+  S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, recs:4},
+  A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, recs:3},
+  B:{day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, recs:2},
+  C:{day:201, mpDay:52, cash:200, mp:80, oil:40, metal:60, iron:70, elec:30, recs:2}};
 // floor: how far the catch-up may hold a rich nation back (income multiplier, home provinces only)
 const TIER_MODES = {normal:{name:'Normal', spread:0.3, floor:0.3}, competitive:{name:'Competitive', spread:0.6, floor:0.75}};
 const tierMode = k => TIER_MODES[k] || TIER_MODES.normal;
 function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tierMode(mode), k = {};
   for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]))*(isGood(key) ? RES_K : 1);   // (the stocks in RES_K units)
   k.floor = M.floor; k.yard = tier === 'S' || tier === 'A';   // (Fortifications: only the capital starts with them, START_FORT, every tier alike)
-  // the Naval Yard of a coastal S or A nation takes the place of border guards only as starts grow distinct: none in normal mode (spread 0.3; with
-  // 2 guards gone a major power opened with fewer units than a regional one of as many cities), one at spread 0.6, two in the full table (plan 3.2)
-  k.yardGuards = k.yard ? Math.floor(2*M.spread + 1e-9) : 0; return k; }
+  // (the Naval Yard of a coastal S or A nation no longer takes the place of border guards: the starting army is the same for every nation, START_ARMY)
+  return k; }
 const tierGap = (a, b) => (TIER_RANK[b] ?? 2) - (TIER_RANK[a] ?? 2);   // how many tiers b stands below a
 // (step 6, the full world: S was 2. A computer superpower in three wars of its own making, most of them across the sea against small nations with
 // armies near its own, left its long borders bare: the United States lost 6 to 16% of its land in 3 seeds of 5, to Canada, Mexico and a

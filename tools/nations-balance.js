@@ -88,8 +88,8 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
     say('T1 Structure', ok && !bad.length, bad.length ? bad.join('; ') : `${open.length} nations, regions open: ${NAT.open.join(', ') || 'none'}` + (notes.length ? ` (not yet reworked: ${notes.join('; ')})` : '')); }
 
   // T2 opening (owner: normal mode starts close to equal): money a day within 10% of the tier's target, or up to 1.3 times it for a nation the
-  // catch-up holds back at its floor; the targets of the richest and poorest tier at most 25% apart; median manpower a day and median opening
-  // units in tier order (S at least A at least B at least C, and S above the lowest tier present)
+  // catch-up holds back at its floor; the targets of the richest and poorest tier at most 25% apart; median manpower a day in tier order (S at least
+  // A at least B at least C, and S above the lowest tier present); every nation opens with the same number of units (START_ARMY)
   { const bad = [], tiers = TIERS.filter(t => open.some(o => o.N.tier === t));
     for (const o of open){ const r = o.cash/o.kit.day; if (r < 0.9 || r > 1.3 || (r > 1.105 && o.N.boost > o.kit.floor + 1e-9)) bad.push(`${o.N.name} $${o.cash.toFixed(0)} a day (target ${o.kit.day})`); }
     const tg = tiers.map(t => R.tierKit(t, mode).day), spread = Math.max(...tg)/Math.min(...tg); if (spread > 1.25) bad.push(`tier targets ${spread.toFixed(2)} apart`);
@@ -99,7 +99,8 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
     const mm = tt.map(t => med(done.filter(o => o.N.tier === t).map(o => o.mp))), mu = tt.map(t => med(done.filter(o => o.N.tier === t).map(o => o.units)));
     const inOrder = a => a.every((v, i) => i === 0 || v <= a[i - 1] + 1e-9) && (a.length < 2 || a[0] > a[a.length - 1]);
     if (!inOrder(mm)) bad.push('median manpower a day not in tier order: ' + tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', '));
-    if (!inOrder(mu)) bad.push('median opening units not in tier order: ' + tt.map((t, i) => t + ' ' + mu[i]).join(', '));
+    // (opening units: the same starting army for every nation, START_ARMY, owner playtest 2026-11-27; before it, the median in tier order)
+    { const u = open.map(o => o.units); if (Math.min(...u) !== Math.max(...u)) bad.push('opening units differ between nations: ' + open.filter(o => o.units !== med(u)).map(o => `${o.N.name} ${o.units}`).slice(0, 8).join(', ')); }
     say('T2 Opening', !bad.length, bad.length ? bad.join('; ') : `money a day ${Math.min(...open.map(o => o.cash)).toFixed(0)} to ${Math.max(...open.map(o => o.cash)).toFixed(0)} (targets ${tiers.map((t, i) => t + ' ' + tg[i]).join(', ')}); median manpower ${tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', ')}; median units ${tt.map((t, i) => t + ' ' + mu[i]).join(', ')}${NAT.open.length ? ` (medians over the ${done.length} nations of ${NAT.open.join(', ')})` : ''}`); }
 
   // T9 seats: a nation started as a seat nobody plays, 3 days: no error and it receives its dispatches (every new nation of the step; at step 0 two of the 15)

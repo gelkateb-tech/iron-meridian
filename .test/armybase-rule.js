@@ -3,7 +3,7 @@
 //    the reason is 'Needs Army Base I' and recruit() refuses; a Recruiting Office alone unlocks nothing; Paratroopers also need an Airbase;
 //    the other ground units keep their Army Base levels. The switch INF_NEEDS = ['fac', 'rec'] (the owner's alternative) needs both buildings.
 // 2. a new game (START-RULES, owner 2026-11-15): no city starts with an Army Base (both worlds), so on day 1 infantry says 'Needs Army Base I'
-//    everywhere; every capital has Fortifications I and no other province any; the starting units are the same as before the rule, plus the
+//    everywhere; every capital has Fortifications I and no other province any; the starting units are as recorded (the nations world: START_ARMY), plus the
 //    capital's fighter (startAir, owner 2026-11-25). Army Base level I is cheap and quick (BUILD.fac.lv1: $10M, 2,000 materials, 2,000 iron, 30
 //    minutes; owner 2026-11-25) and costs the same in every city (no 40% rise at level I); every nation can pay for it from its starting stock;
 //    levels II-V keep their prices (the rise for them: .test/econ-start.js)
@@ -70,9 +70,10 @@ for (const scn of ['world64', 'world']){ const R = load(), api = R.IM.api; api.u
     for (const p of cs) S.cons[p] = null; }
   ok(S.nations.every(N => S.bld[N.capital].fort === R.START_FORT && R.START_FORT === 1), `${scn}: every capital starts with Fortifications I`);
   ok(forts.length === S.nations.length && forts.every(p => caps.includes(p)), `${scn}: no other province starts with Fortifications (${forts.length} forts, ${S.nations.length} nations)`, forts.filter(p => !caps.includes(p)).slice(0, 10));
-  // the starting units as before the rule (recorded from master 48d6a7f, seed 12345: the start uses no dice in either world for the nations' own units),
-  // plus one fighter at every capital (startAir, owner 2026-11-25)
-  const U0 = {world64:1942, world:376}[scn] + S.nations.length; ok(units(S) === U0, `${scn}: starting units as before plus one fighter a nation (${units(S)}, expected ${U0})`); }
+  // the starting units (seed 12345: the start uses no dice in either world for the nations' own units), plus one fighter at every capital (startAir,
+  // owner 2026-11-25). The nations world: START_ARMY (owner playtest 2026-11-27), 8 a nation (capital 2 infantry + 1 artillery, two outer stacks of
+  // 2 infantry; recorded before the recon vehicle); the classic world as recorded from master 48d6a7f
+  const U0 = {world64:7*S.nations.length, world:376}[scn] + S.nations.length; ok(units(S) === U0, `${scn}: starting units as recorded plus one fighter a nation (${units(S)}, expected ${U0})`); }
 
 // ---- 3. an old save
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(777, 0, [0]); let S = R.S, G = R.G; S.started = true;
