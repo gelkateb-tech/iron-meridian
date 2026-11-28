@@ -7,7 +7,7 @@
 //    want is still a patrol; refused on its own land with no enemy there, on a nation it is not at war with, out of range; an Interceptor or an
 //    AWACS cannot Attack; a Strike Fighter's own strike is unchanged
 // 3. the damage (the real resolveStrike, 400 sorties of one aircraft each): about 1 HP a sortie on one infantry, one tank, one artillery in the
-//    open and on a frigate (0.75 to 1.25), troops at sea 1.5x that without warships and 0.75x with them (AT_SEA), and it never cuts road or
+//    open and on a frigate (0.75 to 1.25), troops at sea 1.5x that without warships (AT_SEA; escorted: 10), and it never cuts road or
 //    rail links nor adds war damage (ASF_ATTACK.links);
 //    3b: on a sea zone it records no convoy raid (S.trade.air), where a Strike Fighter does
 // 4. a whole Attack sortie through the hours (tick): out, the strike, the hour over the target, back, 6 h rearming; the foe lost health
