@@ -1,19 +1,22 @@
-// The one-figure test (owner 2026-11-27; index.html ?fig=1, today's look stays the default): node .test/one-figure.js   (bash tools/mkpage.sh first;
+// The one-figure test (owner 2026-11-27; one figure is the default from 2026-11-28, index.html ?fig=0 shows the earlier formation): node .test/one-figure.js   (bash tools/mkpage.sh first;
 // exits 1 on any failure, prints JSON). A nations-world game as Germany, the clock paused, every force removed, at the closest zoom (hex 240):
-//  (D) without the switch a mixed army (4 Anti-Tank, 3 Tanks, 2 Motorized Infantry) still stands as today's formation of several figures
-//  (O) with ?fig=1 the same army stands as ONE figure, its main unit by the badge's rule (count x hit points: 3 Tanks 42 > 4 Anti-Tank 36), a tank
+//  (D) with ?fig=0 a mixed army (4 Anti-Tank, 3 Tanks, 2 Motorized Infantry) still stands as the earlier formation of several figures
+//  (O) by default the same army stands as ONE figure, its main unit by the badge's rule (count x hit points: 3 Tanks 42 > 4 Anti-Tank 36), a tank
 //  (M) Motorized Infantry at rest: one transport with its rifleman beside it; on the move: the transport alone (he rides in the hatch)
 //  (H) on the road (Wiesbaden > Karlsruhe, the German road leg with the most bends, clock 2x) the drawn heading turns smoothly: never faster than the
 //      tracked turn-rate cap (2 rad/s x sqrt 2), 1.5 times it while catching up with its way of travel (more than 25 degrees off it), and it turns through the bends (more than 0.6 rad in all over 6 s); its back-and-forth reversals are reported
 //  (T) the same road at 1x, hex 240, the view following it: the heading stays within 30 degrees of the figure's way of travel (no stretch over
 //      0.6 s) and never swings more than 120 degrees within 1.5 s
+//  (R) on its road (Wiesbaden > Karlsruhe by Mannheim, 1x, the view following it) at hex 150 and 240: the figure's ground point stays on its drawn route (legGeom, leg by leg)
+//      (median within 0.15 world px, 90% of the frames within 0.6; the ends of the leg, where it eases off and onto its standing spots, included)
+//  (S) setting off (hex 240, fixed camera, 4x): its ground point never moves more than 3 css px a frame beyond the force's own drawn motion
 //  (U) an unidentified tank-led Polish army: no figure of its own type (no troop model for its id) but the neutral figure, its '?' plate lifted over it
 //  (E) no console or page error
 const pickNation = require('./pick-nation.js'); const { chromium } = require('playwright'); const path = require('path');
 const fails = []; const fail = (m, d) => fails.push(m + (d !== undefined ? ' ' + JSON.stringify(d) : ''));
 async function openP(b, fig){ const ctx = await b.newContext({ viewport:{width:1440, height:900}, deviceScaleFactor:1 }), p = await ctx.newPage(); p.errs = [];
   p.on('pageerror', e => p.errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') p.errs.push(m.text()); });
-  await p.goto('file://' + path.join(__dirname, 'page.html') + (fig ? '?fig=1' : '')); await p.waitForTimeout(600);
+  await p.goto('file://' + path.join(__dirname, 'page.html') + (fig ? '' : '?fig=0')); await p.waitForTimeout(600);
   await p.click('[data-act="pickscn"][data-k="world64"]'); await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.waitForTimeout(800);
   if (await p.locator('[data-act="start"]').count()) await p.click('[data-act="start"]');
   await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 90000 }); await p.waitForTimeout(1000);
@@ -57,6 +60,24 @@ const settle = async p => { for (let i = 0; i < 30; i++){ await p.waitForTimeout
     let swing = 0; for (let i = 0; i < O.length; i++) for (let k = i + 1; k < O.length && O[k][0] - O[i][0] < 1500; k++) swing = Math.max(swing, Math.abs(Math.atan2(Math.sin(O[k][1] - O[i][1]), Math.cos(O[k][1] - O[i][1]))));
     out.T = {samples:n, over30s:+over.toFixed(2), worstRun30s:+worstRun.toFixed(2), swingDeg:Math.round(swing*180/Math.PI)};
     if (n < 200 || worstRun > 0.6 || swing > Math.PI*2/3) fail('T heading follows the way of travel', out.T); }
+  // (R) the figure's ground point on its road: its distance (world px) to the drawn leg, every frame of the march, the view following it
+  for (const hp of [150, 240]){ const I = await p.evaluate(() => { const im = window.__im, S = im.S; S.armies.length = 0; S.battles.length = 0; const a = im.addArmy(0, 631, {tank:3, inf:1}); im.orderMove(a, 632); im.air.visibleSet(); const R = [a.at, ...a.path], W = []; for (let i = 0; i + 1 < R.length; i++) W.push(...window.__fig.legGeom(a, R[i], R[i + 1])); return {id:a.id, x:im.G.P[631].x, y:im.G.P[631].y, W}; });   // (its whole route: by Mannheim)
+    await at(p, I.x, I.y, hp); await settle(p);
+    const L = await p.evaluate(([id, hp]) => new Promise(res => { const im = window.__im, A = [], t0 = performance.now(); im.S.speed = 1;
+      const f = () => { const t = performance.now(), a = im.S.armies.find(q => q.id === id); if (a){ const pos = im.dispPos(a), r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - pos[0]*s; v.y = r.height/2 - pos[1]*s; }
+        const q = window.__fig.TMDBG.find(z => z.ids.includes(id)); if (q && q.moving) A.push([q.wx, q.wy]);
+        if (t - t0 < 30000 && a && (a.to !== null || a.path.length)) requestAnimationFrame(f); else { im.S.speed = 0; res(A); } }; requestAnimationFrame(f); }), [I.id, hp]);
+    const dseg = (x, y) => { let d = Infinity; for (let i = 0; i + 1 < I.W.length; i++){ const [ax, ay] = I.W[i], dx = I.W[i + 1][0] - ax, dy = I.W[i + 1][1] - ay, u = Math.max(0, Math.min(1, ((x - ax)*dx + (y - ay)*dy)/(dx*dx + dy*dy || 1e-9))); d = Math.min(d, Math.hypot(ax + dx*u - x, ay + dy*u - y)); } return d; };
+    const D = L.map(q => dseg(q[0], q[1])).sort((a, b) => a - b), pc = k => D.length ? +D[Math.min(D.length - 1, Math.floor(D.length*k))].toFixed(3) : null;
+    out['R' + hp] = {samples:D.length, median:pc(0.5), p90:pc(0.9), max:pc(1)};
+    if (D.length < 200 || pc(0.5) > 0.15 || pc(0.9) > 0.6) fail('R the marching figure on its road at hex ' + hp, out['R' + hp]); }
+  // (S) setting off: the figure's ground point against the force's own drawn spot, frame by frame (css px), fixed camera
+  { const I = await p.evaluate(() => { const im = window.__im, S = im.S; S.armies.length = 0; S.battles.length = 0; const a = im.addArmy(0, 631, {tank:3, inf:1}); im.air.visibleSet(); return {id:a.id, x:im.G.P[631].x, y:im.G.P[631].y}; });
+    await at(p, I.x, I.y, 240); await settle(p);
+    const L = await p.evaluate(id => new Promise(res => { const im = window.__im, a = im.S.armies.find(q => q.id === id), A = []; let n = 0; im.orderMove(a, 632); im.S.speed = 4;
+      const f = () => { const q = window.__fig.TMDBG.find(z => z.ids.includes(id)), w = im.dispPos(a); if (q) A.push([q.x, q.y, ...im.toScreen(w[0], w[1])]); if (++n < 200) requestAnimationFrame(f); else { im.S.speed = 0; res(A); } }; requestAnimationFrame(f); }), I.id);
+    let worst = 0, wi = 0; for (let i = 1; i < L.length; i++){ const e = Math.hypot((L[i][0] - L[i - 1][0]) - (L[i][2] - L[i - 1][2]), (L[i][1] - L[i - 1][1]) - (L[i][3] - L[i - 1][3])); if (e > worst){ worst = e; wi = i; } }
+    out.S = {frames:L.length, worstPx:+worst.toFixed(2), at:wi, fig:L[wi] && [L[wi][0] - L[wi - 1][0], L[wi][1] - L[wi - 1][1]].map(v => +v.toFixed(2)), spot:L[wi] && [L[wi][2] - L[wi - 1][2], L[wi][3] - L[wi - 1][3]].map(v => +v.toFixed(2))}; if (L.length < 100 || worst > 3) fail('S setting off without a jump', out.S); }
   { const I = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G; S.armies.length = 0; S.battles.length = 0; const pol = S.nations.findIndex(q => q.name === 'Poland'), rk = (a, b) => Math.min(a, b) + ',' + Math.max(a, b); S.rel[rk(0, pol)] = {st:'war', since:S.hour, until:null};
       const Po = G.P.find(P => P.cityName === 'Poznań' && !P.sea), U = G.P[Po.nbs.filter(n => !G.P[n].sea && S.owner[n] === pol && !G.P[n].city).sort((m, n) => G.P[n].cells.length - G.P[m].cells.length)[0]] || Po;
       const u = im.addArmy(pol, U.id, {tank:4, inf:1}), ue = im.addArmy(0, U.id, {inf:1}); ue.pos = [U.x + 2.5, U.y + 2.0]; im.air.visibleSet(); return {id:u.id, x:U.x, y:U.y, known:im.intel.knowA(u)}; });

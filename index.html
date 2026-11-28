@@ -6825,7 +6825,7 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E
   const b = [Infinity, Infinity, -Infinity, -Infinity], feet = [];
   for (const o of perms){ const F = tmForm(o); b[0] = Math.min(b[0], F.b[0]); b[1] = Math.min(b[1], F.b[1]); b[2] = Math.max(b[2], F.b[2]); b[3] = Math.max(b[3], F.b[3]); for (const f of F.feet) feet.push([f[0], f[1], f[2]/perms.length]); }
   E = {b, feet}; TMFORM.set('F|' + key, E); return E; }
-/* ---------------- ONE FIGURE PER ARMY: the test behind ?fig=1 (owner 2026-11-27; today's look stays the default) ----------------
+/* ---------------- ONE FIGURE PER ARMY (owner 2026-11-27; the default from 2026-11-28, ?fig=0 for the earlier formation of several figures) ----------------
    Each force stands on the map as ONE model, its main unit (figMain: the badge's own rule, count x hit points, so the figure and the badge's
    icon agree; ties: the dearer type, then the stronger in attack, then FIG_ORD), with today's count badge pinned above it. The main unit changes
    only when the new one leads by more than 10% or has led for 2 s, and the two cross-fade over 300 ms (a loss in a battle never flickers it).
@@ -6836,17 +6836,19 @@ function tmFoot(ts){ const key = ts.join('.') + '|' + tmRW() + '|' + TMAS; let E
    The figure turns smoothly: on the move it faces its own way of travel (the drawn spot's velocity), leaning at most 15 degrees toward the road
    or railway a third of a second ahead (figAhead), so it eases into each bend as it reaches it, never more than 25 degrees off the way it goes
    (no sliding sideways or backwards round a bend or a hook); its heading follows a critically damped spring under a turn-rate cap by kind
-   (figTurn). A 3D figure is drawn from
+   (figTurn). On the march the figure stands ON its route: its ground point (and the position dot, on its hull) on the road or railway it
+   follows at every zoom, its counter above it (tmForms; it glides onto the road as it sets off and off it onto its standing spot just before
+   it halts, by the distance covered and at most a pixel or so a frame: easeL, moveAnchor). A 3D figure is drawn from
    the nearest of its views (32 for the new transport, 16 for the others) turned by the angle left over, so it never snaps.
    Idle: vehicles heave a little and puff a wisp of exhaust every 2-3 s, soldiers shift their weight; moving: the walk cycle, a vehicle's body
    pitches as it sets off and brakes; fighting: the kneeling aim, the muzzle flashes and recoil of the battle fire (BFX). None of it with Low
    effects or reduced motion; the idle motion asks for gentle frames only (animAmb: 10 fps with the Battery saver, resting while paused).
    Fog: an unidentified army ('?') shows a neutral figure (a grey tarp-covered load on land, a plain grey hull at sea) of one size, from the
    province alone, never its units, owner's kind of force or a docked fleet; its layout role is neutral too (roleOf). */
-const FIG1 = /[?&]fig=1\b/.test(location.search);
+const FIG1 = !/[?&]fig=0\b/.test(location.search);   // (one figure is the default (owner 2026-11-28); ?fig=0 shows the earlier formation of several figures, for comparison)
 if (FIG1){ Object.assign(TMG, {mot:[6.2, 0.74], motr:[6.2, 0.74], mots:[1.8, 0.42], unkg:[5.6, 0.74], unks:[7.4, 1.25]}); TM_FOOT.add('mots'); }
 const FIGM = {inf:'mot', para:'mots', mar:'mots'};   // a unit type's one figure where it is not its first model (TMM)
-const FIG_ORD = ['tank', 'ifv', 'art', 'mlrs', 'sam', 'at', 'spec', 'inf', 'para', 'mar'], FIG_HYS = 1.1, FIG_HOLD = 2000, FIG_XF = 300, FIG_MAN = 1.6;   // (FIG_MAN: the rifleman beside his transport, at 1.6 times its scale: as tall as a squad's soldier, so he reads)
+const FIG_ORD = ['tank', 'ifv', 'art', 'mlrs', 'sam', 'at', 'spec', 'inf', 'para', 'mar'], FIG_HYS = 1.1, FIG_HOLD = 2000, FIG_XF = 300, FIG_MAN = 2;   // (FIG_MAN: the rifleman beside his transport, at twice its scale (owner 2026-11-28: a bit bigger, so he reads beside it at phone size))
 const figModel = t => FIGM[t] || (TMM[t] && TMM[t][0]) || null;
 const figW = (u, t) => (u[t] || 0)*((UNITS[t] || {hp:10}).hp);
 // the main unit type of a unit mix (count per type) among the types whose figure is of class cls (null: any)
@@ -6912,7 +6914,7 @@ function figDraw(t, ci, x, y, s, lut, now, alpha, rot){ const L = tmLevel(t, s*d
 // hides him and the smoke rising behind it never buries him, and clear of the force's position dot (the vehicle's ground origin), which his
 // height would otherwise cover: in a fight kneeling at the near front corner (or beside the hull when it faces away), at rest standing by
 // the near side's front wheel. Each figure keeps its spot until another is clearly better (FIGMN), so he never hops while it turns a little
-const FIG_MANP = {fight:[[2.6, 1.9], [2.6, -1.9], [0.6, 2.4], [0.6, -2.4]], rest:[[1.4, 2.4], [1.4, -2.4], [-1.4, 2.4], [-1.4, -2.4]]}, FIGMN = new Map();
+const FIG_MANP = {fight:[[2.6, 1.9], [2.6, -1.9], [0.6, 2.4], [0.6, -2.4]], rest:[[2, 3.4], [2, -3.4], [-2, 3.4], [-2, -3.4]]}, FIGMN = new Map();   // (at rest a step out from the wheel: at twice his scale his head stays clear of the dot)
 function figMan(ang, s, fight, id){ const P = FIG_MANP[fight ? 'fight' : 'rest'], ca = Math.cos(ang), sa = Math.sin(ang), at = q => [(q[0]*ca - q[1]*sa), (q[0]*sa + q[1]*ca)*TM_SIN_EL];
   const sc = i => { const [x, y] = at(P[i]); return y + 0.5*Math.abs(x) + 0.12*P[i][0]; }, key = id + (fight ? 'f' : 'r');
   let bi = 0; for (let i = 1; i < P.length; i++) if (sc(i) > sc(bi)) bi = i;
@@ -6948,7 +6950,7 @@ function figQ(q, lut, now, nightK, clBox){ const c = q.c, ua = unitAnim(c.list, 
     if (!calm && !q.air){ const ph = now/1000 + (q.id % 17)*0.37;
       if (foot) rot += 0.026*Math.sin(ph*Math.PI*2/3.2);   // a soldier shifts his weight (about 1.5 degrees round his feet)
       else if (q.sea) rot += 0.012*Math.sin(ph*1.3);
-      else { dy += 0.3*Math.sin(ph*Math.PI*2);   // an engine idling: a heave of a third of a pixel
+      else { dy += 0.2*Math.sin(ph*Math.PI*2);   // an engine idling: a heave of a fifth of a pixel (under half a pixel from top to bottom)
         if (!fight && now >= E.wisp && q.a > 0.3){ E.wisp = now + 2000 + Math.random()*1000; const Lw = (q.art ? q.art.Lw : tmRW()*(TMG[q.t] ? TMG[q.t][1] : 1)), ca = Math.cos(q.ang), sa = Math.sin(q.ang), hh = q.art ? 0 : 1.6*q.s*Math.cos(0.82);
           const [wx, wy] = screenToWorld(q.x - ca*Lw*view.s*0.42, q.y - sa*Lw*view.s*0.42*(q.art ? 1 : TM_SIN_EL) - hh); emit('smoke', wx, wy, {ws:true, s0:Lw*0.05, s1:Lw*0.22, vx:-ca*Lw*0.03, vy:-Lw*0.07, life:1700, a:0.3}); } }   // a wisp of exhaust every 2-3 s
       animAmb(); } }
@@ -7212,6 +7214,10 @@ function anchorOf(R, p, role, now){ const L = provLayout(p, rolesAt(R, p)), T = 
 // a marching force's anchor: its smoothed position, easing off the slot it stood on (as it leaves) and onto the one it will stand on (as it arrives),
 // by the distance covered, so the counter and the models never jump when it sets off or halts
 const SPLITS = new Set();   // marching forces that left a garrison behind
+// the distance (world px) over which a marching force eases off the spot it left or onto the one it goes to (never more than half the trip). One figure:
+// about its offset from the route (it glides onto the road it marches on at most a little faster than it marches, and stays on it), at least 1.5
+// world px; one leaving a garrison beside it, and the formation of several figures (?fig=0): 2.5 times it, at least 8 (the earlier long ease)
+const easeL = (o, D, split) => Math.min(0.5*D, FIG1 && !split ? Math.max(1.5, 1.2*Math.hypot(o[0], o[1])) : Math.max(8, 2.5*Math.hypot(o[0], o[1])));
 function moveAnchor(R, a, wx, wy){ let o0 = [0, 0], o1 = null, f0 = 0, f1 = 0; const L0 = LASTSLOT.get(a.id);
   const q = a.path.length ? a.path[a.path.length - 1] : a.to, D = L0 && q != null && G.P[q] ? Math.max(2, Math.hypot(G.P[q].x - L0.x, G.P[q].y - L0.y)) : 1e9;   // (the two eases never overlap: each within half the trip)
   const lin = v => Math.max(0, 1 - v);   // (linear in the distance: the gentlest ease, so the offset never outruns the march)
@@ -7221,15 +7227,16 @@ function moveAnchor(R, a, wx, wy){ let o0 = [0, 0], o1 = null, f0 = 0, f1 = 0; c
     const gM = L0.p != null && R.get(L0.p), gE = gM && gM.get(fkey(a, L0.p) + a.owner), nx = a.to ?? a.path[0];
     if (gE && !gE.list.includes(a) && nx != null && G.P[nx]){ const gb = tmFoot(roleTypes(roleOf(L0.p, gE))).b, ts = tmRank(tmUnits([a]), G.P[a.at].sea ? 's' : 'g'), mb = ts.length ? tmFoot(ts).b : [-1, 0, 1, 0];
       o0 = [L0.ox + (G.P[nx].x >= L0.x ? 1 : -1)*((gb[2] - gb[0])/2 + (mb[2] - mb[0])/2 + 0.8), L0.oy]; SPLITS.add(a.id); }
-    f0 = lin(Math.hypot(wx - L0.x, wy - L0.y)/Math.min(0.5*D, Math.max(8, 2.5*Math.hypot(o0[0], o0[1])))); }
+    f0 = lin(Math.hypot(wx - L0.x, wy - L0.y)/easeL(o0, D, SPLITS.has(a.id))); }
   if (q != null && G.P[q] && !(a.dest && a.dest.p === q)){ const Q = G.P[q], M = R.get(q), k = fkey(a, q) + a.owner, rs = rolesAt(R, q);
     let T = null; if (M && M.has(k)) T = anchorOf(R, q, roleOf(q, M.get(k)), performance.now());
     else { const u = tmUnits([a]), naval = Object.keys(u).every(t => UNITS[t] && UNITS[t].cls === 'naval'), cls = Q.sea || naval ? 's' : 'g', r = roleStr(cls, a.owner, u, q); T = provLayoutH(q, rs.concat([r])).out.get(r); }
-    if (T){ o1 = [T[0] - Q.x, T[1] - Q.y]; f1 = lin(Math.hypot(wx - Q.x, wy - Q.y)/Math.min(0.5*D, Math.max(8, 2.5*Math.hypot(o1[0], o1[1])))); } }
+    if (T){ o1 = [T[0] - Q.x, T[1] - Q.y]; f1 = lin(Math.hypot(wx - Q.x, wy - Q.y)/easeL(o1, D, false)); } }
   const tx = o0[0]*f0 + (o1 ? o1[0]*f1 : 0), ty = o0[1]*f0 + (o1 ? o1[1]*f1 : 0), now = performance.now(); let E = OFS.get(a.id);
   // (and never faster than a quarter of the march's own step, nor 1.3 px a frame on screen however long the frame: a lurch of the march never throws the group about; what is left when it halts eases out after)
   if (!E || E.st || now - E.t > 2000){ E = {ox:tx, oy:ty, x:wx, y:wy, t:now}; OFS.set(a.id, E); if (OFS.size > 2000) OFS.clear(); }
-  else { const dx = tx - E.ox, dy = ty - E.oy, l = Math.hypot(dx, dy), cap = Math.min(0.25*Math.hypot(wx - E.x, wy - E.y) + 0.25/Math.max(0.05, view.s), 1.3/Math.max(0.05, view.s)), f = l > cap ? cap/l : 1; E.ox += dx*f; E.oy += dy*f; E.x = wx; E.y = wy; E.t = now; }
+  else { const dx = tx - E.ox, dy = ty - E.oy, l = Math.hypot(dx, dy), cap = Math.min((FIG1 ? 0.6 : 0.25)*Math.hypot(wx - E.x, wy - E.y) + (FIG1 ? 0.5 : 0.25)/Math.max(0.05, view.s), 1.3/Math.max(0.05, view.s)), f = l > cap ? cap/l : 1; E.ox += dx*f; E.oy += dy*f; E.x = wx; E.y = wy; E.t = now; }
+  E.f0 = f0; E.f1 = f1; E.w0 = L0 && L0.p == null ? 1 : 0;   // (how far it still is on the spot it left and on the one it goes to; w0: it left a pinned spot, where it stood centred: tmForms)
   E.ax = wx + E.ox; E.ay = wy + E.oy; return [E.ax, E.ay]; }
 // a force that has just halted: what its marching offset had not yet caught up eases out from where it was drawn (a pixel a frame at most)
 function haltAnchor(a, A, now, wx, wy){ const E = OFS.get(a.id); if (!E) return A; if (now - E.t > 2000){ OFS.delete(a.id); return A; }
@@ -7374,10 +7381,12 @@ function tmForms(clusters, now){ const on = !!(window.U3D && U3D.mapMeta);
     // diamond (the middle of its pictures) on the very point, its pictures round it; a force in its province's layout, or marching to a
     // province's centre (a column that joins a stack there), keeps its slot at the top of its group, as before. The shift glides (in time, never by zoom), so a force setting off or arriving does not jump
     // (kept per force: a group takes the largest shift of its forces, so a column joining a stack glides down with it instead of dropping)
-    { const want0 = (c.pinned && !c.dock) || (c.moving && (lead.dest || lead.sail)) ? mid : 0; let Q = null;
+    // (one figure: a marching force's figure stands ON its route, its ground point on the road or railway it follows at every zoom, its counter above it;
+    //  it takes that place by the distance covered as it eases off the spot it left, and gives it back as it eases onto the one it will stand on (moveAnchor), so setting off or halting never jumps)
+    { const O = FIG1 && c.moving && !c.air ? OFS.get(lead.id) : null, want0 = O && O.f0 != null ? mid*Math.max(0, Math.min(1, 1 - O.f0*(1 - O.w0) - O.f1)) : (c.pinned && !c.dock) || (c.moving && (FIG1 || lead.dest || lead.sail)) ? mid : 0; let Q = null;
       for (const q0 of c.list){ const e = TMCEN.get(q0.id); if (e && e.S === S && now - e.t <= 1500 && (!Q || e.v > Q.v)) Q = e; }
       if (TMCEN.size > 3000) TMCEN.clear();
-      if (!Q) Q = {v:want0, t:now, S}; else { Q = {v:Q.v, t:Q.t, S}; const dt = Math.max(0, Math.min(100, now - Q.t)), dv = want0 - Q.v, st = TMCEN_V*dt; Q.v = Math.abs(dv) <= st ? want0 : Q.v + Math.sign(dv)*st; if (Q.v !== want0) animFast(); Q.t = now; }   // (at an even, slow rate: about a px a frame, so the pictures never jump against the force's own motion)
+      if (!Q) Q = {v:want0, t:now, S}; else { Q = {v:Q.v, t:Q.t, S}; const dt = Math.max(0, Math.min(100, now - Q.t)), dv = want0 - Q.v, st = FIG1 ? Math.min(TMCEN_V*dt, 1/Math.max(0.05, view.s)) : TMCEN_V*dt; Q.v = Math.abs(dv) <= st ? want0 : Q.v + Math.sign(dv)*st; if (Q.v !== want0) animFast(); Q.t = now; }   // (at an even, slow rate: about a px a frame, so the pictures never jump against the force's own motion; one figure: never more than 1 css px a frame, however long the frame)
       for (const q0 of c.list) TMCEN.set(q0.id, Q); c.wy -= Q.v; }
     c.form = {sl:want, d, F, top:E.v, id:lead.id, ang, ga:G0.a, arts, mid, pv:want.pv || null}; c.pinY = c.wy + E.v; } }   // (mid: the middle of its pictures, world px below the anchor: where its diamond stands)
 // the models each force shows this frame (from the zoom they are big enough to read: all of a group's models fade in together), planned before

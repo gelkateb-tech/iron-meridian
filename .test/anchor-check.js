@@ -22,6 +22,12 @@
 //                   tank >= 27 css px long)
 // plus the earlier checks: plates over plates / over the HQ, battle bar, ownership, overlap, battle gap, size, composition, jitter,
 // departure (smooth and never on the garrison it leaves).
+// ONE FIGURE (the default look from 2026-11-28; page.html?fig=0 is the earlier formation of several figures, which every check above was written
+// for): each force shows one figure, its main unit's (the badge's rule, window.__fig.main), so (5) asks for exactly that figure (Motorized
+// Infantry: the transport 'mot', paratroopers and marines: the rifleman 'mots') instead of the top three types, (D) asks a deep stack for its
+// one figure instead of three, (4) has no infantry squad to measure and takes the tank's length in the one view it stands in (at least 0.8 of
+// its full length at hex 240, a tank seen a little end-on), and (3) leaves out a place name drawn faded under a figure (the one-figure look
+// fades a name while a figure stands under it).
 // Scene (seeded): Germany. Berlin: three German stacks + a British stack + a parked jet and helicopter; Wiesbaden (631): a battle, German
 // vs French; a French stack at Karlsruhe (632); ships off Jutland (North Sea III, 3346); Munich: a garrison and a stack that departs;
 // Sachsen-Anhalt (564): a lone mixed stack.
@@ -101,7 +107,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
         return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: (al.has(pv) || lend(al, pv)) && !across(al, wx, wy) ? 1 : 0, pv, tag: h.tag ? 1 : 0, heart: h.heart ? 1 : 0 }; });
       const models = im.TM.dbg.map(q => { const a = S.armies.find(z => z.id === q.id), al = allowed(q.ids), pv = provW(q.wx, q.wy);
         return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, cut: q.cut, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: (al.has(pv) || lend(al, pv)) && !across(al, q.wx, q.wy) ? 1 : 0, pv }; });
-      return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).map(l => l.b), pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
+      return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).filter(l => !(window.__fig && window.__fig.on && l.a < 0.5)).map(l => l.b),   /* (one figure: a name faded under a figure is not over it) */ pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
     window.__acUnits = ids => { const u = {}; for (const id of ids){ const a = S.armies.find(q => q.id === id); if (a) for (const t in a.u) if (a.u[t] > 0) u[t] = (u[t] || 0) + a.u[t]; } return u; };
     // a continuous zoom through the game's own wheel handler: one wheel tick every frame (dy css px of wheel delta) until hp1 is reached and
     // the glide has settled; captures the frame drawn before each tick
@@ -119,6 +125,8 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
       const f = () => { n++; if (n === 8) im.camGo(x1, y1, hp1/12, { far: true }); if (n > 8){ const c = window.__acCap(); if (c) out.push(c); } if (n > 8 && !im.camFly && n > 70) res(out); else if (n > 400) res(out); else requestAnimationFrame(f); };
       requestAnimationFrame(f); });
     return out; });
+  const ONE = await p.evaluate(() => !!(window.__fig && window.__fig.on)); M.oneFigure = ONE;
+  const mainFig = async ids => { const k = 'm' + ids.slice().sort((a, b) => a - b).join(','); if (!(k in units)) units[k] = await p.evaluate(ids => { const u = window.__acUnits(ids), t = window.__fig.main(u, null); return t ? window.__fig.model(t) : null; }, ids); return units[k]; };
   M.scene = { battles: sc.battles, airErr: sc.airErr || null }; if (!sc.battles.includes(631)) errors.push('no battle at Wiesbaden (631): ' + JSON.stringify(sc.battles));
   const raf = n => p.evaluate(n => new Promise(res => { let i = 0; const f = () => (++i >= n ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   const setView = (wx, wy, hp, sx, sy) => p.evaluate(([wx, wy, hp, sx, sy]) => { const v = window.__im.view, s = hp/12; v.s = s; v.x = sx - wx*s; v.y = sy - wy*s; }, [wx, wy, hp, sx, sy]);
@@ -236,12 +244,17 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     const len = t => { const ms = top.flatMap(c => c.models.filter(m => m.t === t && m.a > 0.2)); return ms.length ? Math.max(...ms.map(m => t === 'sol' ? m.box[3] - m.box[1] : m.len || Math.max(m.box[2] - m.box[0], m.box[3] - m.box[1]))) : null; };
     const tank = len('tank'), sol = len('sol');
     M.size = { tankMaxZoomCssPx: tank && r1(tank), soldierMaxZoomCssPx: sol && r1(sol), nominal240: { tankLen: r1(sc.tank240), solTall: r1(sc.sol240) } };
-    if (!PHONE && DPR === 1){ if (!(tank >= LIM.tankLen)) fails.push(`(4) tank at max zoom ${tank && r1(tank)} css px long < ${LIM.tankLen}`); if (!(sol >= LIM.solTall)) fails.push(`(4) soldier at max zoom ${sol && r1(sol)} css px tall < ${LIM.solTall}`); } }
+    if (ONE){ if (!PHONE && DPR === 1 && !(tank >= 0.8*sc.tank240)) fails.push(`(4) tank (one figure) at max zoom ${tank && r1(tank)} css px long < ${r1(0.8*sc.tank240)}`); }
+    else if (!PHONE && DPR === 1){ if (!(tank >= LIM.tankLen)) fails.push(`(4) tank at max zoom ${tank && r1(tank)} css px long < ${LIM.tankLen}`); if (!(sol >= LIM.solTall)) fails.push(`(4) soldier at max zoom ${sol && r1(sol)} css px tall < ${LIM.solTall}`); } }
 
   // (5) COMPOSITION and (D) DEPTH
   { let groups = 0, phantom = 0, missing = 0, deep = 0, shallow = 0; const ex = [], dex = [];
     for (const c of caps){ if (c.hp < 130) continue; const grp = {}; for (const m of c.models) if (m.a > 0.2) (grp[m.id] = grp[m.id] || []).push(m);
       for (const g of Object.values(grp)){ if (g.some(m => m.cut)) continue; groups++; const u = await unitsOf(g[0].ids), ts = Object.keys(u).filter(t => ALLOW[t]), have = new Set(g.map(m => m.t)), ok = new Set(ts.flatMap(t => ALLOW[t]));
+        if (ONE){ const mf = await mainFig(g[0].ids), one = new Set(ts.map(t => ({inf:'mot', para:'mots', mar:'mots'})[t] || ALLOW[t][0])), ph = [...have].filter(t => !one.has(t)), miss = mf && !have.has(mf);   // (one figure: the main unit's; another the stack has may show for a moment as it fades out)
+          if (ph.length) phantom++; if (miss) missing++; if ((ph.length || miss) && ex.length < 6){ const s = `${c.focus}@${r1(c.hp)} units ${JSON.stringify(u)} models ${[...have].join(',')} main ${mf}`; if (!ex.includes(s)) ex.push(s); }
+          if (c.hp >= HPMAX*0.99 && !g[0].air && new Set(ts.map(t => ALLOW[t].join('/'))).size >= 3){ deep++; if (!mf || !have.has(mf) || have.size !== 1){ shallow++; if (dex.length < 4) dex.push(`${c.focus} ${JSON.stringify(u)} shows ${[...have].join(',')}`); } }
+          continue; }
         const ph = [...have].filter(t => !ok.has(t)); if (g.some(m => m.sea) && !ts.some(t => ['frig', 'sub', 'crui', 'carr'].includes(t))) ph.length = 0;
         const byN = ts.slice().sort((a, b) => u[b] - u[a]), need = []; if (byN.length){ const th = u[byN[Math.min(2, byN.length - 1)]], above = byN.filter(t => u[t] > th), tied = byN.filter(t => u[t] === th);
           for (const t of above) if (!ALLOW[t].some(m => have.has(m))) need.push(t);
@@ -251,9 +264,9 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
         if (c.hp >= HPMAX*0.99 && !g[0].air){ const cls = new Set(ts.map(t => ALLOW[t].join('/'))); if (cls.size >= 3){ deep++; if (have.size < 3){ shallow++; if (dex.length < 4) dex.push(`${c.focus} ${JSON.stringify(u)} shows ${[...have].join(',')}`); } } } } }
     M.composition = { groups, phantom, missingTop3: missing, examples: ex, deepStacks: deep, shallow, depthExamples: dex };
     if (phantom) fails.push(`(5) ${phantom}/${groups} group samples show a model type the stack does not have`);
-    if (missing) fails.push(`(5) ${missing}/${groups} group samples (hexPx >= 130) miss one of the stack's top-3 unit types`);
+    if (missing) fails.push(ONE ? `(5) ${missing}/${groups} group samples (hexPx >= 130) miss the stack's main-unit figure` : `(5) ${missing}/${groups} group samples (hexPx >= 130) miss one of the stack's top-3 unit types`);
     if (!deep) fails.push('(D) no stack with >= 3 classes seen at max zoom');
-    if (shallow) fails.push(`(D) ${shallow}/${deep} stacks with >= 3 classes show fewer than 3 models at max zoom (${dex[0]})`); }
+    if (shallow) fails.push(ONE ? `(D) ${shallow}/${deep} stacks with >= 3 classes do not show their one main-unit figure at max zoom (${dex[0]})` : `(D) ${shallow}/${deep} stacks with >= 3 classes show fewer than 3 models at max zoom (${dex[0]})`); }
 
   if (QUICK){ M.fails = fails; M.errors = errors; console.log(JSON.stringify(M, null, 1)); await b.close(); process.exit(fails.length || errors.length ? 1 : 0); }
   // (8) JITTER: game running at 1x, fixed camera, 60 frames
