@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): rocket tube openings appear on the top surface of the launcher pods instead of having solid roofs as shown in side view.

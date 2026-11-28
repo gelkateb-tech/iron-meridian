@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 1 (scene): roll bar has diagonal rear support struts added that are not present in picture 1.
+- Point 1 (top): roll bar has added diagonal support struts, the gun shield is missing, and the bed stowage is rearranged.

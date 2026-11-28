@@ -1,0 +1,2 @@
+FLAG
+- 1: The vehicle has 4 axles instead of the requested 6 axles in two groups of three.

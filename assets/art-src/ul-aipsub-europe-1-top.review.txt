@@ -1,0 +1,2 @@
+FLAG
+- 1. Stern fin configuration does not match the reference's X-tail design, adding horizontal fins.

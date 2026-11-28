@@ -1,0 +1,2 @@
+FLAG
+- 1. SAME UNIT: missile canister has four raised reinforcing rings instead of three as shown in the reference.

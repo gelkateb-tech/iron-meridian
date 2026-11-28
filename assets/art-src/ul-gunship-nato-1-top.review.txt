@@ -1,0 +1,2 @@
+FLAG
+- 1. Weapon layout fails to match reference: weapons appear on both sides and with incorrect orientations.

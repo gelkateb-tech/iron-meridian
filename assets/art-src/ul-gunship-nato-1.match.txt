@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): propellers have 4 blades instead of 6, and nose-cheek guns are missing while fuselage armament layout differs from side view.
