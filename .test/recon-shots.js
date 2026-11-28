@@ -3,8 +3,8 @@
 // label names the files (<outdir>/<label>-<desk|phone>-<shot>.png), so a master page and this branch's page shot with the same script give pairs
 // with the same camera. Parts (all by default):
 //   start   the starting setup of Russia, Germany and Belarus (a small nation): the nation in view, then an outer stack selected (its panel)
-//   scene   Russia; in Kazakhstan, east of Astana, a Russian stack of 2 infantry and 1 recon vehicle with Kazakh armies 25 and 45 km away (inside
-//           its 70 km), one 85 km away (outside it, spotted by a second Russian stack of 2 infantry 30 km beyond: '?'); each selected; then the
+//   scene   Russia; in Kazakhstan (at peace), from Astana, a Russian stack of 2 infantry and 1 recon vehicle with Kazakh armies 25 and 45 km away
+//           (inside its 70 km), one 90 km away (outside it, spotted by a second Russian stack of 2 infantry 30 km beyond: '?'); each selected; then the
 //           same scene with the recon vehicle taken out (only infantry: every army '?'). A build without the recon vehicle shoots the infantry
 //           scene only
 //   card    the Mobilize list of a city with an Army Base I, the Recon Vehicle's unit card from it, the research tree's Armoured Forces column and
@@ -56,18 +56,18 @@ async function partStart(phone){
 async function partScene(phone){ const o = await open(phone, 'Russia'), p = o.p;
   const has = await p.evaluate(() => !!window.__im.S && typeof UNITS !== 'undefined' && !!UNITS.rcn).catch(() => false);
   const sc = await p.evaluate(rcn => { const im = window.__im, S = im.S, G = im.G, kz = S.nations.findIndex(N => N.name === 'Kazakhstan'), C = G.P[S.nations[kz].capital];
-    im.fix.declareWar(0, kz); S.armies = S.armies.filter(a => a.owner !== kz || a.air);
+    S.armies = S.armies.filter(a => a.owner !== kz || a.air);   // (at peace: the map keeps its normal colours, so the fog and the sight circles show; identification does not depend on war)
     const KM = KM_W, at = (x, y) => { const c = worldToCell(x, y); return c >= 0 ? G.prov[c] : -1; };
-    let dir = null; for (let k = 0; k < 16 && !dir; k++){ const t = k*Math.PI/8, d = [Math.cos(t), Math.sin(t)]; if ([0, 25, 45, 85, 115, 140].every(km => { const q = at(C.x + d[0]*km*KM, C.y + d[1]*km*KM); return q >= 0 && !G.P[q].sea && S.owner[q] === kz; })) dir = d; }
+    let dir = null; for (let k = 0; k < 16 && !dir; k++){ const t = k*Math.PI/8, d = [Math.cos(t), Math.sin(t)]; if ([0, 25, 45, 90, 120, 145].every(km => { const q = at(C.x + d[0]*km*KM, C.y + d[1]*km*KM); return q >= 0 && !G.P[q].sea && S.owner[q] === kz; })) dir = d; }
     const pt = km => [C.x + dir[0]*km*KM, C.y + dir[1]*km*KM], put = (o, km, u, side = 0) => { const [x0, y0] = pt(km), x = x0 - dir[1]*side*KM, y = y0 + dir[0]*side*KM, a = im.addArmy(o, at(x, y), u); a.pos = [x, y]; a.m = 80; return a; };
-    const me = put(0, 0, rcn ? { inf:2, rcn:1 } : { inf:2 }), me2 = put(0, 115, { inf:2 });
-    const f1 = put(kz, 25, { inf:3, tank:2 }, 8), f2 = put(kz, 45, { inf:2, art:1, sam:1 }, -10), f3 = put(kz, 85, { inf:4, ifv:2 }, 6);
-    S.reveal = {}; S.intel = {}; im.redraw(); const [mx, my] = pt(50);
+    const me = put(0, 0, rcn ? { inf:2, rcn:1 } : { inf:2 }), me2 = put(0, 120, { inf:2 });
+    const f1 = put(kz, 25, { inf:3, tank:2 }, 8), f2 = put(kz, 45, { inf:2, art:1, sam:1 }, -10), f3 = put(kz, 90, { inf:4, ifv:2 }, 8);
+    S.reveal = {}; S.intel = {}; im.redraw(); const [mx, my] = pt(58);
     return { me:me.id, me2:me2.id, foes:[f1.id, f2.id, f3.id], cx:mx, cy:my }; }, has);
   log(o.tag, 'scene', has ? 'recon vehicle' : 'infantry only (no recon vehicle in this build)', JSON.stringify(sc));
   const views = () => p.evaluate(ids => (visCache = null, ids).map(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id), v = armyView(a, visibleSet(0)); return v ? (v.unk ? '?' : JSON.stringify(v.u)) : 'unseen'; }), sc.foes);
   const run = async tagS => { log(o.tag, tagS, 'views', JSON.stringify(await views()));
-    await p.evaluate(() => window.__im.clearSel()); await o.center(sc.cx, sc.cy, o.phone ? 110 : 150); await o.away(); await o.shot(`${tagS}-map`);
+    await p.evaluate(() => window.__im.clearSel()); await o.center(sc.cx, sc.cy, o.phone ? 150 : 200); await o.away(); await o.shot(`${tagS}-map`);
     for (const [i, id] of sc.foes.entries()){ await p.evaluate(id => { const im = window.__im; im.clearSel(); im.selectFoe(id); }, id); await p.waitForTimeout(700); await o.shot(`${tagS}-foe${i + 1}`); log(o.tag, tagS, 'foe', i + 1, await sideText(p)); } };
   if (has){ await run('scene-recon');
     await p.evaluate(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id); a.u.rcn = 0; a.w.rcn = 0; visCache = null; im.redraw(); }, sc.me); }
