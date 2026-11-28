@@ -358,6 +358,18 @@ R_LOOK = {
              "deck"),
     'sub': ("a generic attack submarine of an original design: a long dark grey cylindrical hull, a short sail (fin) set "
             "well forward with small dive planes, a cross-shaped tail"),
+    # the new ships (docs/NEW-SHIPS-PROPOSAL.md on master, section 6): written to read clearly apart from frig, crui and sub above
+    'corv': ("a generic small, short, low coastal corvette of an original design: a short, stocky grey hull with a raked bow and a low "
+             "freeboard, one single-barrel gun in a small turret on the bow, a squat square anti-submarine rocket launcher of short tubes "
+             "just behind it, one compact boxy superstructure amidships with a short dark pole mast carrying a small flat radar, one short "
+             "funnel, and a small open deck at the stern"),
+    'dest': ("a generic destroyer of an original design, bigger than a frigate and smaller than a cruiser: a long, slender grey hull with "
+             "a high, flared, raked bow, one single gun on the bow, a flush block of square vertical missile hatches in front of the "
+             "bridge, two separate angular deckhouses with open deck between them, a tall dark pole mast on the forward one, two square "
+             "funnels side by side on the after one, a helicopter hangar and a plain flight deck at the stern"),
+    'ssbn': ("a generic ballistic missile submarine of an original design: a very long, slim, dark grey-black cylindrical hull, much "
+             "longer than an attack submarine, a tall narrow sail set well forward, and behind it a long, flat missile deck with two "
+             "straight rows of eight round missile hatches side by side, a cross-shaped tail and one large propeller"),
     'cm': ("a generic cruise missile of an original design: a slim grey cylindrical body with a rounded nose, two small "
            "straight wings at its middle, four small tail fins and a small air intake under its belly"),
     'bm': ("a generic ballistic missile of an original design: a tall olive-grey cylindrical rocket with a pointed cone nose, "
@@ -528,6 +540,20 @@ R_ICONS = {   # ri-<key>: cat-<category> (the category icon), a unit unlock or a
     'ri-carr_spd': "Nuclear Propulsion: " + L['carr'] + ", at high speed with a big white bow wave, seen from a low angle at its front left.",
     'ri-sub_torp': "Heavy Torpedoes: the bow of " + L['sub'] + ", under water, a torpedo tube door open, seen from its front left in blue-green water.",
     'ri-sub_quiet': "Quiet Drive: " + L['sub'] + ", gliding silently deep under water in dim blue-green light, its shrouded propeller at the tail, seen from its front left.",
+    # New ships (docs/NEW-SHIPS-PROPOSAL.md on master, section 6): 3 unit unlocks and 5 upgrade icons. Firepower, Protection and Naval Gunnery use
+    # t-fp, t-pr and t-navgun; Sonar Dip uses ri-frig_sonar and Quiet Patrol ri-sub_quiet (borrowed, no new picture)
+    'ri-u_corv': "Corvette: " + L['corv'] + ", patrolling in coastal waters with a low, hazy rocky coastline far behind it, seen from its front left, close.",
+    'ri-u_dest': "Destroyer: " + L['dest'] + ", at sea, seen from its front left, close.",
+    'ri-u_ssbn': "Ballistic Missile Submarine: " + L['ssbn'] + ", surfaced and moving through calm sea, all its missile hatches closed, seen from its front left, close.",
+    'ri-corv_asw': ("ASW Rockets: the anti-submarine rocket launcher on the foredeck of " + L['corv'] + ", close up from its front left: the squat square "
+                    "box of short round tubes on its turntable, raised at an angle and aimed out over the sea, the gun turret just in front of it; no flame, no smoke."),
+    'ri-corv_spd': "Fast Hull: " + L['corv'] + ", racing at high speed with a big white bow wave and spray, seen from a low angle at its front left.",
+    'ri-dest_asw': ("ASW Torpedoes: a triple torpedo tube mount on the deck side of " + L['dest'] + ", close up from its front left: three short, "
+                    "thick tubes side by side, trained out over the side, the rounded nose of a slim grey torpedo showing in the open end of one tube; the grey sea beyond."),
+    'ri-dest_amd': ("Area Missile Defence: the bridge and foredeck of " + L['dest'] + ", close up from its front left: big flat square radar panels on the "
+                    "sides of the forward deckhouse and the flush block of square vertical missile hatches in front of it, all hatches closed; a calm evening sky; no flame."),
+    'ri-ssbn_tubes': ("Extra Missile Tubes: the long missile deck behind the sail of " + L['ssbn'] + ", surfaced, close up from above its front left: "
+                      "the two rows of round hatches, two of them open on their hinges showing the round tops of the empty missile tubes inside; no missile, no flame."),
     # Strategic Weapons
     'ri-cm_rng': "Cruise Missile Range: " + L['cm'] + ", flying low over the sea toward a distant coast, seen from its front left; no flame.",
     'ri-cm_spd': "Cruise Missile Speed: " + L['cm'] + ", flying very fast low over a desert with a little motion blur in the ground, seen from its front left; no flame.",
@@ -1049,19 +1075,22 @@ STYLE_UL_SCENE = STYLE_V2_SCENE   # photo-real scenes: kept (owner)
 assert "no cast shadow" in STYLE_UL_TOP and "no shadow at all" in STYLE_UL_TOP
 UD = {}   # key -> dict(label, cls, kind (the word for "real {kind}"), groups {g: (family, [g1, g2, g3])}, action, paint, setting, note, gens)
 
-def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule='', side_frame=None, side_style=None, only=None):
+def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule='', side_frame=None, side_style=None, only=None,
+             looks=None, top_frame=None):
     """label: the unit's name in the prompts; action: what it does in its card scene (a phrase after "A single {label}"); groups: {group: (family look, [3 generations])};
     paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest];
     scene_frame: replaces the class's card-scene frame (e.g. to allow one prop); rule: an extra sentence after the tail of every description (the units made before it have none);
     side_frame / side_style: replace the class's side-view frame (with {u}) and the side-view style (e.g. no shadow at all for an aircraft in flight);
-    only: a unique unit (docs/DOCTRINES.md section 4): that one group and one look only (groups {only: (family, [the one look])}), named ul-<key>-<only>-1-<kind>"""
+    only: a unique unit (docs/DOCTRINES.md section 4): that one group and one look only (groups {only: (family, [the one look])}), named ul-<key>-<only>-1-<kind>;
+    looks: the look numbers to build in every group (default 1, 2, 3; (1,) = look 1 only, the groups' lists then hold only that look); top_frame: replaces the class's top-down frame"""
     UD[key] = dict(label=label, cls=cls, kind=kind, action=action, groups=groups, paint=paint or UL_PAINT[cls], setting=setting or UL_SETTING[cls], note=frame_note,
                    scene_frame=scene_frame or UL_CLS[cls]['scene_frame'], rule=rule, side=side_frame or UL_CLS[cls]['side'], side_style=side_style or STYLE_V2_SIDE,
-                   gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "], only=only)
+                   gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "], only=only,
+                   looks=(1,) if only else tuple(looks or (1, 2, 3)), top=top_frame or UL_CLS[cls]['top'])
     d, C = UD[key], UL_CLS[cls]; u = label
     for g in ([only] if only else UNIT_GROUPS):
         fam, gl = groups[g]
-        for n in ((1,) if only else (1, 2, 3)):
+        for n in d['looks']:
             desc = f"{fam} Paint: {d['paint'][g]}. {d['gens'][n - 1]}{gl[n - 1]}" + UL_UNIT_TAIL.format(kind=kind) + (' ' + rule if rule else '')
             nm = f'ul-{key}-{g}-{n}'
             UNIT_LOOKS[nm + '-side'] = {
@@ -1077,7 +1106,7 @@ def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, fr
             UNIT_LOOKS[nm + '-top'] = {
                 'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'top', 'group': g, 'look': n, 'fresh': False, 'aspect': '1:1',
                 'prefix': UL_PREFIX_TOP.format(unit=u, detail=C['detail']),
-                'subject': C['top'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc,
+                'subject': d['top'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc,
                 'style': STYLE_UL_TOP.replace(_CROP_NEW, C['crop']), 'refs': [nm + '-side']}
 
 
@@ -2002,6 +2031,238 @@ unit_def('rcn', 'recon vehicle (a small, lightly armoured four-wheeled scout car
 assert len([n for n in UNIT_LOOKS if UNIT_LOOKS[n].get('unit_key') == 'rcn']) == 45 and "LOWER RIGHT" in UD['rcn']['side'] and "contact shadow" in UD['rcn']['side']
 
 
+# ---- THE NEW SHIPS, LOOK 1 ONLY (docs/NEW-SHIPS-PROPOSAL.md on master, section 6; owner 28 November 2026: "the new ships look 1 only (about $2.7,
+# not the $7 full sets)"): Corvette (corv), Destroyer (dest), Ballistic Missile Submarine (ssbn); 5 groups x look 1 x side / card scene / top-down =
+# 15 pictures a ship, named ul-<key>-<group>-1-<kind> (looks 2 and 3 can be added later: unit_def(..., looks=(1,)) builds look 1 only). Each look is
+# written to read clearly apart from the same group's look 1 of the Frigate, Cruiser and Attack Submarine sets (all lattice masts and long hulls,
+# the subs with a sail amidships): the Corvette short, low and stocky (about 6.5-7.5 times as long as wide), one gun, a squat anti-submarine
+# launcher, one compact superstructure, a short mast and a small landing spot or none; the Destroyer long and slender (about 9 times), between
+# the two in size, with its own mast and deckhouse layout per group; the missile submarine very long (about 11-13.5 times), its sail well forward
+# and two rows of missile hatches behind it (the count written in every look). What batches A-D and the recon set taught (28 November 2026) is in
+# every prompt: each look's OWN shapes written out in order from bow to stern (hull length to beam, bow, blocks and their order, mast type,
+# funnel, gun and launcher places; the hatch count for the submarine), the rule names makers, not types; the facing said twice (bow to the LOWER
+# RIGHT); side views on plain grey with only a small, tight contact shadow and, for the surface ships, the hull ending at a thin dark waterline
+# stripe with no sea slab; top-downs with no shadow of any kind; masts, antennas and gun barrels dark; no hull numbers, flags, text or emblems.
+_SHIP_SIDE_SHADOW = "only a faint, tight soft shadow under the hull."
+_SHIP_SIDE_FACING = "one long side, drawn as"
+_SHIP_SIDE_HULL = "with its whole hull down to the waterline visible: no water, no waves, no wake."
+assert all(UL_CLS['ship']['side'].count(t) == 1 for t in (_SHIP_SIDE_SHADOW, _SHIP_SIDE_FACING, _SHIP_SIDE_HULL))
+_FACING_BOW = ("(FACING: the bow points to the LOWER RIGHT corner of the picture and the stern to the upper left; it must not face left and must "
+               "not be seen from behind)")
+SHIP_SIDE = UL_CLS['ship']['side'].replace(_SHIP_SIDE_FACING, "one long side " + _FACING_BOW + ", drawn as").replace(
+    _SHIP_SIDE_HULL, "with its whole hull down to the waterline visible, the hull ending at the waterline in a clean, straight edge marked by a thin dark "
+    "waterline stripe: no water, no waves, no wake, no sea slab, no base plate under it.").replace(
+    _SHIP_SIDE_SHADOW, _CONTACT.replace("where it would touch the ground", "along the waterline"))
+_NO_SHADOW_TOP = "no shadow on the background."
+assert UL_CLS['ship']['top'].count(_NO_SHADOW_TOP) == 1 and UL_CLS['sub']['top'].count(_NO_SHADOW_TOP) == 1
+_TOP_CLEAN = "no shadow on the background: no cast shadow, no contact shadow and no dark halo on the grey around the hull."
+SHIP_TOP, SUB_TOP = (UL_CLS[c]['top'].replace(_NO_SHADOW_TOP, _TOP_CLEAN) for c in ('ship', 'sub'))
+_NO_MARKS = "No hull number, no name, no flag, no letters, no deck markings and no national markings anywhere."
+_SHIP_DARK = ("The masts, antennas, gun barrels and launcher tubes are dark grey: no pale or white tips or edges. Any helicopter deck is plain darker "
+              "grey with no painted circles, letters, numbers or lines. " + _NO_MARKS)
+_SHIP_MAKERS = ("Bath Iron Works, Ingalls, Litton, Huntington Ingalls, Lockheed Martin, Austal, General Dynamics, BAE Systems, Vickers, Vosper Thornycroft, "
+                "Yarrow, Swan Hunter, Cammell Laird, Naval Group, DCN, Fincantieri, Navantia, Bazan, TKMS, Blohm+Voss, Damen, Kockums, Saab, Severnaya Verf, "
+                "Yantar, Zelenodolsk, Almaz, Jiangnan, Hudong-Zhonghua, Huangpu, Dalian, Mitsubishi, IHI, Hyundai Heavy Industries, Daewoo, Korea Tacoma, "
+                "Mazagon, Garden Reach, Goa Shipyard or Israel Shipyards")
+_SHIP_PAINT = {g: UL_PAINT['ship'][g] + ", the masts, antennas, gun barrels and launcher tubes dark grey" for g in UNIT_GROUPS}
+
+# ---- Corvette (key corv; look 1 only)
+unit_def('corv', 'corvette (a small, short, low coastal warship)', 'ship', 'warship',
+    "patrolling at speed in coastal waters, a white bow wave at its stem and a short white wake behind it",
+    {'nato': ("Family look (US/NATO): a small, short, low coastal warship built of flat, slab-sided plates with crisp straight edges and square corners, "
+              "one compact boxy superstructure, one gun on the bow and an anti-submarine launcher.",
+              ["a short, stocky hull about seven times as long as it is wide, low in the water, with a straight, sharply raked stem and a flush deck "
+               "that runs level from bow to stern. From bow to stern, in this order: ONE single-barrel gun in a small, flat-sided, box-shaped turret on "
+               "the foredeck; ONE anti-submarine rocket launcher right behind it, a squat square box of three rows of four short round tubes on a low "
+               "turntable, aimed forward; ONE single compact, boxy superstructure amidships, two decks high and about a third of the ship's length, with "
+               "flat upright sides and a flat front with a row of five square bridge windows; on its flat roof ONE short, dark, single round pole mast "
+               "with one crossbar and a small flat rectangular radar on its top (no lattice mast, no enclosed tower); ONE short, wide, flat-sided funnel "
+               "with a flat top sloping down toward the stern, joined to the back of the superstructure; on the open after deck, two small box-shaped "
+               "missile launchers angled out to the sides, one on each side; a short, flat, open quarterdeck at the stern with a low rail; NO "
+               "helicopter deck and no hangar."]),
+     'east': ("Family look (Eastern): a small, short, robust coastal warship with a high, strongly flared bow, a raised forecastle that steps down "
+              "to a low after deck, many weapons packed onto its small deck and a stubby, enclosed mast.",
+              ["a short, deep hull about six and a half times as long as it is wide, with a high, strongly flared, gently curved bow and a raised "
+               "forecastle that ends in one straight step down, just behind the superstructure, to a low open after deck. From bow to stern, in this "
+               "order: ONE single-barrel gun in a small rounded turret on the forecastle; TWO anti-submarine rocket launchers side by side right behind "
+               "it, each a low square box of two rows of five short round tubes, aimed forward; ONE tall, narrow superstructure block with a rounded "
+               "front of small square windows and open bridge wings; on its roof ONE short, thick, dark, enclosed mast shaped like a tapering round "
+               "cone, with a small flat rotating radar on a platform at its top; NO funnel (small exhaust grilles in the sides of the superstructure "
+               "instead); on the low after deck, two twin torpedo tube mounts, one on each side, angled outward; a depth-charge rail at the very stern; "
+               "NO other gun; NO helicopter deck and no hangar."]),
+     'china': ("Family look (China, its own lines): a small, sleek coastal warship with a sharply raked clipper bow, a long, low forecastle, a "
+               "neat, angular superstructure with crisp edges, and a small helicopter landing spot at the stern.",
+               ["a short, slim hull about seven and a half times as long as it is wide, with a sharply raked clipper bow whose stem curves forward at "
+                "the top and a flush deck that rises gently toward the bow. From bow to stern, in this order: ONE single-barrel gun in a small, low, "
+                "rounded turret on the long forecastle; ONE anti-submarine rocket launcher, a low square box of two rows of six short round tubes on "
+                "a turntable, just in front of the bridge; ONE long, low, angular superstructure from the bridge to the middle of the ship, its front "
+                "slanted back, with a band of rectangular bridge windows; on it ONE short, dark tripod mast (three thin legs meeting at a small "
+                "platform) carrying a flat rectangular radar; TWO small square funnels side by side (one on the left, one on the right, not one behind "
+                "the other) right behind the mast; two box-shaped missile launchers side by side behind the funnels, pointing out to the sides; a "
+                "small, flat, square helicopter landing spot at the stern with NO hangar."]),
+     'europe': ("Family look (Europe): a small, sleek, graceful coastal warship with smoothly rounded superstructure edges and sloping sides, one "
+                "rounded gun turret and one tidy, closed mast.",
+                ["a short, narrow hull about seven times as long as it is wide, with a gently raked, slightly flared bow and a smooth sheer line that "
+                 "sweeps down from the bow to a low, rounded stern. From bow to stern, in this order: ONE single-barrel gun in a smooth, rounded, "
+                 "dome-shaped turret on the foredeck; ONE anti-submarine launcher right behind it, a single flat rectangular box holding one row of "
+                 "four short round tubes side by side, on a turntable, aimed forward; ONE smooth, low superstructure with rounded corners and sloping "
+                 "sides from behind the launcher to the middle of the ship, its bridge front gently curved with a wide wraparound band of dark windows; "
+                 "on it ONE short, slim, dark, closed mast shaped like a tall, narrow, smooth-sided pyramid, with a small round radome on its top; ONE "
+                 "low, rounded, streamlined funnel just behind the mast, flowing smoothly back into the superstructure; on the after deck, two small "
+                 "box-shaped missile launchers side by side, angled out; NO helicopter deck and no hangar."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical small coastal warship with a "
+                "simple superstructure and bolt-on weapons that look fitted by the buyer.",
+                ["a short, plain hull about six and a half times as long as it is wide, with a straight, plain raked stem, a straight, level sheer "
+                 "line and a row of small round portholes along the hull side. From bow to stern, in this order: ONE single-barrel gun, a plain one behind a "
+                 "flat-sided, open-backed gun shield, on the foredeck; ONE anti-submarine launcher bolted to the deck in front of the bridge, a plain "
+                 "open frame holding six short round tubes in two rows of three; ONE plain, square, two-deck superstructure of flat plates with rows "
+                 "of round portholes and a square bridge with square windows; on its roof ONE short, squat, dark four-legged lattice mast, barely as "
+                 "tall as the superstructure, with a small flat radar on top; ONE plain, round, upright funnel just behind it with a slightly darker "
+                 "grey cap; open bridge wings with no guns on them; two plain bolt-on deck lockers and a depth-charge rack at the stern; "
+                 "NO helicopter deck and no hangar."])},
+    paint=_SHIP_PAINT,
+    setting={g: UL_SEA[g] + ('' if g in ('china', 'export') else ", a low, hazy coastline far away on the horizon") for g in UNIT_GROUPS},
+    frame_note=("Its short, low hull (its length to width exactly as described), its bow, its ONE gun, its anti-submarine launcher, its superstructure, "
+                "mast and funnel in the order described, and its stern (with a small landing spot or none, exactly as described) are the same in "
+                "every view. It is a small coastal warship: clearly shorter, lower and simpler than a frigate. " + _SHIP_DARK),
+    side_frame=SHIP_SIDE, side_style=STYLE_UL_SIDE_CONTACT, top_frame=SHIP_TOP, looks=(1,),
+    rule=(_OWNER + "It must not look like any real warship (no " + _SHIP_MAKERS + " corvette, patrol ship or frigate); it is not a fast attack boat and "
+          "not a frigate; its hull, bow, superstructure, mast, funnel, gun and launcher are this game's own design, exactly as described here, with "
+          "no hull number, no flag and no national markings."),
+    gens=["Generation 1 of 3, the oldest, a standard Cold War era coastal corvette: ", "Generation 2 of 3, a clearly newer design: ",
+          "Generation 3 of 3, the newest, a near-future stealth corvette: "])
+
+# ---- Destroyer (key dest; look 1 only)
+unit_def('dest', 'destroyer (a medium warship, bigger than a frigate and smaller than a cruiser)', 'ship', 'warship',
+    "steaming at moderate speed, a white bow wave at its stem and a long white wake behind it",
+    {'nato': ("Family look (US/NATO): a long, sleek, flat-sided warship with a sharply raked, flared bow, crisp angular deckhouses built of flat "
+              "plates, one gun forward, missile launchers forward and amidships, and a helicopter hangar and deck at the stern.",
+              ["a long, slender hull about nine times as long as it is wide, with a high, sharply raked, flared bow and a flush deck from bow to "
+               "stern. From bow to stern, in this order: ONE single-barrel gun in a flat-sided, angular turret on the foredeck; ONE low, flat, square "
+               "block of vertical missile hatches (four rows of four square hatches, flush with the deck) in front of the bridge; the superstructure in "
+               "TWO separate tall, flat-sided blocks with a stretch of open deck between them: the FORWARD block carries the bridge (a wide band of "
+               "square windows across its flat front) and on its roof ONE tall, dark, single round pole mast, raked slightly back, with two crossbars "
+               "and a flat rectangular radar at its top; on the open deck between the blocks, two quadruple box missile launchers angled out to the "
+               "sides; the AFTER block carries TWO square, flat-topped funnels side by side across the ship (one on the left and one on the right, not "
+               "one behind the other) with a second, shorter dark pole mast between them, and ends in a square helicopter hangar; a flat helicopter "
+               "deck at the stern."]),
+     'east': ("Family look (Eastern): a long, heavily armed warship with a high, flared bow, a tall, crowded superstructure of launchers, guns and "
+              "radars, and an enclosed tower mast.",
+              ["a long hull about eight and a half times as long as it is wide, with a high, strongly flared bow and a long raised forecastle that "
+               "steps down to a lower after deck at the hangar. From bow to stern, in this order: ONE twin-barrel gun in a broad, round-fronted turret "
+               "on the forecastle; ONE raised deckhouse behind it with eight round missile hatches on its flat top in two rows of four; ONE tall, "
+               "stepped bridge block with a rounded front of small square windows; on top of it ONE thick, dark, enclosed tower mast shaped like a "
+               "tapering four-sided pyramid with flat sides, carrying a big flat rectangular radar antenna; TWO short, round, raked funnels one "
+               "behind the other in the middle of the ship, with two small round dome radars on short pedestals between them; ONE triple torpedo "
+               "tube mount on each deck side between the funnels; ONE big, boxy helicopter hangar behind the second funnel; a short, low flight deck "
+               "at the stern behind the hangar; NO gun at the stern."]),
+     'china': ("Family look (China, its own lines): a long, sleek warship with a sharply raked clipper bow, a long forecastle, a smooth angular "
+               "superstructure with neat edges, and a large hangar and helicopter deck.",
+               ["a long, slim hull about nine and a half times as long as it is wide, with a sharply raked clipper bow whose stem curves forward at "
+                "the top and a flush deck that rises gently toward the bow. From bow to stern, in this order: ONE single-barrel gun in a rounded "
+                "turret on the long forecastle; ONE anti-submarine rocket launcher, a low square box of two rows of six short tubes, in front of the "
+                "bridge; ONE long, angular superstructure that steps up in three levels from the bridge to a tall central tower, its bridge front "
+                "slanted back with a band of rectangular windows; on the tower ONE tall, slim, dark tripod mast (three thin legs) with a flat "
+                "rectangular radar and a round dish radar on two platforms; between the mast and the funnel, two pairs of box-shaped missile "
+                "launchers, each pair side by side and pointing out to the sides; ONE wide, low funnel with sloping flat sides, set well aft; ONE "
+                "hangar joined to the back of the funnel; a flat helicopter deck at the stern."]),
+     'europe': ("Family look (Europe): a long, sleek, graceful warship with clean, sloped hull sides, a smoothly rounded superstructure, one tall "
+                "closed mast and a rounded gun turret.",
+                ["a long, narrow hull about nine times as long as it is wide, with a gently raked, flared bow and a smooth sheer line that sweeps "
+                 "down from a high bow to a lower stern. From bow to stern, in this order: ONE single-barrel gun in a smooth, rounded, dome-shaped "
+                 "turret on the foredeck; ONE eight-cell box missile launcher (a squat square box of two rows of four square cells) on a raised, "
+                 "rounded platform in front of the bridge; ONE long, smooth superstructure with rounded corners and sloping sides from the bridge to "
+                 "the hangar, its bridge front gently curved with a wraparound band of dark windows; on it, just behind the bridge, ONE tall, slim, "
+                 "dark, closed mast shaped like a smooth tapering cone, with a flat rotating radar on its top; TWO slim, rounded, streamlined "
+                 "funnels one behind the other in the middle of the ship, each raked back; two small six-barrel close-in gun mounts on the hangar "
+                 "roof, one on each side; ONE rounded hangar; a flat helicopter deck at the stern."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical warship with a simple "
+                "superstructure and bolt-on launchers and guns that look fitted by the buyer.",
+                ["a long, plain hull about nine times as long as it is wide, with a straight, plain raked stem, a gently curved sheer and a row of "
+                 "small round portholes along the hull side. From bow to stern, in this order: ONE single-barrel gun in a plain, flat-sided, "
+                 "box-shaped turret on the foredeck; ONE raised platform in front of the bridge with four bolted-on box missile launchers, two on each "
+                 "side, angled out; ONE plain, square, three-deck bridge block of flat plates with square windows and open bridge wings; on it ONE "
+                 "plain, dark, four-legged lattice mast of medium height with a flat radar on top; ONE big, plain, upright oval funnel with a darker "
+                 "grey cap in the middle of the ship; ONE triple torpedo tube mount on each deck side beside the funnel; ONE plain square deckhouse aft "
+                 "with a second short dark pole mast; ONE plain single-barrel gun in a box-shaped turret on the after deck, facing backward; a small "
+                 "flat helicopter pad at the very stern with NO hangar."])},
+    paint=_SHIP_PAINT,
+    frame_note=("Its long, slender hull (its length to width exactly as described), its bow, its guns, its missile launchers, its deckhouses, masts "
+                "and funnels in the order described, and its hangar and helicopter deck are the same in every view. It is a medium warship: clearly "
+                "bigger and more heavily equipped than a frigate and smaller and simpler than a cruiser. " + _SHIP_DARK),
+    side_frame=SHIP_SIDE, side_style=STYLE_UL_SIDE_CONTACT, top_frame=SHIP_TOP, looks=(1,),
+    rule=(_OWNER + "It must not look like any real warship (no " + _SHIP_MAKERS + " destroyer, frigate or cruiser); it is not a cruiser and not a "
+          "frigate; its hull, bow, deckhouses, masts, funnels, guns and launchers are this game's own design, exactly as described here, with no hull "
+          "number, no flag and no national markings."),
+    gens=["Generation 1 of 3, the oldest, a standard Cold War era destroyer: ", "Generation 2 of 3, a clearly newer, guided-missile destroyer: ",
+          "Generation 3 of 3, the newest, a near-future stealth destroyer: "])
+
+# ---- Ballistic Missile Submarine (key ssbn; look 1 only)
+unit_def('ssbn', 'ballistic missile submarine (a long submarine with a row of missile hatches behind the sail)', 'sub', 'submarine',
+    "running on the surface at moderate speed, a white bow wave at its bow and a long, churned white wake behind it, the sail rising near the front "
+    "of the hull and the long missile deck behind it just above the water, all its missile hatches closed",
+    {'nato': ("Family look (US/NATO): a very long, smooth, black submarine with a round bow, a long, straight, parallel-sided middle body, a tall "
+              "sail set well forward and a long, flat missile deck behind it.",
+              ["a very long, round-section hull about thirteen times as long as it is wide, with a smooth, blunt, rounded bow and a long, gently "
+               "tapering stern; ONE tall, narrow sail with flat, upright sides, a rounded front edge and a straight back edge, set about a quarter of "
+               "the way back from the bow, with NO planes on the sail; TWO small, square-tipped hydroplanes low on the hull sides close to the bow; "
+               "behind the sail, a long, flat, level missile deck, only slightly raised above the round hull and blending smoothly into it at both "
+               "ends, carrying SIXTEEN round, flush missile hatches in two straight rows of eight side by side, all closed; a few small flush access "
+               "hatches near the stern; a cruciform tail of four short, swept fins with square tips and no end plates; ONE large propeller with "
+               "seven curved blades, no shroud."]),
+     'east': ("Family look (Eastern): a very long, thick, heavy-built submarine with a blunt, very rounded bow, a big rounded sail set well "
+              "forward and a long, low, flat-topped missile casing behind it.",
+              ["a very long, thick hull about twelve times as long as it is wide, with a blunt, almost round bow and a short, steeply tapering "
+               "stern; ONE big, long, low sail with smoothly rounded front and back ends and a flat top, set about a quarter of the way back from the "
+               "bow, with ONE pair of short planes on its sides near its front; behind the sail, a long, low, flat-topped missile casing with "
+               "straight, upright sides, only about a quarter as high as the hull (NOT a tall hump), running two thirds of the way to the stern and "
+               "sloping down into the hull at its rear end, carrying TWELVE square missile hatch covers in two straight rows of six side by side, all "
+               "closed; a row of small round flood holes along the lower hull side; a cruciform tail of four tall, square-edged fins, the lower fin "
+               "as tall as the upper one; ONE large propeller with five broad blades, no shroud."]),
+     'china': ("Family look (China, its own lines): a very long, slender, smooth submarine with a pointed rounded bow, a low, streamlined sail "
+               "set well forward and a clean missile deck behind it.",
+               ["a very long, slender hull about thirteen and a half times as long as it is wide, with a pointed, rounded bow and a long, finely "
+                "tapered stern; ONE low, long, streamlined sail with a rounded front edge that slopes back and a rounded top, set about a quarter of "
+                "the way back from the bow, with ONE pair of short planes on its sides and a smooth fillet where it meets the hull; behind the sail, "
+                "a long missile deck flush with the top of the hull (no raised casing, no hump), carrying TEN round missile hatches in two straight "
+                "rows of five side by side, all closed, the rows ending well ahead of the tail; a cruciform tail of four short fins with rounded "
+                "tips; ONE propeller with seven curved blades, no shroud."]),
+     'europe': ("Family look (Europe): a very long, sleek, rounded submarine with a smooth, polished, rubber-tiled finish, a small, streamlined "
+                "sail set well forward and a clean, flush missile deck behind it.",
+                ["a very long, smooth, round hull about twelve and a half times as long as it is wide, with a smoothly rounded bow and a long, "
+                 "smoothly tapered stern; ONE short, smooth sail shaped like a teardrop seen from above, with a rounded front and a back edge that "
+                 "slopes down into the hull, set about a quarter of the way back from the bow, with NO planes on the sail; TWO small hydroplanes HIGH "
+                 "on the hull sides just ahead of the sail; behind the sail, a long missile deck flush with the smooth hull, carrying FOURTEEN round "
+                 "missile hatches in two straight rows of seven side by side, all closed; an X-shaped tail of four short fins with square tips, set "
+                 "diagonally (not up-down and left-right); ONE large propeller with seven curved blades, no shroud."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical submarine, a simpler hull with "
+                "visible deck hatches and bolt-on fittings.",
+                ["a long, plain hull about eleven times as long as it is wide (the shortest of the missile submarines, but still much longer than "
+                 "an attack submarine), with a plain rounded bow and a short, tapered stern; ONE tall, plain, upright sail with flat sides, a square "
+                 "front and a flat top, set about a quarter of the way back from the bow, with ONE pair of plain square planes on its sides; behind "
+                 "the sail, a raised, flat-topped missile casing with straight sides and rows of small bolted access panels, sloping down into the "
+                 "hull at both ends, carrying EIGHT large round missile hatches in two straight rows of four side by side, all closed; a flat deck "
+                 "casing with a few small square hatches ahead of the sail; a cruciform tail of four plain fins with square tips; ONE five-bladed "
+                 "propeller, no shroud."])},
+    paint={g: UL_PAINT['sub'][g] + ", the missile hatches the same colour as the deck" for g in UNIT_GROUPS},
+    frame_note=("Its very long hull (its length to width exactly as described, much longer and slimmer than an attack submarine), its sail set well "
+                "forward, its missile hatches (exactly the number written here, in two straight rows side by side on the deck behind the sail, all "
+                "closed), its planes, its tail and its propeller are exactly as described and the same in every view; the masts are lowered. The "
+                "fin tips, planes and propeller blades are dark like the hull: no pale or white tips or edges. " + _NO_MARKS),
+    side_frame=UNIQUE_SUB_SIDE, side_style=STYLE_UL_SIDE_CONTACT, top_frame=SUB_TOP, looks=(1,),
+    rule=(_OWNER + "It must not look like any real submarine (no Electric Boat, General Dynamics, Newport News, Huntington Ingalls, Vickers, BAE Systems, "
+          "Naval Group, DCN, Sevmash, Rubin, Malakhit, Bohai, Huludao, Mazagon, Kockums or TKMS submarine); it is not an attack submarine: its sail "
+          "is set well forward and a long row of missile hatches lies behind it; it has no tall hump behind the sail and not two hulls side by side; "
+          "its hull, bow, sail, planes, hatches, tail and propeller are this game's own design, exactly as described here, with no hull number, no "
+          "flag and no national markings."),
+    gens=["Generation 1 of 3, the oldest, a standard Cold War era ballistic missile submarine: ", "Generation 2 of 3, a clearly newer design: ",
+          "Generation 3 of 3, the newest, a near-future design: "])
+NEW_SHIPS = ('corv', 'dest', 'ssbn')
+assert all(UD[k]['looks'] == (1,) and len([n for n in UNIT_LOOKS if UNIT_LOOKS[n].get('unit_key') == k]) == 15 for k in NEW_SHIPS)
+assert all("LOWER RIGHT" in UD[k]['side'] and "contact shadow" in UD[k]['side'] and "no dark halo" in UD[k]['top'] for k in NEW_SHIPS)
+assert "thin dark waterline stripe" in SHIP_SIDE and "no sea slab" in SHIP_SIDE and "soft shadow" not in SHIP_SIDE
+
+
 # ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
 
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
@@ -2363,21 +2624,22 @@ def doc_unit(key):
         o = [f"#### {u[0].upper() + u[1:]} (`{key}`, {GN[g]} only): 3 prompts, built from these words", '',
              f"Class of picture: `{d['cls']}`. One look, in its own group only. Files: `assets/art-src/ul-{key}-{g}-1-<side|scene|top>.webp` (the look number is always 1, so the picture lookup and `--match ul-{key}-{g}-1` work as for every other unit). Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-{g}-1-side` prints it; the prefix is the look-1 one.", '',
              f"- **Side frame:** {d['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
-             f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+             f"- **Top-down frame:** {d['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
              f"- **Card scene:** \"A single {u} {d['action']}. The setting: {d['setting'][g]}. {d['scene_frame']} The {u} is described in words as: <the words below>\""] + ([f"- **Side view style (this unit's own, instead of the shared one):** {d['side_style']}"] if d['side_style'] != STYLE_V2_SIDE else []) + [
              f"- **Family look:** {fam} Paint: {d['paint'][g]}.", f"- **The one look (all levels):** {d['gens'][0]}{gl[0]}", f"- **Extra sentence after the tail of the description:** {d['rule']}", '']
         print('\n'.join(o)); return
-    o = [f"### {u[0].upper() + u[1:]} (`{key}`): 45 prompts, built from these words", '',
-         f"Class of picture: `{d['cls']}`. Files: `assets/art-src/ul-{key}-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).", '',
+    L1 = d['looks'] == (1,)   # look 1 only (the new ships, owner 28 November 2026): 15 prompts
+    o = [f"### {u[0].upper() + u[1:]} (`{key}`): " + ("15 prompts, look 1 only, built from these words" if L1 else "45 prompts, built from these words"), '',
+         f"Class of picture: `{d['cls']}`. Files: `assets/art-src/ul-{key}-<group>-<look>-<side|scene|top>.webp`. " + (f"Only look 1 of each group is built for now (`ul-{key}-<group>-1-<kind>`); looks 2 and 3 can be added later with the same frames. Batches: 1 = the 5 look-1 side views, 2 = the 10 scenes and top-downs (each from its own side view)." if L1 else "Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view)."), '',
          f"Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section \"The other units\" above; what is unit-specific is below.", '',
          f"- **Side frame:** {d['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
-         f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+         f"- **Top-down frame:** {d['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
          f"- **Card scene:** \"A single {u} {d['action']}. The setting: <the group's setting>. {d['scene_frame']} The {u} is described in words as: <the look's words>\""] + ([f"- **Extra sentence after the tail of every description:** {d['rule']}"] if d['rule'] else []) + ['']
     if d['side_style'] != STYLE_V2_SIDE: o[-1:-1] = [f"- **Side view style (this unit's own, instead of the shared one):** {d['side_style']}"]
     for g in UNIT_GROUPS:
         fam, gl = d['groups'][g]
         o += [f"#### {GN[g]}", '', f"- **Setting of the card scene:** {d['setting'][g]}.", f"- **Family look:** {fam} Paint: {d['paint'][g]}."]
-        for n in (1, 2, 3): o.append(f"- **Look {n} (levels {['1-3', '4-6', '7-8'][n - 1]}):** {d['gens'][n - 1]}{gl[n - 1]}")
+        for n in d['looks']: o.append(f"- **Look {n} (levels {['1-3', '4-6', '7-8'][n - 1]}):** {d['gens'][n - 1]}{gl[n - 1]}")
         o.append('')
     print('\n'.join(o))
 
