@@ -2,13 +2,13 @@
 // stopped, the side panel closed, no toasts, no forces on the map (S.armies emptied: a town is shown, not the troops), no storms, Math.random
 // seeded (both pages start the same game and weather). Each shot: the town centred at hexPx, its own tier (and every town's over the crop)
 // made, the map settled; clip CROPxCROP*0.7 CSS px round the centre, at dpr 2.
-//   node .test/city-shots.js <outdir> <tag> City:hexPx[:d|n] ...   (PAGE=page-before.html for the old page; PHONE=1 for a phone profile;
+//   node .test/city-shots.js <outdir> <tag> City:hexPx[:d|n] ...   (PAGE=page-before.html for the old page; PHONE=1 for a phone profile, VW/VH its viewport;
 //   PRE='js' run once with im = window.__im after the game starts; CROP css px wide, 0.7 of it high; WAIT s at most for the towns to be
 //   drawn, then the run fails)
 const { chromium, devices } = require('playwright'); const path = require('path'); const pickNation = require('./pick-nation.js');
 (async () => { const out = process.argv[2], tag = process.argv[3], shots = process.argv.slice(4).map(a => a.split(':')), PHONE = !!process.env.PHONE, errs = [];
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
-  const ctx = await b.newContext(PHONE ? {...devices['Pixel 7']} : { viewport: {width:+(process.env.VW || 1440), height:+(process.env.VH || 900)}, deviceScaleFactor: 2 });
+  const ctx = await b.newContext(PHONE ? {...devices['Pixel 7'], ...(process.env.VW ? {viewport:{width:+process.env.VW, height:+(process.env.VH || 915)}} : {})} : { viewport: {width:+(process.env.VW || 1440), height:+(process.env.VH || 900)}, deviceScaleFactor: 2 });
   await ctx.addInitScript(() => { let a = 12345; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0)/4294967296; }; });
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });

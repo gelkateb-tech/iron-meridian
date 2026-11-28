@@ -6,7 +6,7 @@
 // and the city cache: the time until Berlin's own tier is made at the first views (settle, ms; the bakes of the towns round it go on after), the bake time per tier (CBT: count, total, worst ms;
 // the longest slice), the memory the city canvases hold (MB), and one town made from nothing at hexPx 150 (cityDbg.time: masks, day, night ms).
 //   node .test/city3d-perf.js [--phone] [--night] [--page page.html] [--json out.json]
-//   (--phone: a modern phone, Pixel 7 profile 412x915 dpr 2.625, touch, the CPU throttled x2 during the measured windows)
+//   (--phone: a modern phone, Pixel 7 profile 412x915 dpr 2.625 (VW/VH: another viewport), touch, the CPU throttled x2 during the measured windows)
 const { chromium, devices } = require('playwright'); const path = require('path'), fs = require('fs'), os = require('os');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : d; };
 const PHONE = process.argv.includes('--phone'), NIGHT = process.argv.includes('--night'), PAGE = arg('page', 'page.html'), JSON_OUT = arg('json', '');
@@ -18,7 +18,7 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
   return {busy, draw:incl.get('draw') || 0, city:Math.max(...CITYF.map(k => incl.get(k) || 0)), top:[...incl].filter(e => e[0] && e[0][0] !== '(').sort((a, b) => b[1] - a[1]).slice(0, 18)}; }   // (top: the functions with the most time, inclusive)
 (async () => {
   const b = await chromium.launch({ args: ['--allow-file-access-from-files'] });
-  const ctx = await b.newContext(PHONE ? {...devices['Pixel 7']} : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const ctx = await b.newContext(PHONE ? {...devices['Pixel 7'], ...(process.env.VW ? {viewport:{width:+process.env.VW, height:+(process.env.VH || 915)}} : {})} : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
   await ctx.addInitScript(() => { let a = 12345; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0)/4294967296; }; });
   const p = await ctx.newPage(), errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   const cdp = await ctx.newCDPSession(p), tap = sel => PHONE ? p.tap(sel) : p.click(sel);
