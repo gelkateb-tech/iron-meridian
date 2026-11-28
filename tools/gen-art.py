@@ -1038,16 +1038,18 @@ STYLE_UL_SCENE = STYLE_V2_SCENE   # photo-real scenes: kept (owner)
 assert "no cast shadow" in STYLE_UL_TOP and "no shadow at all" in STYLE_UL_TOP
 UD = {}   # key -> dict(label, cls, kind (the word for "real {kind}"), groups {g: (family, [g1, g2, g3])}, action, paint, setting, note, gens)
 
-def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None):
+def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule=''):
     """label: the unit's name in the prompts; action: what it does in its card scene (a phrase after "A single {label}"); groups: {group: (family look, [3 generations])};
-    paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest]"""
+    paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest];
+    scene_frame: replaces the class's card-scene frame (e.g. to allow one prop); rule: an extra sentence after the tail of every description (the units made before it have none)"""
     UD[key] = dict(label=label, cls=cls, kind=kind, action=action, groups=groups, paint=paint or UL_PAINT[cls], setting=setting or UL_SETTING[cls], note=frame_note,
+                   scene_frame=scene_frame or UL_CLS[cls]['scene_frame'], rule=rule,
                    gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "])
     d, C = UD[key], UL_CLS[cls]; u = label
     for g in UNIT_GROUPS:
         fam, gl = groups[g]
         for n in (1, 2, 3):
-            desc = f"{fam} Paint: {d['paint'][g]}. {d['gens'][n - 1]}{gl[n - 1]}" + UL_UNIT_TAIL.format(kind=kind)
+            desc = f"{fam} Paint: {d['paint'][g]}. {d['gens'][n - 1]}{gl[n - 1]}" + UL_UNIT_TAIL.format(kind=kind) + (' ' + rule if rule else '')
             nm = f'ul-{key}-{g}-{n}'
             UNIT_LOOKS[nm + '-side'] = {
                 'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'side', 'group': g, 'look': n, 'fresh': n == 1, 'aspect': '1:1',
@@ -1057,7 +1059,7 @@ def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, fr
             UNIT_LOOKS[nm + '-scene'] = {
                 'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'scene', 'group': g, 'look': n, 'fresh': False, 'aspect': '3:2',
                 'prefix': UL_PREFIX_SCENE.format(unit=u, detail=C['detail']),
-                'subject': f"A single {u} {action}. The setting: {d['setting'][g]}. {C['scene_frame']} The {u} is described in words as: {desc}",
+                'subject': f"A single {u} {action}. The setting: {d['setting'][g]}. {d['scene_frame']} The {u} is described in words as: {desc}",
                 'style': STYLE_UL_SCENE, 'refs': [nm + '-side']}
             UNIT_LOOKS[nm + '-top'] = {
                 'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'top', 'group': g, 'look': n, 'fresh': False, 'aspect': '1:1',
@@ -1614,6 +1616,48 @@ unit_def('mpa', 'maritime patrol aircraft (a large aircraft that searches the se
     gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
 
 
+# ---- Marines (key mar): amphibious infantry that lands on any coast. Owner (defaults): the amphibious kit clearly visible (life vest or
+# flotation, waterproof bags, wet-weather gear), a small boat in the card scene; every new prompt carries the look-alike rule.
+UL_BEACH = {
+    'nato': "a wide beach of pale tan sand with low grassy dunes and scrub bushes behind it, gentle white surf rolling in from a blue ocean under a clear sky with a few high clouds",
+    'east': "a cold grey pebble beach on a northern sea under a pale, cloudy northern sky, grey-green surf, a line of birch trees and the dark edge of a pine forest behind the shore",
+    'china': "a hazy beach of yellow sand with green hills and terraced slopes behind it, small waves on a blue-green coastal sea under a pale, slightly hazy sky",
+    'europe': "a sandy Atlantic beach with white-capped waves, grassy dunes and a distant wooded headland, tall cumulus clouds in a bright sky",
+    'export': "a tropical beach of pale sand with a few leaning palm trees, turquoise surf and a hot clear blue sky with a few small white clouds"}
+unit_def('mar', 'marine (an amphibious infantry soldier)', 'man', 'soldier, uniform or kit',
+    "wading ashore through the shallow surf onto the beach with his weapon held ready, sea water splashing around his legs, a small empty inflatable landing boat pulled up on the wet sand behind him, not looking at the viewer",
+    {'nato': ("Family look (US/NATO): a stocky, heavily equipped marine rifleman built for landings from the sea: a rounded combat helmet, an inflatable life vest worn over a vest of pouches, a waterproof roll-top bag strapped to a big pack, a hooded wet-weather jacket, a rifle, sturdy boots.",
+              ["Cold War era kit: a rounded steel-look helmet with a cloth cover, a bulky olive inflatable life vest over a webbing harness with ammunition pouches and two canteens, a rubberised waterproof bag lashed to a canvas pack, a hooded rain poncho rolled on top of the pack, a plain long rifle, high laced boots.",
+               "modern kit: a visored helmet with a night-vision mount, a slim inflatable life-vest collar on the shoulders of a plate-carrier vest with modular pouches, a roll-top waterproof dry bag on a modern pack, a hooded waterproof jacket, a compact rifle with a sight, knee pads.",
+               "near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a built-in self-inflating flotation collar, a sealed waterproof pack, a hooded water-shedding suit, light powered exoskeleton frames on the legs, a compact rifle with an integrated sight."]),
+     'east': ("Family look (Eastern): a lean, tough marine in a rounded helmet and a dark smock, a chest rig of flat pouches, a dark inflatable life vest, a rubberised waterproof bag on a small pack with a rain cape rolled on top, a rifle with a curved magazine, tall rubber-soled boots.",
+              ["Cold War era kit: a rounded steel helmet, a dark canvas smock, a bulky inflatable life vest over a leather-look belt harness with ammunition pouches, a rubberised waterproof bag on a small canvas pack, a rain cape rolled on top, a rifle with a curved magazine and a folding stock, tall boots.",
+               "modern kit: a helmet with a rail mount and goggles, a chest rig with modular pouches over body-armour plates, a slim inflatable life-vest collar, a roll-top waterproof bag on a medium pack, a hooded waterproof jacket, a compact rifle with a sight and a suppressor, knee pads.",
+               "near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a self-inflating flotation collar, a sealed waterproof pack, a dark water-shedding suit, a compact rifle with an integrated sight, light knee guards."]),
+     'china': ("Family look (China, its own lines): a slim, upright marine in a clean tidy uniform, a rounded helmet with a net cover, a neat chest rig with squared pouches, a compact life vest, a squared waterproof bag on a compact backpack, a light rain jacket, a short-barrelled rifle.",
+               ["Cold War era kit: a plain rounded helmet, a simple canvas belt with squared pouches, a bulky canvas-covered flotation vest, a rubberised bag on a small green canvas pack, a rain cape, a long rifle with a curved magazine, canvas boots.",
+                "modern kit: a helmet with a visor and a camera mount, a neat chest rig with squared pouches, a slim inflatable life-vest collar, a squared waterproof dry bag on a compact pack, a hooded waterproof jacket, a compact rifle with a sight, knee pads.",
+                "near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a self-inflating flotation collar, a neat sealed waterproof pack, a slim water-shedding suit with squared panels, light powered exoskeleton frames on the legs, a compact rifle with an integrated sight."]),
+     'europe': ("Family look (Europe): a practical, slim commando-style marine in a rounded modern helmet, a plate-carrier vest with tidy pouches and a slim life vest, a waterproof bag on a medium pack, a hooded windproof smock, a compact rifle held close, ear protection.",
+                ["Cold War era kit: a rounded steel-style helmet with a net, a hooded windproof smock, a bulky inflatable life vest over a webbing harness, a rubberised waterproof bag lashed to a canvas pack, a plain rifle with a plastic-look stock, boots with gaiters.",
+                 "modern kit: a helmet with a visor and ear defenders, a plate-carrier vest with tidy modular pouches and a slim inflatable life-vest collar, a roll-top dry bag on a medium pack, a hooded waterproof smock, a compact rifle with a sight, knee and elbow pads.",
+                 "near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a self-inflating flotation collar, a sealed waterproof pack, a hooded water-shedding smock, a compact rifle with an integrated sight, light knee guards."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, practical marine with mixed, worn kit, a rounded helmet, an old-pattern life vest, a simple vest, a rubberised waterproof bag, a rain poncho, an older rifle, a faded canvas pack.",
+                ["post-war kit: a rounded steel helmet with a cloth cover, a bulky padded life vest, a canvas belt with pouches, a rubberised waterproof bag on a faded canvas pack, a rolled rain poncho, a plain long rifle with a wooden-look stock, worn boots.",
+                 "widely exported 1980s kit: a helmet with a net cover, a chest rig of flat pouches, an inflatable life vest, a waterproof bag on a bigger pack, a hooded rain jacket, a rifle with a curved magazine and a folding stock, a scarf.",
+                 "modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches and a slim inflatable life-vest collar, a roll-top dry bag on a practical pack, a hooded waterproof jacket, a compact rifle with a sight, knee pads, a practical, mixed look made to be sold to many armies."])},
+    paint={'nato': "a green, brown and tan coastal camouflage", 'east': "a dark green and black blotch camouflage",
+           'china': "a blue-grey and sea-green digital camouflage", 'europe': "a grey-green and sand splinter camouflage",
+           'export': "a faded olive and sand-khaki camouflage"},
+    setting=UL_BEACH,
+    frame_note="His amphibious kit is clearly visible in this view: the life vest or flotation collar, the waterproof bag on the pack and the wet-weather gear.",
+    scene_frame=UL_CLS['man']['scene_frame'].replace("Only this one soldier: no other person, no vehicle, no buildings,",
+        "Only this one soldier and his one small empty boat: no other person, no other boat, no ship, no vehicle, no buildings,"),
+    rule="Look-alike rule: the checker must not be able to name a real model from it; no real uniform, camouflage pattern, insignia, badge or flag is copied.",
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer, ", "Generation 3 of 3, the newest, "])
+assert "his one small empty boat" in UD['mar']['scene_frame']
+
+
 # ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
 
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
@@ -1975,7 +2019,7 @@ def doc_unit(key):
          f"Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section \"The other units\" above; what is unit-specific is below.", '',
          f"- **Side frame:** {C['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
          f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
-         f"- **Card scene:** \"A single {u} {d['action']}. The setting: <the group's setting>. {C['scene_frame']} The {u} is described in words as: <the look's words>\"", '']
+         f"- **Card scene:** \"A single {u} {d['action']}. The setting: <the group's setting>. {d['scene_frame']} The {u} is described in words as: <the look's words>\""] + ([f"- **Extra sentence after the tail of every description:** {d['rule']}"] if d['rule'] else []) + ['']
     for g in UNIT_GROUPS:
         fam, gl = d['groups'][g]
         o += [f"#### {GN[g]}", '', f"- **Setting of the card scene:** {d['setting'][g]}.", f"- **Family look:** {fam} Paint: {d['paint'][g]}."]

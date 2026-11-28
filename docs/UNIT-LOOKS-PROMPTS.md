@@ -1897,10 +1897,64 @@ Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly
 - **Look 3 (levels 7-8):** Generation 3 of 3, the newest, a modern export-grade design: a twin-turboprop transport aircraft converted to patrol work, a belly radome, a chin sensor ball, a bolt-on weapons pylon, a practical look made to be sold to many air forces.
 
 
+### Marine (an amphibious infantry soldier) (`mar`): 45 prompts, built from these words
+
+Class of picture: `man`. Files: `assets/art-src/ul-mar-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).
+
+Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-mar-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section "The other units" above; what is unit-specific is below.
+
+Owner's defaults for the Marines (28 November 2026): the amphibious kit is clearly visible in all three pictures (life vest or flotation collar, waterproof bags, wet-weather gear; the side and top frames say so), the card scene is a beach landing with one small empty inflatable boat (the class's "no vehicle" frame is widened for that one boat only), the card scenes are set on each group's own beach instead of the dirt road, and every description ends with the look-alike rule. These two additions (`scene_frame`, `rule` of `unit_def`) leave every earlier unit's prompts word for word as they were.
+
+- **Side frame:** A single marine (an amphibious infantry soldier), seen from a front three-quarter side view from slightly above (about 30 degrees down), standing in a ready pose with the weapon held ready, turned toward the lower right of the picture so that the viewer sees the front and one side. The whole soldier, from the boots to the top of the helmet and the weapon, is centred left to right and top to bottom and fills about 85 percent of the picture's height; the entire figure is inside the frame with a margin all round. Only this one marine (an amphibious infantry soldier): no other person, no vehicle, no ground, only a faint, tight soft shadow under the boots. His amphibious kit is clearly visible in this view: the life vest or flotation collar, the waterproof bag on the pack and the wet-weather gear.
+- **Top-down frame:** A single marine (an amphibious infantry soldier), seen exactly straight down from above (a true top-down plan view), facing the top of the picture, the weapon held ready in front. The whole soldier (head, shoulders, arms, pack and weapon) is centred left to right and top to bottom and fills about 85 percent of the picture's height. Only this one marine (an amphibious infantry soldier): no other person, no vehicle, no ground, no shadow on the background. His amphibious kit is clearly visible in this view: the life vest or flotation collar, the waterproof bag on the pack and the wet-weather gear.
+- **Card scene:** "A single marine (an amphibious infantry soldier) wading ashore through the shallow surf onto the beach with his weapon held ready, sea water splashing around his legs, a small empty inflatable landing boat pulled up on the wet sand behind him, not looking at the viewer. The setting: <the group's setting>. Seen from a low front three-quarter angle at about eye height, the soldier fills about half the picture's height and stands in the middle of the frame, the horizon in the upper third, a believable sky with a few soft clouds, natural daylight with the sun from the upper left. The scene fills the whole picture edge to edge. Only this one soldier and his one small empty boat: no other person, no other boat, no ship, no vehicle, no buildings, no signs, no markings. The marine (an amphibious infantry soldier) is described in words as: <the look's words>"
+- **Extra sentence after the tail of every description:** Look-alike rule: the checker must not be able to name a real model from it; no real uniform, camouflage pattern, insignia, badge or flag is copied.
+
+#### US/NATO
+
+- **Setting of the card scene:** a wide beach of pale tan sand with low grassy dunes and scrub bushes behind it, gentle white surf rolling in from a blue ocean under a clear sky with a few high clouds.
+- **Family look:** Family look (US/NATO): a stocky, heavily equipped marine rifleman built for landings from the sea: a rounded combat helmet, an inflatable life vest worn over a vest of pouches, a waterproof roll-top bag strapped to a big pack, a hooded wet-weather jacket, a rifle, sturdy boots. Paint: a green, brown and tan coastal camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel-look helmet with a cloth cover, a bulky olive inflatable life vest over a webbing harness with ammunition pouches and two canteens, a rubberised waterproof bag lashed to a canvas pack, a hooded rain poncho rolled on top of the pack, a plain long rifle, high laced boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, modern kit: a visored helmet with a night-vision mount, a slim inflatable life-vest collar on the shoulders of a plate-carrier vest with modular pouches, a roll-top waterproof dry bag on a modern pack, a hooded waterproof jacket, a compact rifle with a sight, knee pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a built-in self-inflating flotation collar, a sealed waterproof pack, a hooded water-shedding suit, light powered exoskeleton frames on the legs, a compact rifle with an integrated sight.
+
+#### Eastern
+
+- **Setting of the card scene:** a cold grey pebble beach on a northern sea under a pale, cloudy northern sky, grey-green surf, a line of birch trees and the dark edge of a pine forest behind the shore.
+- **Family look:** Family look (Eastern): a lean, tough marine in a rounded helmet and a dark smock, a chest rig of flat pouches, a dark inflatable life vest, a rubberised waterproof bag on a small pack with a rain cape rolled on top, a rifle with a curved magazine, tall rubber-soled boots. Paint: a dark green and black blotch camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel helmet, a dark canvas smock, a bulky inflatable life vest over a leather-look belt harness with ammunition pouches, a rubberised waterproof bag on a small canvas pack, a rain cape rolled on top, a rifle with a curved magazine and a folding stock, tall boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, modern kit: a helmet with a rail mount and goggles, a chest rig with modular pouches over body-armour plates, a slim inflatable life-vest collar, a roll-top waterproof bag on a medium pack, a hooded waterproof jacket, a compact rifle with a sight and a suppressor, knee pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a self-inflating flotation collar, a sealed waterproof pack, a dark water-shedding suit, a compact rifle with an integrated sight, light knee guards.
+
+#### China
+
+- **Setting of the card scene:** a hazy beach of yellow sand with green hills and terraced slopes behind it, small waves on a blue-green coastal sea under a pale, slightly hazy sky.
+- **Family look:** Family look (China, its own lines): a slim, upright marine in a clean tidy uniform, a rounded helmet with a net cover, a neat chest rig with squared pouches, a compact life vest, a squared waterproof bag on a compact backpack, a light rain jacket, a short-barrelled rifle. Paint: a blue-grey and sea-green digital camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a plain rounded helmet, a simple canvas belt with squared pouches, a bulky canvas-covered flotation vest, a rubberised bag on a small green canvas pack, a rain cape, a long rifle with a curved magazine, canvas boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, modern kit: a helmet with a visor and a camera mount, a neat chest rig with squared pouches, a slim inflatable life-vest collar, a squared waterproof dry bag on a compact pack, a hooded waterproof jacket, a compact rifle with a sight, knee pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a self-inflating flotation collar, a neat sealed waterproof pack, a slim water-shedding suit with squared panels, light powered exoskeleton frames on the legs, a compact rifle with an integrated sight.
+
+#### Europe
+
+- **Setting of the card scene:** a sandy Atlantic beach with white-capped waves, grassy dunes and a distant wooded headland, tall cumulus clouds in a bright sky.
+- **Family look:** Family look (Europe): a practical, slim commando-style marine in a rounded modern helmet, a plate-carrier vest with tidy pouches and a slim life vest, a waterproof bag on a medium pack, a hooded windproof smock, a compact rifle held close, ear protection. Paint: a grey-green and sand splinter camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, Cold War era kit: a rounded steel-style helmet with a net, a hooded windproof smock, a bulky inflatable life vest over a webbing harness, a rubberised waterproof bag lashed to a canvas pack, a plain rifle with a plastic-look stock, boots with gaiters.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, modern kit: a helmet with a visor and ear defenders, a plate-carrier vest with tidy modular pouches and a slim inflatable life-vest collar, a roll-top dry bag on a medium pack, a hooded waterproof smock, a compact rifle with a sight, knee and elbow pads.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, near-future kit: a sealed helmet with a built-in display visor, a smooth faceted armour vest with a self-inflating flotation collar, a sealed waterproof pack, a hooded water-shedding smock, a compact rifle with an integrated sight, light knee guards.
+
+#### Export
+
+- **Setting of the card scene:** a tropical beach of pale sand with a few leaning palm trees, turquoise surf and a hot clear blue sky with a few small white clouds.
+- **Family look:** Family look (Export, a mix of widely exported older-pattern designs): a plain, practical marine with mixed, worn kit, a rounded helmet, an old-pattern life vest, a simple vest, a rubberised waterproof bag, a rain poncho, an older rifle, a faded canvas pack. Paint: a faded olive and sand-khaki camouflage.
+- **Look 1 (levels 1-3):** Generation 1 of 3, the oldest, post-war kit: a rounded steel helmet with a cloth cover, a bulky padded life vest, a canvas belt with pouches, a rubberised waterproof bag on a faded canvas pack, a rolled rain poncho, a plain long rifle with a wooden-look stock, worn boots.
+- **Look 2 (levels 4-6):** Generation 2 of 3, a clearly newer, widely exported 1980s kit: a helmet with a net cover, a chest rig of flat pouches, an inflatable life vest, a waterproof bag on a bigger pack, a hooded rain jacket, a rifle with a curved magazine and a folding stock, a scarf.
+- **Look 3 (levels 7-8):** Generation 3 of 3, the newest, modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches and a slim inflatable life-vest collar, a roll-top dry bag on a practical pack, a hooded waterproof jacket, a compact rifle with a sight, knee pads, a practical, mixed look made to be sold to many armies.
+
+
 ### Made so far, set 3 (19 November 2026, branch `unit-art-3`)
 
 Special Forces, Paratroopers, Mobile Jammer, Heavy Bomber, Maritime Patrol Aircraft: 5 sets, 225 pictures, each look checked three ways (flags only, nothing redone).
-Stopped at the $5 floor before AWACS. Not made: AWACS, Stealth Bomber, Marines, the 5 unique units (prompts not yet written). The cut-outs were made with the
+Stopped at the $5 floor before AWACS. Not made: AWACS, Stealth Bomber, the 5 unique units (prompts not yet written), Marines (prompts written above on 28 November 2026; pictures next, batch A). The cut-outs were made with the
 current `tools/prep-art.py` into a scratch folder for the owner's sheets and are not committed: they get re-packed after the atlas job merges.
 
 ### Made so far (19 November 2026, branch `unit-art-2`)
