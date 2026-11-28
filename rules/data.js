@@ -111,24 +111,53 @@ for (const b in BASE_LV) for (const t in BASE_LV[b]){ const U = UNITS[t]; if (!U
 // Office (10% faster a level, 50% at level V) stays the main way to speed up training. Option B, closer to the old top levels: 0.85 and 0.7
 const BASE_SPD = {fac:[1, 1, 1, 1, 0.9, 0.8], air:[1, 1, 1, 1, 0.9, 0.8], yard:[1, 1, 1, 1, 0.9, 0.8]};
 const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', mar:'Marines', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber'};
-// minH: the shortest flight (h); pk: the chance each SAM-equivalent in or next to the target stops it (Anti-Missile Shield on top: rShield); silo: the
-// Missile Silo level that builds it (0: also any city with an Army Base, Airbase or Naval Yard, msl1, owner point 12 / docs/MISSILES.md 5); land:
-// land targets only; wmd: chemical or nuclear (their limits, effects, cooldowns and diplomacy: rules/air.js, MSL_WMD below). Names only, no pictures
-// (AIR-6): the chemical and nuclear missiles fly with the ballistic missile's picture
+// MISSILES PLAN 2 (owner 2026-11-28; docs/MISSILES-PLAN2.md, defaults on 1-4 and 6-8): seven missiles in the plan, six built now (the Nuclear
+// ICBM is later, section D). One missile body, one range: car is the body (cm cruise, bm ballistic; icbm later), which sets the range, the speed
+// and its research, the HP in flight and who can shoot at it (MSL_CAR, MSL_DEF below); wmd is the warhead (chemical or nuclear: the diplomacy and the
+// zone's hourly rules, MSL_WMD). Ranges in hexes (KM_HEX 180 map km: cruise 16 = 2,880 km, ballistic 26 = 4,680 km); minH: the shortest flight
+// (h); silo: the Missile Silo level that builds it (0: also any city with an Army Base, Airbase or Naval Yard, msl1); land: land targets only.
+// Each kind has its own limits and its own wait between launches (perSilo, perNation, cd: stored plus queued); grp: a cap shared with other kinds
+// (MSL_GRP: the Nuclear Ballistic Missile's 3 a nation, later shared with the ICBM). The blast is the missile's own: power (cruise and ballistic),
+// blast (a chemical missile's small blast on every force), zone (gas or radiation hours; zoneLong with Persistent Agent), civ / civRural (war
+// damage in a city / the countryside), pop (the people's share lost); a nuclear one: soft / hard (the share of every force's health; armour and
+// ships hard), nbSoft / nbHard next door, hits (building hits), ko (every building knocked out, h), links (roads and rails cut, h), nbCiv / nbPop.
+// Names only, no pictures (AIR-6): the cruise kinds fly the cruise missile's picture, the ballistic kinds the ballistic one's. The keys chem and
+// nuc are kept from v74 saves (the Chemical Ballistic and Nuclear Ballistic Missiles); ccm and ncm are new
 const MISSILES = {
-  cm: {name:'Cruise Missile',    short:'CM', cost:60,  oil:10, metal:10, iron:4, elec:8, rare:3, build:36, range:28, speed:9,  power:7,  tech:'msl1', minH:2, pk:0.12, silo:0, desc:'Flies low and fast. Devastates the forces in one province.'},
-  bm: {name:'Ballistic Missile', short:'BM', cost:140, oil:20, metal:24, iron:10, elec:16, rare:8, build:72, range:90, speed:22, power:16, tech:'msl2', minH:4, pk:0.05, silo:1, desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
-  chem:{name:'Chemical Missile', short:'CHM', cost:170, oil:20, metal:24, iron:10, elec:16, rare:12, build:84, range:70, speed:18, power:9, tech:'msl_chem', minH:4, pk:0.05, silo:1, land:1, wmd:'chem', desc:'A small blast, then gas for 12 hours: every ground force in the province loses 2.5% of its health an hour and fights 20% worse. Land targets only.'},
-  nuc: {name:'Tactical Nuclear Missile', short:'TNM', cost:400, oil:30, metal:40, iron:16, elec:30, rare:30, build:120, range:90, speed:22, power:0, tech:'msl_nuc', minH:6, pk:0.04, silo:2, wmd:'nuc', desc:'Half the health of everything in the province (armour and ships 40%), 12% next door; every building knocked out 48 hours, two levels wrecked; radiation for 48 hours. Built in a Silo II or higher.'},
+  cm:  {name:'Cruise Missile',    short:'CM', car:'cm', cost:50,  oil:10, metal:10, iron:4, elec:8, rare:3, build:36, range:16, speed:9,  power:7,  tech:'msl1', minH:2, silo:0, desc:'Flies low and fast. Devastates the forces in one province.'},
+  bm:  {name:'Ballistic Missile', short:'BM', car:'bm', cost:140, oil:20, metal:24, iron:10, elec:16, rare:8, build:72, range:26, speed:22, power:16, tech:'msl2', minH:4, silo:1, desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
+  ccm: {name:'Chemical Cruise Missile', short:'CCM', car:'cm', cost:110, oil:12, metal:14, iron:6, elec:10, rare:7, build:54, range:16, speed:9, power:0, tech:'msl_chem', minH:2, silo:1, land:1, wmd:'chem', perSilo:2, perNation:4, cd:8,
+    blast:5, zone:8, zoneLong:12, civ:25, civRural:12, pop:0.02, desc:'A small blast, then gas for 8 hours: every ground force in the province loses 2.5% of its health an hour and fights 20% worse. Land targets only.'},
+  chem:{name:'Chemical Ballistic Missile', short:'CBM', car:'bm', cost:170, oil:20, metal:24, iron:10, elec:16, rare:12, build:84, range:26, speed:22, power:0, tech:'msl_chem', minH:4, silo:1, land:1, wmd:'chem', perSilo:2, perNation:6, cd:12,
+    blast:9, zone:12, zoneLong:18, civ:40, civRural:20, pop:0.04, desc:'A blast, then gas for 12 hours: every ground force in the province loses 2.5% of its health an hour and fights 20% worse. Land targets only.'},
+  ncm: {name:'Nuclear Cruise Missile', short:'NCM', car:'cm', cost:260, oil:20, metal:26, iron:10, elec:20, rare:20, build:96, range:16, speed:9, power:0, tech:'msl_nuc', minH:3, silo:1, wmd:'nuc', perSilo:1, perNation:2, cd:12,
+    soft:0.3, hard:0.25, nbSoft:0, nbHard:0, hits:1, ko:24, links:48, civ:40, pop:0.06, nbCiv:0, nbPop:0, zone:24, desc:'Every force in the province loses 30% of its health (armour and ships 25%); every building knocked out 24 hours, one level wrecked; radiation for 24 hours. Built in a Silo I.'},
+  nuc: {name:'Nuclear Ballistic Missile', short:'NBM', car:'bm', cost:400, oil:30, metal:40, iron:16, elec:30, rare:30, build:120, range:26, speed:22, power:0, tech:'msl_nuc', minH:6, silo:2, wmd:'nuc', perSilo:1, perNation:3, cd:24, grp:'nucBig',
+    soft:0.5, hard:0.4, nbSoft:0.12, nbHard:0.08, hits:2, ko:48, links:96, civ:60, pop:0.12, nbCiv:20, nbPop:0.02, zone:48, desc:'Half the health of everything in the province (armour and ships 40%), 12% next door; every building knocked out 48 hours, two levels wrecked; radiation for 48 hours. Built in a Silo II or higher.'},
 };
-// chemical and nuclear missiles (docs/MISSILES.md 7 to 9; owner point 12, answers M1-M15). Stock: stored plus queued, per silo and per nation;
-// cd: one launch per nation every cd hours; zone: the gas or radiation hours (S.haz); civ: war damage in the target (countryside), its people's
-// share lost; nb: the nuclear blast next door; mem: memory of the victim / every other nation (at war with the victim) at launch; mark: the opinion
-// line every nation holds against the user (points, fading to 0 over days)
+const MSL_GRP = {nucBig:3};   // shared caps (a nation): the Nuclear Ballistic Missile now, the Nuclear ICBM later (docs/MISSILES-PLAN2.md B.4)
+// the warheads (docs/MISSILES.md 7 to 9, unchanged): rate, armF, fight: the zone's hourly share of health (armour armF of it) and the battle factor
+// in it; bunker: how much of a Bunker's protection counts against a nuclear blast; out: output in a radiation zone; mem: memory of the victim /
+// every other nation / one at war with the victim at launch; mark: the opinion line every nation holds against the user; fallout: a third nation's
+// land in the blast; noPeace: the user's peace offers refused (h). Any missile of a warhead costs the same (owner, question 4)
 const MSL_WMD = {
-  chem:{perSilo:2, perNation:6, cd:12, zone:12, zoneLong:18, rate:0.025, armF:0.5, fight:0.8, blast:9, civ:40, civRural:20, pop:0.04, mem:[-30, -15, -8], mark:{name:'Used chemical weapons', v:-25, days:50}},
-  nuc: {perSilo:1, perNation:3, cd:24, zone:48, rate:0.02, armF:0.5, fight:0.9, soft:0.5, hard:0.4, nbSoft:0.12, nbHard:0.08, bunker:0.5, ko:48, hits:2, links:96, out:0.5, civ:60, pop:0.12, nbCiv:20, nbPop:0.02, mem:[-60, -35, -15], fallout:-40, mark:{name:'Used nuclear weapons', v:-55, days:60}, noPeace:72},
+  chem:{rate:0.025, armF:0.5, fight:0.8, mem:[-30, -15, -8], mark:{name:'Used chemical weapons', v:-25, days:50}},
+  nuc: {rate:0.02, armF:0.5, fight:0.9, bunker:0.5, out:0.5, mem:[-60, -35, -15], fallout:-40, mark:{name:'Used nuclear weapons', v:-55, days:60}, noPeace:72},
 };
+// HP in flight (docs/MISSILES-PLAN2.md C), by missile body: hp; hit, the chance one shot hits (cruise: lower with each Cruise Missile Speed level,
+// spd); max, the most shots it can take; the ICBM's row is here for the later job (no missile uses it yet)
+const MSL_CAR = {cm:{name:'cruise', hp:12, hit:[0.25, 0.23, 0.21], spd:'cm_spd', max:6}, bm:{name:'ballistic', hp:16, hit:[0.2], max:10}, icbm:{name:'ICBM', hp:24, hit:[0.1], max:16}};
+// the defenders, one entry a unit type: dmg, the HP one hit takes off; shots, shots an hour (each unit); hit, times the missile's own chance; vs, the
+// bodies it can shoot at; air: it counts only while it patrols over the target; nbFull: the research that makes it count fully next door (else half).
+// A later unit (the owner's Missile Defence, anti-air item 1) is one more line here
+const MSL_DEF = {
+  sam: {dmg:6, shots:2, hit:1, vs:['cm', 'bm', 'icbm'], nbFull:'sam_g2'},
+  crui:{dmg:6, shots:3, hit:1, vs:['cm', 'bm', 'icbm']},
+  frig:{dmg:4, shots:2, hit:1, vs:['cm', 'bm']},
+  int: {dmg:6, shots:1, hit:1, vs:['cm'], air:1},
+  asf: {dmg:6, shots:1, hit:1, vs:['cm'], air:1},
+};
+const MSL_SHIELD = [1, 1.25, 1.5, 1.8];   // Anti-Missile Shield 0 to III: the defenders' hit chance
 const CBRN_F = [1, 0.5, 0.25], CBRN_POP = [1, 0.75, 0.5];   // CBRN Defence 0 / 1 / 2: what gas and radiation do to the forces, and to the people of the nation's cities
 const CLASSES = ['soft', 'armored', 'air', 'naval'];
 const CLASS_M = {soft:{soft:1.0, armored:0.5, air:0.2, naval:0.2}, armored:{soft:1.2, armored:1.0, air:0.2, naval:0.3}, air:{soft:1.2, armored:1.3, air:1.0, naval:1.0}, naval:{soft:0.8, armored:0.6, air:0.6, naval:1.0}};
@@ -235,7 +264,7 @@ const BUILD = {
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
   fort: {name:'Bunker',            max:5, cost:36, metal:8, iron:8, days:2, where:'any',  lv:BUNKER_LV, desc:`Hidden from other nations. Your garrison here takes ${Math.round(BUNKER_LV[1].red*100)}% less damage at level I, up to ${Math.round(BUNKER_LV[5].red*100)}% at level V, and its morale counts ${Math.round(BUNKER_LV[1].mrl*100)}% to ${Math.round(BUNKER_LV[5].mrl*100)}% higher; the people here lose that much less to war, and the other buildings here take ${Math.round(BUNKER_LV[BUNKER_SHIELD_LV].red*100)}% less damage. Upkeep $${BUNKER_LV[1].upk.toFixed(1)}M to $${BUNKER_LV[5].upk.toFixed(1)}M a day.`},
-  silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores ballistic, chemical and nuclear missiles (needs Conventional Warhead). Level II: Tactical Nuclear Missiles. Levels II\u2013V: missiles build 10% faster per level above I. Cruise missiles also come from any city with an Army Base, Airbase or Naval Yard.'},
+  silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores missiles (needs Conventional Warhead). Level I: ballistic and chemical missiles, and the Nuclear Cruise Missile. Level II: Nuclear Ballistic Missiles. Level III: Nuclear ICBMs (later). Levels II\u2013V build missiles 10% faster per level. Cruise Missiles also come from any city with an Army Base, Airbase or Naval Yard.'},
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:''},   // (desc: written from BASE_LV and BASE_SPD, baseDesc below the table)
 };
 const BK = Object.keys(BUILD);
@@ -446,20 +475,20 @@ const R_LINES = [
 const R_SPECIAL = [
   {cat:'msl', line:'Cruise Missile', pic:'cm', nodes:[
     {id:'msl1', name:'Cruise Missiles', kind:'unlock', ic:'cm', lv:[[1, 'any city with an Army Base, Airbase or Naval Yard (or a Missile Silo) builds Cruise Missiles', {cash:96, metal:20, rare:31, days:6}]]},
-    {id:'cm_rng', name:'Cruise Missile Range', kind:'kit', ic:'rng', req:['msl1'], lv:[[7, 'range 28 to 32 hexes', {cash:90, metal:30, rare:20, days:4}], [13, 'to 36 hexes', {cash:130, metal:45, rare:30, days:5}]]},
-    {id:'cm_spd', name:'Cruise Missile Speed', kind:'kit', ic:'spd', req:['msl1'], lv:[[9, 'speed 9 to 11: less time for the defences', {cash:90, metal:30, rare:20, days:4}], [15, 'to 13', {cash:130, metal:45, rare:30, days:5}]]}]},
+    {id:'cm_rng', name:'Cruise Missile Range', kind:'kit', ic:'rng', req:['msl1'], lv:[[7, 'range 2,880 to 3,240 km (every cruise missile)', {cash:90, metal:30, rare:20, days:4}], [13, 'to 3,600 km', {cash:130, metal:45, rare:30, days:5}]]},
+    {id:'cm_spd', name:'Cruise Missile Speed', kind:'kit', ic:'spd', req:['msl1'], lv:[[9, 'speed 1,620 to 1,980 km/h (every cruise missile): sooner there and harder to hit', {cash:90, metal:30, rare:20, days:4}], [15, 'to 2,340 km/h', {cash:130, metal:45, rare:30, days:5}]]}]},
   {cat:'msl', line:'Ballistic Missile', pic:'bm', nodes:[
     {id:'msl2', name:'Conventional Warhead', kind:'unlock', ic:'bm', req:['msl1'], lv:[[6, 'Missile Silos can be built; silos build Ballistic Missiles', {cash:144, metal:35, rare:64, days:8}]]},
-    {id:'bm_rng', name:'Ballistic Missile Range', kind:'kit', ic:'rng', req:['msl2'], lv:[[11, 'range 90 to 102 hexes', {cash:140, metal:45, rare:34, days:5}], [17, 'to 114 hexes', {cash:190, metal:60, rare:46, days:6}]]},
-    {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'warhead', req:['msl2'], lv:[[14, 'power 16 to 19', {cash:170, metal:60, rare:44, days:6}]]}]},
+    {id:'bm_rng', name:'Ballistic Missile Range', kind:'kit', ic:'rng', req:['msl2'], lv:[[11, 'range 4,680 to 5,220 km (every ballistic missile)', {cash:140, metal:45, rare:34, days:5}], [17, 'to 5,760 km', {cash:190, metal:60, rare:46, days:6}]]},
+    {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'warhead', req:['msl2'], lv:[[14, 'power 16 to 19 (the Ballistic Missile)', {cash:170, metal:60, rare:44, days:6}]]}]},
   // chemical and nuclear missiles (owner point 12, docs/MISSILES.md 4): their own lines, prerequisites inside the missile line (RES-3)
   {cat:'msl', line:'Chemical Missile', pic:'bm', nodes:[
-    {id:'msl_chem', name:'Chemical Warhead', kind:'unlock', ic:'bm', req:['msl2'], lv:[[10, 'Missile Silos build Chemical Missiles', {cash:183, metal:40, rare:55, days:7}]]},
-    {id:'chem_long', name:'Persistent Agent', kind:'kit', ic:'warhead', req:['msl_chem'], lv:[[16, 'gas lasts 18 hours instead of 12', {cash:130, metal:45, rare:30, days:5}]]}]},
+    {id:'msl_chem', name:'Chemical Warhead', kind:'unlock', ic:'bm', req:['msl2'], lv:[[10, 'Missile Silos build Chemical Cruise and Chemical Ballistic Missiles.', {cash:183, metal:40, rare:55, days:7}]]},
+    {id:'chem_long', name:'Persistent Agent', kind:'kit', ic:'warhead', req:['msl_chem'], lv:[[16, 'gas lasts half as long again: 12 hours instead of 8 (cruise), 18 instead of 12 (ballistic)', {cash:130, metal:45, rare:30, days:5}]]}]},
   {cat:'msl', line:'Nuclear Missile', pic:'bm', nodes:[
-    {id:'msl_nuc', name:'Nuclear Warhead', kind:'unlock', ic:'bm', req:['bm_pow'], lv:[[20, 'Missile Silos II and up build Tactical Nuclear Missiles', {cash:390, metal:90, rare:112, days:10}]]}]},
+    {id:'msl_nuc', name:'Nuclear Warhead', kind:'unlock', ic:'bm', req:['bm_pow'], lv:[[20, 'Missile Silos build Nuclear Cruise Missiles. Silos II and up also build Nuclear Ballistic Missiles.', {cash:390, metal:90, rare:112, days:10}]]}]},
   {cat:'msl', line:'Missile Defence', pic:'def', nodes:[
-    {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'def2', req:['msl2'], lv:[[9, 'your SAMs and Frigates intercept missiles twice as well', {cash:132, metal:60, rare:96, days:7}], [15, '2.5 times as well', {cash:170, metal:60, rare:60, days:6}], [21, '3 times as well', {cash:220, metal:80, rare:80, days:7}]]}]},
+    {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'def2', req:['msl2'], lv:[[9, 'your air defences hit missiles 25% more often', {cash:132, metal:60, rare:96, days:7}], [15, '50% more often', {cash:170, metal:60, rare:60, days:6}], [21, '80% more often', {cash:220, metal:80, rare:80, days:7}]]}]},
   {cat:'msl', line:'Satellites', pic:'sat', nodes:[
     {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'sat', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
   // Command & Logistics: five doctrines, each with a second level (its rule reads the level: rMoveF, rCapF, rRoadF, rLandF, rHospF, rCbrn in rules/research.js)

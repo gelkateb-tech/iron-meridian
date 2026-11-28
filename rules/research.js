@@ -96,10 +96,11 @@ const rLandF = n => [0.67, 0.9, 1][rLevel(n, 'nav3')] || 0.67, rHospF = n => [1,
 // CBRN Defence (owner point 12): what gas and radiation do to a nation's forces (1, 0.5, 0.25) and to the people of its provinces (1, 0.75, 0.5)
 const rCbrn = n => n >= 0 ? CBRN_F[rLevel(n, 'cbrn')] ?? 1 : 1, rCbrnPop = n => n >= 0 ? CBRN_POP[rLevel(n, 'cbrn')] ?? 1 : 1;
 // missiles: range, speed and power by research (Cruise Missile Range / Speed, Ballistic Missile Range, Heavier Warhead)
-function mslOf(n, k){ const M0 = MISSILES[k]; if (!M0 || n < 0) return M0; const r = k === 'cm' ? rLevel(n, 'cm_rng')*4 : rLevel(n, 'bm_rng')*12, s = k === 'cm' ? rLevel(n, 'cm_spd')*2 : 0, p = k === 'bm' && has(n, 'bm_pow') ? 3 : 0;
+// (MISSILES PLAN 2: by missile body, docs/MISSILES-PLAN2.md E.1: Cruise Missile Range +2 hexes a step (360 km) and Cruise Missile Speed +2 for
+// every cruise missile; Ballistic Missile Range +3 hexes a step (540 km) for every ballistic missile; Heavier Warhead on the Ballistic Missile only)
+function mslOf(n, k){ const M0 = MISSILES[k]; if (!M0 || n < 0) return M0; const cm = M0.car === 'cm', r = cm ? rLevel(n, 'cm_rng')*2 : M0.car === 'bm' ? rLevel(n, 'bm_rng')*3 : 0, s = cm ? rLevel(n, 'cm_spd')*2 : 0, p = k === 'bm' && has(n, 'bm_pow') ? 3 : 0;
   return r || s || p ? {...M0, range:M0.range + r, speed:M0.speed + s, power:M0.power + p} : M0; }
-// (the chemical and tactical nuclear missiles: the Ballistic Missile Range steps reach them too, +12 hexes a level; no speed or power steps)
-const rShield = n => [1, 2, 2.5, 3][rLevel(n, 'msl3')] || 1;                                          // Anti-Missile Shield: how much better SAMs and Frigates intercept
+const rShield = n => n >= 0 ? MSL_SHIELD[rLevel(n, 'msl3')] || 1 : 1;                                   // Anti-Missile Shield: the defenders' hit chance x1.25 / 1.5 / 1.8
 const rSatMax = n => [0, 3, 4, 5][rLevel(n, 'sat1')] || 0, rSatR = n => SAT_R*(rLevel(n, 'sat1') >= 3 ? 1.15 : 1);   // Reconnaissance Satellites: how many, and the swath
 // who may be air-dropped: Paratroopers, and Special Forces once they are Air-Transportable; how far (the shortest reach in the force)
 const dropOnly = a => !!a && !a.air && count(a) > 0 && (a.u.para || 0) + (a.owner >= 0 && has(a.owner, 'spec_airlift') ? a.u.spec || 0 : 0) === count(a);

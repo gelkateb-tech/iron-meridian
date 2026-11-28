@@ -40,13 +40,13 @@ if (process.argv.includes('--scenarios')){ const out = [], chk = (name, c, d) =>
     const l1 = api.launchMissile(PL, war, q, 'chem'), c2 = X('missileCheck')(PL, war, q, 'chem');
     chk('one chemical launch every 12 h; never at your own land', l1 === true && !c2.ok && /12 h/.test(c2.why) && !c3.ok && /own land/.test(c3.why), `${c2.why} / ${c3.why}`); }
   // 4. the gas zone and the nuclear blast
-  { fresh(); api.declareWar(PL, DE); X('interceptChance = () => 0'); const q = deLand(); strip(q); const a = X('addArmy')(DE, q, {inf:10}), mine = X('addArmy')(PL, q, {inf:2}), h0 = X('effHP')(a), m0 = X('effHP')(mine);
+  { fresh(); api.declareWar(PL, DE); X('mslDefend = () => {}'); const q = deLand(); strip(q); const a = X('addArmy')(DE, q, {inf:10}), mine = X('addArmy')(PL, q, {inf:2}), h0 = X('effHP')(a), m0 = X('effHP')(mine);
     X('missileImpact')({id:S.nid++, owner:PL, k:'chem', from:war, to:q, t:1, dt:1}); const z = S.haz && S.haz[q], h1 = X('effHP')(a); S.hour++; X('hazHour')(); const h2 = X('effHP')(a);
     chk('a chemical strike: blast, your own forces too, a 12 h gas zone, 2.5% an hour', z && z.k === 'gas' && z.until === S.hour - 1 + 12 && h1 < h0 && X('effHP')(mine) < m0 && Math.abs(h2 - h1*0.975) < 1e-6, `zone ${JSON.stringify(z)}, health ${h0} -> ${h1.toFixed(1)} -> ${h2.toFixed(1)}`);
     fresh(); api.declareWar(PL, DE); const p2 = deLand(); strip(p2); const b = X('addArmy')(DE, p2, {inf:10}), hb = X('effHP')(b); X('missileImpact')({id:S.nid++, owner:PL, k:'nuc', from:war, to:p2, t:1, dt:1});
     const hb1 = X('effHP')(b); chk('a nuclear strike: half the health, radiation 48 h', Math.abs(hb1 - hb*0.5) < 0.6 && S.haz[p2].k === 'rad' && S.haz[p2].until === S.hour + 48, `health ${hb} -> ${hb1}`); }
   // 5. self-destruct at peace; a captured city's chemical stock
-  { fresh(); X('interceptChance = () => 0'); rich(PL); grant(PL, 'msl1', 'msl2', 'msl_chem'); api.declareWar(PL, DE); S.bld[war].silo = 1; const M = X('mstock')(war); M.chem = 1; M.wo = PL; M.bm = 1; const q = deLand(); strip(q); const a = X('addArmy')(DE, q, {inf:6}), h0 = X('effHP')(a);
+  { fresh(); X('mslDefend = () => {}'); rich(PL); grant(PL, 'msl1', 'msl2', 'msl_chem'); api.declareWar(PL, DE); S.bld[war].silo = 1; const M = X('mstock')(war); M.chem = 1; M.wo = PL; M.bm = 1; const q = deLand(); strip(q); const a = X('addArmy')(DE, q, {inf:6}), h0 = X('effHP')(a);
     api.launchMissile(PL, war, q, 'chem'); api.applyDeal(PL, DE, 'peace'); for (let h = 0; h < 12; h++) api.tick();
     chk('peace made while a chemical missile flies: it self-destructs', X('effHP')(a) === h0 && !(S.haz && S.haz[q]), `health ${h0} -> ${X('effHP')(a)}`);
     M.chem = 1; M.wo = PL; api.declareWar(DE, PL); strip(war); X('capture')(war, DE); api.tick();
@@ -55,25 +55,33 @@ if (process.argv.includes('--scenarios')){ const out = [], chk = (name, c, d) =>
   for (const c of out) console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.name}   [${c.d}]`);
   const nb = out.filter(c => !c.ok).length; console.log(nb ? `MISSILE SCENARIOS FAILED: ${nb}` : `MISSILE SCENARIOS OK: ${out.length}`); process.exit(nb ? 1 : 0); }
 
-// ---- ai / wars: whole games, the computer on every nation
+// ---- ai / wars: whole games, the computer on every nation. Counted too (MISSILES PLAN 2): the nations that built a missile and that fired one,
+// missiles built by kind, missiles shot down (the rules' fxMissile event with hit false), silos standing at the end; works on an older build too
+// (IM_ROOT=<folder>: the kinds are read from its MISSILES)
 function game(seed, days, wars){ const R = load(), api = R.IM.api, X = s => R.ev(s); api.useScenario('world64'); api.newGame(seed, 0, []); const S = R.S, G = R.G; S.started = true;
   const id = nm => S.nations.findIndex(N => N.name === nm), pairs = [['Germany', 'Poland'], ['Russia', 'Ukraine'], ['India', 'Pakistan'], ['Iran', 'Iraq']];
-  const fired = {cm:0, bm:0, chem:0, nuc:0}, built = {cm:0, bm:0, chem:0, nuc:0}, bad = [], wmd = [];
+  const MS = X('MISSILES'), KS = Object.keys(MS), wmdOf = k => MS[k].wmd || (k === 'chem' || k === 'nuc' ? k : null);
+  const fired = {}, built = {}, down = {}; for (const k of KS){ fired[k] = 0; built[k] = 0; down[k] = 0; } const bad = [], wmd = [], nBuilt = new Set(), nFired = new Set();
+  R.IM.on('fxMissile', E => { if (E && E.hit === false && E.m) down[E.m.k] = (down[E.m.k] || 0) + 1; });
   // every launch: kind, from, to, and the doctrine's reason (read before the launch changes anything)
   const L0 = X('launchMissile'); X('globalThis.__L = launchMissile');
-  R.ev(`launchMissile = function(n, from, to, k){ const pre = (k === 'chem' || k === 'nuc') ? globalThis.__why(n, from, to, k) : null; const r = globalThis.__L(n, from, to, k); if (r) globalThis.__fired(n, from, to, k, pre); return r; }`);
+  R.ev(`launchMissile = function(n, from, to, k){ const pre = globalThis.__wmdOf(k) ? globalThis.__why(n, from, to, k) : null; const r = globalThis.__L(n, from, to, k); if (r) globalThis.__fired(n, from, to, k, pre); return r; }`);
+  globalThis.__wmdOf = wmdOf;
   globalThis.__why = (n, from, to, k) => { const own = S.owner[to] === n; let why = '';
-    if (k === 'chem'){ const e = X('aiFoeMass')(n, 6).get(to); why = e ? `${e.u} enemy units, power ${Math.round(e.pw)}${e.own ? ', OWN FORCES THERE' : ''}` : 'NO ENEMY MASS'; if (!e || e.own || e.u < 8 || e.pw < 80) bad.push(`chemical outside the doctrine: ${why}`); }
+    if (wmdOf(k) === 'chem'){ const e = X('aiFoeMass')(n, 6).get(to); why = e ? `${e.u} enemy units, power ${Math.round(e.pw)}${e.own ? ', OWN FORCES THERE' : ''}` : 'NO ENEMY MASS';
+      const ans = (S.wmd || []).some(e2 => S.hour - e2.h <= 168 && e2.by !== n && wmdOf(e2.k) === 'chem' && (e2.on === n || (e2.on >= 0 && X('rel')(n, e2.on).st === 'ally')));
+      if (!e || e.own || (ans ? e.u < 4 || e.pw < 40 : e.u < 8 || e.pw < 80)) bad.push(`chemical outside the doctrine: ${why}`); }
     else { const ans = (S.wmd || []).some(e => S.hour - e.h <= 168 && e.by !== n && (e.on === n || (e.on >= 0 && X('rel')(n, e.on).st === 'ally'))); why = ans ? 'answer to a strike' : 'desperate'; }
     if (own) bad.push(`${S.nations[n].name} fired a ${k} missile at its own land`); return why; };
-  globalThis.__fired = (n, from, to, k, why) => { fired[k]++; if (why != null) wmd.push(`day ${Math.floor(S.hour/24) + 1}: ${S.nations[n].name} ${k} at ${G.P[to].cityName || G.P[to].name} (${S.owner[to] >= 0 ? S.nations[S.owner[to]].name : 'independent'}): ${why}`); };
-  const B0 = X('buildMissile'); X('globalThis.__B = buildMissile'); globalThis.__built = k => built[k]++;
-  R.ev(`buildMissile = function(n, p, k){ const r = globalThis.__B(n, p, k); if (r) globalThis.__built(k); return r; }`); void L0; void B0;
+  globalThis.__fired = (n, from, to, k, why) => { fired[k]++; nFired.add(n); if (why != null) wmd.push(`day ${Math.floor(S.hour/24) + 1}: ${S.nations[n].name} ${k} at ${G.P[to].cityName || G.P[to].name} (${S.owner[to] >= 0 ? S.nations[S.owner[to]].name : 'independent'}): ${why}`); };
+  const B0 = X('buildMissile'); X('globalThis.__B = buildMissile'); globalThis.__built = (n, k) => { built[k]++; nBuilt.add(n); };
+  R.ev(`buildMissile = function(n, p, k){ const r = globalThis.__B(n, p, k); if (r) globalThis.__built(n, k); return r; }`); void L0; void B0;
   const snap = {};
   for (let d = 1; d <= days && !S.over; d++){ if (wars && d === 2) for (const [a, b] of pairs) if (id(a) >= 0 && id(b) >= 0) api.declareWar(id(a), id(b));
     for (let h = 0; h < 24; h++) api.tick();
-    if (d === 20 || d === 40 || d === days){ const has = t => S.nations.filter(N => N.alive && X('has')(N.id, t)).length; snap['day' + d] = {msl1:has('msl1'), msl2:has('msl2'), chemW:has('msl_chem'), nucW:has('msl_nuc'), cbrn:has('cbrn'), silos:G.P.filter(P => S.bld[P.id].silo > 0).length, silo2:G.P.filter(P => S.bld[P.id].silo >= 2).length, wars:Object.values(S.rel).filter(r => r.st === 'war').length}; } }
-  return {seed, days, wars:!!wars, built, fired, research:snap, wmd, bad}; }
+    if (d === 20 || d === 40 || d === days){ const has = t => S.nations.filter(N => N.alive && X('has')(N.id, t)).length; snap['day' + d] = {msl1:has('msl1'), msl2:has('msl2'), chemW:has('msl_chem'), nucW:has('msl_nuc'), shield:has('msl3'), cbrn:has('cbrn'), silos:G.P.filter(P => S.bld[P.id].silo > 0).length, silo2:G.P.filter(P => S.bld[P.id].silo >= 2).length, wars:Object.values(S.rel).filter(r => r.st === 'war').length}; } }
+  const silos = G.P.filter(P => S.bld[P.id].silo > 0).length;
+  return {seed, days, wars:!!wars, nationsBuilt:nBuilt.size, nationsFired:nFired.size, built, fired, down, silos, research:snap, wmd, bad}; }
 let fail = 0;
 for (const seed of SEEDS){ const t0 = Date.now(), r = game(seed, DAYS, MODE === 'wars'); r.s = Math.round((Date.now() - t0)/1000); console.log(JSON.stringify(r)); if (r.bad.length) fail++; }
 process.exit(fail ? 1 : 0);

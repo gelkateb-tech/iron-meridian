@@ -42,7 +42,8 @@ function opinionParts(a, b){
   if (r !== 'ally' && S.blocReg && Object.values(S.blocReg).some(R => R.members && R.members.includes(a) && R.members.includes(b))) parts.push(['Same coalition', 10]);
   const N = S.nations[b]; if (N.breaker != null && S.hour - N.breaker < 50*24) parts.push(['Treaty breaker', -Math.round(25*(1 - (S.hour - N.breaker)/(50*24)))]);
   // chemical and nuclear weapons used (owner point 12, docs/MISSILES.md 9): every nation, the victim too, holds it against the user, fading to 0
-  if (N.wmdT) for (const k in MSL_WMD){ const h = N.wmdT[k], M = MSL_WMD[k].mark; if (h != null && S.hour - h < M.days*24) parts.push([M.name, Math.round(M.v*(1 - (S.hour - h)/(M.days*24)))]); }
+  // (by warhead: the latest launch of any missile that carries it, MISSILES PLAN 2)
+  if (N.wmdT) for (const w in MSL_WMD){ const h = wmdLast(N, w), M = MSL_WMD[w].mark; if (h != null && S.hour - h < M.days*24) parts.push([M.name, Math.round(M.v*(1 - (S.hour - h)/(M.days*24)))]); }
   if (score(b) > 1.5*score(a) && score(b) > 40) parts.push(['Fears its power', -15]);
   return parts;
 }

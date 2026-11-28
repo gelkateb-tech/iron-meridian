@@ -70,7 +70,7 @@ const MSL_VS = {soft:1.2, armored:1, air:0.4, naval:0.9};
    It reads the same numbers battleStep reads; it is a pure function (armyStrength(a) -> {rows, ctx}). Class mapping (what the rules have for each row):
      infantry -> class soft (an Infantry unit as the target)      armour -> class armored (a Tank)       jets -> class air (a Strike Jet)    helicopters -> class air (an Attack Helicopter)
      drones -> class air (a Strike Drone)       ships -> class naval (a Frigate)      submarines -> class naval (a Submarine; patrol planes hit them hardest)
-     missiles: attack = the chance this force's SAMs and frigates shoot down a cruise missile; defence = the damage a missile does to its units (MSL_VS)
+     missiles: attack = the chance this force alone stops a lone cruise missile (HP in flight: its SAMs, Cruisers and Frigates); defence = the damage a missile does to its units (MSL_VS)
      buildings: attack = bomb load (a Heavy Bomber = 1; no other unit wrecks buildings by combat); defence = none (a dash)
      population: attack = war damage a strike adds (bombers 3 per bomber, artillery shelling 1.2 a game hour); defence = none (a dash) */
 const STR_ROWS = [{k:'inf', name:'Infantry', t:'inf'}, {k:'armor', name:'Armour', t:'tank'}, {k:'jet', name:'Jets', t:'jet'}, {k:'heli', name:'Helicopters', t:'heli'}, {k:'drone', name:'Drones', t:'sdrone'},
@@ -110,8 +110,9 @@ function armyStrength(a, blind = false, viewer = null){   // blind: a force that
       if (aN){ row.atk.base = aB/aN; row.atk.cur = aC/aN; }
       if (dN && !imm){ row.def.base = dB/dN; row.def.cur = dC/dN; } else if (imm && dN) row.def.immune = true;
     } else if (R.k === 'msl'){
-      const sams = (a.u.sam || 0) + 0.6*(a.u.frig || 0), sh = blind ? 1 : rShield(o), sat = blind ? 1 : 1 - (a.sat || 0);
-      if (sams > 0){ row.atk.unit = '%'; row.atk.total = true; row.atk.base = 100*(1 - Math.pow(1 - 0.12, sams*sh)); row.atk.cur = 100*(1 - Math.pow(1 - 0.12, sams*sh*sat)); if (sat < 1) add(wa, 'saturated', sat, 1); }
+      // the chance this force alone stops a lone cruise missile at its own province (MISSILES PLAN 2: HP in flight, mslStopBy; blind: no shield known)
+      if (Object.keys(MSL_DEF).some(t => !MSL_DEF[t].air && a.u[t] > 0)){ const a0 = blind ? {...a, owner:-1} : a, b0 = 100*mslStopBy(a0, 'cm', false), c0 = blind ? b0 : 100*mslStopBy(a0, 'cm', true);
+        row.atk.unit = '%'; row.atk.total = true; row.atk.base = b0; row.atk.cur = c0; if (!blind && a.sat > 0 && b0 > 0) add(wa, 'saturated', c0/b0, 1); }
       let dB = 0, dN = 0, dC = 0; for (const t of types){ const c = a.u[t], d0 = stv(t, 'def')/shF(t, 'def'), Md = MSL_VS[UNITS[t].cls], f = dTake(t), sf = shF(t, 'def'); let prod = 1; for (const k in f) prod *= f[k]; dB += c*d0/Md; dC += c*d0/Md*sf/prod; dN += c; for (const k in f) add(wd, k, 1/f[k], c*d0/Md); add(wd, 'shortage', sf, c*d0/Md); }
       if (dN){ row.def.base = dB/dN; row.def.cur = dC/dN; }
     } else if (R.k === 'bld'){
@@ -148,7 +149,8 @@ function unitStrength(n, t, T){
   const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)
   const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};
     if (R.t){ if (atk > 0) r.atk = atk*mU(R.t); const Md = multU(R.t, t); if (Md > 0.001) r.def = def/Md; else r.immune = true; }
-    else if (R.k === 'msl'){ const w = t === 'sam' ? 1 : t === 'frig' ? 0.6 : 0; if (w){ r.atk = 100*(1 - Math.pow(1 - 0.12, w*([1, 2, 2.5, 3][lv('msl3')] || 1))); r.unit = '%'; } r.def = def/MSL_VS[U.cls]; }
+    else if (R.k === 'msl'){ const D = MSL_DEF[t]; if (D && !D.air && D.vs.includes('cm')){ const sh = MSL_SHIELD[lv('msl3')] || 1, p = Math.min(1, MSL_CAR.cm.hit[0]*(D.hit ?? 1)*sh), k = Math.min(MSL_CAR.cm.max, D.shots);
+        r.atk = 100*(1 - mslPass(Array.from({length:k}, () => [D.dmg, p]), MSL_CAR.cm.hp)); r.unit = '%'; } r.def = def/MSL_VS[U.cls]; }   // (one unit alone against a lone cruise missile)
     else if (R.k === 'bld' && U.bmb){ r.atk = t === 'stealth' && hasT('stealth_bay') ? 0.75 : U.bmb; r.unit = 'bomb load'; }
     return r; });
   return {t, hp:stat('hp'), spd, vis:Math.round(vis), rng:rng == null ? null : Math.round(rng), rngKind:air ? 'mission' : rng == null ? null : 'fire', rows}; }
