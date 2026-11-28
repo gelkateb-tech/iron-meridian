@@ -59,7 +59,7 @@ const rStealable = (n, o) => Object.keys(S.nations[o].tech || {}).filter(t => RN
 // ---------- upgrades worded rather than a flat stat (docs/RESEARCH.md phase 4): each is one small rule read from the nation's level
 // class multipliers a generation or an upgrade changes: unit -> class -> [node, new value]
 // ([node, new value, level of the node it needs (1 when absent)]: Infantry Kit and Close-In Defence change them at their second level)
-const R_VS = {at:{armored:['at_g2', 4]}, mlrs:{armored:['mlrs_g2', 1.2]}, jet:{armored:['jet_g2', 1.8]}, swarm:{armored:['swarm_g2', 0.6]}, frig:{air:['frig_aa', 2.1]},
+const R_VS = {mlrs:{armored:['mlrs_g2', 1.2]}, jet:{armored:['jet_g2', 1.8]}, swarm:{armored:['swarm_g2', 0.6]}, frig:{air:['frig_aa', 2.1]},
   inf:{armored:['inf_kit', 0.7, 2], air:['inf_kit', 0.35, 2]}, carr:{air:['carr_ciws', 1.8, 2]}};
 const multO = (o, t, k) => { const r = R_VS[t] && R_VS[t][k]; return r && o >= 0 && rLevel(o, r[0]) >= (r[2] || 1) ? r[1] : mult(t, k); };
 const multUO = (o, t, u) => (UNITS[t].vsU && UNITS[t].vsU[u] != null) ? UNITS[t].vsU[u] : multO(o, t, UNITS[u].cls);
@@ -71,7 +71,7 @@ function rDrilled(a, terrain){ const o = a.owner; if (o < 0) return false; let a
   for (const t of UT){ if (!a.u[t]) continue; if (t === 'spec') continue; if (t === 'inf'){ const D = R_DRILL[rLevel(o, 'inf_terr')]; if (!D || !D[terrain]) return false; any = true; } else if (t === 'tank'){ if (!has(o, 'tank_terr')) return false; any = true; } else return false; }
   return any; }
 const rSpecTerr = (n, f) => f > 1 ? 1 + (f - 1)*[1, 1.25, 1.5][rLevel(n, 'spec_terr')] : f;             // Mountain & Arctic Training: the rough-terrain attack bonus 40% -> 50% -> 60%
-const rSightF = (n, t) => n >= 0 && ((t === 'at' && has(n, 'at_eye')) || (t === 'spec' && has(n, 'spec_eye'))) ? 1.5 : 1;   // Thermal Sights, Night Optics: that unit type sees 50% farther
+const rSightF = (n, t) => n >= 0 && t === 'spec' && has(n, 'spec_eye') ? 1.5 : 1;   // Night Optics: Special Forces see 50% farther
 const rRangeKm = (n, t) => (RANGE_KM[t] || 0) + (t === 'mlrs' && n >= 0 && has(n, 'mlrs_rng') ? RANGE_ER : 0);   // attack range in km (RANGE_KM); Extended-Range Rockets: Rocket Artillery +50 km
 const rSamNear = n => has(n, 'sam_g2') ? 1 : 0.35;                                                    // Long-Range SAM: neighbouring provinces at full strength
 const rJamF = n => [1, 1.2, 1.4][rLevel(n, 'jam_band')] || 1;                                         // Wideband Jamming

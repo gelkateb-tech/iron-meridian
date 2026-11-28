@@ -84,6 +84,8 @@ img.ri.wide{width:auto !important}   /* a wide resource picture (electronics): a
 .bkt .bkhd > *{border-top:0; color:var(--ink, #e8eef0); font-weight:600; font-size:10.5px; background:rgba(0,0,0,.18)}
 .bkt .bkr.on > *{background:rgba(79,208,222,.16); color:var(--ink, #e8eef0)} .bkt .bkr.had > *{opacity:.7}
 @media (max-width:440px){ .bkt{font-size:10px} .bkt .bkr > *{padding:3px 2px} }
+/* the Army Base, Airbase and Naval Yard levels in the Build list (baseLvHTML): level, what it unlocks (wraps), how much faster */
+.bkt.blv{grid-template-columns:auto 1fr auto} .bkt.blv .bkr > *:nth-child(2){white-space:normal}
 .bld .lv{font-family:var(--body); font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted)}
 .bld .btn{font-size:11.5px; padding:5px 8px; white-space:normal; line-height:1.2; text-align:center; max-width:150px} .bld{grid-template-columns:minmax(0,1fr) auto}
 .bi{--bs:22px; display:inline-block; flex:none; width:var(--bs); height:var(--bs); border-radius:calc(var(--bs)*.18); background:var(--bi) center / 128% no-repeat, radial-gradient(circle at 50% 45%, #46503f, #262d27 72%); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.55); vertical-align:middle; margin:-3px 6px -3px 0; image-rendering:auto}
@@ -2103,7 +2105,7 @@ html.reduced .cs-mi.live .cs-mf::after{animation:none}
 .cs-bpic > .cs-bl{position:absolute; right:3px; bottom:2px; z-index:1; font:700 11px/1 var(--body); color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000}
 @media (max-width: 820px){ .cs-mi.tr > .ut{--us:36px} .cs-mi.tr > svg{width:24px; height:24px} .cs-mi.idle::before{width:12px; height:12px} }
 @media (prefers-reduced-motion: reduce){ .cs-mi.live .cs-mf::after{animation:none} }
-/* a unit the city cannot mobilize yet (no Army Base, its level, research...): greyed, the reason in amber ('Needs Army Base level 1'); a tap says why */
+/* a unit the city cannot mobilize yet (no Army Base, its level, research...): greyed, the reason in amber ('Needs Army Base I'); a tap says why */
 .unit.blk{cursor:not-allowed}
 .unit.blk > .ut, .unit.blk > .nm, .unit.blk > .st{opacity:.42} .unit.blk > .ut{filter:grayscale(.85)}
 .unit.blk > .cost{color:#ffd27a; font-weight:600; transform-origin:0 50%}
@@ -2788,6 +2790,12 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .abs.fight{flex-direction:row; gap:5px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55)}
 .abs.fight canvas{width:24px; height:24px; flex:none}
 .ab-emb{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(111,176,232,.12); border-left:3px solid #6fb0e8; color:#cfe4f5} .ab-emb b{color:#fff}
+/* the fight row (combat display, owner 2026-11-27): "Fighting" and the foe, the countdown to the next damage round, the last round's losses */
+.ab-fight{display:flex; align-items:center; gap:8px; padding:4px 8px 5px 6px; border-radius:4px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55); min-width:0}
+.ab-fight canvas{width:24px; height:24px; flex:none} .abf-t{min-width:0; flex:1; display:flex; flex-direction:column; gap:1px}
+.abf-l1{font-size:13px; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap} .abf-l1 .flag{vertical-align:-2px; margin-right:3px} .abf-k{font-weight:700; color:#ff9a90; text-transform:uppercase; font-size:10.5px; letter-spacing:.06em; margin-right:4px}
+.abf-l1 b.unk{color:#9fd8ff} .abf-more{color:var(--muted); font-weight:600}
+.abf-l2{font-size:11.5px; color:#e8c9c4; font-variant-numeric:tabular-nums} .abf-l2 .ab-tick{color:#fff} .abf-d{color:#ff8a80}
 .abs.dug em{display:flex; align-items:center; gap:3px; color:#ffd77a} .abs.dug b{color:#ffd77a} .castle{flex:none; display:inline-block; vertical-align:-1px}
 .ab-dug{display:flex; align-items:center; gap:6px; font-size:11.5px; padding:3px 8px; border-radius:4px; background:rgba(226,162,61,.12); border-left:3px solid #e2a23d; color:#f1dfb8} .ab-dug b{color:#ffd77a} .ab-dug .digsh{flex:none} .ab-dug-c{color:#bfae8c}
 .ab-stk{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(224,87,79,.12); border-left:3px solid var(--danger, #e0574f); color:var(--danger-t, #ff9a90)}
@@ -6395,28 +6403,108 @@ function trailWalk(tr, x, y){ const ox = x - tr[0][0], oy = y - tr[0][1], pts = 
   let ex = 0, ey = 0; for (let i = pts.length - 1; i > 0; i--){ const dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1], dl = Math.hypot(dx, dy); if (dl > 0.5){ ex = dx/dl; ey = dy/dl; break; } }
   return {at:d => { if (d <= 0) return pts[0]; if (d >= L){ const e = pts[pts.length - 1]; return [e[0] + ex*(d - L), e[1] + ey*(d - L)]; }
     let i = 1; while (cum[i] < d) i++; const f = (d - cum[i - 1])/Math.max(1e-6, cum[i] - cum[i - 1]); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0])*f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1])*f]; }}; }
+/* PATROL TRACK (owner playtest 2026-11-27, item 2c: "a slow, wide racetrack or loop inside the area at a believable speed, turning smoothly").
+   On station (a patrol, an AWACS orbit, a UAV watching, a sea hunt, the hour over a strike) the drawn aircraft flies a racetrack centred on its
+   target point: two straight legs of L world px joined by half circles of radius R (1 world px is about 8.7 km), the long axis across the line
+   from its base (a barrier facing the threat), each wing a little turned and sized by its id so two wings over one point fly apart. It moves
+   at the rules' own flight speed (wingSpd, as on its way out: 2.5 hexes, 450 km an hour of game time for a fighter, about 3.5 world px a real
+   second at 1x), helicopters and drones slower (PTRK_SPF), never above PTRK_CAP px/s at the fast speeds, and stands still while the game is
+   paused, as everything else on the map. Arriving, it joins the track along a smooth curve (a cubic from its position and heading onto the
+   track, tangent at both ends); its heading is the path's tangent and its bank comes from the path's curvature. Display only: the rules keep
+   the patrol on its province (rules/vision.js flightPos, capOver), so nothing in a save changes. */
+const PTRK = {jet:[14, 4.5], uav:[5, 3.5], heli:[3, 2.2]}, PTRK_SPF = {heli:0.55, drone:0.6, sdrone:0.6, swarm:0.6}, PTRK_CAP = 8;
+function trackOf(a, v){ if (v.trk && v.trk.tgt === v.tgt) return v.trk; const t = wingT(a), g = PTRK[t === 'heli' ? 'heli' : UNITS[t].dr ? 'uav' : 'jet'], T = G.P[v.tgt], B = G.P[a.air.base];
+  const bx = wdx(B.x, T.x), by = T.y - B.y, bl = Math.hypot(bx, by), rot = (((a.id*0.618) % 1) - 0.5)*0.6, k0 = 0.85 + 0.3*((a.id*0.382) % 1), b0 = (bl > 1 ? Math.atan2(by, bx) : 0) + Math.PI/2 + rot;
+  return (v.trk = {tgt:v.tgt, cx:T.x, cy:T.y, ax:Math.cos(b0), ay:Math.sin(b0), L:g[0]*k0, R:g[1]*k0, P:2*g[0]*k0 + 2*Math.PI*g[1]*k0}); }
+// the track at arc length s (dir 1 or -1: which way round): [x, y, heading, curvature (signed, 1/px)]
+function trackAt(k, s, dir){ const L = k.L, R = k.R, h = L/2, P = k.P; s = ((s % P) + P) % P; let u, w, hd, cu;
+  if (s < L){ u = -h + s; w = -R; hd = 0; cu = 0; }
+  else if (s < L + Math.PI*R){ const th = (s - L)/R; u = h + R*Math.sin(th); w = -R*Math.cos(th); hd = th; cu = 1/R; }
+  else if (s < 2*L + Math.PI*R){ u = h - (s - L - Math.PI*R); w = R; hd = Math.PI; cu = 0; }
+  else { const th = (s - 2*L - Math.PI*R)/R; u = -h - R*Math.sin(th); w = R*Math.cos(th); hd = Math.PI + th; cu = 1/R; }
+  if (dir < 0){ w = -w; hd = -hd; cu = -cu; }
+  return [k.cx + u*k.ax - w*k.ay, k.cy + u*k.ay + w*k.ax, Math.atan2(Math.sin(hd)*k.ax + Math.cos(hd)*k.ay, Math.cos(hd)*k.ax - Math.sin(hd)*k.ay), cu]; }
+// its speed on station (world px a real second): the rules' flight speed on the game clock, capped; 0 while paused
+const trackSpd = a => !S || !(S.speed > 0) || S.over ? 0 : Math.min(PTRK_CAP, wingSpd(a)*HS0*SQ3*HOURS_PER_SEC[S.speed]*(PTRK_SPF[wingT(a)] || 1));
+// the join: which way round (the one its heading already points along), where (ahead of the nearest point), and the cubic onto it
+function trackJoin(a, v){ const k = trackOf(a, v), h0 = v.hd ?? 0; let sN = 0, dN = Infinity;
+  for (let s0 = 0; s0 < k.P; s0 += 0.4){ const q = trackAt(k, s0, 1), d = Math.hypot(wdx(q[0], v.x), v.y - q[1]); if (d < dN){ dN = d; sN = s0; } }
+  const qN = trackAt(k, sN, 1), dir = Math.cos(qN[2] - h0) >= 0 ? 1 : -1;
+  if (dir < 0){ dN = Infinity; for (let s0 = 0; s0 < k.P; s0 += 0.4){ const q = trackAt(k, s0, -1), d = Math.hypot(wdx(q[0], v.x), v.y - q[1]); if (d < dN){ dN = d; sN = s0; } } }
+  const sJ = sN + Math.max(6, Math.min(18, dN*1.4 + 4)), Q = trackAt(k, sJ, dir);
+  v.dir = dir; v.join = Object.assign(hermJoin(k.cx - wdx(v.x, k.cx), v.y, h0, Q[0], Q[1], Q[2]), {sJ}); }
+// a smooth join: the cubic from a point and heading to another point and heading (tangent at both ends), walked by arc length (J.d, hermAt):
+// onto the patrol track (trackJoin), and off it onto the line home (backFly)
+function hermJoin(x0, y0, h0, x1, y1, h1){ const m = Math.max(3, Math.hypot(x1 - x0, y1 - y0))*1.1;
+  const P0 = [x0, y0], M0 = [Math.cos(h0)*m, Math.sin(h0)*m], P1 = [x1, y1], M1 = [Math.cos(h1)*m, Math.sin(h1)*m];
+  const at = u => { const u2 = u*u, u3 = u2*u, a0 = 2*u3 - 3*u2 + 1, a1 = u3 - 2*u2 + u, a2 = -2*u3 + 3*u2, a3 = u3 - u2, d0 = 6*u2 - 6*u, d1 = 3*u2 - 4*u + 1, d2 = -6*u2 + 6*u, d3 = 3*u2 - 2*u;
+    return [a0*P0[0] + a1*M0[0] + a2*P1[0] + a3*M1[0], a0*P0[1] + a1*M0[1] + a2*P1[1] + a3*M1[1], Math.atan2(d0*P0[1] + d1*M0[1] + d2*P1[1] + d3*M1[1], d0*P0[0] + d1*M0[0] + d2*P1[0] + d3*M1[0])]; };
+  const cum = [0]; let prev = at(0); for (let i = 1; i <= 48; i++){ const q = at(i/48); cum.push(cum[i - 1] + Math.hypot(q[0] - prev[0], q[1] - prev[1])); prev = q; }
+  return {at, cum, len:cum[48], d:0}; }
+function hermAt(J){ let i = 1; while (i < 48 && J.cum[i] < J.d) i++; return J.at(Math.min(1, (i - 1 + (J.d - J.cum[i - 1])/Math.max(1e-6, J.cum[i] - J.cum[i - 1]))/48)); }
+// one frame on station: along the join curve, then round the track
+function trackFly(a, v, dt){ const k = trackOf(a, v), sp = trackSpd(a); if (v.dir == null || (!v.join && v.s == null)) trackJoin(a, v); if (!(sp > 0) || !(dt > 0)) return false;
+  const hd0 = v.hd ?? 0; let q;
+  if (v.join){ const J = v.join; J.d += sp*dt; if (J.d >= J.len){ v.s = J.sJ + (J.d - J.len); v.join = null; q = trackAt(k, v.s, v.dir); }
+    else q = hermAt(J); }
+  else { v.s += sp*dt; q = trackAt(k, v.s, v.dir); }
+  v.x = q[0]; v.y = q[1]; v.hd = q[2]; v.turn = v.join || q[3] == null ? Math.atan2(Math.sin(q[2] - hd0), Math.cos(q[2] - hd0))/dt : q[3]*sp; return true; }
+/* HOME FROM STATION (polish 1). When the rules turn the wing for home (its patrol hours over, Return, a storm abort or Return on the way out),
+   the drawn plane leaves its track along a smooth curve (hermJoin) onto the line from the patrol point home, a little ahead of the rules'
+   position on it, then flies along that line to its base. It paces itself to land with the rules' wing: its speed is what the rest of its path
+   needs in the time the rules' position takes to reach the base, kept between 0.6x and 2x the rules' flight speed and eased from its speed on
+   station (never a step), so the curve off the track costs it a little more speed, not a dash. If the rules land first it flies on at up to
+   2x to its base. Stands still while paused. (Before, it chased the rules' position from the patrol point at up to 3x VW_SPEED, 210 world px
+   a second, snapped the last stretch in single frames, then crawled home.) Returns true once it is down. */
+function backFly(a, v, dt){ const T = G.P[v.tgt], B = G.P[a.air.base], f = a.fly, live = !!f && f.ph === 'back' && f.tgt === v.tgt;
+  const ux0 = wdx(T.x, B.x), uy0 = B.y - T.y, len = Math.hypot(ux0, uy0), bx = wdx(v.x, B.x), by = B.y - v.y;
+  const h1 = v.bk ? v.bk.h1 : len > 1e-3 ? Math.atan2(uy0, ux0) : v.hd ?? 0, ux = Math.cos(h1), uy = Math.sin(h1);
+  const [wx, wy] = live ? wingPos(a) : [T.x + ux0, B.y], sR = live ? Math.min(len, Math.hypot(wdx(T.x, wx), wy - T.y)) : len;   // the rules' position: sR world px along the line home
+  const rs = S.speed > 0 && !S.over ? (len > HS0*SQ3 ? len/Math.max(1, hexDist(B.cc, T.cc)) : HS0*SQ3)*wingSpd(a)*HOURS_PER_SEC[S.speed] : 0;   // the rules' speed (world px a real second; over its own base, its flight speed)
+  let bk = v.bk; if (!bk){ const sJ = Math.min(len, sR + Math.max(10, Math.min(22, Math.hypot(wdx(v.x, wx), v.y - wy)*1.4 + 6)));
+    bk = v.bk = {J:hermJoin(T.x + wdx(T.x, v.x), v.y, v.hd ?? h1, T.x + ux*sJ, T.y + uy*sJ, h1), sJ, h1, s:null, sp:trackSpd(a) || rs}; }
+  if (bk.s != null && bk.s >= len - 1e-3 && !live) return true;
+  if (!(rs > 0) || !(dt > 0)){ v.turn = 0; return false; }
+  if (len < 1){ if (bk.s != null){ v.turn = 0; return false; }   // over its own base: it turns in at the rules' speed, no tighter than half its distance from the field (1.8 to 3 world px), and lands
+    const d = Math.hypot(bx, by); if (!live && (d < 4 || (bk.down = (bk.down || 0) + dt) > 4)) return true;   // (the rules' wing has landed: close in, or a while ago, it is down)
+    bk.sp += (rs - bk.sp)*Math.min(1, dt*1.5); const hd0 = v.hd ?? 0, da = Math.atan2(Math.sin(Math.atan2(by, bx) - hd0), Math.cos(Math.atan2(by, bx) - hd0)), w = bk.sp/Math.max(1.8, Math.min(3, d*0.5))*dt, st = bk.sp*dt;
+    if (d <= Math.max(0.8, st)){ v.x += bx; v.y = B.y; bk.s = len; v.turn = 0; return false; }
+    v.hd = hd0 + Math.max(-w, Math.min(w, da)); v.x += Math.cos(v.hd)*st; v.y += Math.sin(v.hd)*st; v.turn = (v.hd - hd0)/dt; return false; }
+  const rem = bk.s == null ? bk.J.len - bk.J.d + len - bk.sJ : len - bk.s, tl = (len - sR)/rs;   // what is left of its path, and of the rules' flight (s)
+  const want = Math.max(0.6*rs, Math.min(2*rs, tl > 0.05 ? rem/tl : Infinity)) + Math.max(0, rem - (len - sR) - 30)*0.5;   // (far behind, after a long hidden tab: it hurries)
+  bk.sp += (want - bk.sp)*Math.min(1, dt*1.5); const hd0 = v.hd ?? h1; let q = null;
+  if (bk.s == null){ bk.J.d += bk.sp*dt; if (bk.J.d >= bk.J.len) bk.s = bk.sJ + (bk.J.d - bk.J.len); else q = hermAt(bk.J); } else bk.s += bk.sp*dt;
+  if (!q){ bk.s = Math.min(len, bk.s); q = [T.x + ux*bk.s, T.y + uy*bk.s, h1]; }
+  v.x = q[0]; v.y = q[1]; v.hd = q[2]; v.turn = Math.atan2(Math.sin(q[2] - hd0), Math.cos(q[2] - hd0))/dt; return false; }
 function wingVis(a, now, dt){
   const f = a.fly; let v = VW.get(a.id);
-  if (f && (!v || v.stage === 'done' || v.tgt !== f.tgt || v.mid !== f.mid)){ const B = G.P[a.air.base]; v = {x:v && v.stage !== 'done' ? v.x : B.x, y:v && v.stage !== 'done' ? v.y : B.y, stage:'out', tgt:f.tgt, base:a.air.base, kind:f.kind, mid:f.mid, tOver:0}; VW.set(a.id, v); }
+  if (f && (!v || v.stage === 'done' || v.tgt !== f.tgt || v.mid !== f.mid)){ const B = G.P[a.air.base], fresh = !v || v.stage === 'done'; v = {x:!fresh ? v.x : B.x, y:!fresh ? v.y : B.y, stage:'out', tgt:f.tgt, base:a.air.base, kind:f.kind, mid:f.mid, tOver:0}; VW.set(a.id, v);
+    // first drawn while already on station (a save loaded, the page opened, the wing out of the fog): it is on its track at once, no dash from its base
+    if (fresh && (f.ph === 'patrol' || f.ph === 'over')){ const k = trackOf(a, v); v.dir = a.id % 2 ? 1 : -1; v.s = ((a.id*0.37) % 1)*k.P; const q = trackAt(k, v.s, v.dir); v.x = q[0]; v.y = q[1]; v.hd = q[2]; v.stage = 'over'; v.tOver = now; }
+    else if (fresh && f.ph === 'back'){ const [wx, wy] = wingPos(a), T0 = G.P[f.tgt]; v.x = wx; v.y = wy; v.hd = Math.atan2(B.y - T0.y, wdx(T0.x, B.x)); v.stage = 'back'; } }   // (on its way home: where the rules have it, nose for home)
   if (!v || v.stage === 'done') return null;
   const T = G.P[v.tgt], B = G.P[a.air.base], spd = VW_SPEED*Math.sqrt(Math.max(1, S.speed || 1)), heli = wingT(a) === 'heli';
   // the drawn flight (fx.js flightStep): it flies along its heading and steers towards its goal at a capped turn rate, so it follows smooth
   // curves with its nose along the path; it speeds up after take-off and slows down to land; behind the rules' position it catches up, never
   // more than 7 world px (about 60 km) behind (a steady pull, no jump)
   const go = (tx, ty) => flightStep(v, tx, ty, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y]});
-  const follow = (wx, wy) => { flightStep(v, wx, wy, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y], chase:true, lim:7}); };
+  const follow = (wx, wy, lim = 7) => { flightStep(v, wx, wy, dt, {spd:spd*(heli ? 0.6 : 1), base:[B.x, B.y], chase:true, lim}); };
   const strikeNow = () => { const q = STRIKEQ.get(a.id); if (q && Math.hypot(v.x - T.x, v.y - T.y) < 24){ STRIKEQ.delete(a.id); const w = weaponOf(q.T || 'jet'), tb = q.ids && q.ids.length ? armyById(q.ids[0]) : null, B = tb ? dispPos(tb) : [T.x, T.y];
       if (booted){ cfxFire(w, [v.x, v.y], B, {bid:tb ? tb.id : null, kill:q.killed > 0, img:airImg(q.T), sea:G.P[q.p].sea});   // (fx.js)
         if (w === 'fighter'){ const nm = 1 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < nm; i++) shoot('missile', [v.x, v.y], fxOff(T.x + (Math.random() - 0.5)*16, T.y + (Math.random() - 0.5)*10, 6), {dur:450 + i*80, arc:4, big:0.9}); } }
       if (w === 'bomber' || w === 'swarm' || w === 'drone') afxMark(q.p, 24); else strikeFX(q.p, v, q.bnote); if (q.dealt > 0) fx('dmg', q.p, {text:`−${q.dealt}`, val:q.dealt, owner:q.owner, color:'#ffb27a'}); } };
   if (v.stage === 'out'){ const simOut = f && f.ph === 'out' && f.tgt === v.tgt;
-    if (simOut){ const [wx, wy] = wingPos(a); follow(wx, wy); }                    // follow the simulated flight, catching up if behind
+    if (f && f.ph === 'back' && f.tgt === v.tgt) v.stage = 'back';                     // called back (Return) or a storm abort on the way out: it turns for home
+    else if (simOut){ const [wx, wy] = wingPos(a);                                       // follow the simulated flight, catching up if behind;
+      if (v.kind !== 'rebase' && Math.hypot(wdx(wx, T.x), wy - T.y) < 0.5 && Math.hypot(wdx(v.x, T.x), v.y - T.y) < 14){ v.stage = 'over'; v.tOver = now; }   // its flight out done (the rules turn the hour): it joins the track at once, no circling on the point
+      else follow(wx, wy); }
+    else if (v.kind !== 'rebase' && f && f.tgt === v.tgt && Math.hypot(wdx(v.x, T.x), v.y - T.y) < 14){ v.stage = 'over'; v.tOver = now; }   // at its station: it joins the track (PATROL TRACK)
     else if (go(T.x, T.y)){ if (v.kind === 'rebase'){ v.stage = 'done'; v.tr = null; return null; } v.stage = 'over'; v.tOver = now; } }
-  else if (v.stage === 'over'){ const R = heli ? 7 : 16, ph = Math.atan2((v.y - T.y)/0.55, wdx(T.x, v.x)); flightStep(v, T.x + Math.cos(ph + 0.55)*R, T.y + Math.sin(ph + 0.55)*R*0.55, dt, {spd:spd*(heli ? 0.35 : 0.55)}); strikeNow();   // on station: an oval loop round the patrol point (steered: no jump onto the loop)
+  else if (v.stage === 'over'){ trackFly(a, v, dt); strikeNow();   // on station: the calm racetrack round the patrol point (PATROL TRACK)
     const simDone = !f || f.ph === 'back' || f.tgt !== v.tgt; if (simDone && now - v.tOver > (v.kind === 'strike' ? 1500 : 600) && !STRIKEQ.has(a.id)) v.stage = 'back'; }
-  else if (v.stage === 'back'){ if (f && f.ph === 'back'){ const [wx, wy] = wingPos(a); follow(wx, wy); } else if (go(B.x, B.y)){ v.stage = 'done'; v.tr = null; return null; } }
+  else if (v.stage === 'back'){ if ((f && f.ph === 'back') || v.bk ? backFly(a, v, dt) : go(B.x, B.y)){ v.stage = 'done'; v.tr = null; return null; } }   // (home: a smooth curve off its track, then the line home at the rules' speed, HOME FROM STATION)
   // the wing banks into the turn: by its turn rate (rad/s), eased
-  v.bank = (v.bank || 0) + (Math.max(-1, Math.min(1, (v.turn || 0)/2.2)) - (v.bank || 0))*Math.min(1, dt*8);
+  if (v.stage !== 'over' || trackSpd(a) > 0) v.bank = (v.bank || 0) + (Math.max(-1, Math.min(1, (v.turn || 0)/2.2)) - (v.bank || 0))*Math.min(1, dt*(v.stage === 'over' ? 2.5 : 8));   // (eased gently on station; held while paused)
   // contrail history (world units): up to 36 samples [x, y, heading, ms], one every 60 ms
   if (!v.tr) v.tr = []; if (!v.trT || now - v.trT >= 60){ v.trT = now; v.tr.push([v.x, v.y, v.hd ?? 0, now]); if (v.tr.length > 36) v.tr.shift(); }
   const dB = Math.hypot(v.x - B.x, v.y - B.y), dT = Math.hypot(v.x - T.x, v.y - T.y);
@@ -6440,7 +6528,7 @@ function wingPos(a){
   const dist = Math.max(1, hexDist(B.cc, T.cc)), dt = wingSpd(a)/dist;
   if (f.ph === 'out'){ const t = Math.min(1, f.t + live*dt); return [B.x + (T.x - B.x)*t, B.y + (T.y - B.y)*t]; }
   if (f.ph === 'back'){ const t = Math.min(1, f.t + live*dt); return [T.x + (B.x - T.x)*t, T.y + (B.y - T.y)*t]; }
-  const ang = performance.now()/(f.ph === 'over' ? 450 : 700) + a.id, R = f.ph === 'over' ? 18 : 22; return [T.x + Math.cos(ang)*R, T.y + Math.sin(ang)*R*0.55];
+  const v = VW.get(a.id); return v && v.stage === 'over' && v.tgt === f.tgt ? [v.x, v.y] : [T.x, T.y];   // on station: where it is drawn on its track (PATROL TRACK)
 }
 
 
@@ -6509,7 +6597,7 @@ const ovlOn = k => mapOvl[k] && polMode();
 // trade routes (the lanes, their dots, the land trucks) and the cargo ships on them show only with Settings > Map > 'Shipping routes' on (default off); blockaded
 // routes always (red, with the blockade icon). Selecting a fleet no longer shows them.
 const tradeOn = () => SET.shipRoutes === true;
-const sel = {army:null, prov:null, target:null, group:[], foe:null};   // foe: a foreign force you tapped (its read-only army bar)
+const sel = {army:null, prov:null, target:null, group:[], foe:null, atk:null};   // foe: a foreign force you tapped (its read-only army bar); atk: the enemy force an ASF Attack is aimed at (rules/air.js HARASSMENT)
 let boxSel = null, rallyFor = null, rallyPick = null, aimMsl = null;   // rallyFor: the city whose rally point is being set; rallyPick: the spot tapped but not yet confirmed {p}
 let targetPath = null;
 function rgba(hex, a){ const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
@@ -10486,7 +10574,7 @@ function draw(now){ draw.now = now;
   const drawSelPaths = ph => { if (!sa) return;
     if (sa.air){ if (ph !== 1) return; const B = G.P[sa.air.base], [bx, by] = toScreen(B.x, B.y), rr = wingRange(sa)*HS0*SQ3*view.s;
       ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(111,176,232,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = 'rgba(111,176,232,.05)'; ctx.fill(); ctx.restore();
-      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target, sel.surprise);
+      if (sel.target !== null){ const T = G.P[sel.target], [tx, ty] = toScreen(T.x, T.y), c = airCheck(sa, sel.target, sel.surprise, sel.want, sel.atk);
         ctx.save(); ctx.lineWidth = 2.5; ctx.strokeStyle = c.ok ? 'rgba(243,234,210,.9)' : 'rgba(224,87,79,.8)'; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -(now/40 % 13); animAmb(); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
         ctx.font = `600 11px ${BODY}`; const txt = c.ok ? `${c.kind === 'strike' ? 'Strike' : c.kind === 'patrol' ? 'Patrol 12 h' : 'Rebase'} · ${c.hours} h out` : 'Out of range'; const w = ctx.measureText(txt).width + 14;
         roundRect(ctx, tx - w/2, ty - 38, w, 20, 4); ctx.fillStyle = c.ok ? '#1b2a2e' : '#4a1d1a'; ctx.fill(); ctx.strokeStyle = 'rgba(243,234,210,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#f3ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, tx, ty - 28); }
@@ -10700,12 +10788,14 @@ function draw(now){ draw.now = now;
     // counter's own strength badge stays on top of the one at its lower side
     const keepA = counter.ang, keepD = counter.dug;
     if (c.sats && c.pv){ const ga1 = fa0*pa*(c.tag ? c.ta : c.da); for (const q of c.sats){ if (q.x == null) continue; const al = ga1*(1 - (q.pa ?? 0)); if (al < 0.01) continue;
-        ctx.globalAlpha = al; const pr = satDraw(q, now); if (al > 0.3) HITX.push({...pr, ids:q.list.map(a => a.id), own:q.list.map(a => a.id), cx:q.x, cy:q.y, spread:q.list.some(a => a.at !== q.list[0].at), sat:1, a:+al.toFixed(3), tag:q.tag ? 1 : 0}); } }
+        ctx.globalAlpha = al; const pr = satDraw(q, now); if (al > 0.3) HITX.push({...pr, ids:q.list.map(a => a.id), own:q.list.map(a => a.id), cx:q.x, cy:q.y, spread:q.list.some(a => a.at !== q.list[0].at), sat:1, a:+al.toFixed(3), tag:q.tag ? 1 : 0});
+        if (al > 0.3 && !q.quiet && q.cl.some(pbFight) && FPILL.length < 200){ const ld = q.list.reduce((b, z) => count(z) > count(b) ? z : b, q.list[0]); FPILL.push({c:{list:q.list, at:ld.at, owner:ld.owner}, r:pr, sl:q.list.some(z => z.id === sel.army || z.id === sel.foe || sel.group.includes(z.id)), al}); } } }   // (a covered side's counter beside it: its fight label too)
     ctx.globalAlpha = fa0*pa; const L = c.mlist ? c.list.concat(c.mlist) : c.list;
     counter.ang = keepA; counter.dug = keepD;   // (satDraw set the shared marks state: back to this force's own)
     const ua = unitAnim(L, now), uo = ua && (ua.dx || ua.dy); if (uo){ ctx.save(); ctx.translate(ua.dx, ua.dy); }   // (fx.js: the counter of a force that fires or is hit kicks and shakes)
     const r = counter(c, lead, L, c.n + (c.mn || 0), L.some(a => a.id === sel.army || sel.group.includes(a.id)), fighting, now);
     if (uo) ctx.restore(); if (ua && ua.red > 0.02) unitHitMark(r.x, r.y, r.w, r.h, ua.red*fa0*pa);
+    if (fighting && c.pv && fa0*pa > 0.3 && FPILL.length < 200) FPILL.push({c, r, sl:L.some(a => a.id === sel.army || a.id === sel.foe || sel.group.includes(a.id)), al:fa0*pa});   // (its fight label: fightPills, below)
     ctx.globalAlpha = 1;
     const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.tag ? c.sx : c.px, cy:c.tag ? c.sy : c.py, px:c.px, py:c.py, spread:L.some(a => a.at !== c.at), a:+(fa0*pa*(c.tag ? c.ta : c.da)).toFixed(3), tag:c.tag ? 1 : 0, heart:c.heart && c.tag ? 1 : 0};   // (cx, cy: its world point on screen, its position dot (the diamond stands just above it) or the tag's pin; px, py: the dot; a: as drawn, the cross-fade included; tag: the flag tag over its pictures, else the diamond)
     if (c.pv){ hits.push(hb); if (c.fm && c.art >= 0.5) HITX.push({x:c.fm.box[0], y:c.fm.box[1], w:c.fm.box[2] - c.fm.box[0], h:c.fm.box[3] - c.fm.box[1], ids:hb.ids, own:hb.own, cx:c.sx, cy:c.sy, spread:hb.spread, art:1}); }   // close in its pictures are tapped as it too
@@ -10729,6 +10819,7 @@ function draw(now){ draw.now = now;
     for (const list of grp.values()){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkey(a0, pa) + a0.owner);
       const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
       const r = unkPlate(x, y, k, now, hp ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0);   /* (units in cities: a contact on the centre point has its dot on the marker, its plate above the ring) */ hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }   // (its dot on its spot, the plate above)
+  fightPills(now, hits.filter(h => h.unk), hits.concat(HITX.filter(h => h.sat)));   // the fight labels of the counters in battle, over the counters, the names and the '?' contacts, never on one (combat display)
   FXM.PLATECLIP = null; FXM.PLATEBOX = plateBoxes(hits);   // (this frame's plates; the aircraft below are not in it)
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
@@ -10773,11 +10864,11 @@ function draw(now){ draw.now = now;
       if (banked) ctx.restore(); }
     if (a.owner === PLAYER){ ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(226,162,61,.5)'; ctx.lineWidth = 1.2; const [tx, ty] = toScreenFrom(v.x, x, T.x, T.y); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(...(phB ? toScreenFrom(v.x, x, B.x, B.y) : [tx, ty])); ctx.stroke(); ctx.restore(); }   // (from the wing's own copy: the line keeps to its flight)
     // strength in a small pill edged in the owner's colour; pills of wings flying side by side are nudged apart so '6' and '1' never read as '61'
-    { const sl = Math.min(sc, 1.25); ctx.font = `700 ${Math.round(10*sl)}px ${BODY}`; const lb = String(count(a)), lw = ctx.measureText(lb).width + 7*sl, lh = 12*sl; let ly = y + Lf*0.45 + 8*sl;
+    let pillB = y + 22; { const sl = Math.min(sc, 1.25); ctx.font = `700 ${Math.round(10*sl)}px ${BODY}`; const lb = String(count(a)), lw = ctx.measureText(lb).width + 7*sl, lh = 12*sl; let ly = y + Lf*0.45 + 8*sl;
       for (let t = 0; t < 4; t++){ const hit0 = airLbl.find(q => Math.abs(q[0] - x) < (q[2] + lw)/2 + 2 && Math.abs(q[1] - ly) < lh + 1); if (!hit0) break; ly = hit0[1] + (ly >= hit0[1] ? 1 : -1)*(lh + 2); }
       airLbl.push([x, ly, lw]); roundRect(ctx, x - lw/2, ly - lh/2, lw, lh, lh/2); ctx.fillStyle = 'rgba(8,12,14,.86)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = col; ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f2eee2'; ctx.fillText(lb, x, ly + 0.5); }
-    if (a.owner === PLAYER) hits.push({x:x - 16, y:y - 16, w:32, h:34, ids:[a.id], cx:x, cy:y, spread:false}); }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f2eee2'; ctx.fillText(lb, x, ly + 0.5); pillB = Math.max(pillB, ly + lh/2 + 2); }
+    if (a.owner === PLAYER) hits.push({x:x - 22, y:y - 22, w:44, h:pillB - y + 22, ids:[a.id], cx:x, cy:y, spread:false, wing:true}); }   // (a finger-sized box over the plane and its count; a tap also finds it along its recent track: flyingWingAt)
   for (const a of S.armies){ if (!a.fly || a.fly.kind !== 'drop' || (!armyVisible(a, vis) && a.owner !== PLAYER)) continue;
     if (!knowA(a, vis)){ const [ux, uy] = toScreen(...armyPos(a)); const r = unkPlate(ux, uy, k*0.8, now); hits.push({...r, ids:[a.id], cx:ux, cy:uy, spread:false, unk:true}); continue; }   // an air drop spotted, not identified: a '?' plate
     const [wx, wy] = armyPos(a), [x, y] = toScreen(wx, wy), B = G.P[a.fly.tgt], A = G.P[a.fly.from], ang = Math.atan2(B.y - A.y, B.x - A.x), sc = Math.max(0.9, Math.min(k, 1.25));
@@ -10897,6 +10988,7 @@ cv.addEventListener('pointerdown', e => {
   cv.setPointerCapture(e.pointerId); const [x, y] = localXY(e); pointers.set(e.pointerId, {x, y}); lastPT = e.pointerType || 'mouse';
   if (pointers.size === 1 && e.shiftKey && e.pointerType === 'mouse'){ boxSel = {x0:x, y0:y, x1:x, y1:y}; drag = null; return; }
   if (pointers.size === 1){ drag = {x, y, vx:view.x, vy:view.y, moved:false, t0:performance.now(), slop:TAP_SLOP[e.pointerType] || 8}; ZTW = null;
+    { const fw = S && S.started ? flyingWingAt(x, y) : null; downWing = fw ? {id:fw.a.id, x, y, ds:fw.ds} : null; }   // (your aircraft under the finger as it touches down: flyingWingAt)
     // pressing on your own force's counter (with a mouse, or a selected one by touch) drags that force: drop it on another force to merge
     const h = hitAt(x, y, true), own = h && !h.spread && !h.unk ? h.ids.map(armyById).filter(b => b && b.owner === PLAYER && !b.air && !b.fly && count(b)) : [];
     if (own.length && e.button === 0 && !cmdMode && !aimMsl && dropFor === null && (e.pointerType === 'mouse' || own.some(b => b.id === sel.army || sel.group.includes(b.id)))) drag.unit = (own.find(b => b.id === sel.army) || own[0]).id; }
@@ -10938,7 +11030,10 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
     sfx('order'); toast(`Merged ${pluN(n0, 'unit')} into ${armyName(b)}: ${pluN(count(b), 'unit')}.${warn}`, sp.over ? 'bad' : 'good', null); renderSide(true); return true; }
-  const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
+  // (to the spot where the other force stands, not the centre of its province: it merges there, rules/combat.js joinHour; one on the move is
+  // followed province by province)
+  const dest = b.to ?? b.at, spot = b.to !== null || b.path.length ? null : b.sail ? (b.sail.nx || b.sail.to) : b.pos;
+  orderMove(a, dest, spot); if (!a.path.length && a.to === null && !a.sail){ toast('No route to that force.', 'bad', null); return false; }
   a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.${warn}`, sp.over ? 'bad' : 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
 // a move to a spot in the force's own province (rules/movement.js orderMove → orderSpot): it walks, or a fleet sails, there and takes the time
@@ -10984,29 +11079,49 @@ function cityNameAt(x, y){ for (let i = cityNames.length - 1; i >= 0; i--){ cons
 // theirs (HITX, sat) on top, then the counters (hits), then the pictures close in (HITX, art), which their own tags and counters overlap
 function tapList(){ if (!HITX.length) return hits; const A = [], B = []; for (const h of HITX) (h.art ? A : B).push(h); return A.concat(hits, B); }
 function hitAt(x, y, noArt = false){ const L = tapList(); for (let i = L.length - 1; i >= 0; i--){ const h = L[i]; if (noArt && h.art) continue; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h; } return null; }   // (noArt: not the pictures: a drag that starts on one pans the map)
+// one of your aircraft in the air under a tap (owner playtest 2026-11-27, item 2d): the plane keeps moving while the finger is down, so the tap
+// is tested against where it was drawn over the last 600 ms (its trail samples, VW .tr) as well as where it is now, within a fingertip's radius;
+// the nearest wins (and the one under the finger as it touched down, downWing). It is tried before the counters and cities under it (the plane
+// is drawn over them), except where a city's point or a counter's core is under the finger too: then the plane wins only if the tap is closer
+// to its drawn sprite (ds, where it is drawn now) than to that city point or counter (planeWins). Returns {a, d (its trail too), ds} or null
+let downWing = null;   // {id, x, y, ds}: your aircraft in the air under the last touch-down (the plane flies on while the finger rests)
+function flyingWingAt(x, y){ const now = performance.now(), R = 24; let best = null, bd = R;
+  for (const a of S.armies){ if (a.owner !== PLAYER || !a.air || !a.fly || !count(a)) continue; const v = VW.get(a.id); if (!v || v.stage === 'done') continue;
+    const [sx, sy] = toScreen(v.x, v.y), ds = Math.hypot(x - sx, y - sy); let d = ds;
+    if (v.tr) for (let i = v.tr.length - 1; i >= 0; i--){ const q = v.tr[i]; if (now - q[3] > 600) break; const [qx, qy] = toScreenFrom(v.x, sx, q[0], q[1]); d = Math.min(d, Math.hypot(x - qx, y - qy)); }
+    if (d < bd){ bd = d; best = {a, d, ds}; } }
+  return best; }
+function planeWins(x, y, ds){ const m = cityAtTap(x, y), h = coreAt(x, y, true);
+  const dT = Math.min(m ? Math.hypot(x - m.x, y - m.y) : Infinity, h ? Math.hypot(x - (h.x + h.w/2), y - (h.y + h.h/2)) : Infinity);
+  return ds < dT; }
 function tap(x, y, shift = false, long = false){
   /*@DEV*/if (devTap(x, y)) return;/*@ENDDEV*/
   if (tip.classList.contains('dugtip')) tipHide();
   { const dh = dugHitAt(x, y); if (dh && !cmdMode && !aimMsl && dropFor === null && rallyFor === null && (sel.army === null || dh.own)){ closeChooser(); dugTip(x, y, true); return; } }   // a tap (or a long press) on the dug-in shield explains it; the rest of the badge still opens the army bar
   if (rallyFor !== null){ closeChooser(); rallyTap(x, y); return; }   // setting a rally point: a tap picks the spot (a second tap on it, or Set, confirms)
   closeChooser(); lastClickW = screenToWorld(x, y); const TL = tapList();   // (the counters, the stacked ones beside them and the pictures)
+  if (!cmdMode && !wpMode && !aimMsl && dropFor === null){ const dw = downWing && Math.hypot(x - downWing.x, y - downWing.y) < 16 ? armyById(downWing.id) : null, hw = flyingWingAt(x, y);   // your aircraft in the air (under the finger now, or as it touched down): selected as any force of yours (a second tap releases it)
+    const fw = hw && planeWins(x, y, hw.ds) ? hw.a : !hw && dw && dw.fly && count(dw) && planeWins(x, y, downWing.ds) ? dw : null; downWing = null;   // (Waypoint on: a tap is a stop, as with Move or Attack armed)
+    if (fw){ if (shift && sel.army !== null) selectArmy(fw.id, true); else if (fw.id === sel.army && !sel.group.length) clearSel(); else selectArmy(fw.id); return; } }
   const plain = !cmdMode && sel.army === null && !shift && !aimMsl && dropFor === null && rallyFor === null;
   const hs = TL.length !== hits.length && TL.find(h => h.sat && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);   // (a counter stacked beside another stands where it does to be tapped: it wins over a city's point under it)
-  const core = !hs && coreAt(x, y);   // (a counter's own square drawn over a city's point: the counter is what was tapped)
+  const core = !hs && coreAt(x, y, true);   // (a counter's own square drawn over a city's point: the counter is what was tapped; a plane's box is not a counter: planeWins)
   const cityTap = plain && !hs && !core && !!cityAtTap(x, y);   // a plain tap right on a city's point opens the city sheet, even with your troops standing in it (their counter is tapped to reach them)
   const mk = hs || core ? null : cityAtTap(x, y) || (plain && !hitAt(x, y) && (cityNameAt(x, y) || bldAt(x, y))) || null;   // (or one of its buildings)   // a tap on a city's point means that city, even where a neighbouring stack's box overlaps it; with nothing selected, so does a tap on its name (off the counters)
   if (cmdMode && sel.army !== null && long) return;   // (a resting finger is no order: Move stays armed)
   if (cmdMode && sel.army !== null){ const a = armyById(sel.army), mode = cmdMode; cmdMode = null; if (a){
-      for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } break; } }
-      const p = provAt(x, y); if (p < 0) return;
+      let foeP = -1, foeId = null; for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i]; if (h.wing) continue; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){ const foe = h.ids.map(armyById).find(b => b && b.owner !== PLAYER && b.owner >= 0); if (foe && !a.air){ setTarget(a, foe.to ?? foe.at); sel.chase = foe.id; sendToTarget(a); renderSide(true); return; } if (foe && a.air && !foe.air && !foe.fly && (foe.to === null || (mode === 'attack' && asfStrike(a)))){ foeP = provNow(foe); if (mode === 'attack' && asfStrike(a)) foeId = foe.id; } break; } }
+      const p = foeP >= 0 ? foeP : provAt(x, y); if (p < 0) return;   // (an aircraft sent at a foe's counter: the province it stands in)
       if (shift && !a.air){ stopTap(a, p, x, y); return; }   // Shift on a desktop, inside Move: one more stop
       if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; }   // (a spot in its own province or sea zone: it walks, or sails, there)
-      setTarget(a, p);
+      setTarget(a, p, a.air && mode === 'attack' ? 'strike' : a.air && mode === 'patrol' ? 'patrol' : null);   // (an aircraft's Attack: the strike of an Air Superiority Fighter wing, rules/air.js asfStrike; Patrol: a Strike Fighter's patrol, jetPatrol)
+      if (foeId != null){ const fb = armyById(foeId); sel.atk = foeId; if (knowA(fb) && !atWar(a.owner, fb.owner) && !friendly(a.owner, fb.owner)) sel.surprise = [fb.owner]; }   // (an ASF Attack on one enemy force's counter, standing or on the move: the wing follows it, rules/air.js HARASSMENT; a '?' contact, not identified: no surprise attack on its nation, which the player cannot see, and no nation named: trailOf)
       if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => knowA(b) && armyShown(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
         if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
-      if ((a.air && airCheck(a, p, sel.surprise).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
+      if ((a.air && airCheck(a, p, sel.surprise, sel.want, sel.atk).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
   if (!cityTap) for (let i = TL.length - 1; i >= 0; i--){ const h = TL[i];
     if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h){
+      if (h.wing && (wpMode || aimMsl || dropFor !== null || !planeWins(x, y, Math.hypot(x - h.cx, y - h.cy)))) continue;   // (a flying plane's box (its count below it): as flyingWingAt, not over a stop, a target or a nearer city or counter)
       if (mk && !h.ids.some(id => { const a = armyById(id); return a && a.at === mk.p; })) break;
       if (h.spread){ zoomAt(2.4, h.cx, h.cy); return; }
       const own = h.ids.map(armyById).filter(a => a && a.owner === PLAYER);
@@ -11027,8 +11142,11 @@ function tap(x, y, shift = false, long = false){
   const p = mk ? mk.p : provAt(x, y);
   if (aimMsl && p >= 0){ if (MSL_WMD[aimMsl.k]){ mslPick(p); return; } const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }   // (chemical and nuclear: picked, then confirmed)
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
-  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
+  // the Waypoint button on: a tap on water is a stop too (a fleet's stops are on water; troops embark through a port). Before PINPOINT-3 the
+  // line below deselected first (c67d74a, "a tap only selects"), so no fleet could be given a stop by a tap, and a phone had no other way
+  if (a && wpMode && !a.air && !long && p >= 0 && G.P[p].sea){ stopTap(a, p, x, y); return; }
+  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   if (a){
     // a tap is only a selection: it never moves the force (owner's rule). Move or Attack in the command bar (M, K), then a tap, gives the order;
     // the Waypoint button on makes each tap a stop. Anything else: a city or building tapped opens its panel with the force deselected, empty land deselects
@@ -11124,11 +11242,22 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
 const PIN_CITY = 26*KM_W;   // (about 3 world units)
 function byCity(p, w){ const P = G.P[p]; if (!P || P.sea || !w) return false; const [hx, hy] = toScreen(P.x, P.y), [tx, ty] = toScreen(w[0], w[1]);
   return Math.hypot(tx - hx, ty - hy) < 16 && Math.hypot(wdx(P.x, w[0]), w[1] - P.y) <= PIN_CITY; }
-function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
+// the exact spot of a force of yours standing still in province (or sea zone) p that the tapped point w is "on or by", for force a sent there:
+// the tap is inside its counter, or within 16 css px of its spot on screen and PIN_CITY on the map, as byCity. A force arriving joins only a
+// force standing on its very point (rules/movement.js JOIN_R, 0.1 km), so a tap meant for one of yours goes to that point (PINPOINT-3 round 2:
+// with JOIN_R about 9 km a tap near a force of yours ended in it whatever the zoom; now what you tap on screen is what you get)
+function byForce(a, p, w){ if (!a || a.air || !w || !G.P[p]) return null; const [tx, ty] = toScreen(w[0], w[1]), mine = new Set(groupArmies().map(q => q.id)); mine.add(a.id);
+  const ok = b => b && !mine.has(b.id) && b.owner === a.owner && b.at === p && !b.air && !b.fly && b.to === null && !b.path.length && !b.sail && !(b.wp && b.wp.length) && count(b) && shipsOnly(b) === shipsOnly(a);
+  const spot = b => b.pos ? b.pos : [G.P[p].x, G.P[p].y];
+  for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (h.unk || tx < h.x || tx > h.x + h.w || ty < h.y || ty > h.y + h.h) continue; const b = h.ids.map(armyById).filter(ok).sort((u, v) => count(v) - count(u))[0]; if (b) return spot(b); }
+  let best = null, bd = 16; for (const b of S.armies){ if (!ok(b)) continue; const q = spot(b), [bx, by] = toScreen(q[0], q[1]), d = Math.hypot(bx - tx, by - ty); if (d < bd && Math.hypot(wdx(q[0], w[0]), w[1] - q[1]) <= PIN_CITY){ bd = d; best = q; } }
+  return best; }
+function setTarget(a, p, want = null){ sel.target = p; sel.want = a.air ? want : null; sel.atk = null; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
   if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea && byCity(p, sel.targetPt)) sel.targetPt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
+  else if (sel.targetPt){ const f = byForce(a, p, sel.targetPt); if (f) sel.targetPt = f.slice(); }   // (a tap on or by a force of yours standing there: its spot, where it joins it)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
-  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
+  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && ((isStriker(a) && sel.want !== 'patrol') || (sel.want === 'strike' && asfStrike(a))) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
 // the exact end of the route being planned to province t (rules/movement.js etaHours: the last leg's time by its real length)
 const tgtEnd = t => sel.targetPt && t === sel.target ? {p:t, x:sel.targetPt[0], y:sel.targetPt[1]} : null;
@@ -11175,7 +11304,17 @@ function armiesHTML(){
 let cmdMode = null, wpMode = false;   // wpMode: the Waypoint button is on (each tap on the map adds a stop: stopTap)
 function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER) return '';
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
-  if (a.air) return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', !!a.fly) + b('cm-move', '⇄', 'Rebase', '', false, !!a.fly, 'Tap an airbase or carrier') ;   // no Deselect button: tap empty map (or Esc) to deselect
+  // an air wing: its mission (an AWACS's is its radar Orbit), Attack (Air Superiority Fighters: weak strikes on forces, rules/air.js asfStrike),
+  // Patrol (Strike Fighters, as in Conflict of Nations: rules/air.js jetPatrol), Rebase; Split and Merge on the ground; Return (to base) while it
+  // flies. The other ground orders (Waypoint, Delay, Halt, Stance) mean nothing to a wing flying a mission
+  if (a.air){ const fl = !!a.fly, mates = fl ? 0 : mergeMates(a).length, flt = 'In the air: press Return to call it back';
+    return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : wingT(a) === 'awacs' ? 'Orbit' : 'Patrol', 'M', cmdMode === 'move', fl, fl ? flt : '')
+      + (jetPatrol(a) ? b('cm-patrol', '◎', 'Patrol', '', cmdMode === 'patrol', fl, fl ? flt : 'Patrol: tap a province to guard it for 12 h. Its fighters engage enemy aircraft over it and its neighbours (weaker in the air than an Air Superiority Fighter)') : '')
+      + (asfStrike(a) ? b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack', fl, fl ? flt : `Attack: tap enemy forces or ships, standing or on the move (troops at sea, a marching column), to harass them; it follows the force it was sent at. Its job is the air: on the ground its attack is ${ASF_ATTACK.atk}, about ${ASF_ATTACK.atk} damage a strike per aircraft`) : '')
+      + b('cm-move', '⇄', 'Rebase', '', false, fl, fl ? flt : 'Tap an airbase or carrier')
+      + '<span class="sep"></span>' + b('wing-split', '⑂', 'Split', '', false, fl || count(a) < 2, fl ? flt : 'Split: half the aircraft form a new wing at the same base')
+      + b('wing-merge', '⊕', 'Merge', '', false, !mates, fl ? flt : mates ? `Merge the ${UNITS[wingT(a)].name} wings parked here into this one` : `No other ${UNITS[wingT(a)].name} wing parked here`)
+      + b('wing-return', '↩', 'Return', '', false, !fl || a.fly.ph === 'back', !fl ? 'On the ground' : a.fly.ph === 'back' ? 'Already flying back' : 'Return to base now: it turns back and rearms on landing'); }   // no Deselect button: tap empty map (or Esc) to deselect
   const here = a.to === null ? S.armies.filter(x => x.owner === PLAYER && x.at === a.at && x.to === null && !x.air).length : 0;
   const nst = stopsOf(a).length, fl = !!a.fly, flt = 'Paratroopers in the air: orders once they land';   // (a drop in flight takes no ground orders)
   return b('cm-move', '➜', 'Move', 'M', cmdMode === 'move', fl, fl ? flt : '') + b('cm-wp', '⋯', 'Waypoint', 'W', wpMode, fl, fl ? flt : 'Waypoints: while on, each tap on the map adds a stop, and the force moves through the stops in order. Turn it off to keep the stops')
@@ -11189,20 +11328,23 @@ function sendToTarget(a, keep = false){
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
   let ok = 0, g = [];
   if (sel.target !== null){ g = groupArmies(); const T = sel.target, P0 = sel.targetPt;
-    // the exact point (rules/movement.js orderMove): a group's forces stand round it, each on its own spot (the first on the point itself)
-    const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
-    g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
-  sel.target = null; targetPath = null;
+    // the exact point (rules/movement.js orderMove), the same one for every force of a group: they end on the spot that was tapped and join there
+    // (rules/tick.js, the arrival join, JOIN_R), each within its stack limit. Until PINPOINT-3 round 3 the others were sent round it, 6 and 5
+    // world units off (43 to 52 km), and with the join on the very spot only (round 2) they stayed there, as separate stacks
+    const ptOf = i => !P0 ? null : pinPt(g[i], T, P0);
+    g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T, sel.want, sel.want === 'strike' && asfStrike(x) ? sel.atk : null)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
+  sel.target = null; sel.want = null; sel.atk = null; targetPath = null;
   // as in Conflict of Nations the force (or the whole group) stays selected once the order is given, its route drawn to the point with the ETA:
   // another tap on the map changes the order; a tap on the force, on its destination, or Esc releases it. Its route stays brighter for a few seconds
   if (ok){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; hoverPath = null; cmdMode = null; }
   renderSide(true); }
 // Waypoint button on (or Shift): a tap adds a stop at that exact point (rules/movement.js addStop): an idle force sets off for it, one with orders
-// goes there after its last stop. A group: each force adds its own stop round the point (as sendToTarget spreads a group's points)
-function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '';
-  g.forEach((q, i) => { let pt = pinPt(q, p, i ? [w[0] + Math.cos(i*2.4)*6, w[1] + Math.sin(i*2.4)*5] : w);
+// goes there after its last stop. A group: every force adds a stop on the same point (as sendToTarget), and they join there at the end
+function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '', at = null;
+  g.forEach(q => { let pt = pinPt(q, p, at || w);   // (at: the point the first force given a stop took; the others take the same one)
     if (pt && ground(q) && !G.P[p].sea && byCity(p, w)) pt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city: its heart, where a province is captured)
-    if (pt && addStop(q, p, pt)){ ok++; delete q.join; return; }
+    else if (pt && !at){ const f = byForce(q, p, w); if (f) pt = f.slice(); }   // (on or by a force of yours standing there: its spot, where the group joins it)
+    if (pt && addStop(q, p, pt)){ ok++; delete q.join; if (!at) at = pt.slice(); return; }
     if (!why) why = !pt || (shipsOnly(q) && !G.P[p].sea) ? 'A fleet\'s stops are on water.' : !canEnter(PLAYER, p) ? `${placeOwner(p)} is not open to you: tap with Waypoint off to plan an attack.` : embarkWhy(q, p) || 'No route there from the last stop.'; });
   if (ok){ sfx('order'); visCache = null; sel.target = null; targetPath = null; hoverPath = null; sel.lastOrder = {ids:g.map(q => q.id), t:performance.now()}; ftipAsk('move'); }
   else toast(why, 'bad', null);
@@ -11214,7 +11356,7 @@ function undoTap(){ const a = sel.army !== null ? armyById(sel.army) : null; if 
 // a tap on (or by) the end of the selected force's plan: its last stop, within 14 px on screen
 function atPlanEnd(a, x, y){ const st = stopsOf(a); if (!st.length) return false; const q = st[st.length - 1], [ex, ey] = toScreen(q.x, q.y); return Math.hypot(ex - x, ey - y) < 14; }
 // a drawn counter's own square (not its marks or margins) under the tap: it wins over a city's point under it (a force pinned on a city is tapped by its badge)
-function coreAt(x, y){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; const mx = h.w*0.22, my = h.h*0.22; if (x >= h.x + mx && x <= h.x + h.w - mx && y >= h.y + my && y <= h.y + h.h - my) return h; } return null; }
+function coreAt(x, y, noWing = false){ for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (noWing && h.wing) continue; const mx = h.w*0.22, my = h.h*0.22; if (x >= h.x + mx && x <= h.x + h.w - mx && y >= h.y + my && y <= h.y + h.h - my) return h; } return null; }
 function selectArmy(id, add = false){ if (tab !== 'cmd') setTab('cmd');
   if (add && sel.army !== null){ const g = new Set(sel.group.length ? sel.group : [sel.army]); if (g.has(id) && g.size > 1){ g.delete(id); sel.group = [...g]; sel.army = sel.group[0]; renderSide(true); return; } g.add(id); sel.group = [...g]; sel.army = id; renderSide(true); return; }
   if (id !== sel.army) wpMode = false; sel.group = []; sel.foe = null; sel.army = id; sel.prov = null; sel.target = null; targetPath = null; hoverPath = null; renderSide(true); }
@@ -11564,7 +11706,7 @@ const mainLabel = p => { const k = cityMain(p); return k ? cap1(MAIN_NAME[k]) + 
 const mainOutTxt = o => o.k === 'cash' ? '$' + Math.round(o.y) + 'M' : fmt(Math.round(o.y)) + ' ' + MAIN_NAME[o.k];
 function mainChip(p){ const o = cityOut(p); if (!o) return ''; const A = BUILD.arms;
   return `<span class="cs-main res-${o.k}" title="Main resource: ${MAIN_NAME[o.k]}, ${mainOutTxt(o)} a day.&#10;${A.name}${o.lv ? ' ' + ROMAN[o.lv] + ': +' + Math.round(ARMS_PCT*100*o.lv) + '% of it' : ': +' + Math.round(ARMS_PCT*100) + '% of it per level'}.">${icon(o.k, 12)}<b>${o.k === 'rare' ? 'Rare mat.' : cap1(MAIN_NAME[o.k])}</b></span>`; }
-// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a building (no Army Base: infantry's reason, 'Needs Army Base level 1') says so
+// what the idle MOBILIZE UNIT line says: a city that can train nothing for want of a building (no Army Base: infantry's reason, 'Needs Army Base I') says so
 const csMobIdle = p => { if (UT.some(t => !canMobilize(PLAYER, p, t))) return 'Nothing in training'; const k = mobBlock(PLAYER, p, 'inf'); return k && (k.kind === 'bld' || k.kind === 'occ') ? k.why : 'Nothing in training'; };   // (an occupied city: 'Occupied: annex the city to mobilize here')
 const CS_ICO = {
   flag:`<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><g fill="currentColor"><rect x="4" y="2" width="1.8" height="16" rx=".9"/><path d="M5.8 3.2h10l-2.6 3.6 2.6 3.6h-10z"/></g></svg>`,
@@ -11730,7 +11872,7 @@ function csHTML(p){ const P = G.P[p], o = S.owner[p], mine = o === PLAYER, N = S
   // the capital's card: its headquarters (one regional building, no level); a city has no card of its own (no city level)
   const hqCard = () => { const A = hqArt(o); return `<button class="cs-c cs-hq" data-act="cs-card" data-k="city" title="${hqTip(o)}&#10;Province details"><span class="cs-ci${A.art ? ' ba' : ' gl'}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span><span class="cs-cn">Capital</span></button>`; };
   const card = (k, l, o0 = {}) => { const A = csArt(k, l || 1), nm = BUILD[k].name, tag = o0.btn ? 'button' : 'span', need = mine && k === 'fac' && !l && P.city;
-    const busy = c && c.k === k, ttl = `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && k === 'arms' ? '\n' + armsTip(p) : mine && k === 'fort' ? '\n' + bunkerTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
+    const busy = c && c.k === k, ttl = `${nm}${l ? (BUILD[k].max > 1 ? ' · level ' + ROMAN[l] + ' of ' + ROMAN[BUILD[k].max] : ' · built') : ' · not built'}${busy ? ` · building level ${ROMAN[c.lvl]}, ${csTime(c.h)} left` : ''}${bdis(p, k) ? ' · knocked out' : ''}${mine && k === 'rec' ? '\n' + recTip(p) : mine && k === 'fac' ? '\n' + facTip(p) : mine && (k === 'air' || k === 'yard') ? '\n' + baseTip(p, k) : mine && k === 'arms' ? '\n' + armsTip(p) : mine && k === 'fort' ? '\n' + bunkerTip(p) : ''}${o0.btn && k !== 'city' ? '\nTap to build or upgrade' : ''}`;
     return `<${tag} class="cs-c${l ? '' : ' add'}${need ? ' need' : ''}${busy ? ' busy' : ''}${bdis(p, k) ? ' ko' : ''}"${o0.btn ? ` data-act="cs-card" data-k="${k}"` : ''} title="${ttl}"><span class="cs-ci${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}"${A.u ? ` style="background-image:url(${A.u})"` : ''}></span>
       ${l ? `<span class="cs-lvb" aria-label="Level ${l}"><b>${l}</b></span>` : '<span class="cs-plus" aria-hidden="true">+</span>'}<span class="cs-cn">${nm}</span>${busy ? `<span class="cs-cb"><i style="width:${Math.round(csBldF(p, c)*100)}%"></i></span><span class="cs-ct">${csTime(c.h)}</span>` : ''}</${tag}>`; };
   const B = bldSeen(p, PLAYER), built = BK.filter(k => B[k]), can = mine ? BK.filter(k => !S.bld[p][k] && canBuildHere(p, k)) : [], first = P.city && can[0] === 'fac' ? can.shift() : null;   // (no Army Base yet: its card comes first; a foreign Bunker is hidden)
@@ -11782,16 +11924,30 @@ function cmodHead(p, title){ const N = S.nations[PLAYER], P = G.P[p], inc = inco
 const recK = l => '+' + (+recMp(l).toFixed(1)) + 'k';
 const recTip = p => { const l = S.bld[p].rec || 0, M = BUILD.rec.max;
   return l ? `${BUILD.rec.name} ${ROMAN[l]}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here' : 'unlocks no units (infantry comes from the Army Base)'}. ${recPct(l)}% faster training and ${recK(l)} manpower a day in this city. ${l < M ? `Next level: ${recPct(l + 1)}% faster, ${recK(l + 1)}/day.` : 'Highest level.'}`
-    : `${BUILD.rec.name}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here (Motorized Infantry, Anti-Tank Infantry, Special Forces and, with an Airbase, Paratroopers)' : 'unlocks no units (infantry comes from the Army Base)'}. Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
+    : `${BUILD.rec.name}: ${INF_NEEDS.includes('rec') ? 'needed, with an Army Base, to mobilize infantry here (Motorized Infantry, Special Forces and, with an Airbase, Paratroopers)' : 'unlocks no units (infantry comes from the Army Base)'}. The main way to train faster. Level I: every unit trained in this city trains ${recPct(1)}% faster and the city gives ${recK(1)} manpower a day; up to ${recPct(M)}% faster and ${recK(M)}/day at level ${ROMAN[M]}.`; };
 const recHead = p => S.bld[p].rec ? `${BUILD.rec.name}: ${recPct(S.bld[p].rec)}% faster training` : '';
 // Army Base and Arms Industry in city p, in words: what the next level does here and what it costs (the city strip's hover text, built or not)
 const bldPrice = (p, k) => { const l = S.bld[p][k] || 0; if (l >= BUILD[k].max) return 'Highest level.'; const c = buildCost(PLAYER, k, l + 1, p); return `Level ${ROMAN[l + 1]} costs ${costTxt(c, ', ')} and takes ${csTime(c.h)}.`; };
-const facUnits = l => UT.filter(t => reqsOf(t).some(r => r.b === 'fac' && r.l === l)).map(t => UNITS[t].name).join(', ');
-const facPct = l => Math.round((1 - facF(l))*100);
+// the base levels in words (BUILD-REQS, owner 2026-11-27; from the rules' BASE_LV and BASE_SPD): what level l of base k unlocks and how much faster it trains
+const facUnits = (l, k = 'fac') => baseUnits(k, l).join(', ');
+const facPct = l => baseSpdPct('fac', l);
+const lvGives = (k, l) => { const u = facUnits(l, k), f = baseSpdPct(k, l); return [u ? 'unlocks ' + u : '', f ? `units train ${f}% faster` : ''].filter(Boolean).join(' and ') || 'no new units'; };
+const needTxt = t => reqsOf(t).map(r => BUILD[r.b].name + ' ' + ROMAN[r.l]).join(' and ');   // 'Army Base II and Airbase I'
+const lanes = p => Math.min(queueMax(PLAYER), 1 + (S.bld[p].fac || 0));   // training lines in use: a queue holds at most queueMax
 const facTip = p => { const l = S.bld[p].fac || 0, M = BUILD.fac.max, others = riseCnt(PLAYER, 'fac', p, l + 1), mem = queueMax(PLAYER) > 1;
-  return (l ? `${BUILD.fac.name} ${ROMAN[l]}: ground units train ${facPct(l)}% faster here${mem ? `, ${1 + l} training lines` : ''}.${l < M ? ` Level ${ROMAN[l + 1]}: ${facPct(l + 1)}% faster${mem ? ', one more training line' : ''}${l === 1 ? `, and unlocks ${facUnits(2)}` : ''}.` : ''}`
-    : `${BUILD.fac.name}: needed to mobilize ground units here, infantry included. Level I unlocks ${facUnits(1)}; ground units train ${facPct(1)}% faster${mem ? ' and a second training line opens' : ''}. Level II unlocks ${facUnits(2)}. Up to level ${ROMAN[M]} (${facPct(M)}% faster). No income.`)
-    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other city where you have an Army Base II or higher, beyond the first two: ${others} now.)` : !l ? ' Level I costs the same in every city.' : l === 1 ? ' Levels II\u2013V: your first two cost the base price; each one after that costs 40% more.' : ''); };
+  return (l ? `${BUILD.fac.name} ${ROMAN[l]}${facPct(l) ? `: ground units train ${facPct(l)}% faster here` : ''}${mem ? `${facPct(l) ? ',' : ':'} ${lanes(p)} training lines` : ''}.${l < M ? ` Level ${ROMAN[l + 1]} ${lvGives('fac', l + 1)}.` : ''}`
+    : `${BUILD.fac.name}: needed to mobilize ground units here, infantry included. ${[1, 2, 3, 4, 5].filter(i => i <= M).map(i => `Level ${ROMAN[i]} ${lvGives('fac', i)}`).join('; ')}.${mem ? ' Army Base I opens a second training line.' : ''} No income.`)
+    + ' ' + bldPrice(p, 'fac') + (others && l < M ? ` (That includes 40% more for each other city where you have an Army Base II or higher, beyond the first two: ${others} now.)` : !l ? ' Level I costs the same in every city.' : l === 1 ? ' Levels II–V: your first two cost the base price; each one after that costs 40% more.' : ''); };
+// the Airbase and the Naval Yard on a city card: their level, what the next one gives, and its price
+const baseTip = (p, k) => { const l = S.bld[p][k] || 0, M = BUILD[k].max, f = baseSpdPct(k, l);
+  return (l ? `${BUILD[k].name} ${ROMAN[l]}${f ? `: units train ${f}% faster here` : ''}.${l < M ? ` Level ${ROMAN[l + 1]} ${lvGives(k, l + 1)}.` : ''}`
+    : `${BUILD[k].name}: ${[1, 2, 3, 4, 5].filter(i => i <= M).map(i => `level ${ROMAN[i]} ${lvGives(k, i)}`).join('; ')}.`) + ' ' + bldPrice(p, k); };
+// the three bases in the Build list: a short line, then one row a level (what it unlocks, how much faster it trains), this city's level marked
+const BASE_HEAD = {fac:'Unlocks and trains ground units, infantry included. No income.', air:'Unlocks and trains aircraft (with their research). Wings based here reach 1 hex farther per level above I and repair faster.', yard:'Coastal cities only: unlocks and trains ships. Damaged ships repair fast here, 20% faster per level above II.'};
+const baseLvHTML = (p, k) => { const l = S.bld[p][k] || 0, rows = [];
+  for (let i = 1; i <= BUILD[k].max; i++){ const u = baseUnits(k, i), f = baseSpdPct(k, i); rows.push(`<span class="bkr${i === l ? ' on' : i < l ? ' had' : ''}" role="row"><b>${ROMAN[i]}</b><span>${u.length ? u.join(', ') : '<span class="muted">no new units</span>'}</span><span>${f ? f + '% faster' : '–'}</span></span>`); }
+  const top = baseUnits(k, 5);   // (Airbase V: the Stealth Bomber; Naval Yard V: the Aircraft Carrier)
+  return `<span class="bkt-w"><span class="bkt-h">${BASE_HEAD[k]} Levels I–III unlock units; IV and V train faster${top.length ? ` (V also unlocks ${top.join(', ')})` : ''}. The Recruiting Office is the main way to train faster${k === 'fac' && queueMax(PLAYER) > 1 ? '; Army Base I opens a second training line' : ''}.</span><span class="bkt blv" role="table" aria-label="${BUILD[k].name} levels"><span class="bkr bkhd" role="row"><b>Lv</b><b>Unlocks</b><b>Speed</b></span>${rows.join('')}</span></span>`; };
 const armsTip = p => { const o = cityOut(p); if (!o) return BUILD.arms.desc; const l = S.bld[p].arms || 0, M = BUILD.arms.max, pc = Math.round(ARMS_PCT*100), nm = MAIN_NAME[o.k], others = facOthers(PLAYER, p, 'arms');
   const d1 = v => v < 20 ? Math.round(v*10)/10 : Math.round(v), out = y => o.k === 'cash' ? '$' + d1(y) + 'M' : fmt(Math.round(y)) + ' ' + nm, at = lv => out(o.base*(1 + ARMS_PCT*lv)), gain = o.base*ARMS_PCT, c = l < M ? buildCost(PLAYER, 'arms', l + 1, p) : null;
   const pay = c && gain > 0 ? Math.max(1, Math.round((c.cash + lotCash(c.metal, mkt().p.metal) + lotCash(c.iron, mkt().p.iron) + lotCash(c.elec || 0, mkt().p.elec))/(o.k === 'cash' ? gain : lotCash(gain, mkt().p[o.k])))) : 0;
@@ -11805,7 +11961,7 @@ const bunkerTip = p => { const l = S.bld[p].fort || 0, L = BUNKER_LV[l], M = BUI
 const bunkerLvHTML = p => { const l = S.bld[p].fort || 0, pc = v => Math.round(v*100) + '%', T = bunkerTable(PLAYER), hp = bunkerHp(p);
   return `<span class="bkt-w"><span class="bkt-h">${BUILD.fort.name}: hidden from other nations. Your garrison takes less damage (with dug-in: in the open, in a city); the people of the province are spared as much; the other buildings here take ${pc(BUNKER_LV[BUNKER_SHIELD_LV].red)} less damage at every level.${l ? ` Health now ${Math.round(hp)}/${BUNKER_LV[l].hp}.` : ''}</span>
     <span class="bkt" role="table" aria-label="${BUILD.fort.name} levels"><span class="bkr bkhd" role="row"><b>Lv</b><b>Damage</b><b>Dug in</b><b>Health</b><b>Morale</b><b>Upkeep</b><b>Price</b></span>${T.map(r => `<span class="bkr${r.lv === l ? ' on' : r.lv < l ? ' had' : ''}" role="row"><b>${ROMAN[r.lv]}</b><span>−${pc(r.less)}</span><span>−${pc(r.lessOpen)} / −${pc(r.lessCity)}</span><span>${r.hp}</span><span>+${pc(r.mrl)}</span><span>$${r.upk.toFixed(1)}M</span><span>$${r.cost.cash}M, ${+(r.cost.h/24).toFixed(1)} d</span></span>`).join('')}</span></span>`; };
-const bldDesc = (p, k) => k === 'rec' ? recTip(p) : k === 'fort' ? bunkerLvHTML(p) : BUILD[k].desc;
+const bldDesc = (p, k) => k === 'rec' ? recTip(p) : k === 'fort' ? bunkerLvHTML(p) : BASE_LV[k] ? baseLvHTML(p, k) : BUILD[k].desc;
 const csPic = (k, lv) => { const A = csArt(k, lv); return `<i class="bi${lv ? '' : ' dim'}${A.art ? '' : ' gl'}${A.ba ? ' ba' : ''}" style="--bi:url(${A.u});--bs:54px" aria-hidden="true"></i>`; };
 const mobHTML = p => `${cmodHead(p, 'Mobilize unit')}<div class="cs-mbody cs-mmod">${cityRecruitHTML(p)}</div>`;
 const cbldHTML = p => `${cmodHead(p, 'Build')}<div class="cs-mbody cs-bmod">${cityConsHTML(p, true)}${cityMslOn(p) ? citySiloHTML(p) : ''}</div>`;
@@ -11934,7 +12090,7 @@ function renderSide(force){
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
   else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : targetPath && targetPath.length ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.` : `${embarkWhy(a, sel.target) || 'No route there.'} Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
-  setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync(); mslCfSync();
+  setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : cmdMode === 'patrol' ? 'Patrol: tap the province to guard. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync(); mslCfSync();
 }
 // nation n has an Army Base (built, or going up) in one of its cities: the first step of First steps and the tutorial
 const hasBase = n => ownedBy(n).some(p => S.bld[p].fac >= 1 || (S.cons[p] && S.cons[p].k === 'fac'));
@@ -11975,7 +12131,7 @@ const TUT_STEPS = [
   {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b>.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Build an Army Base', d:() => { const c = buildCost(PLAYER, 'fac', 1, S.nations[PLAYER].capital); return `Tap <b>BUILD</b> in the city panel, then <b>Build</b> on the Army Base (the first row: $${c.cash}M, ${dayTxt(c.h)}). Infantry and every other ground unit train only in a city with an Army Base, and no city starts with one.`; }, el:'#csheet:not([hidden]) .cs-bldb, #sheet .bld[data-bk="fac"] .btn', map:() => S.nations[PLAYER].capital, done:() => hasBase(PLAYER)},
-  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run: your Army Base goes up in 30 minutes. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
+  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run: your Army Base goes up in 30 minutes. Battles deal damage every 15 game minutes; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
   {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
   {t:'Recruit', d:() => ownedBy(PLAYER).some(p => S.bld[p].fac >= 1) ? `Your Army Base stands. Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.` : 'Your Army Base is still going up (the BUILD square shows the time left). When it stands, tap <b>MOBILIZE UNIT</b> in the city panel, then a unit card (Motorized Infantry is cheap). Tap Next to carry on meanwhile.', el:'#csheet:not([hidden]) .cs-mob, #ctx', next:() => !ownedBy(PLAYER).some(p => S.bld[p].fac >= 1), done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them. Tapping only selects: the army bar opens at the bottom.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
@@ -12437,7 +12593,7 @@ function rCardHTML(nd){ if (!nd) return '';
   // the one-line note under the header, the unit box and the description
   const note = RK_NOPIC[nd.id] ? 'A new warhead for the Missile Silo.' : nd.kind === 'unlock' ? 'Starting level military unit or technology.' : nd.kind === 'gen' ? `<b>${nd.name}</b>: a new generation${U ? ' of the ' + U.name : ''}.` : `<b>${step}</b>${U ? ` for every ${U.name}` : ''}.`;
   const box = U ? U.name : RK_MSL[nd.line] ? nd.line : nd.cat === 'cmd' ? C.name : rLineName(nd);
-  const desc = nd.kind === 'unlock' && U ? `${U.role}${nd.elite ? ' Elite unit.' : ''}` : `${rTxt(nd, lvN)}.`;
+  const desc = nd.kind === 'unlock' && U ? `${U.role}${nd.elite ? ' Elite unit.' : ''}${reqsOf(nd.u).length ? ` Trained at: ${needTxt(nd.u)}.` : ''}` : `${rTxt(nd, lvN)}.`;   // (where it trains: BUILD-REQS)
   const tagIc = U ? uiconSVG(nd.u, 20) : RK_MSL[nd.line] ? uiconSVG(RK_MSL[nd.line], 20) : rkCat(nd.cat, 10);
   const stripe = K.fld.map(k => `<span class="rk-gi" style="--gc:${(RK_BAN[k] || RK_BAN.export)[1]};--gl:${(RK_BAN[k] || RK_BAN.export)[2]}" title="${NGROUP_BY[k].name}">${rkEmb(k, 34)}</span>`).join('');
   const scene = U ? K.art.scene : `assets/art/ri-${rKey(nd)}.webp`;
@@ -12560,7 +12716,7 @@ function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k
   return `<div class="eyebrow" style="margin-top:12px">Achievements · ${got} of ${keys.length}</div><div class="achs">${keys.map(k => `<div class="ach ${ACHS[k] ? 'on' : ''}" title="${ACH[k][1]}"><b>${ACHS[k] ? '★' : '☆'} ${ACH[k][0]}</b><span class="small muted">${ACH[k][1]}</span></div>`).join('')}</div>`; }
 function statusText(a){
   const P = G.P;
-  if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${cpName(a.at)}`};
+  if (S.battles.includes(a.at) && a.to === null) return (F => ({cls:'battle', short:F ? 'fighting' : 'in battle', long:F ? `Fighting ${F.main ? armyLabel(F.main, PLAYER) : 'an unidentified army'}${F.more ? ` and ${F.more} more` : ''} at ${cpName(a.at)}` : `In battle at ${cpName(a.at)}`}))(fightFoes(a));
   if (a.wp && a.wp.length && a.to === null && !a.path.length && !a.sail) return {cls:'move', short:'at a stop', long:`At a waypoint in ${P[a.at].cityName || P[a.at].name}: it sets off for the next stop within the hour (${pluN(a.wp.length, 'stop')} to go)`};
   if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${cpName(a.at)}, resupplied at sea by the convoys`}`}; }
   if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${cpName(a.at)}: it attacks any convoy within ${fleetKm(a)} km`}; }
@@ -12582,6 +12738,93 @@ function statusText(a){
     if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
   return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}`};
 }
+// ---- the fight readout (combat display, owner 2026-11-27: fights read as in Conflict of Nations): while a force fights, its army bar and its map
+// label say "Fighting" and the enemy force it fights, count down to the next damage round and, after each round, show what each side lost in it.
+// Display only. The rounds are the rules' own battle steps (rules/tick.js battleStep: every 15 game minutes, BATTLE_Q a game hour, so damage
+// already lands on a fixed tick); a round's damage is what a force's health fell by since the round before: the battle step itself and any ranged
+// fire, air strike or missile that hit it between the two (rangedStep, airTick, missileTick run before battleStep sets a._h). Its first round: a._h.
+// Nothing here reads rng() or changes rule state. Fog (P3-01): a foe is named only once the player has identified it (knowA; a battle with your
+// or an ally's force identifies the other side); others are "? Unidentified" (never named, counted or measured); a foe not seen is left out.
+const CBR = new Map();   // the last round of each battle: p -> {k: its step (cbStamp), t: performance.now(), nid: S.nid then, f: Map(force id -> {lost, h0, h1})}; UI only, not saved
+const cbStamp = () => S.hour*BATTLE_Q + (S.q || 0);
+// each force's health at the end of the round before (h1) is the start of this one, or its health as the step began (a._h) where that is more (a force
+// joined it) or there was no round just before; a side with a force made here since then (a split) starts from a._h too (the health went with it, not to fire)
+IM.on('fxBattle', (p, owners, sides) => { const P0 = CBR.get(p), prev = P0 && P0.k === cbStamp() - 1 ? P0 : null, f = new Map();
+  for (const o of owners){ const split = !!prev && S.armies.some(b => b.owner === o && b.id >= prev.nid && b.at === p);
+    for (const a of sides.get(o)){ const e = prev && !split ? prev.f.get(a.id) : null, h1 = effHP(a), h0 = Math.max(a._h || 0, e ? e.h1 : 0); f.set(a.id, {lost:Math.max(0, h0 - h1), h0, h1}); } }
+  CBR.delete(p); CBR.set(p, {k:cbStamp(), t:performance.now(), nid:S.nid, f}); if (CBR.size > 300) CBR.delete(CBR.keys().next().value); });
+// the foes force a fights (null when it is not fighting): every hostile force at war with it standing in its province that the player sees.
+// main: the strongest identified one (by strength), more: how many others (all unidentified ones count as one, as the map shows them: one '?')
+function fightFoes(a, vis = visibleSet(PLAYER)){
+  if (!a || a.to !== null || a.air || a.fly || !count(a) || !S.battles.includes(a.at)) return null;
+  const all = stationaryAt(a.at).filter(b => b.owner !== a.owner && count(b) > 0 && atWar(a.owner, b.owner) && (b.owner === PLAYER || armyShown(b, vis)));
+  if (!all.length) return null;
+  const known = all.filter(b => knowA(b, vis)).sort((x, y) => power(y) - power(x)), unk = known.length < all.length, main = known[0] || null;
+  return {main, known, unk, all, more:main ? known.length - 1 + (unk ? 1 : 0) : 0}; }
+// what forces L lost in the battle's last round at p ({lost, h0}: health points, and their health at its start), null before the first round or long after
+function fightLost(p, L){ const R = CBR.get(p), d = R ? cbStamp() - R.k : -1; if (!R || d < 0 || d > 1) return null; let lost = 0, h0 = 0, n = 0;
+  for (const a of L){ const e = R.f.get(a.id); if (e){ lost += e.lost; h0 += e.h0; n++; } } return n ? {lost, h0, age:performance.now() - R.t} : null; }
+const fightPct = e => { const v = e && e.h0 > 0 ? e.lost/e.h0*100 : 0; return '−' + (v < 9.95 ? v.toFixed(1) : String(Math.round(v))) + '%'; };
+// the army bar's fight row: the swords, "Fighting" and the foe (+N others), the next round's countdown (abTickText, kept live by abTickPatch) and the last
+// round's losses: this force's in health points and as a share (a foreign force's as a share only, as its bar shows its health), the identified foes' as a share
+function fightRowHTML(a, ro){ const F = fightFoes(a); if (!F) return ''; const me = fightLost(a.at, [a]), fo = F.known.length ? fightLost(a.at, F.known) : null, m = F.main;
+  const nm = m ? `${m.owner >= 0 ? flagHTML(m.owner, 14) : ''}<b>${armyLabel(m, PLAYER)}</b>` : '<b class="unk">? Unidentified</b>';
+  return `<div class="ab-fight" title="In battle: both sides deal damage every 15 game minutes (a round). The next round is in the time shown. Last round: what each side lost since the round before, in the battle and to any artillery, air strike or missile that hit it."><canvas class="ab-sw" aria-hidden="true"></canvas><div class="abf-t">
+    <div class="abf-l1"><span class="abf-k">Fighting</span> ${nm}${F.more ? ` <span class="abf-more">+${F.more}</span>` : ''}</div>
+    <div class="abf-l2">Next round <b class="ab-tick">${abTickText()}</b>${me ? ` · last round: ${ro ? 'it' : 'this force'} <b class="abf-d">${ro ? fightPct(me) : `−${me.lost < 9.95 ? me.lost.toFixed(1) : Math.round(me.lost)} (${fightPct(me).slice(1)})`}</b>${fo ? ` · enemy <b class="abf-d">${fightPct(fo)}</b>` : ''}` : ''}</div></div></div>`; }
+// the map label of a force in battle: a small dark pill over its counter with the round ring (the share of the round gone) and the countdown; for
+// your and your allies' battles and a force you selected also "Fighting" and the foe (other battles you see: the ring and the countdown only);
+// for 2 s after each round a red chip with what its side here lost in it (the foe's own label shows the foe's). Collected while the counters are
+// drawn (FPILL), drawn over them and the late names (fightPills)
+const FPILL = [];
+/*@TEST*/const FPDBG = []; if (location.protocol === 'file:') window.__imFight = {pills:FPDBG, foes:id => { const F = fightFoes(armyById(id)); return F && {main:F.main ? F.main.id : null, more:F.more, unk:F.unk, ids:F.all.map(b => b.id)}; }, cbr:p => { const R = CBR.get(p); return R && {k:R.k, now:cbStamp(), f:[...R.f]}; }};/*@ENDTEST*/
+function fightPills(now, unk = [], all = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!FPILL.length) return;
+  const vis = visibleSet(PLAYER), Q = BATTLE_Q, left = Math.min(1/Q, Math.max(0, ((S.q || 0) + 1)/Q - acc)), done = 1 - left*Q, tt = abTickText(), run = S.speed > 0 && !S.over, mine = o => o === PLAYER || isAlly(PLAYER, o);
+  const H = 16, f1 = `700 10.5px ${BODY}`, f0 = `800 9px ${BODY}`, boxes = [], plates = [], ov = (q, b) => q[0] < b[2] + 2 && q[2] > b[0] - 2 && q[1] < b[3] + 1 && q[3] > b[1] - 1, hit = (q, me) => q[0] < 0 || q[2] > cw || boxes.some(b => ov(q, b)) || plates.some(b => b !== me && ov(q, b));   // (labels never cover one another, nor another fighting counter)
+  const cut = t => (t = t.replace(/ Division$/, ' Div.').replace(/ Brigade$/, ' Bde.')).length > 18 ? t.slice(0, 17).trimEnd() + '…' : t, mw = (t, f) => (ctx.font = f, mtw(t, f));   // (mtw measures in the current font: f is only its cache key)
+  // each label: its force, its foes, what it says; the selected force's first, then yours and your allies' battles, then the rest (the first placed get the spots
+  // next to their counters); within each, your own forces first, then your allies', then the others
+  const J = []; for (const {c, r, sl, al} of FPILL){ const here = c.list.filter(a => a.at === c.at && a.to === null && count(a) > 0); if (!here.length) continue;
+    const lead = here.reduce((b, a) => count(a) > count(b) ? a : b, here[0]), F = fightFoes(lead, vis); if (!F) continue;
+    const full = mine(c.owner) || F.all.some(b => mine(b.owner)) || sl; J.push({c, r, sl, al, here, lead, F, full, pr:sl ? 0 : full ? 1 : 2, ow:c.owner === PLAYER ? 0 : mine(c.owner) ? 1 : 2}); }
+  J.sort((x, y) => x.pr - y.pr || x.ow - y.ow); for (const j of J){ j.pb = [j.r.x, j.r.y, j.r.x + j.r.w, j.r.y + j.r.h]; plates.push(j.pb); }
+  for (const h of unk) plates.push([h.x, h.y, h.x + h.w, h.y + h.h]);   // (the '?' contacts: no label over one)
+  let fade = false; ctx.save(); ctx.textBaseline = 'middle';
+  for (const {c, r, sl, al, here, lead, F, full, pr, pb} of J){ if (r.x + r.w < 0 || r.x > cw || r.y + r.h < 0 || r.y > ch) continue;   // (a counter off the screen: no label pulled onto it)
+    const L0 = fightLost(c.at, here); /*@TEST*/if (L0 && (window.__imFight || {}).hold) L0.age = 0;/*@ENDTEST*/ let chip = L0 && L0.age < 2000 && L0.lost > 0.05 ? 'lost ' + fightPct(L0) : '', ca = chip ? (L0.age < 1300 ? 1 : 1 - (L0.age - 1300)/700) : 0; if (chip) fade = true;
+    const cx = r.x + (r.bg ? r.w - r.bg.w - 2 : r.w)/2, up = Math.round(r.y - H - 4), dn = Math.round(r.y + r.h + 7); let cW = chip ? mw(chip, f1) + 10 : 0;
+    const dims = fl => { const nm = !fl ? '' : F.main ? cut(armyName(F.main)) : '? Unidentified', more = fl && F.more ? ` +${F.more}` : ''; const wK = fl ? mw('FIGHTING', f0) + 4 : 0, wN = nm ? mw(nm + more, f1) + 11 : 0;
+      return {fl, nm, more, wK, wN, W:5 + 10 + 4 + wK + wN + mw(tt, f1) + 6}; };
+    // over its counter; where another label stands there, under it (two sides side by side: one over, one under); with no room for the whole
+    // label next to its counter, the ring and the countdown alone (zoomed out, crowded), a row further out at most, then the same without the round's
+    // chip; still no room: a battle of others gets none, yours and the selected force's the short one (with its chip) over the counter.
+    // Your own force's whole label (owner 2026-11-28: zoomed out and crowded, "let your own full label sit a little further from its counter"): the
+    // nearer spots first, then a row further out, then two, before the short one; out there it covers no counter at all (yours included), nor a label
+    const R = H + 3, far = c.owner === PLAYER, clear = q => !all.some(h => ov(q, [h.x, h.y, h.x + h.w, h.y + h.h]));
+    let D = null, x0 = 0, y0 = up; const chip0 = chip, cW0 = cW;
+    for (const [fl, ck] of full ? [[true, 1], [false, 1], [false, 0]] : [[false, 1], [false, 0]]){ if (!ck){ if (!chip0) break; chip = ''; cW = 0; }
+      const d = dims(fl), xx = Math.max(2, Math.min(cw - d.W - cW - 5, Math.round(cx - (d.W + (chip ? cW + 3 : 0))/2)));
+      for (const y of fl ? far ? [up, dn, up - R, dn + R, up - 2*R, dn + 2*R] : [up, dn] : [up, dn, up - R, dn + R]){ const q = [xx, y, xx + d.W + cW + 3, y + H];
+        if (!hit(q, pb) && (!fl || y === up || y === dn || clear(q))){ D = d; x0 = xx; y0 = y; break; } } if (D) break; }
+    // (that last one: over the counter, or where a label stands there the nearest of a row out, under it, a row under that free of labels and, for
+    // another nation's force, of your counters; none free: yours and the force you selected over the counter as before, another's none: your label
+    // in the same battle shows the same round and countdown)
+    if (!D){ if (pr > 1) continue; chip = chip0; cW = cW0; D = dims(false); x0 = Math.max(2, Math.min(cw - D.W - cW - 5, Math.round(cx - (D.W + (chip ? cW + 3 : 0))/2)));
+      const q = y => [x0, y, x0 + D.W + cW + 3, y + H], my = far ? null : new Set(S.armies.filter(a => a.owner === PLAYER).map(a => a.id));
+      const bad = y => y < 0 || y + H > ch || boxes.some(b => ov(q(y), b)) || (!!my && all.some(h => h.ids && h.ids.some(i => my.has(i)) && ov(q(y), [h.x, h.y, h.x + h.w, h.y + h.h])));
+      const yy = [up, up - R, dn, dn + R].find(y => !bad(y)); if (yy == null && !far && !sl) continue; y0 = yy ?? up; }
+    const W = D.W; boxes.push([x0, y0, x0 + W + cW + 3, y0 + H]);
+    const CT = sideT(forceSide(lead)); ctx.globalAlpha = al; roundRect(ctx, x0, y0, W, H, H/2); ctx.fillStyle = 'rgba(16,9,8,.88)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = CT[0]; ctx.stroke();   // (its edge in its side's colour, as its counter)
+    const rx = x0 + 5 + 5, ry = y0 + H/2; ctx.beginPath(); ctx.arc(rx, ry, 4.2, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(rx, ry, 4.2, -Math.PI/2, -Math.PI/2 + Math.max(0.05, done)*Math.PI*2); ctx.strokeStyle = '#ff8a7a'; ctx.stroke();
+    let tx = x0 + 19; ctx.textAlign = 'left';
+    if (D.fl){ ctx.font = f0; ctx.fillStyle = '#ff9a90'; ctx.fillText('FIGHTING', tx, ry + 0.5); tx += D.wK; ctx.font = f1; ctx.fillStyle = F.main ? '#f4efe4' : '#9fd8ff'; ctx.fillText(D.nm, tx, ry + 0.5);
+      if (D.more){ ctx.fillStyle = '#b9aea6'; ctx.fillText(D.more, tx + mw(D.nm, f1), ry + 0.5); } tx += D.wN; ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(tx - 6, y0 + 4, 1, H - 8); }   // (a thin line between the foe and the countdown)
+    ctx.font = f1; ctx.fillStyle = '#ffd9a8'; ctx.fillText(tt, tx, ry + 0.5);
+    if (chip){ const kx = x0 + W + 3; ctx.globalAlpha = al*Math.max(0, ca); roundRect(ctx, kx, y0, cW, H, 4); ctx.fillStyle = '#b8302a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,190,180,.8)'; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText(chip, kx + 5, ry + 0.5); }
+    /*@TEST*/FPDBG.push({ids:here.map(a => a.id), owner:c.owner, at:c.at, x:x0, y:y0, w:W, h:H, box:[x0, y0, x0 + W + cW + 3, y0 + H], full:D.fl, row:y0 === up ? 'up' : y0 === dn ? 'dn' : String(Math.round((y0 < up ? up - y0 : y0 - dn)/R)) + (y0 < up ? 'up' : 'dn'), name:D.nm, more:F.more, time:tt, chip, chipA:+ca.toFixed(2), ring:+done.toFixed(3), plate:[r.x, r.y, r.w, r.h], sel:!!sl});/*@ENDTEST*/ }
+  ctx.restore(); FPILL.length = 0;
+  if (fade) animFast(); else if (run) animIn(200); }   // (the chip fades; the countdown and the ring move with the clock)
 function oddsHTML(a, t, foes){
   if (!foes.length) return G.P[t].sea || S.owner[t] === PLAYER ? '' : `<br><span class="small">No defenders seen${visibleSet(PLAYER).has(t) ? '' : ' (fog: there may be some)'}.</span>`;
   const r = odds(a, t, foes, undefined, viaOf(a)), cls = r >= 1.5 ? 'good' : r >= 0.9 ? 'even' : 'bad', label = r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even fight' : 'Likely defeat';
@@ -12599,7 +12842,7 @@ function groupHTML(){
   const g = groupArmies(); sel.group = g.map(a => a.id); if (g.length < 2) return armyHTML(g[0]);
   const units = g.reduce((s0, a) => s0 + count(a), 0), pw = g.reduce((s0, a) => s0 + power(a), 0);
   let plan = '';
-  if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target), tgtEnd(sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
+  if (sel.target !== null){ const eta = Math.max(...g.map(a => a.air ? (airCheck(a, sel.target, sel.surprise, sel.want, sel.atk).hours || 0) : etaHours(a, pathFor(a, a.to !== null ? a.to : a.at, sel.target), tgtEnd(sel.target)))), reach = g.filter(a => a.air ? airCheck(a, sel.target, sel.surprise, sel.want).ok : pathFor(a, a.to !== null ? a.to : a.at, sel.target).length).length;
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Group order</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br><span class="small">${reach} of ${g.length} forces can get there · slowest arrives in about ${eta} h</span></div>
       <div class="row"><button class="btn primary" data-act="send" ${reach ? '' : 'disabled'}>Send all</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
   return `<div class="eyebrow">Group · ${g.length} forces</div><h2>${units} units</h2>${plan}
@@ -12616,33 +12859,34 @@ function condHTML(a){ const c = wingCond(a), pc = Math.round(c*100), mr = maintR
 function wingHTML(a){
   const f = a.fly, B = G.P[a.air.base];
   const status = !f ? ((a.air.cd || 0) > 0 ? `Rearming at ${B.cityName || B.name}: ready in ${a.air.cd} h` : `Ready at ${B.cityName || B.name}`)
-    : f.ph === 'out' ? `${f.kind === 'strike' ? 'Striking' : f.kind === 'patrol' ? 'Flying to patrol' : f.kind === 'recon' ? 'Flying to watch' : f.kind === 'orbit' ? 'Flying to orbit over' : f.kind === 'hunt' ? 'Flying to hunt around' : 'Rebasing to'} ${G.P[f.tgt].cityName || G.P[f.tgt].name}`
-    : f.ph === 'patrol' ? `Patrolling ${G.P[f.tgt].cityName || G.P[f.tgt].name}${a.u.asf ? ' and its neighbours' : ''}: ${f.hrs} h left`
+    : f.ph === 'out' ? `${f.kind === 'strike' ? (asfStrike(a) ? (f.foe != null ? (fb => fb ? `Attacking ${asfWhat([fb], f.tgt, knowA(fb))} ${G.P[f.tgt].sea ? 'in' : 'at'}` : 'Attacking forces at')(trailOf(a)) : 'Attacking forces at') : 'Striking') : f.kind === 'patrol' ? 'Flying to patrol' : f.kind === 'recon' ? 'Flying to watch' : f.kind === 'orbit' ? 'Flying to orbit over' : f.kind === 'hunt' ? 'Flying to hunt around' : 'Rebasing to'} ${G.P[f.tgt].cityName || G.P[f.tgt].name}`
+    : f.ph === 'patrol' ? `Patrolling ${G.P[f.tgt].cityName || G.P[f.tgt].name}${a.u.asf || a.u.jet ? ' and its neighbours' : ''}: ${f.hrs} h left`
     : f.ph === 'over' && f.kind === 'recon' ? `Watching ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left${f.salvo ? ` · ${f.salvo} salvo left` : ''}` : f.ph === 'over' && f.kind === 'orbit' ? `Radar orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left`
     : f.ph === 'over' && f.kind === 'hunt' ? `Hunting ships around ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left` : f.ph === 'over' ? `Over ${G.P[f.tgt].cityName || G.P[f.tgt].name}` : `Returning to ${B.cityName || B.name}`;
   const T = wingT(a), L0 = uavOf(a.owner);
   let plan = '';
-  if (sel.target !== null){ const c = airCheck(a, sel.target, sel.surprise);
+  if (sel.target !== null){ const c = airCheck(a, sel.target, sel.surprise, sel.want, sel.atk);
     plan = `<div class="status move"><div class="eyebrow" style="margin-bottom:4px">Planned mission</div><b>${G.P[sel.target].cityName || G.P[sel.target].name}</b> · ${placeOwner(sel.target)}<br>
       <span class="small">${c.ok ? (c.kind === 'strike' ? (T === 'stealth' ? `Stealth raid: fly out ${c.hours} h, wreck building levels and roads (60% of a Heavy Bomber's load), hit troops there (25% harder in a city). SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often; in flight the enemy sees it only from a SAM or jammer in or next to the province under it. A raid that loses half turns back.`
         : T === 'bomb' ? `Bombing raid: fly out ${c.hours} h (bombers are slow), wreck building levels and roads, hit troops there (50% harder in a city). Fighter patrols and SAMs are its bane: a raid that loses half turns back.`
         : T === 'swarm' ? `Swarm attack in ${c.hours} h: jammers and SAMs down some drones first and jamming blunts the rest; survivors saturate the air defence for hours and shred infantry, guns and SAMs.`
         : T === 'sdrone' ? `Precision strike in ${c.hours} h: hits units hard and knocks out the most valuable building for 24 h (sometimes a whole level). SAMs, fighters and jammers fire first.`
+        : asfStrike(a) ? `Attack: fly out ${c.hours} h and harass ${(fb => fb && !knowA(fb) ? 'the unidentified contact you tapped (the wing follows it if it moves on; it strikes only if the contact is hostile)' : fb ? `the ${G.P[sel.target].sea && ground(fb) ? 'troops at sea' : fb.to != null || fb.sail ? 'force on the move' : 'force'} you tapped (the wing follows it if it moves on)` : 'the enemy forces there, standing or on the move')(sel.atk != null ? armyById(sel.atk) : null)}, then return and rearm 6 h. A fighter is very weak against the ground: attack ${+(ASF_ATTACK.atk*count(a)).toFixed(1)}, about ${+(ASF_ATTACK.atk*count(a)).toFixed(1)} damage a strike on infantry, tanks or ships (troops at sea without warships take ${AT_SEA.alone}×, with them ${AT_SEA.escort}×); buildings, roads and the land are not hit. Enemy fighters and air defence fire back.`
         : `Strike: fly out ${c.hours} h, hit everything hostile there with ${STRIKE}× firepower, then return and rearm 6 h. Air defence (SAMs, Interceptors, Frigates) fires back.`)
-        : c.kind === 'patrol' ? `Patrol for 12 h: intercepts enemy strikes, bombers and drones over this province${a.u.asf ? ' and its neighbours, and hunts loitering UAVs, AWACS and patrol planes there' : ' (and its neighbours under your AWACS)'}.`
+        : c.kind === 'patrol' ? `Patrol for 12 h: intercepts enemy strikes, bombers and drones over this province${a.u.asf || a.u.jet ? ' and its neighbours, and hunts loitering UAVs, AWACS and patrol planes there' : ' (and its neighbours under your AWACS)'}.${a.u.jet ? ' A Strike Fighter fights in the air at about a third of an Air Superiority Fighter\'s strength; it strikes nothing on patrol.' : ''}`
         : c.kind === 'recon' ? `Loiter ${L0.loiter} h after ${c.hours} h: identifies every enemy force within ${L0.vis} km (type, size, level, health)${L0.salvos ? `; fires ${L0.salvos} missile salvo${L0.salvos > 1 ? 's' : ''} at hostile forces there` : '; recon only, no weapons'}. Jammers and SAMs nearby can shoot it down.`
         : c.kind === 'orbit' ? `Radar orbit for 16 h after ${c.hours} h: every enemy force within ${Math.round(visAewKm(PLAYER)/10)*10} km shows as an unidentified contact (?); your fighters under it cover neighbouring provinces and fight 25% better. Keep it away from enemy fighters.`
         : c.kind === 'hunt' ? `Patrol the sea for ${rMpaH(PLAYER)} h after ${c.hours} h: spots every ship and submerged submarine within ${Math.round(visMpaKm(PLAYER)/10)*10} km and attacks hostile ships (subs first) every 3 h. Frigates fire back.`
         : `Move this wing to the airbase here.`) : c.why}</span></div>
-      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (isBmb(T) ? 'Launch raid' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
-  return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div></div>${plan}
+      <div class="row"><button class="btn primary" data-act="send" ${c.ok ? '' : 'disabled'}>${c.ok ? (c.kind === 'strike' ? (isBmb(T) ? 'Launch raid' : asfStrike(a) ? 'Launch attack' : 'Launch strike') : c.kind === 'patrol' ? 'Start patrol' : c.kind === 'recon' ? 'Launch UAV' : c.kind === 'orbit' ? 'Start orbit' : c.kind === 'hunt' ? 'Start sea patrol' : 'Rebase') : 'Cannot fly there'}</button><button class="btn" data-act="untarget">Cancel</button></div>`; }
+  return `<div class="uhd">${unitPic(T, 'xl')}<div class="uht"><div class="eyebrow">Air wing · ${UNITS[T].name}</div><h2>${count(a)} ${UNITS[T].dr ? 'drone' : 'aircraft'}${UNITS[T].dr && count(a) !== 1 ? 's' : ''}</h2></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>${plan}
     <div class="status ${f ? 'move' : ''}">${status}</div>
     ${T === 'drone' ? `<div>${uavBadge(a.owner)}</div><div class="small muted">Vision ${L0.vis} km · loiter ${L0.loiter} h · stealth ${Math.round((1 - L0.stealth)*100)}%</div>` : ''}
     ${!G.P[a.air.base].sea && bdis(a.air.base, 'air') ? `<div class="status battle">Airbase knocked out: grounded for ${bdisH(a.air.base, 'air')} h</div>` : ''}
     ${unitRows(a)}${stackLine(a)}
     ${condHTML(a)}
     <dl class="kv">${stackHTML(a)}<dt>Range</dt><dd>${wingRange(a)*KM_HEX} km from base</dd><dt>Speed</dt><dd>${fmtK(Math.round(wingSpd(a)*24*KM_HEX/100)*100)} km/day in flight</dd><dt>Strength</dt><dd>${Math.round(power(a))}</dd><dt>Morale</dt><dd>${Math.round(a.m ?? 80)}%</dd></dl>
-    <p class="small muted" style="margin:0">Press the mission button, then tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol; UAVs watch, AWACS orbit, patrol planes hunt ships; pressing Rebase and tapping one of your airbases rebases the wing.</p>
+    <p class="small muted" style="margin:0">Press the mission button, then tap a province inside the blue range ring to plan a mission. Strikers, bombers and strike drones attack and come back; fighters patrol (Air Superiority Fighters can also Attack forces, weakly); UAVs watch, AWACS orbit, patrol planes hunt ships; pressing Rebase and tapping one of your airbases rebases the wing. Return calls a wing in the air back to its base.</p>
     <div class="row"><button class="btn" data-act="airguide">Air &amp; drone guide</button></div>`;
 }
 // ---- split panel: every unit row (damaged units apart), a slider and +/- per row for the group being edited, quick plans, several groups at once
@@ -12703,7 +12947,7 @@ let abUnit = null;   // {id, t}: the unit type whose details are open under the 
 const abSpd = a => Math.round((shipsOnly(a) ? seaSpeed(a) : landSpeed(a))*KM_HEX/10)*10;
 // game time to the next battle step (every 15 game minutes), as real seconds at the running speed, or game minutes when paused
 function abTickText(){ const Q = BATTLE_Q; let left = (((S.q || 0) + 1)/Q) - acc; left = Math.min(1/Q, Math.max(0, left));
-  if (S.speed && !S.over){ const sec = left/HOURS_PER_SEC[S.speed]; return sec < 1 ? 'now' : Math.ceil(sec) + ' s'; }
+  if (S.speed && !S.over){ const sec = left/HOURS_PER_SEC[S.speed]; return sec < 1 ? (1/Q/HOURS_PER_SEC[S.speed] < 1.5 || sec < 1e-6 ? '<1 s' : '1 s') : Math.ceil(sec) + ' s'; }   // (under a second left: "1 s" until the step runs; "<1 s" at 4x and 8x, a round under 1.5 s, and while the step itself runs)
   return Math.max(1, Math.ceil(left*60 - 1e-6)) + ' min'; }
 function abTickPatch(){ const els = document.querySelectorAll('.ab-tick'); if (!els.length) return; const t = abTickText(); for (const e of els) if (e.textContent !== t) e.textContent = t; }
 // the crossed swords of the map (battleBadge: the one function) on the small canvases of the army bar
@@ -12726,9 +12970,9 @@ function armyBarHTML(a, ro = false){
   const col = hf > 0.6 ? 'var(--ok)' : hf > 0.3 ? 'var(--accent)' : 'var(--danger)', types = UT.filter(t => a.u[t] > 0).sort((x, y) => a.u[y]*UNITS[y].hp - a.u[x]*UNITS[x].hp);
   const nm = ro ? `<h2 class="aname">${armyLabel(a, PLAYER)}</h2>` : renaming === a.id ? `<input class="rn" data-id="${a.id}" maxlength="32" value="${armyName(a)}" aria-label="Force name" style="font:inherit;font-size:18px;width:100%;margin:0">` : `<h2 class="aname" data-act="rename" data-id="${a.id}" title="Click to rename">${armyName(a)} <span class="small muted">✎</span></h2>`;
   const cell = (k, v, tip, cls = '') => `<span class="abs ${cls}" title="${tip}"><em>${k}</em><b>${v}</b></span>`;
-  const knownMorale = !ro, sw = fight ? `<span class="abs fight" title="In battle: both sides deal damage every 15 game minutes. The next exchange is in the time shown."><canvas class="ab-sw" aria-hidden="true"></canvas><b class="ab-tick">${abTickText()}</b></span>` : '';
+  const knownMorale = !ro, fr = fight ? fightRowHTML(a, ro) : '', sw = fight && !fr ? `<span class="abs fight" title="In battle: both sides deal damage every 15 game minutes. The next exchange is in the time shown."><canvas class="ab-sw" aria-hidden="true"></canvas><b class="ab-tick">${abTickText()}</b></span>` : '';   // (the fight row, fightRowHTML, carries the swords and the countdown)
   return `<div class="abar">
-    <div class="ab-top">${o >= 0 ? flagHTML(o, 18) : ''}<div class="ab-nm">${nm}<div class="ab-sub">${ro ? 'Foreign force' : 'Your force'} · ${pluN(count(a), 'unit')}</div></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>
+    <div class="ab-top">${o >= 0 ? flagHTML(o, 18) : ''}<div class="ab-nm">${nm}<div class="ab-sub">${ro ? 'Foreign force' : 'Your force'} · ${pluN(count(a), 'unit')}</div></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>${fr}
     <div class="ab-hp" role="img" aria-label="Health ${hp.cur} of ${hp.max}" title="Health of the whole force: ${hp.cur} of ${hp.max} health points"><i style="width:${Math.round(hf*100)}%;background:${col}"></i><b>${ro ? Math.round(hf*100) + '%' : hp.cur + '/' + hp.max}</b></div>
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
     ${a.land > 0 && a.to === null ? `<div class="ab-emb" title="Troops coming ashore from the sea: they cannot move on or capture until they have landed, and fight at ${Math.round(rLandF(o)*100)}% on their first day ashore">⚓ <b>Landing</b> · ${durTxt(a.land)} left</div>` : a.emb != null && a.to === null && a.path.length ? `<div class="ab-emb" title="Ground forces board ships only at a naval city. The force stays in the port until it is aboard, then sails.">⚓ <b>Embarking</b> · ${durTxt(a.emb)} left</div>` : ''}
@@ -12905,7 +13149,7 @@ function cityRecruitHTML(p){ const P = G.P[p], N = S.nations[PLAYER]; let html =
         html += `<div class="mobneed"><span>${going ? `<b>Army Base going up</b>: ready in ${dayTxt(c0.h)}. Infantry and the other ground units can be trained here once it stands.` : `<b>No Army Base in ${P.cityName} yet.</b> Infantry and every other ground unit train only in a city with an Army Base (level I: $${cc.cash}M, ${dayTxt(cc.h)}).`}</span>${going ? '' : c0 ? `<span class="small muted">Busy building ${BUILD[c0.k].name}</span>` : `<button class="btn${hasC(N, cc) ? ' can' : ''}" data-act="build" data-k="fac" ${hasC(N, cc) ? '' : `disabled title="Needs ${missTxt(N, cc)}"`}>Build Army Base</button>`}</div>`; } }
     html += `<div class="eyebrow">Recruit<span class="rec-b"> · ${queueMax(PLAYER) > 1 ? `${queueUsed(p)}/${queueMax(PLAYER)} in training` : queueUsed(p) ? 'training' : 'one at a time'}</span>${recHead(p) ? `<span class="rec-b"> · ${recHead(p)}</span>` : ''}</div>${qOne ? `<div class="small mobone" style="margin:2px 0 6px"><b>One unit at a time.</b> The next one can be mobilized here when ${(UNITS[q0.t] || MISSILES[q0.t]).name} is ready (${q0.h} h).</div>` : ''}<div class="units">${open.map(card).join('')}</div>${locked.length ? `<details class="locked" ${lockedOpen ? 'open' : ''}><summary>${locked.length} locked unit${locked.length > 1 ? 's' : ''} ▸</summary><div class="units">${locked.map(card).join('')}</div></details>` : ''}`;
     const q = S.queue[p];
-    html += `<div class="small muted">${queueMax(PLAYER) > 1 ? `${1 + S.bld[p].fac} training line${S.bld[p].fac ? 's' : ''} (each Army Base level adds one). Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city).` : `One unit at a time in each city. With a membership: a queue of ${QUEUE_MAX} per city, trained side by side on the Army Base's training lines.`} <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
+    html += `<div class="small muted">${queueMax(PLAYER) > 1 ? `${lanes(p)} training line${lanes(p) > 1 ? 's' : ''}${S.bld[p].fac ? '' : ' (Army Base I opens a second)'}. Shift-click a card to fill the queue (max ${queueMax(PLAYER)} per city).` : `One unit at a time in each city. With a membership: a queue of ${QUEUE_MAX} per city, trained side by side on the Army Base's training lines.`} <button class="btn" data-act="airguide" style="padding:1px 7px;font-size:11.5px">Air &amp; drone guide</button></div>`;
     html += rallyRowHTML(p);
     html += `<label class="rep"><input type="checkbox" data-act="repeat" data-p="${p}" ${S.repeat && S.repeat[p] ? 'checked' : ''}><i aria-hidden="true"></i><span>Repeat production${S.repeat && S.repeat[p] ? ': ' + UNITS[S.repeat[p]].name : ' of the last unit queued'}</span></label>`;
     if (q.length) html += `<div class="queue">${q.map((it, i) => `<div class="qi"><span>${(UNITS[it.t] || MISSILES[it.t]).name}</span><span class="muted">${i === 0 ? it.h + ' h left' : 'queued'}</span></div>${i === 0 ? `<div class="bar"><i style="width:${Math.round((1 - it.h/(it.h0 || 24))*100)}%"></i></div>` : ''}`).join('')}</div>`;
@@ -13064,6 +13308,9 @@ document.addEventListener('click', e => {
     case 'merge': if (a && a.to === null && !a.fly){ for (const b2 of S.armies) if (b2 !== a && b2.owner === PLAYER && b2.at === a.at && b2.to === null && !b2.fly && !!b2.air === !!a.air) merge(a, b2); removeEmpty();
         { const sp = stackPenalty(a); toast(`Merged into ${armyName(a)}: ${pluN(count(a), 'unit')}.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); } renderSide(true); } break;
     case 'stop': if (a){ haltArmy(a); redraw(); renderSide(true); } break;
+    case 'wing-split': if (a && a.air){ const n0 = count(a), w2 = splitWing(a); if (w2){ sfx('order'); toast(`Split ${n0} aircraft into two wings: ${count(a)} · ${count(w2)}.`, 'info', null); } renderSide(true); } break;
+    case 'wing-merge': if (a && a.air && mergeWings(a)){ const sp = stackPenalty(a); sfx('order'); toast(`Merged into ${armyName(a)}: ${count(a)} aircraft.${sp.over ? ` ${stackWarn(sp)}` : ''}`, sp.over ? 'bad' : 'good', null); renderSide(true); } break;
+    case 'wing-return': if (a && a.air && recallAir(a)){ cmdMode = null; sel.target = null; sel.want = null; sel.atk = null; sfx('order'); toast(`${armyName(a)} turns back to ${G.P[a.air.base].cityName || G.P[a.air.base].name}.`, 'info', null); redraw(); renderSide(true); } break;
     case 'fleet-escort': case 'fleet-raid': case 'fleet-blockade': { const f = armyById(+b.dataset.id); if (!f || f.owner !== PLAYER) break; let done = true;
       if (act === 'fleet-escort'){ if (f.escort != null) escortSet(f, null); else { const r = fleetEscortPick(f); if (r) escortSet(f, r.id); else done = false; } }
       else if (act === 'fleet-raid'){ if (f.raid) raidSet(f, null); else { const t = raidTargets(f)[0]; done = !!t && raidSet(f, t.r.id); if (!done) toast(t ? 'No sea route to that lane from here.' : 'No enemy trade routes to raid.', 'bad', null); } }
@@ -13119,6 +13366,7 @@ document.addEventListener('click', e => {
     case 'cm-wp': wpMode = !wpMode; cmdMode = null; sel.target = null; targetPath = null; renderSide(true); break;
     case 'cm-undo': undoTap(); break;
     case 'cm-attack': cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); break;
+    case 'cm-patrol': cmdMode = cmdMode === 'patrol' ? null : 'patrol'; wpMode = false; renderSide(true); break;
     case 'cm-delay': if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } break;
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
     case 'sat': if (launchSat(PLAYER, +b.dataset.id)) renderSide(true); break;
@@ -13491,7 +13739,7 @@ const HELP_SEC = [
     <li><span class="res-mp">${icon('mp', 12)}</span> <b>Manpower</b>: population and Recruiting Offices (+3k a day at level I up to +9k at level V; each level also trains every unit in its city 10% faster); Mobilisation in Production raises it at a cost in money. Every unit needs crews.</li>
     <li><b>Short of something?</b> A city's chip and the Cities tab show its main resource, and hovering a province shows its yields, so you know what to capture. Buy or sell oil, materials, iron, electronics and rare materials on the <b>Market</b> (T), get goods from <b>trade routes</b>, trade in <b>deals</b>, or ask your coalition: partners can gift any resource.</li></ul>`],
   ['basics', 'Recruit, move, capture', `<ul>
-    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry). No city starts with one: build level I in your capital first (cheap, ready in 30 minutes, the same price in every city; for levels II\u2013V your first two cost the base price, each later one 40% more); units take a day or more to train. A city trains one unit at a time; with a membership it holds a queue of ${QUEUE_MAX}, and each Army Base level adds a training line. Cities can have a rally point for new units.</li>
+    <li><b>Recruit</b> in your cities: every ground unit, infantry included, needs an Army Base in its city (level I for infantry). No city starts with one: build level I in your capital first (cheap, ready in 30 minutes, the same price in every city; for levels II\u2013V your first two cost the base price, each later one 40% more); units take a day or more to train. Army Base levels I–III unlock units (tanks and IFVs at level II, rocket artillery, SAMs, special forces and jammers at III); levels IV and V train faster, and the Recruiting Office is the main way to speed training up. A city trains one unit at a time; with a membership it holds a queue of ${QUEUE_MAX}, and Army Base I opens a second training line. Cities can have a rally point for new units.</li>
     <li><b>Move</b>: tap your counter, then a province or sea zone; the dashed route shows the odds chip and travel time. Tap again or press Send.</li>
     <li><b>Capture</b>: a province is yours the moment your ground units reach its centre point, the city (or, without a city, the crossroads in its middle where its roads meet), with no defenders left: there is no capture timer, and ${CAP_MIN === 1 ? 'one ground unit is enough' : CAP_MIN + ' ground units are needed'}. Every province's roads meet at that point, and a march into a province ends on it. Crossing the border or stopping anywhere else in it does not take it: the army bar says <i>Reach the city to capture</i>, and a move to a point beyond the city goes by it. Air units fight but never capture.</li>
     <li><b>Battles</b> run hour by hour. The blue bar is morale: forces that break retreat. Defenders on home soil take less damage, troops at sea more. Enemy columns on the move that come into the same province or sea zone stop where they meet and fight; a force that meets the enemy in the province it was going to walks on to its point once it has won.</li>
@@ -13517,10 +13765,10 @@ const HELP_SEC = [
     <li><b>Capture</b>: trains run only through provinces held by you or an ally, so a captured line serves its new owner. Works on a link are abandoned if either end is lost.</li></ul>`],
   ['air', 'Air power and new aircraft', `<ul>
     <li><b>Wings</b> live at your airbases (or on a carrier). Select one and tap a target inside its range ring: strike missions hit everything hostile there and fly home to rearm; patrols guard a province for 12 h.</li>
-    <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (Airbase II): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
-    <li><b>Heavy Bomber</b> (Airbase II): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
-    <li><b>Stealth Bomber</b> (Airbase III; research the Strategic Bomber Upgrade on the Heavy Bomber's line and Stealth Airframes on the Strike Fighter's, then the Stealth Bomber itself, from day 14): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
-    <li><b>AWACS</b> (Airbase II) locates enemy forces within 500 km (up to 650 km with radar research) and lets your fighters inside that radius cover the neighbouring provinces and fight better. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
+    <li><b>Interceptor</b>: patrols one province and shoots down strikes, bombers and drones. <b>Air Superiority Fighter</b> (${needTxt('asf')}): covers the province and all its neighbours, hits aircraft hardest and hunts UAVs, AWACS and patrol planes. Countered by SAMs.</li>
+    <li><b>Heavy Bomber</b> (${needTxt('bomb')}): very long range; wrecks cities, buildings, roads and rail. Easy prey for fighters and SAMs: escort it or clear the sky first.</li>
+    <li><b>Stealth Bomber</b> (${needTxt('stealth')}; research the Strategic Bomber Upgrade on the Heavy Bomber's line and Stealth Airframes on the Strike Fighter's, then the Stealth Bomber itself, from day 14): the Heavy Bomber's range with 60% of its bombs. SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often. In flight it shows only to a Mobile SAM or jammer in or next to the province under it; an AWACS gets a <b>?</b> contact at half its range. Costly to build and to keep.</li>
+    <li><b>AWACS</b> (${needTxt('awacs')}) locates enemy forces within 500 km (up to 650 km with radar research) and lets your fighters inside that radius cover the neighbouring provinces and fight better. <b>Maritime Patrol</b> finds submerged submarines and hunts ships and convoys. <b>Gunships</b> hit armor and infantry at short range.</li>
     <li><b>Wear and maintenance</b>: every mission wears a wing 3–6% (more for long or loitering missions), even unopposed. Wings repair only on the ground at your airbases (10% + 6% per base level a day) or on a carrier (20%), and not in the 6 h after a sortie, so back-to-back strikes grind them down. Below 50% they show <b>Needs maintenance</b> and fight worse; below 20% they are grounded.</li></ul>`],
   ['drones', 'Drones, UAVs, AWACS and jammers', `<ul>
     <li><b>UAV levels</b> (Drones research): UAV I–III are <b>recon only</b>: they reveal what is around them, with more vision, loiter time, range and stealth each level. UAV IV and V are <b>armed</b> and fire missile salvos at units and buildings.</li>
@@ -13529,7 +13777,7 @@ const HELP_SEC = [
     <li><b>Static Jammers</b> (anti-drone) down drones over their province and its neighbours, swarms best, and blunt the drones that get through; they cannot fight anything else. SAMs and fighters also kill drones; a bigger swarm loses more drones.</li>
     <li>The <b>Air &amp; drone guide</b> (button in any city panel) lists every air unit, its range and its counters.</li></ul>`],
   ['navy', 'Navy, speeds and transports', `<ul>
-    <li><b>Ships</b> come from a Naval Yard in a coastal city: frigates (air defence, find submarines nearby), submarines (hidden convoy and fleet killers), cruisers, carriers (a mobile airbase).</li>
+    <li><b>Ships</b> come from a Naval Yard in a coastal city: frigates (air defence, find submarines nearby) at ${needTxt('frig')}, cruisers and submarines (hidden convoy and fleet killers) at ${needTxt('crui')}, carriers (a mobile airbase) at ${needTxt('carr')}; levels IV and V train ships faster.</li>
     <li><b>Naval cities</b>: every coastal city is a naval city, marked with an anchor beside its name. Only there can a Naval Yard be built, and only there do troops board ships and come ashore.</li>
     <li><b>Transports</b>: ground troops board ships only at a <b>naval city</b> of yours or a friend's; from a coast without one the order to sea is refused (march to a naval city). Embarking takes ${durTxt(EMBARK_H)} in the port; then they ride slow transports, about 650 km a day. Ships in the same zone escort them: they take less damage.</li>
     <li><b>Landings</b> only at a naval city: your own or a friend's, or an enemy's or independent one taken by an <b>assault landing</b>. A route to other land over the sea lands at the nearest naval city and marches on. <b>Marines</b> (amphibious infantry, trained at an Army Base in a coastal city once researched in the Infantry Corps) land on any coast, when the force is Marines alone. ${durTxt(LAND_H)} to come ashore (${durTxt(LAND_PORT_H)} into a naval city you or a friend hold; Amphibious Doctrine halves both). Meanwhile the troops cannot move on or capture, and fight at a disadvantage on their first day ashore. The army bar counts the time down.</li>
@@ -14030,7 +14278,7 @@ if (location.protocol === 'file:' && window.__im) window.__im.wx = {   // test o
 if (location.protocol === 'file:' && window.__im) window.__im.wfx = {W:WFX, FXW, cover:(x, y, w) => wfxCover(x, y, w), start:(k, x, y, o) => wfxStart(k, x, y, o), strike:(k, x, y, o) => wfxStrike(k, x, y, o), dev:k => devFx(k), cap:h => wfxCap(h), freeze:t => { WFX.fz = t || 0; redraw(); }, dbg:on => { WFX.dbg = on ? [] : null; }, spr:(k, a, b, c) => k === 'fire' ? wfxFire(a, b) : k === 'ring' ? wfxRing(a) : k === 'scorch' ? wfxScorch() : wfxSmoke(a, b, c), get pos(){ return WFX.dbg; }, AFX, PART, WRECKS, mark:(p, h) => afxMark(p, h), explode:(x, y, b) => explode(x, y, b), puff:(x, y, o) => afxPuff(x, y, o)};
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {BFX:{get:() => BFX}, BSM:{get:() => BSM}, hits:{get:() => hits}, hitx:{get:() => HITX}, season:{value:p => season(p)}, geo:{get:() => GEO}, tintOf:{value:(o, c) => tintOf(o, c)}, isWet:{value:(x, y) => isWet(x, y)}});   // the battle fire hook (figures' firing points) and the battle smoke
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {rd:{get:() => RD}, ambIdle:{value:() => ambIdle()}, mapBusy:{value:() => !!(RD.st || RD.dirty || DT.busy > 0 || CITY_PEND || SNOWT || SEAJ.it || SEAJ.q.length)}, wrap:{value:{W:WRAP_W, X0:WRAP_X0, WW:WORLD_W, WH:WORLD_H, minScale:() => minScale(), ks:() => wrapKs(0)}}, redraw:{value:ms => redraw(ms)}, bg:{value:on => on ? bgPause() : bgResume()}});   // the redraw scheduler (Battery saver tests); mapBusy: the map still converging (bands, tiles, city bakes): tests wait for it before comparing shots
-if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {pathDbg:{get:() => PATHDBG}, netDraw:{value:() => netDraw()}, legGeom:{value:(a, u, v) => legGeom(a, u, v)}, clearSel:{value:() => clearSel()}, wpMode:{get:() => wpMode, set:v => { wpMode = !!v; renderSide(true); }}, stopTap:{value:(a, p, x, y) => stopTap(a, p, x, y)}, undoTap:{value:() => undoTap()}, coreAt:{value:(x, y) => coreAt(x, y)}, stopRoutes:{value:a => stopRoutes(a)}, cmdMode:{get:() => cmdMode}, lastPT:{get:() => lastPT}});   // (unit controls and waypoints: .test/controls.js, .test/waypoints.js)
+if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {pathDbg:{get:() => PATHDBG}, netDraw:{value:() => netDraw()}, legGeom:{value:(a, u, v) => legGeom(a, u, v)}, clearSel:{value:() => clearSel()}, wpMode:{get:() => wpMode, set:v => { wpMode = !!v; renderSide(true); }}, stopTap:{value:(a, p, x, y) => stopTap(a, p, x, y)}, undoTap:{value:() => undoTap()}, coreAt:{value:(x, y) => coreAt(x, y)}, stopRoutes:{value:a => stopRoutes(a)}, cmdMode:{get:() => cmdMode}, lastPT:{get:() => lastPT}, recallAir:{value:a => recallAir(a)}, cityPt:{value:p => { const m = cityPts.find(q => q.p === p); return m ? [m.x, m.y] : null; }}});   // (unit controls and waypoints: .test/controls.js, .test/waypoints.js; aircraft: .test/air-tap.js)
 if (location.protocol === 'file:' && window.__im) Object.defineProperties(window.__im, {toast:{value:(t, k, p) => toast(t, k, p)}, camFly:{get:() => camFly}, flyHome:{value:() => flyHome()}, camGo:{value:(x, y, s, o) => camGo(x, y, s, o)}, CAMSNAP:{get:() => CAMSNAP}, flyHold:{value:ms => { if (camFly) camFly.hold = ms; }}});   // tests: hold the start flight at ms (screenshots of a mid frame)
 if (location.protocol === 'file:' && window.__im) window.__im.rs = {pics:() => ({nodes:RNODES.map(n => ({id:n.id, kind:n.kind, name:n.name, u:n.u, eng:n.eng, key:rKey(n)})), cats:RCATS.map(c => c.id)}), can:(n, id) => canResearch(n, id), why:(n, id) => researchWhy(n, id), start:(n, id) => startResearch(n, id), free:n => rFree(S.nations[n]), hour:n => researchHour(S.nations[n]), cost:(id, lv) => rCost(RN[id], lv || 1), TECH:() => RNODES.filter(T => !T.std).map(T => ({id:T.id, req:T.req[0] || null, reqs:T.req.slice(), days:T.lv[0].c.days, day:T.lv[0].day, levels:T.lv.length, kind:T.kind, cat:T.cat, u:T.u})), level:(n, id) => rLevel(n, id), open:(n, id) => rOpen(n, id), day:() => rDay(), grant:(n, id, lv) => rGrant(S.nations[n], id, lv), done:n => rDone(n), steps:() => R_STEPS, hurt:(a, d, f) => hurt(a, d, f), airRange:(n, t) => airRangeT(n, t), unlocked:(n, t) => unlocked(n, t), reqs:(id, lv) => rReqs(RN[id], lv), mslOf:(n, k) => mslOf(n, k), dropRange:a => dropRange(a), migrate:() => { delete S.rsv; researchMigrate(); }, st:(n, t, k) => st(n, t, k), RV:() => RV, html:() => researchHTML(), look:(t, n, lv) => unitLookArt(t, n, lv), lookNode:id => rkLook(RN[id]), ulFiles:() => UL_CELL, group:n => ulGroup(n), model:(u, g, k) => unitModel(u, g, k), line:() => researchLine(), save:() => saveJSON(), aiTurn:n => aiTurn(n)};   // two research slots (.test/rs2.js)
 if (location.protocol === 'file:' && window.__im) window.__im.uc = {heartOn:a => heartOn(a), mid:(id, pid) => { const hexPx = view.s*HS0, a = S.armies.find(q => q.id === id), P = G.P[pid], dx = a.pos[0] - P.x, dy = a.pos[1] - P.y, l = Math.hypot(dx, dy) || 1, NM = heartNames(pid, hexPx); return {hexPx, hb:HEARTF.HB.get(pid) || null, own:NM.own, mk:NM.mk, r:heartMid0({at:pid, n:count(a), list:[a], owner:a.owner}, l*view.s, [dx/l, dy/l], hexPx, HEARTF.HB.get(pid) || null, [])}; }, names:(p, h) => heartNames(p, h), gnd:(p, x, y) => heartGnd(p, x, y), badge:(n, q, x, y, h, hb, p) => heartBadge(n, q, x, y, h, hb, p), land:(p, sx, sy) => { const [wx, wy] = screenToWorldRaw(sx, sy), v = tmGround(p, 'g', wx, wy, 1), q = provAt(sx, sy), own = v < 2600 && q >= 0 && !G.P[q].sea && S.owner[q] === S.owner[p]; return {own, g:v === 0 ? 'prov' : v < 2600 ? 'ctry' : v < 3200 ? 'foreign' : 'sea', at:q >= 0 ? (G.P[q].cityName || G.P[q].name) : null}; }, list:(p, k) => heartList(p, k), line:p => heartLine(p, 'cs-in'), marks:() => HMDBG.slice(), dot:id => DOTW.get(id) || null, ringR:() => heartRingR(view.s*HS0), held:() => HBDBG && [...HBDBG], geo:() => ({uiK:uiK(), dotR:dotR(), d6:plateDims(6, 1, false, false), d2:plateDims(2, 1, false, false), t6:plateDims(6, 1, false, true), lift6:dotLift(6, false), lift2:dotLift(2, false), ring:[12, 30, 60, 120, 240].map(h => [h, heartRingR(h), heartOut(h), tmOn() ? tmFade(h) : null, tmOn() ? tmU(h) : null])}), lay:p => { const L = PLAY.get(p); return L ? {hr:L.hr || null, dbg:L.dbg, dbc:L.dbc, out:[...L.out], items:(PREG.get(p) || []).map(q => ({ax:q.ax, ay:q.ay, fb:q.fb}))} : null; }};   // units in cities (.test/units-in-cities.js)
@@ -14178,7 +14426,7 @@ function battleBlasts(p, owners, sides, lostBy){ const B = S.bt && S.bt[p], P = 
   for (let i = jobs.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [jobs[i], jobs[j]] = [jobs[j], jobs[i]]; }   // (both sides' blasts mixed through the hour)
   jobs.slice(0, cap).forEach(([z, at], i, J) => fxLater(i*span/J.length + Math.random()*span*0.25/J.length, () => FXW.blast(z, ...fxOff(at[0] + (Math.random() - 0.5)*5, at[1] + (Math.random() - 0.5)*3, 2), {sea:P.sea}))); }
 IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet(PLAYER).has(p), lostBy = [];
-  if (showFx) owners.forEach((o, i) => { const lost = lostBy[i] = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
+  if (showFx) owners.forEach((o, i) => { lostBy[i] = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); });   // (the round's losses: each side's own fight label shows them, fightPills; the floating "−N" by the counters is gone)
   if (showFx && booted){ battleBlasts(p, owners, sides, lostBy); for (const a of list) if ((a._h || 0) - effHP(a) > 0.2) unitHit(a.id, blastSize(mainT(a))); }   // (fx.js: a hit force flashes red and shakes)   // the hour's hits: a blast for each kind of unit lost, sized by its class (the only blasts of the hour: no drawn discs or sprite pops beside them)
   if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
     if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});

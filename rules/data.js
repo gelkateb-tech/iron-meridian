@@ -16,8 +16,8 @@ const resK = o => { for (const k in o) o[k] *= RES_K; return o; };   // a table 
 const lotCash = (q, price) => q/MKT_LOT*price, lotsFor = (cash, price) => Math.floor(cash/price)*MKT_LOT;
 // req (and req2 for the few that need two): the building, and its level, a city must have to mobilize the unit; tech: the research it needs (null: known from day one).
 // Ground units, infantry included, come from an Army Base, aircraft from an Airbase, ships from a Naval Yard. The rule itself is canMobilize()
-// The Army Base rule (owner, 2026-11-14): infantry (Motorized, Anti-Tank, Special Forces and Paratroopers; Paratroopers also need an Airbase) is
-// mobilized only in a city with an Army Base of level I or more. INF_NEEDS lists the buildings infantry needs at level I: ['fac'] the Army Base alone
+// The Army Base rule (owner, 2026-11-14): infantry (Motorized, Special Forces and Paratroopers; Paratroopers also need an Airbase) is
+// mobilized only in a city with an Army Base (the level each needs: BASE_LV below, owner 2026-11-27). INF_NEEDS lists the buildings infantry needs at level I: ['fac'] the Army Base alone
 // (the Recruiting Office unlocks nothing and keeps its training-speed and manpower bonuses), ['fac', 'rec'] both. The one switch between the two.
 const INF_NEEDS = ['fac'];
 /* NAVAL CITIES (owner 2026-11-19): every coastal city is a NAVAL CITY (navalCity, rules/state.js): the only place a Naval Yard can be built, the only
@@ -26,9 +26,24 @@ const INF_NEEDS = ['fac'];
    any coast). NAVAL_CITIES is the one switch: false gives the game exactly as it was before (no Marines, landings on any coast). */
 const NAVAL_CITIES = true;
 const INF_T = ['inf', 'at', 'spec', 'para', ...(NAVAL_CITIES ? ['mar'] : [])];   // the infantry units (their req and req2 are set from INF_NEEDS below the table)
+/* ASF ATTACK ORDER (owner playtest 2026-11-27, item 2a; owner 2026-11-28: "make its Attack even weaker: about 1 HP of damage per strike against
+   ground troops and ships, as a plain attack number in its stats, on the same scale as every other unit. Its air-to-air strength stays as it is").
+   The Air Superiority Fighter keeps its job of winning the air (attack 9 x vs air 3.0, unchanged) and may also be sent to attack enemy ground
+   forces and ships (the Attack button: orderAir with want 'strike', rules/air.js asfStrike), for harassment: troops at sea, armies on the move.
+   atk: its attack on ground forces and ships, ONE number on the scale of every unit's attack in Army Info (Motorized Infantry 3, Main Battle
+   Tank 6, a Strike Fighter 9.6 on infantry): against infantry, armour, artillery, ships and submarines alike. Set into UNITS.asf.vs below the
+   table (vs soft, armored, naval = atk / its attack 9), so research that raises its attack raises this too, as for any unit. Measured with the
+   real resolveStrike (one aircraft, open plains, morale 80, .test/asf-attack.js): about 1.0 HP a sortie on infantry, 0.9 on a tank, 0.8 on a
+   frigate, 1.5 on infantry at sea without warships (AT_SEA below; 0.75 with them). Until 2026-11-28 it was three multipliers (soft 0.25,
+   armoured 0.2, naval 0.3: 2.25, 1.8, 2.7 on that scale, about 2.3 HP on infantry). links: whether its strike also hurts the land under it as a
+   Strike Fighter's does (cuts the road and rail links for LINK_DMG.strike hours, adds war damage); false: the forces only. No research needed. */
+const ASF_ATTACK = {atk:1, links:false};
+/* TROOPS AT SEA (rules/tick.js battles, rules/air.js strikes): ground units aboard ships in a sea zone take more damage, as in Conflict of
+   Nations: AT_SEA.alone (1.5x) with no warship of their own nation in that sea zone, AT_SEA.escort (0.75x) with one. The same factor in battles
+   at sea, in air strikes and UAV salvoes on forces at sea, and in Army Info ('at sea', rules/combat.js armyStrength): atSeaF. */
+const AT_SEA = {alone:1.5, escort:0.75};
 const UNITS = {
   inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:{b:'fac', l:1},          tech:null,  role:'Line infantry that holds ground and captures provinces.'},
-  at:   {name:'Anti-Tank Infantry',short:'ATI', cls:'soft',    cost:32, oil:0, metal:3, iron:3, elec:0, rare:0, mp:10, atk:3, def:3, hp:9,  spd:4,  build:30, upk:1, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{armored:3.5}, role:'Infantry armed with anti-tank missiles.'},
   art:  {name:'Mobile Artillery',  short:'ART', cls:'soft',    cost:36, oil:3, metal:4, iron:7, elec:0, rare:0, mp:10, atk:7, def:3, hp:9,  spd:3,  build:48, upk:2, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Self-propelled howitzer that fires on enemy forces from a distance.'},
   sam:  {name:'Mobile SAM',        short:'SAM', cls:'soft',    cost:44, oil:2, metal:6, iron:3, elec:7, rare:0, mp:8,  atk:5, def:2, hp:8,  spd:4,  build:48, upk:2, fuel:0,   req:{b:'fac', l:2}, tech:null,  vs:{air:3.0, soft:0.3, armored:0.3}, vsU:{swarm:1.4, sdrone:3.2, bomb:4.0}, role:'Mobile surface-to-air missile launcher that guards the sky over your forces.'},
   ifv:  {name:'Infantry Fighting Vehicle',short:'IFV', cls:'armored', cost:32, oil:4, metal:4, iron:7, elec:0, rare:0, mp:10, atk:4, def:4, hp:12, spd:7,  build:36, upk:2, fuel:0.5, req:{b:'fac', l:1}, tech:'inf2', role:'Fast armored infantry carrier.'},
@@ -45,13 +60,13 @@ const UNITS = {
   drone:{name:'Recon UAV',         short:'UAV', cls:'air', dr:'uav', cost:26, oil:2, metal:4, iron:0, elec:5, rare:0, mp:1,  atk:0, def:1, hp:4, spd:16, build:30, upk:1, fuel:0.5, req:{b:'air', l:1}, tech:'drone1', vs:{soft:1.0, armored:1.2, air:0, naval:0.6}, vsU:{sam:1.3, jam:1.6, art:1.4, mlrs:1.4}, role:'Unmanned aircraft that scouts enemy forces; later models carry missiles.'},
   para: {name:'Paratroopers',short:'PAR', cls:'soft',   cost:36, oil:0, metal:4, iron:0, elec:0, rare:0, mp:10, atk:4, def:3, hp:10, spd:4,  build:36, upk:1.5, fuel:0,   req:{b:'fac', l:1}, req2:{b:'air', l:1}, tech:'para1', role:'Airborne infantry that can be dropped from the air.'},
   // V3 air: drones, the jammer that counters them, and specialised aircraft. dr = drone kind (swarm / uav / sdrone); pack = units per recruit card
-  swarm:{name:'Swarm Drones',      short:'SWM', cls:'air', dr:'swarm', pack:6, cost:40, oil:2, metal:4, iron:0, elec:5, rare:0, mp:2, atk:1.6, def:0.5, hp:2, spd:14, build:30, upk:0.25, fuel:0.05, req:{b:'fac', l:2}, tech:'swarm1', vs:{soft:1.3, armored:0.35, air:0, naval:0.25}, vsU:{sam:1.8, jam:2.0, art:1.6, mlrs:1.0, ifv:0.9, at:1.2}, role:'Cheap loitering drones launched in packs from trucks.'},
+  swarm:{name:'Swarm Drones',      short:'SWM', cls:'air', dr:'swarm', pack:6, cost:40, oil:2, metal:4, iron:0, elec:5, rare:0, mp:2, atk:1.6, def:0.5, hp:2, spd:14, build:30, upk:0.25, fuel:0.05, req:{b:'fac', l:2}, tech:'swarm1', vs:{soft:1.3, armored:0.35, air:0, naval:0.25}, vsU:{sam:1.8, jam:2.0, art:1.6, mlrs:1.0, ifv:0.9}, role:'Cheap loitering drones launched in packs from trucks.'},
   sdrone:{name:'Strike Drone', short:'SDR', cls:'air', dr:'sdrone', cost:48, oil:3, metal:6, iron:0, elec:7, rare:1, mp:2, atk:5, def:1, hp:5, spd:12, build:42, upk:1.5, fuel:0.4, req:{b:'air', l:1}, tech:'sdrone1', vs:{soft:1.1, armored:1.4, air:0, naval:0.9}, vsU:{sam:1.5, jam:1.8, art:1.6, mlrs:1.6}, role:'Long-range one-way attack drone.'},
   jam:  {name:'Mobile Jammer',     short:'JAM', cls:'soft',    cost:34, oil:1, metal:4, iron:0, elec:7, rare:0, mp:6,  atk:1, def:2, hp:7,  spd:5,  build:30, upk:1.5, fuel:0, req:{b:'fac', l:1}, tech:'jam1', vs:{soft:0.3, armored:0.2, air:0.3, naval:0}, role:'Electronic warfare vehicle that defends against drones.'},
   bomb: {name:'Heavy Bomber', short:'HBR', cls:'air', bmb:1, cost:132, oil:20, metal:24, iron:6, elec:14, rare:0, mp:6, atk:10, def:2, hp:14, spd:9, build:96, upk:7, fuel:3, req:{b:'air', l:2}, tech:'bomb1', vs:{soft:1.2, armored:0.8, naval:0.6, air:0.3}, role:'Long-range bomber that strikes cities and buildings.'},
   mpa:  {name:'Maritime Patrol Aircraft', short:'MPA', cls:'air', cost:74, oil:10, metal:12, iron:0, elec:11, rare:0, mp:5, atk:6, def:2, hp:10, spd:14, build:66, upk:4, fuel:2, req:{b:'air', l:1}, tech:'mpa1', vs:{naval:1.3, soft:0.2, armored:0.1, air:0.1}, vsU:{sub:2.5}, role:'Patrol aircraft that searches the sea for ships and submarines.'},
   awacs:{name:'AWACS',              short:'AEW', cls:'air',     cost:96, oil:10, metal:14, iron:0, elec:18, rare:5, mp:5, atk:0, def:2, hp:10, spd:15, build:72, upk:5, fuel:2, req:{b:'air', l:2}, tech:'awacs1', vs:{soft:0, armored:0, air:0, naval:0}, role:'Airborne radar that spots enemy forces from afar.'},
-  asf:  {name:'Air Superiority Fighter', short:'ASF', cls:'air', cost:78, oil:11, metal:12, iron:0, elec:12, rare:2, mp:5, atk:9, def:5, hp:10, spd:22, build:72, upk:6, fuel:2, req:{b:'air', l:2}, tech:'asf1', vs:{air:3.0, soft:0.25, armored:0.2, naval:0.3}, vsU:{bomb:3.0, awacs:3.0, mpa:3.0, drone:2.4, sdrone:2.6, swarm:1.8}, role:'Fighter built to win control of the air.'},
+  asf:  {name:'Air Superiority Fighter', short:'ASF', cls:'air', cost:78, oil:11, metal:12, iron:0, elec:12, rare:2, mp:5, atk:9, def:5, hp:10, spd:22, build:72, upk:6, fuel:2, req:{b:'air', l:2}, tech:'asf1', vs:{air:3.0}, vsU:{bomb:3.0, awacs:3.0, mpa:3.0, drone:2.4, sdrone:2.6, swarm:1.8}, role:'Fighter built to win control of the air; it can also harass ground forces and ships, very weakly.'},
   // bmb: bomb load as a share of the Heavy Bomber's (bombers wreck cities, buildings and roads); lo: low-observable airframe, the share of hits that find it
   // (ad: Mobile SAMs, frigates and cruisers; air: fighters and other aircraft), each measured against what the same shooter does to a Heavy Bomber
   stealth:{name:'Stealth Bomber', short:'STB', cls:'air', bmb:0.6, lo:{ad:0.35, air:0.4}, cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, atk:8, def:4, hp:12, spd:10, build:168, upk:14, fuel:3.5, req:{b:'air', l:3}, tech:'bomb3', vs:{soft:1.0, armored:0.7, naval:0.6, air:0.2}, role:'Long-range bomber that is hard to detect.'},
@@ -59,9 +74,42 @@ const UNITS = {
 // Marines (NAVAL CITIES): amphibious infantry, a little stronger and dearer than Motorized Infantry; trained at an Army Base in a coastal city
 // (coastal: mobBlock, rules/production.js); a force of Marines alone boards and lands on any coast (amphib, rules/movement.js)
 if (NAVAL_CITIES) UNITS.mar = {name:'Marines', short:'MAR', cls:'soft', cost:34, oil:0, metal:3, iron:2, elec:0, rare:0, mp:10, atk:4, def:3, hp:10, spd:4, build:36, upk:1.5, fuel:0, req:{b:'fac', l:1}, tech:null, coastal:1, amph:1, role:'Amphibious infantry: boards ships and lands on any coast, not only at naval cities. Trained at an Army Base in a coastal city.'};
+// the Air Superiority Fighter's attack on ground forces and ships (ASF_ATTACK.atk, above) as its damage classes: atk / its attack, so Army Info
+// reads ASF_ATTACK.atk against infantry, armour, ships and submarines (its air-to-air, vs air 3.0 and vsU, is its own)
+for (const k of ['soft', 'armored', 'naval']) UNITS.asf.vs[k] = ASF_ATTACK.atk/UNITS.asf.atk;
+// Anti-Tank Infantry ('at') is gone (owner 2026-11-27, BUILD-REQS): a type in INF_T with no unit is dropped from it here, before anything reads it
+// (an old save's Anti-Tank Infantry becomes Motorized Infantry on load: atMigrate, rules/state.js)
+for (let i = INF_T.length - 1; i >= 0; i--) if (!UNITS[INF_T[i]]) INF_T.splice(i, 1);
 // infantry's buildings from INF_NEEDS: reqs lists every building the unit needs at its level (the Paratroopers' Airbase last); reqsOf reads it
 for (const t of INF_T){ const U = UNITS[t], air = U.req2 && U.req2.b === 'air' ? [U.req2] : [];
   U.reqs = [...INF_NEEDS.map(b => ({b, l:1})), ...air]; U.req = U.reqs[0]; if (U.reqs[1]) U.req2 = U.reqs[1]; else delete U.req2; }
+/* BUILD REQUIREMENTS (owner 2026-11-27, BUILD-REQS): the level of its base (b: fac Army Base, air Airbase, yard Naval Yard) each unit needs, one table
+   for all three bases; it is written onto each unit's req (and the infantry's reqs) below, so mobBlock, the build lists, their texts and the computer
+   read it from there. The Army Base and the Airbase exactly as the owner listed them; levels IV and V add no unit of their own (only the slot for
+   Missile Defence at Army Base V, and the Stealth Bomber at Airbase V): they build faster (BASE_SPD). The Naval Yard as the owner listed it in
+   round 2 (2026-11-27): I Corvette, Frigate; II Destroyer; III Cruiser, Attack Submarine; IV no new units; V Aircraft Carrier, Ballistic Missile
+   Submarine. Units the owner's lists do not name keep the level they had: Marines (Army Base I, coastal cities only) and the Interceptor
+   (Airbase I). Paratroopers also keep their Airbase I (req2). Ships already at sea stay, and ships already queued in a yard that is now too
+   low finish as queued (the queue never checks the level again: prodHour); only new orders need the new level (yardMigrate tells the seat).
+   A key with no unit is a MARKED SLOT, skipped until that unit exists (nothing is made for it):
+     rcn   THE RECON SLOT: the recon vehicle, Army Base I (proposed with the starting armies, branch start-armies, under the key 'rcn'; not in the game yet)
+     maa   Mobile Anti-Air, Army Base II (no short-range air-defence vehicle in the game; the Mobile SAM, the nearest, is listed at level III)
+     mdef  Missile Defence, Army Base V (no such unit; today only the research Anti-Missile Shield, msl3, which works nation-wide with no building)
+     corv  Corvette, Naval Yard I (no such ship yet; docs/RESEARCH.md 'Patrol Boat' is the nearest proposal)
+     dest  Destroyer, Naval Yard II (no such ship yet; proposed in docs/RESEARCH.md, between the Frigate and the Cruiser)
+     ssbn  Ballistic Missile Submarine, Naval Yard V (no such ship yet; proposed in docs/RESEARCH.md) */
+const BASE_LV = {
+  fac: {inf:1, rcn:1, art:1, mar:1,  ifv:2, tank:2, maa:2, para:2, swarm:2,  mlrs:3, sam:3, spec:3, jam:3,  mdef:5},
+  air: {drone:1, heli:1, asf:1, int:1,  jet:2, sdrone:2,  mpa:3, awacs:3, bomb:3,  stealth:5},
+  yard:{corv:1, frig:1,  dest:2,  crui:3, sub:3,  carr:5, ssbn:5},
+};
+for (const b in BASE_LV) for (const t in BASE_LV[b]){ const U = UNITS[t]; if (!U) continue;   // (a marked slot: no unit yet)
+  for (const r of U.reqs || [U.req, U.req2]) if (r && r.b === b) r.l = BASE_LV[b][t]; }
+// BUILD SPEED (owner 2026-11-27): levels I-III of the three bases only unlock units; levels IV and V train faster, the same on all three. A unit's
+// training time is multiplied by the factor for the level of the base that trains it (its first building need, trainBase in rules/production.js:
+// the Army Base for ground units, Swarm Drones and Paratroopers, the Airbase for aircraft, the Naval Yard for ships), by level 0 to V. The Recruiting
+// Office (10% faster a level, 50% at level V) stays the main way to speed up training. Option B, closer to the old top levels: 0.85 and 0.7
+const BASE_SPD = {fac:[1, 1, 1, 1, 0.9, 0.8], air:[1, 1, 1, 1, 0.9, 0.8], yard:[1, 1, 1, 1, 0.9, 0.8]};
 const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', mar:'Marines', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber'};
 // minH: the shortest flight (h); pk: the chance each SAM-equivalent in or next to the target stops it (Anti-Missile Shield on top: rShield); silo: the
 // Missile Silo level that builds it (0: also any city with an Army Base, Airbase or Naval Yard, msl1, owner point 12 / docs/MISSILES.md 5); land:
@@ -143,7 +191,7 @@ const terr = p => TERRAIN[G.P[p].terrain] || TERRAIN.plains;
 const RIVER_X = 1.3, RIVER_XB = 1.1, RIVER_ATK = 0.8;
 const riverX = (from, to) => G.P[from].river.has(to) && !G.P[to].sea && !G.P[from].sea;
 // per-unit-type terrain combat factor: [atk 0/1][cold 0/1] -> {type: factor}; aircraft and ships ignore terrain
-const FOOT_U = {inf:1, para:1, at:1, mar:1}, GUN_U = {art:1, mlrs:1}, TUF = {};
+const FOOT_U = {inf:1, para:1, mar:1}, GUN_U = {art:1, mlrs:1}, TUF = {};
 function tuf(k, atk, cold){ const key = k + (atk ? 1 : 0) + (cold ? 1 : 0); let r = TUF[key]; if (r) return r; const T = TERRAIN[k] || TERRAIN.plains; r = TUF[key] = {};
   for (const t of Object.keys(UNITS)){ const c = UNITS[t].cls; let f = 1;
     if (c !== 'air' && c !== 'naval'){ f = t === 'spec' ? T.spec : FOOT_U[t] ? T.foot : GUN_U[t] ? T.art : 1; if (c === 'armored' && atk) f *= T.armor; if (cold) f *= T.cold || 1; }
@@ -182,13 +230,13 @@ const BUNKER_HIT = 20;        // the health one building hit takes from a bunker
 const BUNKER_SHIELD_LV = 1;   // the other buildings of the province are shielded with this level's protection, whatever the bunker's level ("up to level 1")
 const BUNKER_FIX = 2.5;       // health a bunker repairs an hour (a lost level is not repaired: it is built again)
 const BUILD = {
-  fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:10, metal:2, iron:2, hours:0.5}, where:'city', desc:'Unlocks and trains ground units. Level I (cheap, 30 minutes): infantry (Motorized, Anti-Tank, Special Forces; Paratroopers also need an Airbase), mobile artillery, main battle tanks, IFVs and jammers; level II: mobile SAMs, rocket artillery and swarm drones. With a membership, each level adds a training line; ground units train 20% faster per level up to III, then 5% per level. No income. Level I costs the same in every city. Levels II\u2013V: your first two cost the base price; from the third on, each other province where you already have level II or higher makes the next cost 40% more.'},
-  air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:'Needed for strike fighters and interceptors (with Jet Engines research). Levels II\u2013V: aircraft build 10% faster and wings based here reach 1 hex farther per level above I.'},
+  fac:  {name:'Army Base',         max:5, cost:25, ecost:55, metal:12, iron:12, days:3, lv1:{cost:10, metal:2, iron:2, hours:0.5}, where:'city', desc:''},   // (desc: written from BASE_LV and BASE_SPD, baseDesc below the table)
+  air:  {name:'Airbase',           max:5, cost:85, metal:22, elec:5, days:4, where:'city', desc:''},   // (desc: written from BASE_LV and BASE_SPD, baseDesc below the table)
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
-  rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Anti-Tank Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
+  rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
   fort: {name:'Bunker',            max:5, cost:36, metal:8, iron:8, days:2, where:'any',  lv:BUNKER_LV, desc:`Hidden from other nations. Your garrison here takes ${Math.round(BUNKER_LV[1].red*100)}% less damage at level I, up to ${Math.round(BUNKER_LV[5].red*100)}% at level V, and its morale counts ${Math.round(BUNKER_LV[1].mrl*100)}% to ${Math.round(BUNKER_LV[5].mrl*100)}% higher; the people here lose that much less to war, and the other buildings here take ${Math.round(BUNKER_LV[BUNKER_SHIELD_LV].red*100)}% less damage. Upkeep $${BUNKER_LV[1].upk.toFixed(1)}M to $${BUNKER_LV[5].upk.toFixed(1)}M a day.`},
   silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores ballistic, chemical and nuclear missiles (needs Conventional Warhead). Level II: Tactical Nuclear Missiles. Levels II\u2013V: missiles build 10% faster per level above I. Cruise missiles also come from any city with an Army Base, Airbase or Naval Yard.'},
-  yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:'Coastal cities only. Level I builds Frigates and Submarines, level II Cruisers. Damaged ships repair fast here. Levels III\u2013V: ships build 10% faster and repair 20% faster per level above II.'},
+  yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:''},   // (desc: written from BASE_LV and BASE_SPD, baseDesc below the table)
 };
 const BK = Object.keys(BUILD);
 /* ---- occupation, morale, annexing and rebels (owner points 8-11, 2026-11-25; docs/REBELS-PLAN.md with the owner's answers R1-R17 of 2026-11-26).
@@ -237,6 +285,16 @@ const MAIN_NAME = {cash:'money', oil:'oil', metal:'materials', iron:'iron', elec
 const ECO_OLD = {ref:{name:'Refinery', cost:50, metal:10, iron:5}, fdy:{name:'Foundry', cost:50, metal:10, iron:0}, mine:{name:'Rare Earth Mine', cost:55, metal:10, iron:0}};
 const ECO_OLD_TECH = {eco1:'Industrial Automation', eco2:'National Service', eco3:'Oil Refining'};   // the removed Economy research branch: a nation that researched one keeps its bonus (has(n, 'eco1') ...)
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+// the three bases' descriptions (the build list's text and tooltips), written from BASE_LV and BASE_SPD so they always say what the rules do: what
+// each level unlocks and how much faster levels IV and V train. baseUnits: the names of the units level l of base b unlocks (marked slots left out)
+const baseUnits = (b, l) => Object.keys(BASE_LV[b]).filter(t => UNITS[t] && BASE_LV[b][t] === l).map(t => UNITS[t].name + (t === 'mar' ? ' (coastal cities)' : t === 'para' ? ' (also need an Airbase)' : ''));
+const baseSpdPct = (b, l) => Math.round((1 - BASE_SPD[b][Math.max(0, Math.min(BASE_SPD[b].length - 1, l))])*100);
+const baseLevelTxt = (b, l) => { const u = baseUnits(b, l), f = baseSpdPct(b, l); return `Level ${ROMAN[l]}: ${[u.length ? u.join(', ') : 'no new units', ...(f ? [`units train ${f}% faster here`] : [])].join('; ')}`; };
+function baseDesc(b){ const L = []; for (let l = 1; l <= BUILD[b].max; l++) L.push(baseLevelTxt(b, l)); return L.join('. ') + '.'; }
+BUILD.fac.desc = `Unlocks and trains ground units, infantry included. ${baseDesc('fac')} Levels I–III only unlock units; the Recruiting Office is the main way to train faster. With a membership, Army Base I opens a second training line. No income. Level I is cheap (30 minutes) and costs the same in every city. Levels II–V: your first two cost the base price; from the third on, each other province where you already have level II or higher makes the next cost 40% more.`;
+BUILD.air.desc = `Unlocks and trains aircraft (with their research). ${baseDesc('air')} Levels I–III only unlock aircraft; the Recruiting Office is the main way to train faster. Wings based here reach 1 hex farther per level above I and repair faster.`;
+// (the Naval Yard's text in the table above is replaced here too, so all three bases read alike)
+BUILD.yard.desc = `Coastal cities only. ${baseDesc('yard')} Levels I–III only unlock ships; the Recruiting Office is the main way to train faster. Damaged ships repair fast here, 20% faster per level above II.`;
 // ---------- the research tree (docs/RESEARCH.md): organised by unit. Ten categories; inside a category one column ("line") per unit type.
 // A node sits on a day (it cannot be started before that day) and has one or more levels, each with its own day, price and research time.
 // Node kinds: unlock (lets you build the unit; units known from day one are "standard issue"), eng (Firepower / Protection, three levels:
@@ -274,11 +332,6 @@ const R_LINES = [
     ['kit', 'Infantry Kit', 'vest', [[5, {hp:2}, 'health +2'], [14, {}, 'light anti-tank and anti-air missiles: damage to armor 0.5x to 0.7x, to aircraft 0.2x to 0.35x']]],
     ['terr', 'Rough-Ground Drills', 'terr', [[6, {}, 'half the speed penalty in forest and hills'], [12, {}, 'and in mountains and jungle']]]],
    g:[[2, 9, 'Mechanized Infantry', {atk:2, spd:1, hp:2}, 'attack +2, speed +1, health +2'], [3, 17, 'Assault Infantry', {atk:1, def:1, hp:2}, 'attack +1, defense +1, health +2']]},
-  {u:'at', cat:'inf', day:1, std:1, k:[
-    ['armor', 'Ceramic Body Armour', 'armor', [[1, {def:1}, 'defense +1']]],
-    ['warhead', 'Tandem Warheads', 'warhead', [[5, {atk:1}, 'attack +1'], [11, {atk:1}, 'attack +1 more']]],
-    ['eye', 'Thermal Sights', 'scope', [[8, {}, 'sees 50% farther']]]],
-   g:[[2, 12, 'Guided Missile Teams', {atk:1, hp:2}, 'attack +1, health +2, damage to armor 3.5x to 4x']]},
   {u:'spec', cat:'inf', day:4, ud:4, elite:1, fam:'inf', k:[
     ['terr', 'Mountain & Arctic Training', 'terr', [[7, {}, 'rough-terrain attack bonus 40% to 50%'], [13, {}, 'to 60%']]],
     ['eye', 'Night Optics', 'scope', [[8, {}, 'sees 50% farther']]],
@@ -454,8 +507,8 @@ const rCost = (n, lv) => { const c = n.lv[lv - 1].c; return {cash:c.cash || 0, m
 // ---------- the projects of the old tree (before the research redesign): what each converts to when an old save is loaded.
 // 'node' sets that node to level 1; 'node@' adds one level to it. Projects whose id did not change (log1, msl1, sat1 ...) are not listed.
 const R_LEGACY = {
-  inf1:['inf_armor', 'at_armor'], inf2:['inf_g2', 'at_warhead@', 'u_ifv'], inf3:['inf_g3', 'u_spec'],
-  tank1:['tank_armor'], tank2:['tank_gun', 'ifv_gun', 'at_warhead@'], tank3:['tank_eng'],
+  inf1:['inf_armor'], inf2:['inf_g2', 'u_ifv'], inf3:['inf_g3', 'u_spec'],
+  tank1:['tank_armor'], tank2:['tank_gun', 'ifv_gun'], tank3:['tank_eng'],
   art1:['art_radar'], art2:['art_shell', 'u_mlrs'], art3:['art_guided'],
   air1:['u_jet', 'u_int'], air2:['jet_pgm', 'int_msl'], air3:['jet_lo'],
   nav1:['frig_gun', 'crui_gun'], nav2:['u_carr'],
@@ -475,6 +528,15 @@ const R_LEGACY_NAME = {inf1:'Ceramic Body Armor', inf2:'Mechanized Infantry', in
   asf1:'Air Superiority Fighters', awacs1:'Airborne Early Warning', mpa1:'Maritime Patrol', bomb1:'Strategic Bombers', bomb2:'Strategic Bomber Upgrade', bomb3:'Stealth Bombers',
   drone1:'UAV I · Unmanned Recon', uav2:'UAV II · Long-Endurance Optics', uav3:'UAV III · Low-Observable Airframe', uav4:'UAV IV · Armed UAV', uav5:'UAV V · Hunter-Killer',
   jam1:'Counter-Drone Jamming', swarm1:'Swarm Drones', sdrone1:'Strike Drones', heli1:'Rotary Wing', para1:'Airborne Forces'};
+// Anti-Tank Infantry as it was before it was removed (owner 2026-11-27, BUILD-REQS), kept only for old saves (atMigrate, rules/state.js): its
+// health and training time, its price over Motorized Infantry's (refunded for one queued), and the price of every level of its research line
+// ([cash, materials, iron, rare materials], goods in the old units: scaled by RES_K where used). carry: the upgrades that carry over to Motorized
+// Infantry's own (the higher level of the two is kept); the others are refunded
+const AT_OLD = {hp:9, build:30, extra:{cash:7, metal:3, iron:3},
+  lv:{at_fp:[[51, 15, 3, 3], [77, 23, 5, 5], [102, 30, 6, 8]], at_pr:[[51, 15, 3, 3], [77, 23, 5, 5], [102, 30, 6, 8]], at_armor:[[44, 20, 0, 14]],
+    at_warhead:[[44, 20, 0, 14], [63, 30, 0, 20]], at_eye:[[44, 20, 0, 14]], at_g2:[[130, 50, 6, 38]]},
+  carry:{at_fp:'inf_fp', at_pr:'inf_pr', at_armor:'inf_armor'},
+  name:{at_fp:'Firepower', at_pr:'Protection', at_armor:'Ceramic Body Armour', at_warhead:'Tandem Warheads', at_eye:'Thermal Sights', at_g2:'Guided Missile Teams'}};
 // national doctrines, chosen at the start of a campaign
 const DOCTRINES = {
   precision:{name:'Precision', tag:'Fewer, better forces', desc:'Units attack 10% harder and research runs 15% faster, but every unit costs 15% more.', atk:1.10, def:1, cost:1.15, build:1, res:0.85},
@@ -512,7 +574,6 @@ const ngroupOf = name => NGROUP_OF[name] || 'export';
 // only). null: no name found yet (Europe's newest jammer); the screen shows the unit type instead
 const UNIT_NAMES = {
   inf:{nato:['M16A1', 'M4A1', 'M7'], east:['AKM', 'AK-74M', 'AK-12'], china:['Type 56', 'QBZ-95', 'QBZ-191'], europe:['G3A3', 'G36A2', 'G95A1'], export:['AKM', 'AK-103', 'M4']},
-  at:{nato:['M47', 'FGM-148', 'FGM-148F'], east:['9K111', '9K115-2', '9K135'], china:['HJ-73', 'HJ-9', 'HJ-12'], europe:['LRAC F1', 'NLAW', 'MMP'], export:['9M14', 'HJ-8E', '9K135']},
   spec:{nato:['XM177E2', 'Mk 18 Mod 1', 'M7'], east:['AKMS', 'AK-105', 'AK-12K'], china:['Type 56-1', 'QBZ-95-1', 'QBZ-192'], europe:['MP5', 'G36KA4', 'G95K'], export:['AKMS', 'M4', 'AK-104']},
   mar:{nato:['M16A2', 'M27 IAR', 'M27'], east:['AK-74', 'AK-74M', 'AK-12'], china:['Type 81', 'QBZ-95-1', 'QBZ-191'], europe:['FAMAS F1', 'HK416F', 'G95A1'], export:['AKM', 'M4', 'AK-103']},
   ifv:{nato:['M2A1', 'M2A3', 'XM30'], east:['BMP-1', 'BMP-3', 'T-15'], china:['Type 86', 'ZBL-08', 'ZBD-04A'], europe:['AMX-10P', 'Strf 9040C', 'VBCI-2'], export:['BMP-1', 'M2A2', 'BMP-3M']},
@@ -609,8 +670,8 @@ const winShareFor = k => k <= 27 ? 0.25 : k <= 41 ? 0.22 : k <= 49 ? 0.2 : k <= 
 // Tiers (S superpower, A major, B regional, C minor): what a nation starts with. TIER_FULL is the plan's wide table (3.2), TIER_EVEN an equal
 // start for everyone; a game mode sits between the two by its spread (0 = everyone equal, 1 = the wide table). Normal mode is close to equal
 // (the owner's rule: big countries are bigger, not much richer at the start); a later competitive mode is mildly more distinctive.
-//   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; inf/tank/art: the capital's force;
-//   cityTanks: that many of the biggest other cities get a tank; guards: border guards (2 infantry each); recs: Recruiting Offices outside the capital
+//   day / mpDay: money and manpower a day the opening catch-up aims at; cash..elec: stocks; recs: Recruiting Offices outside the capital.
+//   (The starting army is no longer by tier: START_ARMY below, the same for every nation; owner playtest 2026-11-27, item 3)
 const TIER_RANK = {S:0, A:1, B:2, C:3};
 // The Bunker at the start (owner, 2026-11-14, as Fortifications): every nation's capital starts with a Bunker of this level, and no other province has any
 // (before, a tier C capital and the border guards' provinces of tiers B and C had level I, and the classic world's small powers their capital and borders: about 150 forts)
@@ -618,21 +679,35 @@ const START_FORT = 1;
 // The Airbase at the start (owner, 2026-11-25): every nation's capital also starts with an Airbase of this level and one wing of START_AIR_UNIT based
 // there (one Air Superiority Fighter), so every nation can patrol and scout from day one; computer nations alike. New games only (startAir, rules/state.js)
 const START_AIR = 1, START_AIR_UNIT = 'asf';
-const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2};
+// The starting army in the nations world (owner playtest 2026-11-27, item 3): the same for every nation, seats and computer nations alike, in every
+// game mode; no tanks. New games only (tierStart, rules/state.js; old saves keep their armies). The whole start is this one table:
+//   capital: the capital's force (beside START_AIR's fighter at its Airbase, made by startAir as before)
+//   outer:   the force of each of the outerN stacks that stand in cities outside the capital (which cities: startOuter, rules/state.js, by START_OUTER)
+//   recon:   THE RECON SLOT of every outer stack: added to each outer stack once the recon vehicle exists. It does not exist yet (proposal sent to the
+//            owner, not approved), so it is null and skipped; on approval it becomes the new unit's key and count, e.g. {rcn:1}. A key that is not
+//            a unit yet is skipped too (startForce)
+//   cities:  a garrison for every other city (null: none; the start before 2026-11-27 had {inf:2})
+//   guards / guard: how many border guards and their force (0: none; facing the strongest neighbour first, as before)
+const START_ARMY = {capital:{inf:2, art:1}, outerN:2, outer:{inf:2}, recon:null, cities:null, guards:0, guard:{inf:2}};
+// which cities hold the outer stacks (startOuter): only cities the capital reaches over the nation's own land, not next to the capital (unless fewer
+// than 2 remain); weight = people, times border for a city on another nation's land border (independent land does not count) and times highway
+// for one on a highway (equal weights: the more populous); the first stack the heaviest, the second the heaviest not next to the first and away
+// from it: at least apart degrees from it as seen from the capital, or at least far times the capital's distance to it from both it and the capital
+const START_OUTER = {apart:60, far:0.75, border:1.5, highway:1.5};
+const TIER_EVEN = {day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, recs:2};
 const TIER_FULL = {
-  S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, inf:6, tank:3, art:2, cityTanks:4, guards:5, recs:4},
-  A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, inf:5, tank:2, art:1, cityTanks:2, guards:4, recs:3},
-  B:{day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:1, cityTanks:0, guards:3, recs:2},
-  C:{day:201, mpDay:52, cash:200, mp:80, oil:40, metal:60, iron:70, elec:30, inf:4, tank:1, art:0, cityTanks:0, guards:3, recs:2}};
+  S:{day:310, mpDay:84, cash:320, mp:140, oil:60, metal:80, iron:90, elec:40, recs:4},
+  A:{day:262, mpDay:70, cash:260, mp:110, oil:50, metal:70, iron:80, elec:35, recs:3},
+  B:{day:220, mpDay:58, cash:220, mp:90, oil:40, metal:60, iron:70, elec:30, recs:2},
+  C:{day:201, mpDay:52, cash:200, mp:80, oil:40, metal:60, iron:70, elec:30, recs:2}};
 // floor: how far the catch-up may hold a rich nation back (income multiplier, home provinces only)
 const TIER_MODES = {normal:{name:'Normal', spread:0.3, floor:0.3}, competitive:{name:'Competitive', spread:0.6, floor:0.75}};
 const tierMode = k => TIER_MODES[k] || TIER_MODES.normal;
 function tierKit(tier, mode){ const F = TIER_FULL[tier] || TIER_FULL.B, M = tierMode(mode), k = {};
   for (const key in TIER_EVEN) k[key] = Math.round(TIER_EVEN[key] + M.spread*(F[key] - TIER_EVEN[key]))*(isGood(key) ? RES_K : 1);   // (the stocks in RES_K units)
   k.floor = M.floor; k.yard = tier === 'S' || tier === 'A';   // (Fortifications: only the capital starts with them, START_FORT, every tier alike)
-  // the Naval Yard of a coastal S or A nation takes the place of border guards only as starts grow distinct: none in normal mode (spread 0.3; with
-  // 2 guards gone a major power opened with fewer units than a regional one of as many cities), one at spread 0.6, two in the full table (plan 3.2)
-  k.yardGuards = k.yard ? Math.floor(2*M.spread + 1e-9) : 0; return k; }
+  // (the Naval Yard of a coastal S or A nation no longer takes the place of border guards: the starting army is the same for every nation, START_ARMY)
+  return k; }
 const tierGap = (a, b) => (TIER_RANK[b] ?? 2) - (TIER_RANK[a] ?? 2);   // how many tiers b stands below a
 // (step 6, the full world: S was 2. A computer superpower in three wars of its own making, most of them across the sea against small nations with
 // armies near its own, left its long borders bare: the United States lost 6 to 16% of its land in 3 seeds of 5, to Canada, Mexico and a

@@ -100,10 +100,10 @@ for (const mode of ['normal', 'competitive']){ const R = load(), api = R.IM.api;
   ok(made >= 3, `Repeat production trains one after another in a free seat's city (${made} infantry in 4 days)`); }
 // an old save: no membership flag, a city holding two queued units
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(777, 0, [0]); const S = R.S, N = S.nations[0], cap = N.capital; S.bld[cap].fac = 1;
-  S.queue[cap].push({t:'inf', h:20, h0:24}, {t:'at', h:30, h0:30}); const o = JSON.parse(api.saveJSON()); for (const M of o.nations || []) delete M.member;
+  S.queue[cap].push({t:'inf', h:20, h0:24}, {t:'art', h:30, h0:48}); const o = JSON.parse(api.saveJSON()); for (const M of o.nations || []) delete M.member;
   const R2 = load(), api2 = R2.IM.api; ok(api2.restore(o) !== false, 'an old save (no membership flag) loads');
   ok(!R2.isMember(0) && R2.queueMax(0) === 1, 'its seat has no membership');
-  ok(R2.S.queue[cap].length === 2 && R2.S.queue[cap][1].t === 'at', 'and its city keeps both queued units', R2.S.queue[cap]);
+  ok(R2.S.queue[cap].length === 2 && R2.S.queue[cap][1].t === 'art', 'and its city keeps both queued units', R2.S.queue[cap]);
   R2.S.nations[0].cash = 9000; ok(api2.recruit(0, cap, 'inf') === false, 'but cannot add a third'); }
 
 console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: start Airbase and fighter, Army Base I price and 30 minutes, day one for all 68 nations, the membership queue`);
