@@ -1,0 +1,2 @@
+FLAG
+- 1. Antenna and optics mast are swapped between left and right sides compared to reference.

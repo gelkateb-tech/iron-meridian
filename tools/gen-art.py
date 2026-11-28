@@ -2439,7 +2439,7 @@ def main(a):
         i += 1
     if batch and any(n in GROWS and GROWS[n][0] in names for n in names):
         raise SystemExit('a level that grows from another level in the same batch has to wait for it: send them one after the other')
-    if batch and not PRINT_ONLY and any(n in UNIT_LOOKS and r in names for n in names for r in UNIT_LOOKS[n]['refs']):
+    if batch and not PRINT_ONLY and any(r in names for n in names if n in UNIT_LOOKS for r in UNIT_LOOKS[n]['refs']):
         raise SystemExit('a picture made from another picture (looks 2 and 3 from look 1, scenes and top-downs from their side view) cannot be in the same batch as it: send the master first, then the rest in the next batch')
     jobs = [(n, request(n, refs)) for n in names] + [(n, request(n, r, c)) for n, r, c in edits]
     if show:

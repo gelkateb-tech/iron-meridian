@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 1 in scene: Added a second missile launcher pod on the right side, which is absent in picture 1.
+- 1 in top: Sensor mast is missing, and the missile launcher pod is placed on the wrong side.

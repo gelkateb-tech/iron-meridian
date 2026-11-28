@@ -1,0 +1,4 @@
+FLAG (flagged: scene, top)
+- Point 1 (scene): A stowage box is present on the vehicle's left rear flank, but the master vehicle only has one on the right.
+- Point 1 (scene): The antenna is mounted on the right side instead of the left side.
+- Point 1 (top): The telescoping sensor mast is centered at the rear instead of offset to the vehicle's left side as in the master.

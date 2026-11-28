@@ -1,0 +1,2 @@
+FLAG
+- Point 4: Vehicle faces lower left instead of pointing toward the lower right corner as required.

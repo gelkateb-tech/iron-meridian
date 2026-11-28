@@ -1,0 +1,3 @@
+FLAG
+- Point 1: Roof layout mismatches reference; antenna moved left of launcher and rear hatch added.
+- Point 3: Background has a visible soft shadow cast to the left of the vehicle.

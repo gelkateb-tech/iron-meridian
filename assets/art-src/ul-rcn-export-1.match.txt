@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): Spare tire and periscope are centered instead of offset, and one antenna is missing compared to the side view.

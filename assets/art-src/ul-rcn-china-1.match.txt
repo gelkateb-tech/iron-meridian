@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 1 (scene): Jerry cans are mounted on the left side, which are not present on the master side view.
+- Point 1 (top): Machine gun ammo box and mount are mirrored to the left side of the weapon instead of the right.

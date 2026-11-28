@@ -1,0 +1,2 @@
+FLAG
+- 1: Roof stowage and antenna positions are rearranged and mirrored compared to the reference view.

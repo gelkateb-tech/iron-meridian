@@ -1,0 +1,2 @@
+FLAG
+- 1. Optics post moved to center rear, antenna layout split across corners, and stowage count altered.

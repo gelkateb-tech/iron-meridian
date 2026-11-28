@@ -1,0 +1,2 @@
+FLAG
+- 1. Rear sensor mast and whip antenna are mirrored/swapped sides compared to reference.

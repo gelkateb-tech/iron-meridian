@@ -1,0 +1,2 @@
+FLAG
+- 1. The roof sensor head is oriented backwards toward the rear instead of facing forward as in the reference.

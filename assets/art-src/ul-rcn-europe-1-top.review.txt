@@ -1,0 +1,2 @@
+FLAG
+- 1. Antenna whip is missing and its mount moved to the opposite side compared to reference.

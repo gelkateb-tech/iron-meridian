@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1 (top): Left antenna is moved to the rear corner instead of mid-roof, and the sensor mast has a single offset post instead of two.

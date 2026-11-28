@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): sensor mast is retracted instead of extended as shown in the side view.
+- 1 (top): gun mount optic and ammo box layout is mirrored compared to the side view.

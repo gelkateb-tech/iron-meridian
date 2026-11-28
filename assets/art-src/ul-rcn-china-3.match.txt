@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): weapon mount and missile launcher are mirrored left-to-right compared to the master side view.
