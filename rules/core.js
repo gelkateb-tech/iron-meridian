@@ -19,7 +19,9 @@ const IM = { subs:{},
 // only ever return what the scan they stand for would return, in the same order (docs: BUILD.md, "Rules speed"). A rule moves a force to another
 // province with atMove(a, p) (a.at = p, and the forces-by-province lookup follows: rules/combat.js armiesAt)
 let tickDepth = 0, tickSess = 0, ATV = 0, OWNV = 0, RELV = 0;
-const ownChanged = () => { OWNV++; }, relChanged = () => { RELV++; };
+// (ownChanged also destroys a chemical or nuclear stock whose city its builder no longer holds, at once: wmdSweep, rules/air.js, M8; so a city
+// lost and retaken within one hour does not keep it)
+const ownChanged = () => { OWNV++; if (S.mstock) wmdSweep(); }, relChanged = () => { RELV++; };
 // the rules keep answers for the hour (income, powers, borders, ports, fog: worked out at their first use in the hour). While the page runs an hour
 // over several frames (rules/tick.js tickQSlice) it reads between its steps: keep() is false then, and what it asks is worked out without being
 // kept, so the hour's own first use still makes the hour's answer, as when the hour runs at once

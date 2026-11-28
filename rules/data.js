@@ -111,10 +111,25 @@ for (const b in BASE_LV) for (const t in BASE_LV[b]){ const U = UNITS[t]; if (!U
 // Office (10% faster a level, 50% at level V) stays the main way to speed up training. Option B, closer to the old top levels: 0.85 and 0.7
 const BASE_SPD = {fac:[1, 1, 1, 1, 0.9, 0.8], air:[1, 1, 1, 1, 0.9, 0.8], yard:[1, 1, 1, 1, 0.9, 0.8]};
 const UNIT_NICK = {inf:'Infantry', at:'Anti-tank', art:'Artillery', sam:'SAM', ifv:'IFV', tank:'Tank', jet:'Strike', int:'Interceptor', frig:'Frigate', sub:'Submarine', crui:'Cruiser', mlrs:'MLRS', spec:'SOF', mar:'Marines', carr:'Carrier', heli:'Helicopter', drone:'UAV', para:'Paras', swarm:'Swarm', sdrone:'Strike drone', jam:'Jammer', bomb:'Bomber', mpa:'MPA', awacs:'AWACS', asf:'ASF', stealth:'Stealth bomber'};
+// minH: the shortest flight (h); pk: the chance each SAM-equivalent in or next to the target stops it (Anti-Missile Shield on top: rShield); silo: the
+// Missile Silo level that builds it (0: also any city with an Army Base, Airbase or Naval Yard, msl1, owner point 12 / docs/MISSILES.md 5); land:
+// land targets only; wmd: chemical or nuclear (their limits, effects, cooldowns and diplomacy: rules/air.js, MSL_WMD below). Names only, no pictures
+// (AIR-6): the chemical and nuclear missiles fly with the ballistic missile's picture
 const MISSILES = {
-  cm: {name:'Cruise Missile',    short:'CM', cost:60,  oil:10, metal:10, iron:4, elec:8, rare:3, build:36, range:28, speed:9,  power:7,  tech:'msl1', desc:'Flies low and fast. Devastates the forces in one province.'},
-  bm: {name:'Ballistic Missile', short:'BM', cost:140, oil:20, metal:24, iron:10, elec:16, rare:8, build:72, range:90, speed:22, power:16, tech:'msl2', desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
+  cm: {name:'Cruise Missile',    short:'CM', cost:60,  oil:10, metal:10, iron:4, elec:8, rare:3, build:36, range:28, speed:9,  power:7,  tech:'msl1', minH:2, pk:0.12, silo:0, desc:'Flies low and fast. Devastates the forces in one province.'},
+  bm: {name:'Ballistic Missile', short:'BM', cost:140, oil:20, metal:24, iron:10, elec:16, rare:8, build:72, range:90, speed:22, power:16, tech:'msl2', minH:4, pk:0.05, silo:1, desc:'Climbs into space and falls on its target: massive damage, wrecks a building, shakes morale.'},
+  chem:{name:'Chemical Missile', short:'CHM', cost:170, oil:20, metal:24, iron:10, elec:16, rare:12, build:84, range:70, speed:18, power:9, tech:'msl_chem', minH:4, pk:0.05, silo:1, land:1, wmd:'chem', desc:'A small blast, then gas for 12 hours: every ground force in the province loses 2.5% of its health an hour and fights 20% worse. Land targets only.'},
+  nuc: {name:'Tactical Nuclear Missile', short:'TNM', cost:400, oil:30, metal:40, iron:16, elec:30, rare:30, build:120, range:90, speed:22, power:0, tech:'msl_nuc', minH:6, pk:0.04, silo:2, wmd:'nuc', desc:'Half the health of everything in the province (armour and ships 40%), 12% next door; every building knocked out 48 hours, two levels wrecked; radiation for 48 hours. Built in a Silo II or higher.'},
 };
+// chemical and nuclear missiles (docs/MISSILES.md 7 to 9; owner point 12, answers M1-M15). Stock: stored plus queued, per silo and per nation;
+// cd: one launch per nation every cd hours; zone: the gas or radiation hours (S.haz); civ: war damage in the target (countryside), its people's
+// share lost; nb: the nuclear blast next door; mem: memory of the victim / every other nation (at war with the victim) at launch; mark: the opinion
+// line every nation holds against the user (points, fading to 0 over days)
+const MSL_WMD = {
+  chem:{perSilo:2, perNation:6, cd:12, zone:12, zoneLong:18, rate:0.025, armF:0.5, fight:0.8, blast:9, civ:40, civRural:20, pop:0.04, mem:[-30, -15, -8], mark:{name:'Used chemical weapons', v:-25, days:50}},
+  nuc: {perSilo:1, perNation:3, cd:24, zone:48, rate:0.02, armF:0.5, fight:0.9, soft:0.5, hard:0.4, nbSoft:0.12, nbHard:0.08, bunker:0.5, ko:48, hits:2, links:96, out:0.5, civ:60, pop:0.12, nbCiv:20, nbPop:0.02, mem:[-60, -35, -15], fallout:-40, mark:{name:'Used nuclear weapons', v:-55, days:60}, noPeace:72},
+};
+const CBRN_F = [1, 0.5, 0.25], CBRN_POP = [1, 0.75, 0.5];   // CBRN Defence 0 / 1 / 2: what gas and radiation do to the forces, and to the people of the nation's cities
 const CLASSES = ['soft', 'armored', 'air', 'naval'];
 const CLASS_M = {soft:{soft:1.0, armored:0.5, air:0.2, naval:0.2}, armored:{soft:1.2, armored:1.0, air:0.2, naval:0.3}, air:{soft:1.2, armored:1.3, air:1.0, naval:1.0}, naval:{soft:0.8, armored:0.6, air:0.6, naval:1.0}};
 const mult = (t, k) => (UNITS[t].vs && UNITS[t].vs[k] != null) ? UNITS[t].vs[k] : CLASS_M[UNITS[t].cls][k];
@@ -220,7 +235,7 @@ const BUILD = {
   arms: {name:'Arms Industry',     max:5, cost:40, metal:12, iron:6, days:3, first:0.5, where:'city', desc:'Raises this city\u2019s main resource (money, oil, materials, iron, electronics or rare materials) by 25% per level. Level I is half price and pays for itself in about a week. Each Arms Industry you already own in another province makes the next one cost 40% more.'},   // first: level I at half price (levels II-V as before)
   rec:  {name:'Recruiting Office', max:5, cost:40, metal:0,  days:2, where:'any',  lv:REC_LV, desc:(INF_NEEDS.includes('rec') ? 'Needed, with an Army Base, to mobilize infantry in this city: Motorized Infantry, Special Forces and (with an Airbase) Paratroopers. ' : 'Unlocks no units (infantry comes from the Army Base). ') + 'Each level: every unit trained in this city trains 10% faster (50% at level V) and +1.5k manpower a day (+3k at level I, +9k at level V).'},
   fort: {name:'Bunker',            max:5, cost:36, metal:8, iron:8, days:2, where:'any',  lv:BUNKER_LV, desc:`Hidden from other nations. Your garrison here takes ${Math.round(BUNKER_LV[1].red*100)}% less damage at level I, up to ${Math.round(BUNKER_LV[5].red*100)}% at level V, and its morale counts ${Math.round(BUNKER_LV[1].mrl*100)}% to ${Math.round(BUNKER_LV[5].mrl*100)}% higher; the people here lose that much less to war, and the other buildings here take ${Math.round(BUNKER_LV[BUNKER_SHIELD_LV].red*100)}% less damage. Upkeep $${BUNKER_LV[1].upk.toFixed(1)}M to $${BUNKER_LV[5].upk.toFixed(1)}M a day.`},
-  silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores cruise and ballistic missiles (needs Strategic research). Levels II\u2013V: missiles build 10% faster per level above I.'},
+  silo: {name:'Missile Silo',      max:5, cost:140, metal:40, iron:15, elec:10, days:5, where:'city', desc:'Builds and stores ballistic, chemical and nuclear missiles (needs Conventional Warhead). Level II: Tactical Nuclear Missiles. Levels II\u2013V: missiles build 10% faster per level above I. Cruise missiles also come from any city with an Army Base, Airbase or Naval Yard.'},
   yard: {name:'Naval Yard',        max:5, cost:75, metal:15, iron:15, days:4, where:'port', desc:''},   // (desc: written from BASE_LV and BASE_SPD, baseDesc below the table)
 };
 const BK = Object.keys(BUILD);
@@ -430,22 +445,29 @@ const R_LINES = [
 // the two categories that are not unit lines. The first level of each keeps the id, price and time it had before the redesign.
 const R_SPECIAL = [
   {cat:'msl', line:'Cruise Missile', pic:'cm', nodes:[
-    {id:'msl1', name:'Cruise Missiles', kind:'unlock', ic:'cm', lv:[[1, 'Missile Silos can build Cruise Missiles', {cash:96, metal:20, rare:31, days:6}]]},
+    {id:'msl1', name:'Cruise Missiles', kind:'unlock', ic:'cm', lv:[[1, 'any city with an Army Base, Airbase or Naval Yard (or a Missile Silo) builds Cruise Missiles', {cash:96, metal:20, rare:31, days:6}]]},
     {id:'cm_rng', name:'Cruise Missile Range', kind:'kit', ic:'rng', req:['msl1'], lv:[[7, 'range 28 to 32 hexes', {cash:90, metal:30, rare:20, days:4}], [13, 'to 36 hexes', {cash:130, metal:45, rare:30, days:5}]]},
     {id:'cm_spd', name:'Cruise Missile Speed', kind:'kit', ic:'spd', req:['msl1'], lv:[[9, 'speed 9 to 11: less time for the defences', {cash:90, metal:30, rare:20, days:4}], [15, 'to 13', {cash:130, metal:45, rare:30, days:5}]]}]},
   {cat:'msl', line:'Ballistic Missile', pic:'bm', nodes:[
-    {id:'msl2', name:'Ballistic Missiles', kind:'unlock', ic:'bm', req:['msl1'], lv:[[6, 'Silos can build Ballistic Missiles', {cash:144, metal:35, rare:64, days:8}]]},
+    {id:'msl2', name:'Conventional Warhead', kind:'unlock', ic:'bm', req:['msl1'], lv:[[6, 'Missile Silos can be built; silos build Ballistic Missiles', {cash:144, metal:35, rare:64, days:8}]]},
     {id:'bm_rng', name:'Ballistic Missile Range', kind:'kit', ic:'rng', req:['msl2'], lv:[[11, 'range 90 to 102 hexes', {cash:140, metal:45, rare:34, days:5}], [17, 'to 114 hexes', {cash:190, metal:60, rare:46, days:6}]]},
     {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'warhead', req:['msl2'], lv:[[14, 'power 16 to 19', {cash:170, metal:60, rare:44, days:6}]]}]},
+  // chemical and nuclear missiles (owner point 12, docs/MISSILES.md 4): their own lines, prerequisites inside the missile line (RES-3)
+  {cat:'msl', line:'Chemical Missile', pic:'bm', nodes:[
+    {id:'msl_chem', name:'Chemical Warhead', kind:'unlock', ic:'bm', req:['msl2'], lv:[[10, 'Missile Silos build Chemical Missiles', {cash:183, metal:40, rare:55, days:7}]]},
+    {id:'chem_long', name:'Persistent Agent', kind:'kit', ic:'warhead', req:['msl_chem'], lv:[[16, 'gas lasts 18 hours instead of 12', {cash:130, metal:45, rare:30, days:5}]]}]},
+  {cat:'msl', line:'Nuclear Missile', pic:'bm', nodes:[
+    {id:'msl_nuc', name:'Nuclear Warhead', kind:'unlock', ic:'bm', req:['bm_pow'], lv:[[20, 'Missile Silos II and up build Tactical Nuclear Missiles', {cash:390, metal:90, rare:112, days:10}]]}]},
   {cat:'msl', line:'Missile Defence', pic:'def', nodes:[
     {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'def2', req:['msl2'], lv:[[9, 'your SAMs and Frigates intercept missiles twice as well', {cash:132, metal:60, rare:96, days:7}], [15, '2.5 times as well', {cash:170, metal:60, rare:60, days:6}], [21, '3 times as well', {cash:220, metal:80, rare:80, days:7}]]}]},
   {cat:'msl', line:'Satellites', pic:'sat', nodes:[
     {id:'sat1', name:'Reconnaissance Satellites', kind:'kit', ic:'sat', req:['msl1'], lv:[[5, 'launch up to 3 spy satellites from a silo or your capital: each sweeps the globe once a day', {cash:120, metal:35, rare:61, days:6}], [11, 'up to 4 satellites', {cash:150, metal:50, rare:48, days:5}], [17, 'up to 5, each with a wider swath', {cash:200, metal:70, rare:64, days:6}]]}]},
-  // Command & Logistics: four doctrines, each with a second level (its rule reads the level: rMoveF, rCapF, rRoadF, rLandF, rHospF in rules/research.js)
+  // Command & Logistics: five doctrines, each with a second level (its rule reads the level: rMoveF, rCapF, rRoadF, rLandF, rHospF, rCbrn in rules/research.js)
   {cat:'cmd', line:'Supply', pic:'truck', nodes:[{id:'log1', name:'Motorized Supply', kind:'kit', ic:'truck', lv:[[1, 'all forces move 20% faster; opens high-speed rail', {cash:66, metal:20, rare:27, days:4}], [10, 'all forces move 30% faster', {cash:110, metal:30, rare:30, days:5}]]}]},
   {cat:'cmd', line:'Engineers', pic:'wrench', nodes:[{id:'log2', name:'Combat Engineers', kind:'kit', ic:'wrench', lv:[[2, 'troops embark at ports 30% faster; bunkers cost half; roads and railways 25% cheaper and faster to build', {cash:78, metal:20, rare:29, days:5}], [11, 'troops embark 40% faster; roads and railways 35% cheaper and faster to build', {cash:120, metal:30, rare:32, days:5}]]}]},
   {cat:'cmd', line:'Landings', pic:'anchor', nodes:[{id:'nav3', name:'Amphibious Doctrine', kind:'kit', ic:'anchor', lv:[[3, 'landings from the sea take half the time, and the troops fight at 90% instead of 67% on their first day ashore', {cash:114, metal:20, rare:34, days:7}], [12, 'they fight at full strength on their first day', {cash:140, metal:30, rare:36, days:6}]]}]},
   {cat:'cmd', line:'Medical', pic:'cross', nodes:[{id:'log3', name:'Field Hospitals', kind:'kit', ic:'cross', lv:[[4, 'your forces take 15% less damage', {cash:102, metal:20, rare:32, days:7}], [13, '20% less damage', {cash:150, metal:30, rare:40, days:7}]]}]},
+  {cat:'cmd', line:'CBRN', pic:'cross', nodes:[{id:'cbrn', name:'CBRN Defence', kind:'kit', ic:'vest', lv:[[9, 'gas and radiation hurt your forces 50% less; your cities lose a quarter fewer people to them', {cash:110, metal:40, rare:30, days:5}], [17, 'gas and radiation hurt your forces 75% less; your cities lose half as many people to them', {cash:160, metal:60, rare:45, days:6}]]}]},
 ];
 // the node list. node: {id, cat, line, u, kind, name, ic, req:[node ids], req3 (Firepower / Protection level 3 needs it), std, elite, fam, gen, pic,
 // lv:[{day, c:{cash, metal, iron, elec, rare, days}, fx, txt, rq (a later level of an upgrade dated after generation 2: [that generation])}]}
