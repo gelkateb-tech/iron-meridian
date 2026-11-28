@@ -56,7 +56,10 @@ async function run(phone){
   const select = id => p.evaluate(id => { const im = window.__im; im.clearSel(); im.selectArmy(id); }, id);
   // the panel and Army Info
   await select(sc.asf); await p.waitForTimeout(500); await center(sc.cx, sc.cy, phone ? 34 : 44); await p.waitForTimeout(800); await settle(); await clean(); await away(); await p.waitForTimeout(500); await shot('panel');
-  await p.click('#side [data-act="army-info"], [data-act="army-info"]').catch(e => log('no army-info button', e.message)); await p.waitForTimeout(700); await shot('info');
+  // (a build whose wing panel has no Army Info button, master v72: the same Army Info opened through a button added for the shot, so its numbers show)
+  if (!await p.$('#side [data-act="army-info"]')){ log(tag, 'no Army Info button on the wing panel: opened through an added button'); await p.evaluate(id => { const b = document.createElement('button'); b.dataset.act = 'army-info'; b.dataset.id = id; b.id = 'shot-ai'; document.getElementById('side').appendChild(b); }, sc.asf); }
+  await p.click('#side [data-act="army-info"]', { force: true }).catch(e => log('no army-info button', e.message)); await p.waitForTimeout(700); await shot('info');
+  await p.evaluate(() => { const b = document.getElementById('shot-ai'); if (b) b.remove(); });
   const rows = await p.evaluate(() => { const m = document.getElementById('modal'); return m ? m.textContent.replace(/\s+/g, ' ').slice(0, 700) : ''; }); log(tag, 'Army Info:', rows);
   await p.keyboard.press('Escape'); await p.waitForTimeout(300);
   // the convoy and the marching army: the ASF's order on the force's counter, then the strike
