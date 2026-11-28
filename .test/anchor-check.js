@@ -58,7 +58,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     const fr = N.findIndex(n => n.name === 'France'), uk = N.findIndex(n => n.name === 'United Kingdom');
     S.rel[Math.min(0, fr) + ',' + Math.max(0, fr)] = { st: 'war', since: S.hour, until: null };
     const ber = by('Berlin'), mun = by('Munich'), ham = by('Hamburg'), WI = 631, KA = 632, SEA = 3346;
-    const A = im.addArmy(0, ber.id, { tank: 3, inf: 3, ifv: 2 }), B = im.addArmy(0, ber.id, { mlrs: 2, sam: 1, inf: 1 }), C = im.addArmy(0, ber.id, { art: 2, at: 2 });
+    const A = im.addArmy(0, ber.id, { tank: 3, inf: 3, ifv: 2 }), B = im.addArmy(0, ber.id, { mlrs: 2, sam: 1, inf: 1 }), C = im.addArmy(0, ber.id, { art: 2 });
     const U = im.addArmy(uk, ber.id, { inf: 2, tank: 1 });
     try { im.air.spawn(0, ber.id, 'jet'); im.air.spawn(0, ber.id, 'heli'); } catch (e) { out.airErr = e.message; }
     const gw = im.addArmy(0, WI, { inf: 3, tank: 1 }), fw = im.addArmy(fr, WI, { tank: 3, inf: 2 }), fk = im.addArmy(fr, KA, { inf: 2, sam: 1 });

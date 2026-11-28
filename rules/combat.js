@@ -142,7 +142,7 @@ function unitStrength(n, t, T){
   const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
   const atk = stat('atk'), def = stat('def'), uavK = [1, 1.15, 1.3][lv('drone_sens')] || 1;
   const vis = uav ? Math.round(uav.vis*uavK) : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
-    : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
+    : U.vis*(t === 'spec' && hasT('spec_eye') ? 1.5 : 1);
   const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
   const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)
   const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};
@@ -372,7 +372,7 @@ function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return fals
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
 function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a) || a.fly) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
-    if (a.to !== null || a.path.length) continue;
+    if (a.to !== null || a.path.length || a.sail) continue;   // (still walking to the other force's spot: it merges there)
     if (a.at === b.at && b.to === null){ delete a.join; merge(b, a); any = true; if (isSeat(a.owner)){ const sp = stackPenalty(b); tell(a.owner, `${armyName(a)} joined ${armyName(b)} at ${G.P[b.at].cityName || G.P[b.at].name}: ${pluN(count(b), 'unit')}.${sp.over ? ` ${stackText(sp)}.` : ''}`, sp.over ? 'bad' : 'good', b.at); IM.emit('merged', a.id, b.id); } continue; }
     const pth = pathFor(a, a.at, b.to ?? b.at); if (pth.length){ a.path = pth; a.forced = true; } else delete a.join; }
   if (any) removeEmpty(); }

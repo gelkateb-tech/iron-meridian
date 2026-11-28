@@ -16,7 +16,7 @@ function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   if (U.coastal && !navalCity(p)) return {kind:'coast', why:`${U.name} train only in a coastal city (a naval city)`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
-    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${hoursTxt(c.h)}` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
+    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${hoursTxt(c.h)}` : r.b === 'fac' || r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};   // ('Needs Army Base I', 'Needs Army Base II', 'Needs Naval Yard III': Roman numerals on every base, owner 2026-11-27)
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
   return null; }
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
@@ -74,11 +74,13 @@ const riseCnt = (n, k, p, lvl = 1) => !RISE_K[k] || Math.max(1, lvl) < (RISE_FRO
 const riseOf = (n, k, p, lvl = 1) => Math.pow(FAC_RISE, riseCnt(n, k, p, lvl));
 function buildCost(n, k, lvl, p){ if (BUILD[k].lv){ const c = lvCost(k, lvl); if (k === 'fort' && has(n, 'log2')){ c.cash = Math.round(c.cash/2); c.metal = kRound(c.metal/2); c.iron = kRound(c.iron/2); c.elec = kRound(c.elec/2); } return c; }   // (a table's price; Combat Engineers: a Bunker at half price)
   const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p, lvl), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:B.hours != null ? B.hours : Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }   // (B.hours: a level's own time, a fraction allowed)
-// training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
-// (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
-const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
-const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
-function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
+// training time factors from the buildings in province p (BUILD SPEED, owner 2026-11-27): the base that trains the unit (trainBase: its first
+// building need; the Army Base for ground units, Swarm Drones and Paratroopers, the Airbase for aircraft, the Naval Yard for ships) by its level
+// (BASE_SPD, rules/data.js: nothing at levels I-III, 10% faster at IV, 20% at V), times the Recruiting Office's (recSpeed). facF: the Army Base's
+const trainBase = t => { const r = reqsOf(t)[0]; return r ? r.b : null; };
+const baseSpd = (k, l) => { const T = BASE_SPD[k]; return T ? T[Math.max(0, Math.min(T.length - 1, l || 0))] : 1; };
+const facF = l => baseSpd('fac', l);
+function trainF(p, t){ const b = trainBase(t); return (b ? baseSpd(b, S.bld[p][b]) : 1)*recSpeed(p); }
 const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)*(n >= 0 ? rTrainF(n, t) : 1)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
 function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && navalCity(p))); }
