@@ -24,6 +24,7 @@ run anchor node .test/anchor-check.js 1440 900 1
 if [ ! -f "$ROOT/.test/base8d9/.test/page.html" ]; then echo "making .test/base8d9 (the old build nat-oldsave needs)"
   rm -rf -- "$ROOT/.test/base8d9"; mkdir -p "$ROOT/.test/base8d9" && git -C "$ROOT" archive 8d9051c | tar -x -C "$ROOT/.test/base8d9" && bash "$ROOT/.test/base8d9/tools/mkpage.sh" > "$L/base8d9.log" 2>&1; fi
 run natold node .test/nat-oldsave.js
+run recon node .test/recon.js   # (the Recon Vehicle: identification, sight, speed, capture, old saves, the computer; plain Node)
 # the balance checks, one after another too: balance plays in a browser, and run beside nations-balance on a loaded machine its page crashed
 # ('Target crashed', PINPOINT-3, 2026-11-27); eco-check and stack-duel are heavy plain Node runs, so they take their turn as well
 run balance node tools/balance.js
