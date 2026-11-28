@@ -1038,12 +1038,13 @@ STYLE_UL_SCENE = STYLE_V2_SCENE   # photo-real scenes: kept (owner)
 assert "no cast shadow" in STYLE_UL_TOP and "no shadow at all" in STYLE_UL_TOP
 UD = {}   # key -> dict(label, cls, kind (the word for "real {kind}"), groups {g: (family, [g1, g2, g3])}, action, paint, setting, note, gens)
 
-def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule=''):
+def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule='', side_frame=None, side_style=None):
     """label: the unit's name in the prompts; action: what it does in its card scene (a phrase after "A single {label}"); groups: {group: (family look, [3 generations])};
     paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest];
-    scene_frame: replaces the class's card-scene frame (e.g. to allow one prop); rule: an extra sentence after the tail of every description (the units made before it have none)"""
+    scene_frame: replaces the class's card-scene frame (e.g. to allow one prop); rule: an extra sentence after the tail of every description (the units made before it have none);
+    side_frame / side_style: replace the class's side-view frame (with {u}) and the side-view style (e.g. no shadow at all for an aircraft in flight)"""
     UD[key] = dict(label=label, cls=cls, kind=kind, action=action, groups=groups, paint=paint or UL_PAINT[cls], setting=setting or UL_SETTING[cls], note=frame_note,
-                   scene_frame=scene_frame or UL_CLS[cls]['scene_frame'], rule=rule,
+                   scene_frame=scene_frame or UL_CLS[cls]['scene_frame'], rule=rule, side=side_frame or UL_CLS[cls]['side'], side_style=side_style or STYLE_V2_SIDE,
                    gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "])
     d, C = UD[key], UL_CLS[cls]; u = label
     for g in UNIT_GROUPS:
@@ -1054,7 +1055,7 @@ def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, fr
             UNIT_LOOKS[nm + '-side'] = {
                 'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'side', 'group': g, 'look': n, 'fresh': n == 1, 'aspect': '1:1',
                 'prefix': UNIT_PREFIX_SIDE_NEW if n == 1 else UNIT_PREFIX_SIDE_FAMILY.format(unit=u),
-                'subject': C['side'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc, 'style': STYLE_V2_SIDE,
+                'subject': d['side'].format(u=u) + (' ' + frame_note if frame_note else '') + ' ' + desc, 'style': d['side_style'],
                 'refs': UNIT_ANCHORS if n == 1 else UNIT_ANCHORS + [f'ul-{key}-{g}-1-side']}
             UNIT_LOOKS[nm + '-scene'] = {
                 'unit': u, 'unit_key': key, 'cls': cls, 'kind': 'scene', 'group': g, 'look': n, 'fresh': False, 'aspect': '3:2',
@@ -1658,6 +1659,49 @@ unit_def('mar', 'marine (an amphibious infantry soldier)', 'man', 'soldier, unif
 assert "his one small empty boat" in UD['mar']['scene_frame']
 
 
+# ---- AWACS (key awacs): an airborne early-warning radar plane. What batch A taught (28 November 2026): the earlier patrol aircraft came out
+# looking like real airliners, so every look describes its own airframe (nose, wing, engine count and place, propeller blades, tail, and the
+# radar dome's shape and mounting) and every description ends with the look-alike rule; an aircraft in flight has no shadow at all in its side
+# view (the side views' long cast shadows were kept by the cut-out as a slab); the card scene is seen from slightly above so the dome shows.
+STYLE_UL_SIDE_FLIGHT = STYLE_V2_SIDE.replace("with a soft shadow under each object", "with no cast shadow on the background").replace("with only a soft shadow;", "with no shadow at all;")
+assert STYLE_UL_SIDE_FLIGHT.count("no cast shadow on the background") == 1 and STYLE_UL_SIDE_FLIGHT.count("no shadow at all") == 1 and "soft shadow" not in STYLE_UL_SIDE_FLIGHT
+_AIR_SIDE_SHADOW = "only a faint, tight soft shadow below it."
+assert UL_CLS['air']['side'].count(_AIR_SIDE_SHADOW) == 1
+_AIR_SCENE_CAM = "Seen from a low three-quarter angle slightly below and beside it, banking gently,"
+assert UL_CLS['air']['scene_frame'].count(_AIR_SCENE_CAM) == 1
+unit_def('awacs', 'airborne early-warning aircraft (a large radar plane)', 'air', 'radar aircraft',
+    "flying high on its slow, wide patrol orbit, watching the sky with the big radar dome on its back",
+    {'nato': ("Family look (US/NATO): a long, slim, sleek radar plane with crisp straight-edged shapes, a clean grey finish and a large radar dome carried high on its back.",
+              ["a Cold War era design: a long, slim fuselage with a short rounded nose and a stepped cockpit, a long, straight, low wing set far back on the body, four turboprop engines in slim nacelles that reach well behind the wing, each propeller with four blades, a single very tall, straight-edged tail fin with a square top and the tailplane at its base, and a large round rotating saucer-shaped radar dome on one thick, swept-back blade pylon above the middle of the fuselage.",
+               "a modern twin-jet design: a long fuselage with a blunt, deep, rounded nose, a moderately swept low wing with blended, upturned wingtips, two large jet engines mounted on short pylons ABOVE the wings (over the wing, not under it), a T-tail (the tailplane on top of the fin), and a large, flattened oval rotating radar dome on two slim forward-raked struts above the rear fuselage.",
+               "a near-future, unmanned design: a wide, flat, smoothly blended body and long swept wings in one piece with no separate fuselage and no cockpit windows, two jet engines buried in the upper rear body with flat, shielded exhausts, two small outward-canted tail fins, flat radar panels set flush into the leading edges of the wings, and a low, wide disc-shaped radar dome fused into the top of the body."]),
+     'east': ("Family look (Eastern): a big, rugged, heavy high-winged radar plane with a deep, wide fuselage, many engines, a tall tail and a huge radar dome on its back.",
+              ["a Cold War era design: a deep, boxy fuselage with a glazed, stepped navigator's nose, a long, straight high wing, six turboprop engines (three on each wing), each propeller with four blades, a single tall swept fin with the tailplane set halfway up it (a cross-shaped tail), and a huge round rotating radar dome on two thick vertical struts above the FRONT half of the fuselage, ahead of the wing.",
+               "a heavy three-jet design: a wide, deep fuselage with a thick rounded radar chin under the cockpit, a swept, drooping high wing with one jet engine in a pod under each wing and a third jet engine set into the root of the tail fin, a tall swept fin with the tailplane at its base and a small bullet fairing on the fin tip, and a big round rotating radar dome on four short, thick, splayed struts above the wing.",
+               "a near-future four-jet design: a slender fuselage with a smooth, glass-free radar nose, a long, thin, sharply swept high wing, four slim jet engines in two side-by-side pairs on pylons under the wing, a V-tail, and a fixed, non-rotating radar dome shaped like a long, flattened teardrop with flat radar faces on its sides, fused into a raised spine along the top of the fuselage."]),
+     'china': ("Family look (China, its own lines): a tidy, medium-large radar plane with a clean, smooth finish, a rounded nose, neat engine nacelles and a neatly faired radar dome on top.",
+               ["a Cold War era design: a short, tubby fuselage with a rounded glazed nose, a straight low wing, two large turboprop engines, each propeller with five blades, a single broad, rounded tail fin, and a medium round rotating radar dome on a tripod of three short struts above the wing.",
+                "a modern four-jet design: a long, smooth fuselage with a short rounded nose, a moderately swept mid-mounted wing, four jet engines carried in pairs in two wide double nacelles under the wings, twin outward-canted tail fins, and a fixed, non-rotating radar dome shaped like a wide, flattened lens with a pale rim, sitting on one tall, narrow, streamlined pedestal above the rear fuselage.",
+                "a near-future twin-jet design with a joined wing: a forward-swept upper wing and a backward-swept lower wing that meet at their tips (a diamond shape seen from above), the radar arrays built into the joined wings, a smooth glass-free nose, two jet engines on short pylons on each side of the rear fuselage, a single short tail fin, and a small round fixed radar dome on top of the fin."]),
+     'europe': ("Family look (Europe): a smooth, elegant, medium radar plane with a rounded body, neatly faired engines, a polished finish and a carefully faired radar dome.",
+                ["a Cold War era design: a slim fuselage with a long, pointed, glazed nose, a long, gently tapered shoulder wing, four slim turboprop engines, each propeller with three blades, the tailplane set low on the rear body, and a large round rotating radar dome mounted on TOP of a tall, thick tail fin, like a mushroom cap on its stalk.",
+                 "a modern twin-jet design: a slim fuselage with a long, smooth, slightly drooping tapered nose, a slender, slightly forward-swept shoulder wing, two jet engines in pods on short pylons under the wing, a gracefully curved swept fin with a long dorsal fillet and the tailplane set high on the rear body, and a long, slim, rounded radar dome shaped like a canoe laid along the top of the fuselage from behind the cockpit to the wing, faired smoothly into it with no struts.",
+                 "a near-future, unmanned long-endurance design: a slim pod-like fuselage with a smooth, glass-free bulbous nose, a very long, thin, straight high wing with drooped tips, two jet engines in pods above the rear of the fuselage, twin tail booms joined by a high tailplane, and a fixed, non-rotating flat diamond-shaped radar dome on a short pylon above the wing."]),
+     'export': ("Family look (Export, a mix of widely exported older-pattern designs): a plain, rugged, practical radar plane, a transport-aircraft shape with a bolt-on radar dome that looks fitted by the buyer, extra antennas and patched panels.",
+                ["a post-war pattern: a deep, boxy fuselage with a rounded glazed nose and a raised flight deck, a straight high wing, two big round radial piston engines, each propeller with three blades, a single tall fin with a big dorsal fillet, and a round rotating radar dome on a squat, open lattice frame of thin struts above the wing, a plain finish.",
+                 "a widely exported 1980s pattern: a deep, boxy fuselage with a stubby rounded nose and a chin radar bump, a low, straight, thick wing with an upward bend outboard of the engines (a gull wing), four turboprop engines, each propeller with four blades, two oval fins at the tips of a high tailplane (a twin-fin tail), bolt-on antenna fins along the belly, and a big round rotating radar dome on a boxy, bolted-on pedestal of flat plates above the wing.",
+                 "a modern export-grade design: a slim fuselage with a rounded nose, a moderately swept low wing, two jet engines in pods on pylons under the wing, a plain T-tail, a fixed, non-rotating radar dome shaped like a short, thick disc with a flat top, on a pair of short, wide, swept fins above the wing, and two small bolt-on side-looking radar fairings on the forward fuselage, a practical look made to be sold to many air forces."])},
+    frame_note=("Its radar dome (its shape, size, mounting and place along the body) is clearly visible on its back; the dome, the number and place of the engines, "
+                "the number of blades on each propeller and the shape of the nose, wings and tail are exactly as described and the same in every view."),
+    side_frame=UL_CLS['air']['side'].replace(_AIR_SIDE_SHADOW, "no shadow at all: it is in flight, so no cast shadow and no contact shadow on the background, only the plain grey all round it."),
+    side_style=STYLE_UL_SIDE_FLIGHT,
+    scene_frame=UL_CLS['air']['scene_frame'].replace(_AIR_SCENE_CAM, "Seen from a three-quarter angle slightly above and beside it, so that the radar dome on its back is clearly visible, banking gently,"),
+    rule=("Look-alike rule: it must not look like any real aircraft type (no Boeing/Airbus/Ilyushin/Tupolev/Shaanxi/Embraer/Saab airliner or AEW type, and no other real airliner, "
+          "transport or radar plane); the checker must not be able to name a real model from it; its nose, wings, engines, tail and radar dome are this game's own design, exactly as described here."),
+    gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, "])
+assert "no shadow at all" in UD['awacs']['side'] and "slightly above and beside it" in UD['awacs']['scene_frame']
+
+
 # ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
 
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
@@ -2017,9 +2061,10 @@ def doc_unit(key):
     o = [f"### {u[0].upper() + u[1:]} (`{key}`): 45 prompts, built from these words", '',
          f"Class of picture: `{d['cls']}`. Files: `assets/art-src/ul-{key}-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).", '',
          f"Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section \"The other units\" above; what is unit-specific is below.", '',
-         f"- **Side frame:** {C['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+         f"- **Side frame:** {d['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
          f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
          f"- **Card scene:** \"A single {u} {d['action']}. The setting: <the group's setting>. {d['scene_frame']} The {u} is described in words as: <the look's words>\""] + ([f"- **Extra sentence after the tail of every description:** {d['rule']}"] if d['rule'] else []) + ['']
+    if d['side_style'] != STYLE_V2_SIDE: o[-1:-1] = [f"- **Side view style (this unit's own, instead of the shared one):** {d['side_style']}"]
     for g in UNIT_GROUPS:
         fam, gl = d['groups'][g]
         o += [f"#### {GN[g]}", '', f"- **Setting of the card scene:** {d['setting'][g]}.", f"- **Family look:** {fam} Paint: {d['paint'][g]}."]
