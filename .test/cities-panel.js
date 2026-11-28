@@ -52,10 +52,10 @@ const bad = [], errs = [], ok = (c, m) => { if (!c) bad.push(m); };
     await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     ok(await p.evaluate(() => !document.querySelector('#cpi') && !document.getElementById('modal').hidden), dev + ' escape closes options only');
     await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.waitForTimeout(250);
-    // the Army Base rule (BLD-RULES): no Army Base in A, so infantry is greyed with "Needs Army Base level 1" (the Recruiting Office unlocks nothing)
+    // the Army Base rule (BLD-RULES): no Army Base in A, so infantry is greyed with "Needs Army Base I" (the Recruiting Office unlocks nothing)
     const nb = await p.evaluate(() => { const r = document.querySelector('#cpi .cpo[data-ut="inf"]'), b = r && r.querySelector('[data-act="cp-train"]');
       return {blk:!!r && r.classList.contains('blk'), dis:b && b.getAttribute('aria-disabled'), tip:b && b.title, note:r && (r.querySelector('.cpw') || {}).textContent, open:document.querySelectorAll('#cpi .cpo:not(.blk) [data-act="cp-train"]').length}; });
-    ok(nb.blk && nb.dis === 'true' && nb.note === 'Needs Army Base level 1' && /Needs Army Base level 1/.test(nb.tip) && nb.open === 0, dev + ' infantry greyed without an Army Base ' + JSON.stringify(nb));
+    ok(nb.blk && nb.dis === 'true' && nb.note === 'Needs Army Base I' && /Needs Army Base I/.test(nb.tip) && nb.open === 0, dev + ' infantry greyed without an Army Base ' + JSON.stringify(nb));
     if (dev === 'desk') await p.screenshot({path:__dirname + '/cp-inline-noab.png'}).catch(() => {});
     await p.evaluate(A => { window.__im.S.bld[A].fac = 1; }, A); await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.click(`[data-act="cp-open"][data-kind="trn"][data-id="${A}"]`); await p.waitForTimeout(250);
     const tr = await p.evaluate(() => { const bs = [...document.querySelectorAll('#cpi .cpo:not(.blk) [data-act="cp-train"]')]; return {n:bs.length, t:bs[0] && bs[0].dataset.t, locked:document.querySelectorAll('#cpi details.cplock').length}; });
@@ -127,8 +127,8 @@ const bad = [], errs = [], ok = (c, m) => { if (!c) bad.push(m); };
     ok(!un.t || (un.ok >= 1 && un.skip.some(w => /One unit at a time/.test(w))), dev + ' unit plan ' + JSON.stringify(un));   // (the capital, training: a free seat's one at a time)
     const unm = await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(); S.nations[0].member = true; const t = cp.units().find(k => cp.trainWhy(ids[1], k) === '') || null; const P = t ? cp.plan('trn', t, ids) : null; delete S.nations[0].member; return t ? {t, ok:P.ok.length, skip:P.skip.map(x => x.why)} : {t:null}; });
     ok(!unm.t || (unm.ok >= 1 && unm.skip.some(w => /queue full/i.test(w))), dev + ' unit plan, member ' + JSON.stringify(unm));
-    // infantry in bulk: the cities without an Army Base are skipped with "Needs Army Base level 1"
-    const ib = await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(), P = cp.plan('trn', 'inf', ids); return {noab:ids.filter(i => !S.bld[i].fac).length, why:P.skip.filter(x => x.why === 'Needs Army Base level 1').length}; });
+    // infantry in bulk: the cities without an Army Base are skipped with "Needs Army Base I"
+    const ib = await p.evaluate(() => { const im = window.__im, S = im.S, cp = im.cp, ids = cp.cities(), P = cp.plan('trn', 'inf', ids); return {noab:ids.filter(i => !S.bld[i].fac).length, why:P.skip.filter(x => x.why === 'Needs Army Base I').length}; });
     ok(ib.noab >= 1 && ib.why === ib.noab, dev + ' bulk infantry skips the cities without an Army Base ' + JSON.stringify(ib));
     // 7. closing the panel clears the selection
     await p.keyboard.press('Escape'); await p.waitForTimeout(200); await p.keyboard.press('Escape'); await p.waitForTimeout(200);

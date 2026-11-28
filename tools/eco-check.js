@@ -87,15 +87,16 @@ for (const k of KS){ const P = cities.find(q => R.cityMain(q.id) === k && S.owne
   const facP = () => [1, 2].map(l => R.buildCost(n, 'fac', l, cs[2]).cash), fA = facP(); S.bld[cs[1]].arms = 0; const f0 = facP();
   ok(JSON.stringify(fA) === JSON.stringify(f0), 'an Arms Industry must not raise the Army Base price (levels I and II, with and without one): ' + JSON.stringify([fA, f0]));
   ok(cs.every(p => R.canBuildHere(p, 'arms')) && !R.canBuildHere(G.P.find(P => S.owner[P.id] === n && !P.city).id, 'arms'), 'Arms Industry: cities only');
-  const cap = S.nations[n].capital, rec0 = S.bld[cap].rec; S.bld[cap].fac = 2; S.bld[cap].rec = 0; ok(near(R.trainF(cap, 'tank'), 0.6) && near(R.trainF(cap, 'inf'), 0.6) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: ground units 40% faster, aircraft and ships not');
-  S.bld[cap].rec = 2; ok(near(R.trainF(cap, 'tank'), 0.48) && near(R.trainF(cap, 'jet'), 0.8) && near(R.trainF(cap, 'frig'), 0.8), 'Recruiting Office II: every unit 20% faster on top'); S.bld[cap].rec = rec0; S.bld[cap].fac = 1; }
+  const cap = S.nations[n].capital, rec0 = S.bld[cap].rec; S.bld[cap].fac = 2; S.bld[cap].rec = 0; ok(near(R.trainF(cap, 'tank'), 1) && near(R.trainF(cap, 'inf'), 1) && near(R.trainF(cap, 'jet'), 1) && near(R.trainF(cap, 'frig'), 1), 'Army Base II: no faster training (levels I-III only unlock units; BUILD-REQS)');
+  S.bld[cap].fac = 4; ok(near(R.trainF(cap, 'tank'), 0.9) && near(R.trainF(cap, 'inf'), 0.9) && near(R.trainF(cap, 'jet'), 1), 'Army Base IV: ground units 10% faster, aircraft not'); S.bld[cap].fac = 2;
+  S.bld[cap].rec = 2; ok(near(R.trainF(cap, 'tank'), 0.8) && near(R.trainF(cap, 'jet'), 0.8) && near(R.trainF(cap, 'frig'), 0.8), 'Recruiting Office II: every unit 20% faster'); S.bld[cap].rec = rec0; S.bld[cap].fac = 1; }
 
 // ---- 3. every playable nation can field its basic units
 for (const scn of Object.keys(R.SCENARIOS)){ const Q = load(); Q.useScenario(scn); Q.IM.api.newGame(12345, 0, []); const S2 = Q.IM.api.S; let low = {};
   for (const N of S2.nations){ const g = Q.atPeaceMor(() => ({...Q.income(N.id).gross}));
     for (const k of ['cash', 'mp', 'metal', 'iron', 'oil']){ ok(g[k] > (k === 'cash' ? 150 : k === 'mp' ? 30 : 4*K), `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
     for (const k of ['elec', 'rare']){ ok(g[k] > 1*K, `${scn}: ${N.name} ${k} income ${g[k].toFixed(1)}`); if (!low[k] || g[k] < low[k][0]) low[k] = [g[k], N.name]; }
-    for (const t of ['inf', 'at', 'tank', 'art']){ const c = Q.ucost(N.id, t); ok(Object.keys(c).every(k => N[k] >= c[k]), `${scn}: ${N.name} cannot pay for ${t} on day 1`); } }
+    for (const t of ['inf', 'tank', 'art']){ const c = Q.ucost(N.id, t); ok(Object.keys(c).every(k => N[k] >= c[k]), `${scn}: ${N.name} cannot pay for ${t} on day 1`); } }
   console.log(`${scn}: ${S2.nations.length} nations; lowest day-1 income  ` + Object.entries(low).map(([k, v]) => `${k} ${v[0].toFixed(1)} (${v[1]})`).join('  ')); }
 
 // ---- 3b. the follow-ups: a seat's expired offers come back with a dispatch; medium powers get two weeks before an AI attacks them

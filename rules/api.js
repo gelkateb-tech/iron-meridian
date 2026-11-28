@@ -18,7 +18,7 @@ IM.api = {
   // orders (first argument: the nation, or its force)
   recruit, build, buildMissile, startResearch, buildLink,
   orderMove, haltArmy, splitArmy, splitPlan, merge, addStop, undoStop, stopsOf, stopsEta,
-  orderAir, orderDrop, launchMissile, launchSat, startSpy,
+  orderAir, recallAir, splitWing, mergeMates, mergeWings, orderDrop, launchMissile, launchSat, startSpy,
   declareWar, surpriseWar, acceptOffer, applyDeal,
   // the Diplomacy screens (rules/dealings.js): people, threads, trades and the relation menu (first argument: the seat), and their pure readers
   leaderOf, personOf, isPerson, seatInfo, muteSet, isMuted, friendSet, friendsOf, markRead, msgSend, dealNorm, dealWhy, dealAnswer, dealPreview, dealPropose, dealApply, offerAct,
