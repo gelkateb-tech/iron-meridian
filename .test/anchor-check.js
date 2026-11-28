@@ -26,8 +26,7 @@
 // for): each force shows one figure, its main unit's (the badge's rule, window.__fig.main), so (5) asks for exactly that figure (Motorized
 // Infantry: the transport 'mot', paratroopers and marines: the rifleman 'mots') instead of the top three types, (D) asks a deep stack for its
 // one figure instead of three, (4) has no infantry squad to measure and takes the tank's length in the one view it stands in (at least 0.8 of
-// its full length at hex 240, a tank seen a little end-on), and (3) leaves out a place name drawn faded under a figure (the one-figure look
-// fades a name while a figure stands under it).
+// its full length at hex 240, a tank seen a little end-on). (3) is unchanged: a place name counts over a figure however faded it is drawn.
 // Scene (seeded): Germany. Berlin: three German stacks + a British stack + a parked jet and helicopter; Wiesbaden (631): a battle, German
 // vs French; a French stack at Karlsruhe (632); ships off Jutland (North Sea III, 3346); Munich: a garrison and a stack that departs;
 // Sachsen-Anhalt (564): a lone mixed stack.
@@ -107,7 +106,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
         return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: (al.has(pv) || lend(al, pv)) && !across(al, wx, wy) ? 1 : 0, pv, tag: h.tag ? 1 : 0, heart: h.heart ? 1 : 0 }; });
       const models = im.TM.dbg.map(q => { const a = S.armies.find(z => z.id === q.id), al = allowed(q.ids), pv = provW(q.wx, q.wy);
         return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, cut: q.cut, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: (al.has(pv) || lend(al, pv)) && !across(al, q.wx, q.wy) ? 1 : 0, pv }; });
-      return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).filter(l => !(window.__fig && window.__fig.on && l.a < 0.5)).map(l => l.b),   /* (one figure: a name faded under a figure is not over it) */ pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
+      return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).map(l => l.b), pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
     window.__acUnits = ids => { const u = {}; for (const id of ids){ const a = S.armies.find(q => q.id === id); if (a) for (const t in a.u) if (a.u[t] > 0) u[t] = (u[t] || 0) + a.u[t]; } return u; };
     // a continuous zoom through the game's own wheel handler: one wheel tick every frame (dy css px of wheel delta) until hp1 is reached and
     // the glide has settled; captures the frame drawn before each tick

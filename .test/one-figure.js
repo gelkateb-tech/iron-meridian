@@ -7,8 +7,11 @@
 //      tracked turn-rate cap (2 rad/s x sqrt 2), 1.5 times it while catching up with its way of travel (more than 25 degrees off it), and it turns through the bends (more than 0.6 rad in all over 6 s); its back-and-forth reversals are reported
 //  (T) the same road at 1x, hex 240, the view following it: the heading stays within 30 degrees of the figure's way of travel (no stretch over
 //      0.6 s) and never swings more than 120 degrees within 1.5 s
-//  (R) on its road (Wiesbaden > Karlsruhe by Mannheim, 1x, the view following it) at hex 150 and 240: the figure's ground point stays on its drawn route (legGeom, leg by leg)
-//      (median within 0.15 world px, 90% of the frames within 0.6; the ends of the leg, where it eases off and onto its standing spots, included)
+//  (R) on its road (Wiesbaden > Karlsruhe by Mannheim, 1x, the view following it, the WHOLE march to its halt, about 57 s) at hex 150 and 240: the figure's ground
+//      point stays on its drawn route (legGeom, leg by leg): median and 90% of the frames within 0.15 world px, every frame within 0.6 (the start, where it
+//      eases off the spot it left onto the road, and the arrival, where it stays on the road to the leg's end, included); the last fifth of the march within 0.15
+//      (no drift toward its standing spot as it arrives); and from setting off to 3.5 s after it halts (when it glides onto its standing spot) its drawn spot
+//      never moves more than 3 css px a frame against the force's own (the three frames after a stall of the test browser, over 100 ms, left out: the view that follows it lags and overshoots there)
 //  (S) setting off (hex 240, fixed camera, 4x): its ground point never moves more than 3 css px a frame beyond the force's own drawn motion
 //  (U) an unidentified tank-led Polish army: no figure of its own type (no troop model for its id) but the neutral figure, its '?' plate lifted over it
 //  (E) no console or page error
@@ -63,14 +66,16 @@ const settle = async p => { for (let i = 0; i < 30; i++){ await p.waitForTimeout
   // (R) the figure's ground point on its road: its distance (world px) to the drawn leg, every frame of the march, the view following it
   for (const hp of [150, 240]){ const I = await p.evaluate(() => { const im = window.__im, S = im.S; S.armies.length = 0; S.battles.length = 0; const a = im.addArmy(0, 631, {tank:3, inf:1}); im.orderMove(a, 632); im.air.visibleSet(); const R = [a.at, ...a.path], W = []; for (let i = 0; i + 1 < R.length; i++) W.push(...window.__fig.legGeom(a, R[i], R[i + 1])); return {id:a.id, x:im.G.P[631].x, y:im.G.P[631].y, W}; });   // (its whole route: by Mannheim)
     await at(p, I.x, I.y, hp); await settle(p);
-    const L = await p.evaluate(([id, hp]) => new Promise(res => { const im = window.__im, A = [], t0 = performance.now(); im.S.speed = 1;
+    const L = await p.evaluate(([id, hp]) => new Promise(res => { const im = window.__im, A = [], t0 = performance.now(); im.S.speed = 1; let haltT = null;
       const f = () => { const t = performance.now(), a = im.S.armies.find(q => q.id === id); if (a){ const pos = im.dispPos(a), r = document.getElementById('map').getBoundingClientRect(), v = im.view, s = hp/12; v.s = s; v.x = r.width/2 - pos[0]*s; v.y = r.height/2 - pos[1]*s; }
-        const q = window.__fig.TMDBG.find(z => z.ids.includes(id)); if (q && q.moving) A.push([q.wx, q.wy]);
-        if (t - t0 < 30000 && a && (a.to !== null || a.path.length)) requestAnimationFrame(f); else { im.S.speed = 0; res(A); } }; requestAnimationFrame(f); }), [I.id, hp]);
+        const q = window.__fig.TMDBG.find(z => z.ids.includes(id)), mv = !!a && (a.to !== null || a.path.length > 0), sp = a ? im.toScreen(...im.dispPos(a)) : null; if (q) A.push([q.wx, q.wy, mv ? 1 : 0, q.x, q.y, sp ? sp[0] : null, sp ? sp[1] : null, t]);
+        if (!mv && haltT == null) haltT = t; if (t - t0 < 120000 && (haltT == null || t - haltT < 3500)) requestAnimationFrame(f); else { im.S.speed = 0; res({A, march:(haltT ?? t) - t0, halted:haltT != null}); } }; requestAnimationFrame(f); }), [I.id, hp]);
     const dseg = (x, y) => { let d = Infinity; for (let i = 0; i + 1 < I.W.length; i++){ const [ax, ay] = I.W[i], dx = I.W[i + 1][0] - ax, dy = I.W[i + 1][1] - ay, u = Math.max(0, Math.min(1, ((x - ax)*dx + (y - ay)*dy)/(dx*dx + dy*dy || 1e-9))); d = Math.min(d, Math.hypot(ax + dx*u - x, ay + dy*u - y)); } return d; };
-    const D = L.map(q => dseg(q[0], q[1])).sort((a, b) => a - b), pc = k => D.length ? +D[Math.min(D.length - 1, Math.floor(D.length*k))].toFixed(3) : null;
-    out['R' + hp] = {samples:D.length, median:pc(0.5), p90:pc(0.9), max:pc(1)};
-    if (D.length < 200 || pc(0.5) > 0.15 || pc(0.9) > 0.6) fail('R the marching figure on its road at hex ' + hp, out['R' + hp]); }
+    const M = L.A.filter(q => q[2]), Dm = M.map(q => dseg(q[0], q[1])), D = Dm.slice().sort((a, b) => a - b), pc = k => D.length ? +D[Math.min(D.length - 1, Math.floor(D.length*k))].toFixed(3) : null;
+    const tail = Dm.slice(Math.floor(Dm.length*0.8)), tailMax = tail.length ? +Math.max(...tail).toFixed(3) : null;
+    let jump = 0; for (let i = 1; i < L.A.length; i++){ const r = L.A[i], r0 = L.A[i - 1]; if (r[5] == null || r0[5] == null || [0, 1, 2].some(k => i - k > 0 && L.A[i - k][7] - L.A[i - k - 1][7] > 100)) continue; jump = Math.max(jump, Math.hypot((r[3] - r[5]) - (r0[3] - r0[5]), (r[4] - r[6]) - (r0[4] - r0[6]))); }
+    out['R' + hp] = {marchS:+(L.march/1000).toFixed(1), halted:L.halted, samples:D.length, median:pc(0.5), p90:pc(0.9), max:pc(1), lastFifthMax:tailMax, jumpPx:+jump.toFixed(2)};
+    if (!L.halted || D.length < 200 || pc(0.5) > 0.15 || pc(0.9) > 0.15 || pc(1) > 0.6 || tailMax > 0.15 || jump > 3) fail('R the marching figure on its road at hex ' + hp, out['R' + hp]); }
   // (S) setting off: the figure's ground point against the force's own drawn spot, frame by frame (css px), fixed camera
   { const I = await p.evaluate(() => { const im = window.__im, S = im.S; S.armies.length = 0; S.battles.length = 0; const a = im.addArmy(0, 631, {tank:3, inf:1}); im.air.visibleSet(); return {id:a.id, x:im.G.P[631].x, y:im.G.P[631].y}; });
     await at(p, I.x, I.y, 240); await settle(p);
