@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 5. Scene: contains an extra vehicle (an inflatable boat on the beach behind the soldier).
+- 1. Top-down: the rifle features an erroneous second magazine protruding from the top of the receiver.

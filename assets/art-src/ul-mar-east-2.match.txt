@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 5 (scene): Picture contains an extra vehicle/boat (an inflatable dinghy on the beach).

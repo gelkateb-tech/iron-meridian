@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 5 (scene): an inflatable boat is present, violating the no extra vehicle/ship rule.

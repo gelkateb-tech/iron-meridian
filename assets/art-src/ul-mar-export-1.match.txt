@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 5. scene: contains a prominent extra vehicle (inflatable boat) on the beach.

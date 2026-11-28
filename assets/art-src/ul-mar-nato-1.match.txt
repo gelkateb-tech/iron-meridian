@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 5 in scene: Contains an extra vehicle (inflatable boat) in the water.
+- 1 in top: Soldier's weapon grip and gear layout are mirrored compared to the side view.

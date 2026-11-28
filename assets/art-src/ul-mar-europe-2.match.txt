@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- 5. scene: Contains an extra vehicle (inflatable boat), violating the no extras rule.

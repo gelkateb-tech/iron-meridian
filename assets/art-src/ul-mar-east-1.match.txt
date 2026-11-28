@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 5, scene: shows an extra vehicle (an inflatable boat on the beach).
+- Point 3, top: unit is facing downwards instead of front up.

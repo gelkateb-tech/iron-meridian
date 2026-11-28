@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 5, scene: contains an extra vehicle (an inflatable boat on the beach).
+- Point 1, top: the rifle magazine is incorrectly positioned protruding horizontally from the side of the receiver.

@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 5. scene: Picture shows an extra vehicle (an inflatable boat) behind the marine.
+- 1. top: The rifle and grip are mirrored, pointing to the soldier's right with hands reversed compared to the side view.

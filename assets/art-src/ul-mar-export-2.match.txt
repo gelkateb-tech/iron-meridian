@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- scene: fails point 5 because an extra vehicle (inflatable boat) is present on the beach.
+- top: fails point 1 because the rifle orientation and posture do not match the side view.

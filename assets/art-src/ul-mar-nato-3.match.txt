@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 5 (scene): Contains an extra vehicle (an inflatable boat on the beach).
+- Point 1 (top): A mechanical exoskeleton brace is added along the right arm, which is not present in the side view.

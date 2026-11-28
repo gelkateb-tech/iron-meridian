@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 5. Scene: includes an inflatable boat, violating the rule against extra vehicles or craft.
+- 1. Top: the rifle is mirrored/reversed, held left-handed instead of right-handed as shown in the side view.

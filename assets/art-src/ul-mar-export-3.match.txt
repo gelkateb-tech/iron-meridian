@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- 5 in scene: includes an extra vehicle (inflatable boat) on the beach.
+- 1 in top: rifle grip is reversed to left-handed, with buttstock on the wrong shoulder.

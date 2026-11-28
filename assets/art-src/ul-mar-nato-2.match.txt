@@ -1,0 +1,2 @@
+FLAG (flagged: scene)
+- Point 5, scene: contains an extra vehicle (inflatable boat) behind the soldier.
