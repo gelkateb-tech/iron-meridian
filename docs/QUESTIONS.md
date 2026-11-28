@@ -470,3 +470,7 @@ The Diplomacy layout options (A/B/C) from the same job are superseded by your re
 
 - Build requirements: "yes to 2, 3 and 4" (fewer tanks and strike fighters early: OK; Special Forces at Army Base III: OK; "Needs Army Base II" wording: yes). Question 1 replaced by the owner's Naval Yard levels: I Corvette, Frigate; II Destroyer; III Cruiser, Attack Submarine; IV faster; V Aircraft Carrier, Ballistic Missile Submarine, faster still (Corvette, Destroyer and Ballistic Missile Submarine as marked slots until they exist).
 - Missiles plan 2, question 5: the answer is "ships later": the Ballistic Missile Submarine (NEW SHIPS proposal) fires cruise, ballistic and nuclear missiles from the sea, its nukes inside the nation's nuke limit.
+
+## Owner's answers, 2026-11-28
+
+All open questions: the default in brackets, except as given in docs/QUEUE.md "Owner answers 2026-11-28" (verbatim there).

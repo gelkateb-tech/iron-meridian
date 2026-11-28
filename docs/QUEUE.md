@@ -13,7 +13,7 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Messages to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule: every message you send me, also save word for word to the shots branch, in a separate top-level folder: messages/<date>/<HH-MM>-<job>.md, one file per message, with the folder names of any pictures it refers to. Keep the picture folders (shots/<date>/<job>/) pictures only. Same 14-day cleanup for both." Done with `python3 -I tools/push-shots.py --msg <date> <HH-MM> <job> <file.md> --pics <folders>` (times UTC), before the message is sent.
 - **New messages never cancel running jobs (owner, 2026-11-19):** a new message from the owner never cancels or replaces a running job unless the owner says "cancel" or "stop" with the job's name. Each new block is extra work added to the queue. If a message seems to change a running job, ask the owner before stopping it. Every job brief quotes the owner's request it comes from, so a worker never mistakes a newer, unrelated message for its own task.
 
-Last updated: 2026-11-27 (ONE FIGURE done, sheets sent; nothing running; everything waits for the owner's answers).
+Last updated: 2026-11-28 (owner answered every open question; MERGE CHAIN 1, ANTI-AIR proposal, SIMPLER BUILDINGS round 2 and picture batch A starting).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -90,6 +90,44 @@ Set 2026-11-27 (owner block above). Each starts when a slot frees up (at most 5 
 
 1. **(DONE 2026-11-22, waiting for the owner; see Ready)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
 
+
+## Owner answers 2026-11-28 (verbatim; every open question; extra work, cancels nothing)
+
+```
+Answers to every open question: take your default (in brackets) everywhere, except where I say otherwise below.
+
+MERGE (Dev Build only, one at a time, checks after each, nothing to public): waypoints first, then build requirements (both rounds), starting armies (with the balance re-run), the fighter, combat display, missiles (as it is, with the two small fixes), cities-redo (with the revert put back).
+
+ONE FIGURE: one figure per army, code-drawn infantry with the rifleman a bit bigger, and the dot stays on the hull. Yes to the small follow-up fixing marching figures that sit below their road. Merge it after the others.
+
+SIMPLER BUILDINGS: option B (drawn in code), plus the extra round giving the HQ and smaller buildings more character. Skip option A and the single Army Base test picture.
+
+PROVINCE BUILDINGS AND HOSPITALS: for 9 and 11, no new pictures. Draw the Field Hospital, the province Bunker and the building site in code in the option B style, plainer than the city versions (province rule).
+
+MISSILES PLAN 2: defaults on 1–4 and 6–8. Build it as its own job on top of the merged missiles.
+
+FIGHTER: yes to Patrol for the Strike Fighter, like Conflict of Nations.
+
+COMBAT DISPLAY: keep 15-minute rounds for now.
+
+LOGISTICS and NEW SHIPS: build both after the merges.
+
+PICTURES (Gemini, batches only, stop at the $5 floor), in this order: unit batches A to D (about $5.92), the recon test picture then its set, then the new ships look 1 only (about $2.7, not the $7 full sets). Tell me the balance after each batch.
+
+ANTI-AIR, SPEEDS AND STACKS (new job, Opus; proposal with numbers first, then wait for my OK):
+1. Three anti-air units: a cheap Mobile Anti-Air gun (the marked slot at Army Base II), the Mobile SAM as today, and a Missile Defence unit that only shoots missiles (the marked slot at Army Base V). Make it the best missile stopper in plan 2's HP model.
+2. Remove the Interceptor. The Air Superiority Fighter takes over its job. In old saves, Interceptors become Air Superiority Fighters.
+3. Ground speeds: tanks and artillery slower than now. Mobile Anti-Air, SAMs and Missile Defence much slower.
+4. Stacks: 10 units per army at most, and about 4–5 armies in a province, never one giant stack. The computer still made a 128-unit stack: find out why (a bug or merged counters) and fix it. Overstacking should slow armies down more than it does today.
+```
+
+Plan from these answers (2026-11-28):
+- **MERGE CHAIN 1** (now): pinpoint-3, build-reqs (both rounds), start-armies (balance re-run; its Anti-Tank stand-in swapped), fighter-asf (plus Strike Fighter Patrol and the AWACS "Orbit" label, defaults/answer) into merge branch merge-1128, full checks after each, then master and the Dev Build.
+- **MERGE CHAIN 2** (after chain 1): combat-display (plus the default "own full label may sit further out"), missiles (plus the tutorial-card hint fix and the silo-saving income guard), cities-redo (revert of a4fbeb0 put back; plus the defaults: player's capital lots first, proper night darkening of pictures, no frame). Then the Dev Build.
+- **After chain 2:** ONE FIGURE follow-up (bigger rifleman; marching figures on their road) then its merge; SIMPLER BUILDINGS round 2 (B with more character; starts now on simpler-bldg) then its merge after cities-redo; MISSILES PLAN 2 build on merged missiles; LOGISTICS build; NEW SHIPS build; PROVINCE BUILDINGS AND HOSPITALS build (defaults; Field Hospital, province Bunker and the building site drawn in code in the B style, plainer; no new pictures); RECON VEHICLE build (proposal defaults: sight 70/80 km, a lone recon can't capture, Special Forces keep identifying); starting armies border-city habit (default yes).
+- **PICTURES** (one batch at a time, the balance reported after each, stop at the $5 floor): unit batches A Marines, B AWACS, C Stealth Bomber, D the 5 uniques; the recon test picture, then its set; the new ships look 1 only. The defaults also cover the rebels card scene and top-down from test 2 with the flag raised (about $0.06-0.10), run last.
+- **ANTI-AIR, SPEEDS AND STACKS** proposal (now).
+- Not doing: option A pictures, the single Army Base test picture, new province pictures, the full new-ship sets.
 
 ## Owner block 2026-11-27 (missiles answers, Gemini credit, combat display, one figure per army, logistics; verbatim; extra work, cancels nothing)
 
