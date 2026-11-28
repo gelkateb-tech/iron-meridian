@@ -149,7 +149,9 @@ function aiAnnex(n, N){ const cs = ownedBy(n).filter(p => G.P[p].city && occSt(p
 function aiBrake(n){ let k = 0; for (const p of ownedBy(n)) if (G.P[p].city && morShown(p) <= MOR.rebelAt && ++k >= MOR.aiBrake) return true; return false; }
 // habit 1: idleBy (province -> its idle stacks, aiTurn0) loses the stacks set apart or sent as garrisons; they are also kept in AIT.gar, so the
 // offensive launched from a staging province (aiOperate) leaves them where they are
-const aiTakeN = (a, k) => { const plan = {}; let got = 0; for (const t of [...INF_T, ...GROUND_T.filter(t => !INF_T.includes(t))]){ if (got >= k || !a.u[t]) continue; const v = Math.min(a.u[t], k - got); Object.assign(plan, aiTakePlan(a, t, v)); got += v; } return plan; };
+// (a garrison is counted in units that can hold the province, capN: the part taken from a stack is never a recon vehicle, and a stack is split only while
+// what stays still holds CAP_MIN + 1 such units, so no recon force is left behind alone to be swept up by the offensive: repair 1, the Belarus 2rcn of seed 777)
+const aiTakeN = (a, k) => { const plan = {}; let got = 0; for (const t of [...INF_T, ...GROUND_T.filter(t => !INF_T.includes(t) && !NOCAP_T.includes(t))]){ if (got >= k || !a.u[t]) continue; const v = Math.min(a.u[t], k - got); Object.assign(plan, aiTakePlan(a, t, v)); got += v; } return plan; };
 function aiGarrison(n, idleBy){ const want = [], gar = AIT ? AIT.gar : new Set();
   for (const p of ownedBy(n)){ if (!G.P[p].city) continue; const r = rebelsAt(p), m = morShown(p); if (!r && m > MOR.aiGar) continue;
     const need = Math.max(m <= MOR.aiGar ? rebelSize(p) : 0, r ? count(r) + 1 : 0); want.push([p, need, m - (r ? 100 : 0)]); }
@@ -159,11 +161,11 @@ function aiGarrison(n, idleBy){ const want = [], gar = AIT ? AIT.gar : new Set()
   const keep = (a, L) => { gar.add(a); if (L){ const i = L.indexOf(a); if (i >= 0) L.splice(i, 1); } };
   for (const [p, need] of want){
     // (already on its way there)
-    let got = 0; for (const a of armiesOf(n)) if (ok(a) && a.at !== p && (a.path.length ? a.path[a.path.length - 1] === p : a.to === p)) got += groundN(a);
+    let got = 0; for (const a of armiesOf(n)) if (ok(a) && a.at !== p && (a.path.length ? a.path[a.path.length - 1] === p : a.to === p)) got += capN(a);
     // the stacks standing there: the idle ones first, then those only passing through; whole stacks while they fit, else the part needed (infantry first)
     const here = idleBy.get(p) || [], pass = (byAt(p) || S.armies).filter(a => a.owner === n && a.at === p && a.to === null && a.path.length > 0 && ok(a) && !gar.has(a));
-    for (const a of [...here.filter(ok).sort((x, y) => groundN(x) - groundN(y) || x.id - y.id), ...pass]){ if (got >= need) break; const g = groundN(a), w0 = need - got;
-      if (g - w0 >= CAP_MIN + 1){ const [b] = splitPlan(a, [aiTakeN(a, w0)]); if (b){ b.path = []; b.dest = null; b.forced = false; got += groundN(b); keep(b, null); } }
+    for (const a of [...here.filter(ok).sort((x, y) => groundN(x) - groundN(y) || x.id - y.id), ...pass]){ if (got >= need) break; const g = capN(a), w0 = need - got;
+      if (g - w0 >= CAP_MIN + 1){ const [b] = splitPlan(a, [aiTakeN(a, w0)]); if (b){ b.path = []; b.dest = null; b.forced = false; got += capN(b); keep(b, null); } }
       else { if (a.path.length){ a.path = []; a.dest = null; } got += g; keep(a, here); } }
     if (got >= need) continue;
     // the nearest idle stacks over its own land (within 6 provinces, two days' march), not the capital's garrison when it is threatened
@@ -172,8 +174,8 @@ function aiGarrison(n, idleBy){ const want = [], gar = AIT ? AIT.gar : new Set()
       for (const v of G.P[u].nbs){ if (seen.has(v) || G.P[v].sea || S.owner[v] !== n) continue; seen.set(v, du + 1); q.push(v);
         if (v === S.nations[n].capital && threatNear(v, n)) continue; if (S.battles.includes(v)) continue;
         const L = idleBy.get(v) || []; for (const a of L.filter(ok)){ if (got >= need) break; if (G.P[v].city && morShown(v) <= MOR.aiGar) continue;   // (not from another burning city)
-          const pth = pathFor(a, a.at, p); if (!pth.length || pth.some(w => G.P[w].sea) || etaHours(a, pth) > 48) continue; const g = groundN(a), w0 = need - got;
-          if (g - w0 >= CAP_MIN + 1){ const [b] = splitPlan(a, [aiTakeN(a, w0)]); if (b){ b.path = pth; b.forced = true; got += groundN(b); keep(b, null); } }
+          const pth = pathFor(a, a.at, p); if (!pth.length || pth.some(w => G.P[w].sea) || etaHours(a, pth) > 48) continue; const g = capN(a), w0 = need - got;
+          if (g - w0 >= CAP_MIN + 1){ const [b] = splitPlan(a, [aiTakeN(a, w0)]); if (b){ b.path = pth; b.forced = true; got += capN(b); keep(b, null); } }
           else { a.path = pth; a.forced = true; got += g; keep(a, L); } } } } } }
 /* ---------------- AI ---------------- */
 let PPC = {v:-1, m:null};
@@ -311,7 +313,7 @@ function aiOperate(n, idle){ const plan = aiPlan(n), N = S.nations[n], used = ne
   if (!plan) return used;
   // 2. gather at the staging provinces, then strike together from every side once strong enough
   const stage = plan.stage.filter(v => S.owner[v] === n); if (!stage.length){ delete S.plans[n]; return used; }
-  const atStage = armiesOf(n).filter(a => !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a) && (a.at !== N.capital || idle.includes(a)) && !(AIT && AIT.gar.has(a)));   // (not the capital's garrison, nor a burning city's: aiGarrison)
+  const atStage = armiesOf(n).filter(a => !a.air && a.to === null && !a.path.length && stage.includes(a.at) && count(a) && (a.at !== N.capital || idle.includes(a)) && !(AIT && AIT.gar.has(a)) && !scoutOnly(a));   // (not the capital's garrison, nor a burning city's: aiGarrison; nor a recon force alone, scoutOnly, which never strikes on its own)
   const massed = atStage.reduce((s0, a) => s0 + power(a)*terrFit(a, plan.tgt, true)*(riverX(a.at, plan.tgt) ? RIVER_ATK : 1), 0), need = defPower(plan.tgt, n)*1.5 + 10;
   if (massed >= need){ for (const a of atStage){ const m = aiGunsStay(a, plan.tgt); if (m) orderMove(m, plan.tgt); used.add(a); } plan.launched = S.hour;   // (guns that can shell the target stay behind)
     { const eta = atStage.filter(a => a.path.length).map(a => [a, etaHours(a)]), slow = Math.max(0, ...eta.map(e => e[1])); for (const [a, h] of eta) if (slow - h >= 3) a.delay = Math.min(36, Math.round(slow - h)); }   // all arrive together
@@ -761,7 +763,7 @@ function aiTurn0(n, N){
     const seen = new Set([a.at]), q = [a.at]; let dest = -1;
     for (let h = 0; h < q.length && dest < 0; h++) for (const v of G.P[q[h]].nbs){ if (seen.has(v)) continue; seen.add(v); if (S.owner[v] === n){ dest = v; break; } q.push(v); }
     const pth = dest >= 0 ? pathFor(a, a.at, dest) : []; if (pth.length){ a.path = pth; a.dest = null; a.forced = true; } }
-  const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
+  const planned = aiOperate(n, idleAll().filter(a => !a.air && !shipsOnly(a) && !gunsOnly(a) && !scoutOnly(a) && !G.P[a.at].sea && S.owner[a.at] === n && (a.m ?? 80) >= 50));
   // NAVAL CITIES: ground forces left idle at sea (a landing refused on the way, a route planned again to none: rules/tick.js) are in no own province,
   // so the stacks above never hold them: they head for the nearest own province over the water, coming ashore at a naval city (landOk)
   // (a force with no way home at all, the nation holding no naval city it can reach, through friends' land included, waits 72 h at sea, a.seaIdle,
@@ -790,6 +792,7 @@ function aiTurn0(n, N){
     if (a.at === N.capital && threatNear(a.at, n)) continue;
     if ((a.m ?? 80) < 50 || (a.resting && a.m < 70)){ a.resting = true; continue; } a.resting = false;
     if (gunsOnly(a)) continue;   // batteries fire from range (aiGuns), they do not march into battles
+    if (scoutOnly(a)) continue;   // nor does a recon force alone (one split off after the recon filter above: it joins a stack next turn)
     ready.push(a); }
   // offensives: the ready stacks of one province pick a target together (their summed strength), and stacks standing next to that target in other own
   // provinces join from their own side. Each stack stays within the stack limit; they go in from several directions (the target's own neighbours),

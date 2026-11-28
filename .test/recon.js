@@ -15,13 +15,16 @@
 // 9. old saves: a save of master before the Recon Vehicle (.test/fixtures/rcn-oldsave.json, from .test/rcn-oldsave-make.js) loads with every
 //    force as saved and no recon vehicle anywhere, plays a day; the computer: in a 20-day all-computer game it builds a few (at most 6 a
 //    nation), keeps them in stacks (no lone recon vehicle sent at foreign land, few left alone) and still holds its capitals
+// 10. at war (repair 1): a city garrison taken from a stack (aiGarrison) never leaves its recon vehicles behind alone, and in a 30-day all-computer
+//    game with 12 neighbour wars started on days 2, 12 and 22 (seed 777, where Belarus once sent 2 recon vehicles alone at Pomerania) no force of
+//    recon vehicles alone is sent at foreign land
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..')), QUICK = process.argv.includes('quick');
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-  + '\nreturn {IM, UNITS, RN, RNODES_U, R_STEPS, START_ARMY, VIS_KM, RANGE_KM, KM_W, BASE_LV, MOVE_T, POWERS:() => POWERS, addArmy, count, capN, scoutOnly, armyVisKm, rSightF, moveType, legHours, linkOf, roadLv, railLv,'
+  + '\nreturn {IM, UNITS, RN, RNODES_U, R_STEPS, START_ARMY, VIS_KM, RANGE_KM, KM_W, BASE_LV, MOVE_T, POWERS:() => POWERS, addArmy, count, capN, scoutOnly, aiGarrison, rebelSize, atWar, armyVisKm, rSightF, moveType, legHours, linkOf, roadLv, railLv,'
   + ' provOfPt, rGrant, unitStrength, rel, clearVis:() => { visCache = null; }, get S(){ return S; }, get G(){ return G; }};';
 const load = () => new Function(SRC)();
 let bad = 0, n = 0; const ok = (c, msg, info) => { n++; if (!c){ bad++; console.log('FAIL  ' + msg + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 400) : '')); } else console.log('PASS  ' + msg); };
@@ -157,6 +160,25 @@ if (!QUICK){ const R = load(), api = R.IM.api; api.useScenario('world64'); api.n
   ok(tot > 0 && inStacks >= 0.8*tot, 'at least 80% of them ride in stacks with other ground units', {tot, inStacks});
   const empty = S.nations.filter(N => N.alive !== false && !S.armies.some(a => a.owner === N.id && a.at === N.capital && a.to === null && !a.air && R.capN(a) > 0)).map(N => N.name);
   ok(empty.length <= 2, 'the computer capitals keep ground units that can hold them (at most 2 of 68 without, as wars go)', empty); }
+
+// ---- 10. at war: the garrison split, and a 30-day game with wars
+{ const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(777, 0, []); const S = R.S, G = R.G; const by = nat(R, 'Belarus');
+  const city = G.P.filter(P => P.city && S.owner[P.id] === by && P.id !== S.nations[by].capital).sort((x, y) => R.rebelSize(y.id) - R.rebelSize(x.id) || x.id - y.id)[0];
+  const tryG = (u, need) => { S.armies = S.armies.filter(a => a.owner !== by); const a = R.addArmy(by, city.id, u); S.mor[city.id] = 30; const idle = new Map([[city.id, [a]]]);
+    R.aiGarrison(by, idle); const mine = S.armies.filter(b => b.owner === by && R.count(b) > 0); return {need, forces:mine.map(units), alone:mine.filter(b => R.scoutOnly(b)).length, idle:(idle.get(city.id) || []).map(units)}; };
+  const need = R.rebelSize(city.id);
+  let r = tryG({inf:need - 1, art:1, rcn:2}); ok(r.alone === 0 && r.forces.length === 1, `a burning city needing ${need} (${city.cityName || city.name}): a stack of ${need - 1} infantry, 1 artillery and 2 recon vehicles stays whole as its garrison (the recon vehicles are not left over alone)`, r);
+  r = tryG({inf:need + 2, rcn:2}); ok(r.alone === 0 && r.forces.length === 2 && r.forces.some(u => u.inf === need && !u.rcn) && r.forces.some(u => u.inf === 2 && u.rcn === 2), `with ${need + 2} infantry and 2 recon vehicles: ${need} infantry are split off as the garrison, the recon vehicles stay with the 2 others`, r);
+  r = tryG({inf:need + 1, rcn:2}); ok(r.alone === 0 && r.forces.length === 1, `with ${need + 1} infantry and 2 recon vehicles: kept whole (what would stay is 1 infantry and the recon vehicles, too few to hold: CAP_MIN + 1 units that can capture)`, r); }
+if (!QUICK){ const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(777, 0, []); const S = R.S, G = R.G; S.started = true;
+  const provoke = h => { let k = 0; const used = new Set(); for (let p = 0; p < G.P.length && k < 12; p++){ const a = S.owner[p]; if (a < 0 || G.P[p].sea || used.has(a)) continue;
+    for (const q of G.P[p].nbs){ const b = S.owner[q]; if (b < 0 || b === a || G.P[q].sea || used.has(b) || R.atWar(a, b)) continue; if (h === 24 && (p*7 + q) % 5) continue; api.declareWar(a, b); used.add(a); used.add(b); k++; break; } } };
+  const sent = []; const seen = new Set(); let wars = 0;
+  for (let h = 0; h < 30*24; h++){ if (h % 240 === 24){ provoke(h); wars = S.nations.reduce((s0, N) => s0 + S.nations.filter(M => M.id > N.id && R.atWar(N.id, M.id)).length, 0); } api.tick();
+    for (const a of S.armies){ if (a.owner < 0 || !R.scoutOnly(a)) continue; const d = a.path.length ? a.path[a.path.length - 1] : a.to; if (d == null || S.owner[d] === a.owner || seen.has(a.id + ':' + d)) continue;
+      if (S.owner[d] < 0 || R.atWar(a.owner, S.owner[d])){ seen.add(a.id + ':' + d); sent.push(`h${h} ${S.nations[a.owner].name} ${a.u.rcn}rcn ${G.P[a.at].name}->${G.P[d].name}`); } } }
+  console.log(`(30 days with wars, seed 777: ${wars} wars on day 22, ${S.armies.reduce((s0, a) => s0 + (a.owner >= 0 ? a.u.rcn || 0 : 0), 0)} recon vehicles in the field)`);
+  ok(wars >= 12 && sent.length === 0, 'at war, no force of recon vehicles alone is sent at foreign land (enemy or independent)', {wars, sent:sent.slice(0, 6)}); }
 
 console.log(bad ? `${bad} of ${n} checks FAILED` : `ALL ${n} CHECKS PASS: the Recon Vehicle (numbers, identification, sight, speed, capture, old saves, the computer)`);
 process.exit(bad ? 1 : 0);
