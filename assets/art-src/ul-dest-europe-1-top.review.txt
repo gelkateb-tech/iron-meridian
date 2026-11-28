@@ -1,0 +1,3 @@
+FLAG
+- 1. Gun mount layout and sponson placement around funnels differ from reference model.
+- 3. Noticeable cast shadow visible on background beneath the stern.

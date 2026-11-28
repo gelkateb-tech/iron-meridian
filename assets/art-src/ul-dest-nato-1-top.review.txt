@@ -1,0 +1,2 @@
+FLAG
+- 1. Missile launchers overhang beyond the hull edge, conflicting with the inboard layout in the reference.

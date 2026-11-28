@@ -1,0 +1,2 @@
+FLAG
+- 3. Background has a visible cast shadow along the left side and stern of the hull.

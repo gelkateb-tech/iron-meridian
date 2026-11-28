@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 1. SAME UNIT (top): missile launchers are placed side-by-side symmetrically, but in the side view they are staggered longitudinally.

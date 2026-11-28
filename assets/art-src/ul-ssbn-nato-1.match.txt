@@ -1,0 +1,3 @@
+FLAG (flagged: scene, top)
+- Point 1 (scene): Sail mast details differ, with the antenna needle located on the front mast instead of the rear.
+- Point 1 (top): Deck has only 6 pairs of missile hatches instead of 7 pairs shown in the side view.

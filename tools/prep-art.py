@@ -684,7 +684,7 @@ def net_mask_img(im, size):
     o = s.run(None, {s.get_inputs()[0].name: x})[0][0, 0].astype(np.float32); o = (o - o.min())/max(float(o.max() - o.min()), 1e-6)
     return np.clip(np.asarray(Image.fromarray(o, 'F').resize((size, size), Image.BICUBIC)), 0, 1)
 
-PALE_UNITS = {'jet', 'int', 'asf', 'heli', 'drone', 'sdrone', 'swarm', 'mpa', 'awacs', 'bomb', 'stealth', 'frig', 'crui', 'sub', 'carr'}
+PALE_UNITS = {'jet', 'int', 'asf', 'heli', 'drone', 'sdrone', 'swarm', 'mpa', 'awacs', 'bomb', 'stealth', 'frig', 'crui', 'sub', 'carr', 'corv', 'dest', 'ssbn'}
 def ul_net_cut_ok(f): return bool(ISNET) and os.path.exists(ISNET)
 def ul_prep():
     import glob

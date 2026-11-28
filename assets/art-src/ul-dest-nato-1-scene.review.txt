@@ -1,0 +1,2 @@
+FLAG
+- 1. Missile launchers are incorrectly positioned compared to reference: moved behind funnels rather than between bridge and forward funnel.
