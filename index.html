@@ -10712,7 +10712,7 @@ function draw(now){ draw.now = now;
     for (const list of grp.values()){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkey(a0, pa) + a0.owner);
       const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
       const r = unkPlate(x, y, k, now, hp ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0);   /* (units in cities: a contact on the centre point has its dot on the marker, its plate above the ring) */ hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }   // (its dot on its spot, the plate above)
-  fightPills(now, hits.filter(h => h.unk));   // the fight labels of the counters in battle, over the counters, the names and the '?' contacts, never on one (combat display)
+  fightPills(now, hits.filter(h => h.unk), hits.concat(HITX.filter(h => h.sat)));   // the fight labels of the counters in battle, over the counters, the names and the '?' contacts, never on one (combat display)
   FXM.PLATECLIP = null; FXM.PLATEBOX = plateBoxes(hits);   // (this frame's plates; the aircraft below are not in it)
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
@@ -12656,7 +12656,7 @@ function fightRowHTML(a, ro){ const F = fightFoes(a); if (!F) return ''; const m
 // drawn (FPILL), drawn over them and the late names (fightPills)
 const FPILL = [];
 /*@TEST*/const FPDBG = []; if (location.protocol === 'file:') window.__imFight = {pills:FPDBG, foes:id => { const F = fightFoes(armyById(id)); return F && {main:F.main ? F.main.id : null, more:F.more, unk:F.unk, ids:F.all.map(b => b.id)}; }, cbr:p => { const R = CBR.get(p); return R && {k:R.k, now:cbStamp(), f:[...R.f]}; }};/*@ENDTEST*/
-function fightPills(now, unk = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!FPILL.length) return;
+function fightPills(now, unk = [], all = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!FPILL.length) return;
   const vis = visibleSet(PLAYER), Q = BATTLE_Q, left = Math.min(1/Q, Math.max(0, ((S.q || 0) + 1)/Q - acc)), done = 1 - left*Q, tt = abTickText(), run = S.speed > 0 && !S.over, mine = o => o === PLAYER || isAlly(PLAYER, o);
   const H = 16, f1 = `700 10.5px ${BODY}`, f0 = `800 9px ${BODY}`, boxes = [], plates = [], ov = (q, b) => q[0] < b[2] + 2 && q[2] > b[0] - 2 && q[1] < b[3] + 1 && q[3] > b[1] - 1, hit = (q, me) => q[0] < 0 || q[2] > cw || boxes.some(b => ov(q, b)) || plates.some(b => b !== me && ov(q, b));   // (labels never cover one another, nor another fighting counter)
   const cut = t => (t = t.replace(/ Division$/, ' Div.').replace(/ Brigade$/, ' Bde.')).length > 18 ? t.slice(0, 17).trimEnd() + '…' : t, mw = (t, f) => (ctx.font = f, mtw(t, f));   // (mtw measures in the current font: f is only its cache key)
@@ -12675,12 +12675,22 @@ function fightPills(now, unk = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!
       return {fl, nm, more, wK, wN, W:5 + 10 + 4 + wK + wN + mw(tt, f1) + 6}; };
     // over its counter; where another label stands there, under it (two sides side by side: one over, one under); with no room for the whole
     // label next to its counter, the ring and the countdown alone (zoomed out, crowded), a row further out at most, then the same without the round's
-    // chip; still no room: a battle of others gets none, yours and the selected force's the short one (with its chip) over the counter
+    // chip; still no room: a battle of others gets none, yours and the selected force's the short one (with its chip) over the counter.
+    // Your own force's whole label (owner 2026-11-28: zoomed out and crowded, "let your own full label sit a little further from its counter"): the
+    // nearer spots first, then a row further out, then two, before the short one; out there it covers no counter at all (yours included), nor a label
+    const R = H + 3, far = c.owner === PLAYER, clear = q => !all.some(h => ov(q, [h.x, h.y, h.x + h.w, h.y + h.h]));
     let D = null, x0 = 0, y0 = up; const chip0 = chip, cW0 = cW;
     for (const [fl, ck] of full ? [[true, 1], [false, 1], [false, 0]] : [[false, 1], [false, 0]]){ if (!ck){ if (!chip0) break; chip = ''; cW = 0; }
       const d = dims(fl), xx = Math.max(2, Math.min(cw - d.W - cW - 5, Math.round(cx - (d.W + (chip ? cW + 3 : 0))/2)));
-      for (const y of fl ? [up, dn] : [up, dn, up - H - 3, dn + H + 3]) if (!hit([xx, y, xx + d.W + cW + 3, y + H], pb)){ D = d; x0 = xx; y0 = y; break; } if (D) break; }
-    if (!D){ if (pr > 1) continue; chip = chip0; cW = cW0; D = dims(false); x0 = Math.max(2, Math.min(cw - D.W - cW - 5, Math.round(cx - (D.W + (chip ? cW + 3 : 0))/2))); y0 = up; }
+      for (const y of fl ? far ? [up, dn, up - R, dn + R, up - 2*R, dn + 2*R] : [up, dn] : [up, dn, up - R, dn + R]){ const q = [xx, y, xx + d.W + cW + 3, y + H];
+        if (!hit(q, pb) && (!fl || y === up || y === dn || clear(q))){ D = d; x0 = xx; y0 = y; break; } } if (D) break; }
+    // (that last one: over the counter, or where a label stands there the nearest of a row out, under it, a row under that free of labels and, for
+    // another nation's force, of your counters; none free: yours and the force you selected over the counter as before, another's none: your label
+    // in the same battle shows the same round and countdown)
+    if (!D){ if (pr > 1) continue; chip = chip0; cW = cW0; D = dims(false); x0 = Math.max(2, Math.min(cw - D.W - cW - 5, Math.round(cx - (D.W + (chip ? cW + 3 : 0))/2)));
+      const q = y => [x0, y, x0 + D.W + cW + 3, y + H], my = far ? null : new Set(S.armies.filter(a => a.owner === PLAYER).map(a => a.id));
+      const bad = y => y < 0 || y + H > ch || boxes.some(b => ov(q(y), b)) || (!!my && all.some(h => h.ids && h.ids.some(i => my.has(i)) && ov(q(y), [h.x, h.y, h.x + h.w, h.y + h.h])));
+      const yy = [up, up - R, dn, dn + R].find(y => !bad(y)); if (yy == null && !far && !sl) continue; y0 = yy ?? up; }
     const W = D.W; boxes.push([x0, y0, x0 + W + cW + 3, y0 + H]);
     const CT = sideT(forceSide(lead)); ctx.globalAlpha = al; roundRect(ctx, x0, y0, W, H, H/2); ctx.fillStyle = 'rgba(16,9,8,.88)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = CT[0]; ctx.stroke();   // (its edge in its side's colour, as its counter)
     const rx = x0 + 5 + 5, ry = y0 + H/2; ctx.beginPath(); ctx.arc(rx, ry, 4.2, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; ctx.stroke();
@@ -12690,7 +12700,7 @@ function fightPills(now, unk = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!
       if (D.more){ ctx.fillStyle = '#b9aea6'; ctx.fillText(D.more, tx + mw(D.nm, f1), ry + 0.5); } tx += D.wN; ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(tx - 6, y0 + 4, 1, H - 8); }   // (a thin line between the foe and the countdown)
     ctx.font = f1; ctx.fillStyle = '#ffd9a8'; ctx.fillText(tt, tx, ry + 0.5);
     if (chip){ const kx = x0 + W + 3; ctx.globalAlpha = al*Math.max(0, ca); roundRect(ctx, kx, y0, cW, H, 4); ctx.fillStyle = '#b8302a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,190,180,.8)'; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText(chip, kx + 5, ry + 0.5); }
-    /*@TEST*/FPDBG.push({ids:here.map(a => a.id), owner:c.owner, at:c.at, x:x0, y:y0, w:W, h:H, full:D.fl, name:D.nm, more:F.more, time:tt, chip, chipA:+ca.toFixed(2), ring:+done.toFixed(3), plate:[r.x, r.y, r.w, r.h], sel:!!sl});/*@ENDTEST*/ }
+    /*@TEST*/FPDBG.push({ids:here.map(a => a.id), owner:c.owner, at:c.at, x:x0, y:y0, w:W, h:H, box:[x0, y0, x0 + W + cW + 3, y0 + H], full:D.fl, row:y0 === up ? 'up' : y0 === dn ? 'dn' : String(Math.round((y0 < up ? up - y0 : y0 - dn)/R)) + (y0 < up ? 'up' : 'dn'), name:D.nm, more:F.more, time:tt, chip, chipA:+ca.toFixed(2), ring:+done.toFixed(3), plate:[r.x, r.y, r.w, r.h], sel:!!sl});/*@ENDTEST*/ }
   ctx.restore(); FPILL.length = 0;
   if (fade) animFast(); else if (run) animIn(200); }   // (the chip fades; the countdown and the ring move with the clock)
 function oddsHTML(a, t, foes){

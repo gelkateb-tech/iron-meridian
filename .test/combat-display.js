@@ -16,6 +16,10 @@
 //      split off in the battle is no loss
 //  (U) fog: the foreign force fighting an unidentified one: its bar "Fighting ? Unidentified", never the other's nation or size; its label when
 //      selected "? Unidentified"; no label on the unidentified contact itself; your own label never names it
+//  (K) zoomed out and crowded (owner 2026-11-28: "let your own full label sit a little further from its counter"): a third nation at war with you
+//      joins your battle, the three counters stacked; at hex 52 (phone 48) your label is still the full one, a row or two further out (the spots
+//      next to the counter are taken), covering no other label and no counter (yours included), and no other label covers your counter; the same
+//      fight closer in (hex 150, phone 200, the counters apart): your label full, over or under its counter as before
 //  (E) no console or page error
 const fs = require('fs'), path = require('path'), pickNation = require('./pick-nation.js'), { chromium } = require('playwright');
 const ARGS = process.argv.slice(2), POS = ARGS.filter(a => !a.startsWith('--')), SHOTS = ARGS.includes('--shots'), CLIP = ARGS.includes('--clip');
@@ -121,6 +125,25 @@ const PAGE = process.env.CD_PAGE || path.join(__dirname, 'page.html'); fs.mkdirS
     await nextRound(100); const R2 = await p.evaluate(([o, A]) => new Map(window.__imFight.cbr(A).f).get(o), [C.own, C.A]);
     ok('(R) the round\'s loss counts the fire that hit your force since the round before', !!R2 && hit > 5.9 && R2.lost >= hit && R2.lost < hit + 15, { hit, R2 });
   }
+  // ---- (K) zoomed out and crowded: a third nation at war with you joins your battle, the three counters one over another (removed again after)
+  { const K = await p.evaluate(([A, foeN, X, Y, own, foe]) => { const im = window.__im, S = im.S, P = im.G.P[A], a = id => S.armies.find(q => q.id === id);
+      const Z = S.nations.map((n, i) => i).find(i => i > 0 && i !== foeN && i !== X && i !== Y && S.nations[i].alive && rel(0, i).st !== 'ally'), z = im.addArmy(Z, A, {inf:4, tank:2});
+      setRel(0, Z, 'war'); if (atWar(Z, foeN)) setRel(Z, foeN, 'peace'); const L = [a(own), a(foe), z], keep = L.slice(0, 2).map(q => q.pos.slice());
+      [[0, 0], [0.3, -1.5], [-0.3, 1.5]].forEach(([dx, dy], i) => { L[i].pos = [P.x + dx, P.y + dy]; L[i].to = null; L[i].path = []; }); im.air.visibleSet(); return { z: z.id, Z, keep }; }, [C.A, C.foeN, C.X, C.Y, C.own, C.foe]);
+    await p.evaluate(() => window.__im.clearSel());
+    const look = async () => { const r = await held(() => p.evaluate(() => { const H = window.__im.hits, hs = (Array.isArray(H) ? H : H()).concat(window.__im.hitx.filter(h => h.sat)); /* (the counters; a covered side's counter beside its group is a satellite) */ return { pills: JSON.parse(JSON.stringify(window.__imFight.pills)), plates: hs.map(h => ({ ids: h.ids.slice(), b: [h.x, h.y, h.x + h.w, h.y + h.h] })) }; })); return r; };
+    const ovl = (q, b) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1];
+    const ZK = PHONE ? 48 : 52; await view(ZK, C.cA, dy); await p.waitForTimeout(900); await nextRound(350); const KF = await look(); shots.push(await shot('crowded-far'));
+    const ZN = PHONE ? 200 : ZP; await view(ZN, C.cA, dy); await p.waitForTimeout(900); await nextRound(350); const KN = await look(); shots.push(await shot('crowded-near'));   // (phone: closer than its play zoom, where the three counters still stand one over another)
+    if (!SHOTS){ const po = KF.pills.find(q => q.ids.includes(C.own)), ob = po && po.plate && [po.plate[0], po.plate[1], po.plate[0] + po.plate[2], po.plate[1] + po.plate[3]];
+      ok('(K) setup: three counters fight in your battle (yours, the neighbour\'s, the third nation\'s)', [C.own, C.foe, K.z].every(id => KF.plates.some(h => h.ids.includes(id))) && await p.evaluate(([o, z]) => { const F = window.__imFight.foes(o); return !!F && F.ids.includes(z) && F.more >= 1; }, [C.own, K.z]), { plates: KF.plates.map(h => h.ids), z: K.z, foes: await p.evaluate(o => window.__imFight.foes(o), C.own) });
+      ok(`(K) hex ${ZK}, crowded: your label is the full one, a row or two further out`, !!po && po.full && /^[12](up|dn)$/.test(po.row || '') && po.name === shortN(foeName), po);
+      ok('(K) ... covering no other label and no counter, yours included', !!po && !KF.pills.some(q => q !== po && ovl(po.box, q.box)) && !KF.plates.some(h => ovl(po.box, h.b)), { po, pills: KF.pills.map(q => [q.ids, q.box]), hit: KF.plates.filter(h => po && ovl(po.box, h.b)) });
+      ok('(K) ... and no other label covers your counter', !!ob && !KF.pills.some(q => q !== po && ovl(q.box, ob)), { ob, pills: KF.pills.map(q => [q.ids, q.box, q.full]) });
+      const pn = KN.pills.find(q => q.ids.includes(C.own));
+      ok(`(K) the same fight at hex ${ZN}: your label full, over or under its counter as before`, !!pn && pn.full && (pn.row === 'up' || pn.row === 'dn'), pn); }
+    await p.evaluate(([z, own, foe, keep]) => { const S = window.__im.S, a = id => S.armies.find(q => q.id === id); for (const t in a(z).u) a(z).u[t] = 0; removeEmpty(); a(own).pos = keep[0]; a(foe).pos = keep[1]; window.__im.air.visibleSet(); }, [K.z, C.own, C.foe, K.keep]);
+    await nextRound(100); }
   // ---- (U) a fight with an unidentified enemy: the other battle, the identified force selected
   await view(ZU, C.cB, PHONE ? -H*0.2 : 0); await p.waitForTimeout(600);
   await p.evaluate(id => window.__im.selectFoe(id), C.xa); await view(ZU, C.cB, PHONE ? -H*0.2 : 0); await p.waitForTimeout(300);
