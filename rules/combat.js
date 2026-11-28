@@ -90,7 +90,7 @@ function armyStrength(a, blind = false, viewer = null){   // blind: a force that
   const aF = t => blind ? {} : ({morale:mrl*wear, supply:sup, terrain:TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1, stack:se[DOM_T[t]], commander:cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1),
     landing:land, season:szn, river:t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv, shortage:shortFx(o, t, 'atk')});
   // the damage taken is scaled by dF (the product of these): the defence is its inverse
-  const bk = mine && a.to === null && !a.air && !a.fly && (viewer == null || bunkerSeen(p, viewer)) ? bunkerLv(p) : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
+  const bk = mine && a.to === null && !a.air && !a.fly && (viewer == null || bunkerSeen(p, viewer)) ? bunkerLv(p) : 0, dd = docOf(o), sea1 = sea ? atSeaF(p, a, shipsN(a) > 0) : 1;
   const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, bunker:1 - bunkerRed(bk), doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
     'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1, 'dug in':digF(a)});
   const out = [];
@@ -209,6 +209,8 @@ const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length &&
 // friend's province: a force on the move is never dug in (dugIn), and one with the Defend stance in a province held by a foe is attacking
 const DIG_DEF = 1/1.1, DIG_CITY = 1/1.25;
 const digP = p => G.P[p] && G.P[p].city ? DIG_CITY : DIG_DEF;   // (the dug-in damage factor of a province: DIG_CITY in a city, DIG_DEF in the open)
+// troops at sea (AT_SEA, rules/data.js): the damage factor of force a in sea zone p, with or without warships of its own escorting it
+const atSeaF = (p, a, escorted) => G.P[p].sea && ground(a) ? (escorted ? AT_SEA.escort : AT_SEA.alone) : 1;
 const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? digP(a.at) : 1;
 /* ---------------- The Bunker (BUILD.fort, levels 1-5; owner #17; the table: BUNKER_LV in rules/data.js, docs/COMBAT.md section 7) ----------------
    - the garrison (the province holder's own forces standing there) takes red less damage from everything that strikes it there: battles, ranged

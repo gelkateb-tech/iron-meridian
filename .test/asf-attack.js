@@ -1,11 +1,14 @@
 // The Air Superiority Fighter's Attack order and the wing orders added with it (FIGHTER-ASF, owner playtest 2026-11-27, item 2), plain Node:
 //   node .test/asf-attack.js        (exit 0 when every check holds; about 20 s)
-// 1. the numbers: ASF_ATTACK (rules/data.js) is what UNITS.asf uses against soft, armoured and naval targets; air-to-air (3.0) unchanged
+// 1. the numbers (owner 2026-11-28: "about 1 HP of damage per strike ... as a plain attack number in its stats"): ASF_ATTACK.atk is 1, UNITS.asf
+//    reads it against soft, armoured and naval targets (atk / 9), Army Info (unitStrength) shows 1 against infantry, armour, ships and
+//    submarines, the air rows and air-to-air (attack 9 x vs air 3.0, vsU) unchanged
 // 2. the order (rules/air.js airCheck / orderAir with want 'strike'): an ASF wing may Attack enemy forces (kind 'strike'), the same tap without
 //    want is still a patrol; refused on its own land with no enemy there, on a nation it is not at war with, out of range; an Interceptor or an
 //    AWACS cannot Attack; a Strike Fighter's own strike is unchanged
-// 3. the damage (the real resolveStrike, 300 sorties each on one infantry, one tank, one artillery in the open): the ASF hits weakly, between
-//    10% and 40% of a Strike Fighter on infantry and under 25% on tanks, and never cuts road or rail links nor adds war damage (ASF_ATTACK.links);
+// 3. the damage (the real resolveStrike, 400 sorties of one aircraft each): about 1 HP a sortie on one infantry, one tank, one artillery in the
+//    open and on a frigate (0.75 to 1.25), troops at sea 1.5x that without warships and 0.75x with them (AT_SEA), and it never cuts road or
+//    rail links nor adds war damage (ASF_ATTACK.links);
 //    3b: on a sea zone it records no convoy raid (S.trade.air), where a Strike Fighter does
 // 4. a whole Attack sortie through the hours (tick): out, the strike, the hour over the target, back, 6 h rearming; the foe lost health
 // 5. Return (recallAir): a wing flying out turns back from where it is, one on patrol heads home at once, both land and rearm
@@ -17,10 +20,20 @@
 //    bombers, AWACS, maritime patrol and drones; a whole patrol through the hours; while on patrol it is one of the fighters over that province
 //    and its neighbours (capOver), not on a strike; it shoots down enemy bombers there with its own air-to-air numbers (fewer than an Air
 //    Superiority Fighter, more than no patrol at all) and hunts a loitering AWACS; its Strike is unchanged
+// 9. HARASSMENT (owner 2026-11-28, rules/air.js provNow, foesIn, asfHome): (a) troops at sea sailing between sea zones and (b) infantry marching
+//    towards our capital, both on a leg (not standing anywhere, so no strike found them before): the Attack is allowed on them, sent at the force
+//    (fly.foe) it hits it, about 1 HP (1.5 at sea), and they keep going; a Strike Fighter's strike still hits only forces standing there; the
+//    wing follows its force into the next province, not beyond its range (it flies on and reports that the force moved out of reach); a target
+//    destroyed meanwhile: it hits the others there
+// 10. the at-sea factor in air strikes (AT_SEA, rules/combat.js atSeaF): a Strike Fighter's strike on troops at sea, alone and escorted, the same
+//    factors as a battle at sea (rules/tick.js); the UAV salvo too
+// 11. air-to-air identical to the build before the change (4daba2a, git show): 300 bomber raids into an ASF patrol, 300 Strike Fighter raids into
+//    one, an AWACS hunted, the same seed: the same HP to the decimal; Army Info's air rows for the ASF the same
+// 12. an old save (4daba2a's rules) with an ASF in the middle of an Attack loads and the strike lands, with this build's damage
 'use strict';
 const fs = require('fs'), path = require('path'), cp = require('child_process'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
-const EXP = '\nreturn {IM, get S(){ return S; }, get G(){ return G; }, UNITS, ASF_ATTACK: typeof ASF_ATTACK === "undefined" ? null : ASF_ATTACK, setRel, addArmy, count, armyHP, effHP, resolveStrike, removeEmpty, airCheck, capOver: typeof capOver === "undefined" ? null : capOver, loiterHour: typeof loiterHour === "undefined" ? null : loiterHour, nbs: p => G.P[p].nbs, orderAir, wingRange, hexDist, stationaryAt, S_dmg: () => S.dmg,'
+const EXP = '\nreturn {IM, get S(){ return S; }, get G(){ return G; }, UNITS, ASF_ATTACK: typeof ASF_ATTACK === "undefined" ? null : ASF_ATTACK, setRel, addArmy, count, armyHP, effHP, resolveStrike, removeEmpty, airCheck, capOver: typeof capOver === "undefined" ? null : capOver, loiterHour: typeof loiterHour === "undefined" ? null : loiterHour, nbs: p => G.P[p].nbs, orderAir, wingRange, hexDist, stationaryAt, S_dmg: () => S.dmg, unitStrength, AT_SEA: typeof AT_SEA === "undefined" ? null : AT_SEA, provNow: typeof provNow === "undefined" ? null : provNow, foesIn: typeof foesIn === "undefined" ? null : foesIn, asfHome: typeof asfHome === "undefined" ? null : asfHome, orderMove, armyById, uavSalvo,'
   + ' recallAir: typeof recallAir === "undefined" ? null : recallAir, splitWing: typeof splitWing === "undefined" ? null : splitWing, mergeWings: typeof mergeWings === "undefined" ? null : mergeWings};';
 const srcOf = read => { const html = read('index.html'); const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]); return "'use strict';\n" + FILES.map(read).join('\n') + EXP; };
 const load = () => new Function(srcOf(f => fs.readFileSync(path.join(ROOT, f), 'utf8')))();
@@ -37,10 +50,15 @@ function setup(R){ const api = R.IM.api; api.newGame(4242, 0, SEATS); const S = 
 const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w.air = {base, cd:0}; w.m = 80; return w; };
 
 // ---- 1. the numbers
-{ const R = load(), A = R.ASF_ATTACK, vs = R.UNITS.asf.vs;
-  ok(A && A.soft === 0.25 && A.armored === 0.2 && A.naval === 0.3 && A.links === false, 'ASF_ATTACK holds the proposed numbers (soft 0.25, armoured 0.2, naval 0.3, no links)', A);
-  ok(vs.soft === A.soft && vs.armored === A.armored && vs.naval === A.naval, 'UNITS.asf uses ASF_ATTACK against the ground and the sea', vs);
-  ok(vs.air === 3.0 && R.UNITS.asf.atk === 9 && R.UNITS.asf.vsU.bomb === 3.0, 'air-to-air unchanged (vs air 3.0, attack 9, vs bombers 3.0)', vs); }
+{ const R = load(), A = R.ASF_ATTACK, vs = R.UNITS.asf.vs, E = setup(R);
+  ok(A && A.atk === 1 && A.links === false && Object.keys(A).length === 2, 'ASF_ATTACK is one plain attack number, 1, and no links', A);
+  ok([vs.soft, vs.armored, vs.naval].every(v => Math.abs(v*R.UNITS.asf.atk - A.atk) < 1e-12), 'UNITS.asf uses it against the ground and the sea (atk / 9 each)', vs);
+  ok(vs.air === 3.0 && R.UNITS.asf.atk === 9 && R.UNITS.asf.vsU.bomb === 3.0 && R.UNITS.asf.vsU.awacs === 3.0, 'air-to-air unchanged (vs air 3.0, attack 9, vs bombers and AWACS 3.0)', vs);
+  const rows = R.unitStrength(0, 'asf', {u_asf:1}).rows, at = k => rows.find(r => r.k === k).atk;
+  console.log('Army Info, ASF attack by row:', JSON.stringify(Object.fromEntries(rows.map(r => [r.k, r.atk == null ? null : +r.atk.toFixed(2)]))));
+  ok(['inf', 'armor', 'ship', 'sub'].every(k => Math.abs(at(k) - 1) < 1e-9), 'Army Info shows attack 1 against infantry, armour, ships and submarines', rows.map(r => [r.k, r.atk]));
+  const inf = R.unitStrength(0, 'inf', {}).rows.find(r => r.k === 'inf').atk, tank = R.unitStrength(0, 'tank', {}).rows.find(r => r.k === 'armor').atk, jet = R.unitStrength(0, 'jet', {u_jet:1}).rows.find(r => r.k === 'inf').atk;
+  ok(inf === 3 && tank === 6 && Math.abs(jet - 9.6) < 1e-9, 'on the same scale as every unit: Motorized Infantry 3, Main Battle Tank 6, a Strike Fighter 9.6 against infantry', {inf, tank, jet}); }
 
 // ---- 2. the order
 { const R = load(), E = setup(R), S = E.S; S.armies = S.armies.filter(a => !a.air);
@@ -64,23 +82,23 @@ const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w
   ok(R.orderAir(w, E.foeP, 'strike') && w.fly.kind === 'strike' && w.fly.ph === 'out', 'orderAir(wing, p, "strike") sends the ASF on a strike', w.fly);
   ok(!R.orderAir(wingAt(R, E.base, 'asf'), E.base, 'strike'), 'Attack on its own airbase with no enemy is refused'); }
 
-// ---- 3. the damage, the real resolveStrike
-{ const R = load(), E = setup(R), S = E.S, P = E.G.P[E.foeP]; P.terrain = 'plains'; P.river = new Set();
-  const run = (T, tgt, N = 300) => { let dealt = 0, cut = 0, dmg = 0;
-    for (let i = 0; i < N; i++){ S.armies.length = 0; const D = R.addArmy(1, E.foeP, {...tgt}); D.still = S.hour; const h0 = R.effHP(D);
-      for (const r of P.lk.values()) r.dmg = 0; const d0 = (S.dmg && S.dmg[E.foeP]) || 0;
-      const w = wingAt(R, E.base, T); R.resolveStrike(w, E.foeP); dealt += h0 - R.effHP(D);
-      for (const r of P.lk.values()) if (r.dmg > 0) { cut++; break; } dmg += ((S.dmg && S.dmg[E.foeP]) || 0) - d0; if (S.dmg) S.dmg[E.foeP] = 0; }
-    return {hp:+(dealt/N).toFixed(2), cutShare:+(cut/N).toFixed(2), warDmg:+(dmg/N).toFixed(2)}; };
-  const out = {};
-  for (const [k, tgt] of [['inf', {inf:1}], ['tank', {tank:1}], ['art', {art:1}]]) out[k] = {jet:run('jet', tgt), asf:run('asf', tgt)};
-  console.log('sorties (HP dealt per sortie, share of sorties that cut links, war damage):', JSON.stringify(out));
-  const r = k => out[k].asf.hp/out[k].jet.hp;
-  ok(out.inf.asf.hp > 0.5 && r('inf') > 0.1 && r('inf') < 0.4, 'the ASF hurts infantry, weakly: 10-40% of a Strike Fighter', {asf:out.inf.asf.hp, jet:out.inf.jet.hp});
-  ok(out.tank.asf.hp > 0.3 && r('tank') < 0.25, 'tanks: under a quarter of a Strike Fighter', {asf:out.tank.asf.hp, jet:out.tank.jet.hp});
-  ok(r('art') > 0.1 && r('art') < 0.45, 'artillery: 10-45% of a Strike Fighter', {asf:out.art.asf.hp, jet:out.art.jet.hp});
-  ok(out.inf.asf.cutShare === 0 && out.tank.asf.cutShare === 0 && out.inf.asf.warDmg === 0, 'the ASF never cuts roads or rails and adds no war damage (ASF_ATTACK.links false)', out.inf.asf);
-  ok(out.inf.jet.cutShare > 0.5, 'a Strike Fighter still cuts them', out.inf.jet); }
+// ---- 3. the damage, the real resolveStrike (one aircraft a sortie, open plains, morale 80, flying an Attack)
+{ const R = load(), E = setup(R), S = E.S, G = E.G, P = G.P[E.foeP]; P.terrain = 'plains'; P.river = new Set();
+  const z = G.P.filter(q => q.sea && R.hexDist(G.P[E.base].cc, q.cc) <= 5).sort((a, b) => R.hexDist(G.P[E.base].cc, a.cc) - R.hexDist(G.P[E.base].cc, b.cc))[0].id;
+  const run = (T, tgt, p = E.foeP, N = 400) => { let dealt = 0, cut = 0, dmg = 0;
+    for (let i = 0; i < N; i++){ S.armies = S.armies.filter(a => a.owner !== 1 && !a.air); const D = R.addArmy(1, p, {...tgt}); D.still = S.hour; const h0 = R.effHP(D);
+      if (!G.P[p].sea) for (const r of G.P[p].lk.values()) r.dmg = 0; const d0 = (S.dmg && S.dmg[p]) || 0;
+      const w = wingAt(R, E.base, T); w.fly = {tgt:p, kind:'strike', ph:'out', t:1, hrs:0}; R.resolveStrike(w, p);
+      dealt += h0 - R.effHP(D);
+      if (!G.P[p].sea) for (const r of G.P[p].lk.values()) if (r.dmg > 0) { cut++; break; } dmg += ((S.dmg && S.dmg[p]) || 0) - d0; if (S.dmg) S.dmg[p] = 0; }
+    return {hp:+(dealt/N).toFixed(3), cutShare:+(cut/N).toFixed(2), warDmg:+(dmg/N).toFixed(2)}; };
+  const out = {inf:run('asf', {inf:1}), tank:run('asf', {tank:1}), art:run('asf', {art:1}), frig:run('asf', {frig:1}, z), sub:run('asf', {sub:1}, z), infSea:run('asf', {inf:1}, z), jetInf:run('jet', {inf:1})};
+  console.log('ASF sorties, HP dealt per sortie by one aircraft:', JSON.stringify(Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.hp]))));
+  for (const k of ['inf', 'tank', 'art', 'frig']) ok(out[k].hp > 0.75 && out[k].hp < 1.25, `about 1 HP a sortie on ${k === 'frig' ? 'a frigate' : k === 'inf' ? 'infantry' : k === 'tank' ? 'a tank' : 'artillery'}`, out[k]);
+  ok(out.infSea.hp/out.inf.hp > 1.35 && out.infSea.hp/out.inf.hp < 1.65, 'infantry at sea without warships: 1.5x what it takes on land', {sea:out.infSea.hp, land:out.inf.hp});
+  ok(out.jetInf.hp > 8, '(a Strike Fighter still does about 9.4 on infantry)', out.jetInf);
+  ok(out.inf.cutShare === 0 && out.tank.cutShare === 0 && out.inf.warDmg === 0, 'the ASF never cuts roads or rails and adds no war damage (ASF_ATTACK.links false)', out.inf);
+  ok(run('jet', {inf:1}, E.foeP, 60).cutShare > 0.5, 'a Strike Fighter still cuts them'); }
 
 // ---- 3b. a sea Attack is no convoy raid (polish 1): an ASF striking ships in a sea zone records no trade raid there (S.trade.air, rules/trade.js
 //      trRaidMap), where a Strike Fighter's strike does (one ASF's raid weight, power(a), was 11.2 against a Strike Fighter's 7.9)
@@ -179,5 +197,97 @@ const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w
   // a loitering enemy AWACS over a neighbour of the patrol loses aircraft to it
   { let lost = 0; for (let i = 0; i < 200; i++){ S.armies = S.armies.filter(a => !a.air); onPatrol('jet', 2); const A = R.addArmy(1, E.foeP, {awacs:1}); A.air = {base:E.foeP, cd:0}; A.m = 80; A.fly = {tgt:nb, kind:'orbit', ph:'over', t:0, hrs:16}; const h0 = R.effHP(A); R.loiterHour(A); lost += h0 - R.effHP(A); }
     S.armies = S.armies.filter(a => !a.air); ok(lost/200 > 0.2, 'it hunts a loitering AWACS over a neighbouring province', +(lost/200).toFixed(2)); } }
+
+// ---- 9. HARASSMENT: troops at sea and an army on the move
+{ const R = load(), E = setup(R), S = E.S, G = E.G, B = G.P[E.base]; S.armies = S.armies.filter(a => !a.air && a.owner !== 1);
+  const z = G.P.filter(q => q.sea && R.hexDist(B.cc, q.cc) >= 4 && R.hexDist(B.cc, q.cc) <= 9).sort((a, b) => R.hexDist(B.cc, a.cc) - R.hexDist(B.cc, b.cc))[0];
+  const far = G.P.filter(q => q.sea && R.hexDist(z.cc, q.cc) >= 3 && R.hexDist(B.cc, q.cc) <= 12).sort((a, b) => R.hexDist(B.cc, a.cc) - R.hexDist(B.cc, b.cc))[0];
+  const onLeg = (foe, h = 0) => { while (foe.to === null && h < 30){ E.api.tick(); h++; } return foe.to !== null; };
+  const sortie = (w, foe) => { const h0 = R.effHP(foe); let h = 0; while (w.fly && w.fly.ph === 'out' && h < 12){ E.api.tick(); h++; } return h0 - R.effHP(foe) + 0.0834*h; };   // (+ what it healed in those hours, at most 1/12 HP an hour)
+  const feed = () => (S.log || []).map(x => x.text);
+  // (a) troops at sea, sailing from one sea zone to the next
+  { const foe = R.addArmy(1, z.id, {inf:2}); R.orderMove(foe, far.id);
+    ok(onLeg(foe) && G.P[R.provNow(foe)].sea && R.provNow(foe) === z.id, 'troops at sea under way, on a leg between sea zones', {at:foe.at, to:foe.to, now:R.provNow(foe)});
+    const p = R.provNow(foe);
+    ok(!R.stationaryAt(p).some(b => b.owner === 1), '(nothing of theirs stands in the zone: other strikes find no target there)');
+    const wj = wingAt(R, E.base, 'jet'), cj = R.airCheck(wj, p); S.armies.splice(S.armies.indexOf(wj), 1);
+    const w = wingAt(R, E.base, 'asf'), c = R.airCheck(w, p, null, 'strike', foe.id), cp0 = R.airCheck(w, p, null, 'strike');
+    ok(c.ok && c.kind === 'strike' && cp0.ok, 'an ASF may Attack the troops at sea, sent at the force or at the zone', [c, cp0]);
+    ok(R.orderAir(w, p, 'strike', foe.id) && w.fly.foe === foe.id, 'the Attack records the force it was sent at (fly.foe)', w.fly);
+    const d = sortie(w, foe), l = feed().find(t => /^Attack on .*troops at sea/.test(t));
+    console.log('troops at sea struck:', d.toFixed(2), 'HP;', l);
+    ok(d > 0.8 && d < 2.1, 'it hits them, about 1.5 HP (one aircraft, troops at sea alone: 1.5x)', d);
+    ok(foe.to !== null || foe.path.length || foe.at === far.id, 'and they sail on (harassment: it does not stop them)', {to:foe.to, path:foe.path});
+    ok(!!l, 'the report reads "Attack on ... troops at sea in ..."', feed().slice(0, 3));
+    ok(cj.ok, '(a Strike Fighter may still strike the zone, and hits only forces standing in it: unchanged)', cj); }
+  // (b) infantry marching towards our capital
+  { S.armies = S.armies.filter(a => !a.air && a.owner !== 1); const foe = R.addArmy(1, E.foeP, {inf:2}); R.orderMove(foe, E.base);
+    const dest = () => foe.path.length ? foe.path[foe.path.length - 1] : foe.to;
+    ok(onLeg(foe) && dest() === E.base, 'infantry marching towards our capital, on a leg', {at:foe.at, to:foe.to, dest:dest()});
+    const p = R.provNow(foe), w = wingAt(R, E.base, 'asf');
+    ok(!R.stationaryAt(p).some(b => b.owner === 1) && R.foesIn(p, 0).includes(foe), 'it stands nowhere (stationaryAt) but counts in the province it marches through (foesIn)');
+    ok(R.airCheck(w, p, null, 'strike').ok, 'an Attack on that province is allowed (before: "No enemy forces there to attack")');
+    ok(R.orderAir(w, p, 'strike', foe.id), 'Attack sent at the marching force');
+    const d = sortie(w, foe), l = feed().find(t => /^Attack on .*forces on the move/.test(t));
+    console.log('marching infantry struck:', d.toFixed(2), 'HP;', l);
+    ok(d > 0.6 && d < 1.5, 'it hits it, about 1 HP', d);
+    ok(dest() === E.base && (foe.to !== null || foe.path.length), 'and it marches on towards our capital', {to:foe.to, path:foe.path});
+    ok(!!l, 'the report reads "Attack on ... forces on the move at ..."', feed().slice(0, 3)); }
+  // (c) the wing follows its force into the next province, not beyond its range
+  { S.armies = S.armies.filter(a => !a.air && a.owner !== 1); const w = wingAt(R, E.base, 'asf'), X = E.foeP;
+    const Y = G.P[X].nbs.find(v => !G.P[v].sea && R.hexDist(B.cc, G.P[v].cc) <= R.wingRange(w) - 1 && R.hexDist(B.cc, G.P[v].cc) !== R.hexDist(B.cc, G.P[X].cc));
+    const foe = R.addArmy(1, Y, {inf:1}); w.fly = {tgt:X, kind:'strike', ph:'out', t:0.4, hrs:0, foe:foe.id};
+    const d0 = R.hexDist(B.cc, G.P[X].cc), d1 = R.hexDist(B.cc, G.P[Y].cc);
+    ok(R.asfHome(w) && w.fly.tgt === Y && Math.abs(w.fly.t*Math.max(1, d1) - 0.4*Math.max(1, d0)) < 1e-9, 'its force moved into the next province: the wing turns there, the distance flown kept', {tgt:w.fly.tgt, t:w.fly.t, d0, d1});
+    const Fz = G.P.find(q => !q.sea && R.hexDist(B.cc, q.cc) > R.wingRange(w) + 1 && R.hexDist(B.cc, q.cc) < R.wingRange(w) + 6);
+    foe.at = Fz.id; w.fly.tgt = X; w.fly.t = 0.4;
+    ok(!R.asfHome(w) && w.fly.tgt === X, 'moved out of its range: the wing flies on to where it was going', w.fly);
+    const other = R.addArmy(1, X, {inf:1}), h0 = R.effHP(other), hf = R.effHP(foe); R.resolveStrike(w, X);
+    ok(R.effHP(other) < h0 && R.effHP(foe) === hf && feed().some(t => /moved out of reach/.test(t)), 'there it hits the enemy forces it finds, and says its force moved out of reach', feed().slice(0, 2));
+    w.fly.foe = foe.id; foe.u.inf = 0; const h1 = R.effHP(other); R.resolveStrike(w, X);
+    ok(R.effHP(other) < h1, 'its force destroyed meanwhile: it hits the others there'); } }
+
+// ---- 10. the at-sea factor in air strikes: a Strike Fighter on troops at sea alone and escorted, the UAV salvo
+{ const R = load(), E = setup(R), S = E.S, G = E.G, P = G.P[E.foeP]; P.terrain = 'plains'; P.river = new Set();
+  const z = G.P.filter(q => q.sea && R.hexDist(G.P[E.base].cc, q.cc) <= 5).sort((a, b) => R.hexDist(G.P[E.base].cc, a.cc) - R.hexDist(G.P[E.base].cc, b.cc))[0].id;
+  ok(R.AT_SEA && R.AT_SEA.alone === 1.5 && R.AT_SEA.escort === 0.75, 'AT_SEA: 1.5x alone, 0.75x escorted (the battle-at-sea numbers, rules/tick.js)', R.AT_SEA);
+  const run = (T, p, other, N = 300) => { let dealt = 0;
+    for (let i = 0; i < N; i++){ S.armies = S.armies.filter(a => a.owner !== 1 && !a.air); const D = R.addArmy(1, p, {inf:3}); D.still = S.hour; if (other) R.addArmy(1, p, other).still = S.hour; const h0 = R.effHP(D);
+      const w = wingAt(R, E.base, T); if (T === 'drone') R.uavSalvo(w, p); else R.resolveStrike(w, p); dealt += h0 - R.effHP(D); }
+    return dealt/N; };
+  const land = run('jet', E.foeP), sea = run('jet', z), landT = run('jet', E.foeP, {tank:1}), seaF = run('jet', z, {frig:1});
+  console.log('Strike Fighter on 3 infantry: land', land.toFixed(2), 'at sea', sea.toFixed(2), '| beside a 14 HP force: land (a tank)', landT.toFixed(2), 'at sea escorted (a frigate)', seaF.toFixed(2));
+  ok(sea/land > 1.35 && sea/land < 1.65, 'a Strike Fighter strike on troops at sea without warships: 1.5x', sea/land);
+  ok(seaF/landT > 0.65 && seaF/landT < 0.85, 'with a frigate of theirs in the zone: 0.75x', seaF/landT);
+  Object.assign(S.nations[0].tech, {u_drone:1, drone_g2:1, drone_g3:1, drone_g4:1}); S.nations[0].tv = (S.nations[0].tv || 0) + 1;   // (armed UAV: level IV)
+  const uL = run('drone', E.foeP), uS = run('drone', z);
+  ok(uL > 0 && uS/uL > 1.3 && uS/uL < 1.7, 'the UAV salvo too: 1.5x on troops at sea', {land:uL, sea:uS}); }
+
+// ---- 11. air-to-air identical to the build before the change (4daba2a)
+{ let old = null; try { cp.execSync('git cat-file -e 4daba2a', {cwd:ROOT, stdio:'ignore'}); old = f => cp.execSync(`git show 4daba2a:${f}`, {cwd:ROOT, maxBuffer:1 << 26}).toString(); } catch (e) {}
+  if (!old){ console.log('skip 11: 4daba2a not in this checkout'); }
+  else { const air = R => { const E = setup(R), S = E.S, G = E.G, nb = R.nbs(E.ownP).find(v => !G.P[v].sea) ?? R.nbs(E.ownP)[0], out = {};
+      const patrol = (t, k) => { const w = wingAt(R, E.base, t, k); w.fly = {tgt:E.ownP, kind:'patrol', ph:'patrol', t:0, hrs:12}; return w; };
+      for (const [nm, T, k] of [['bombers', 'bomb', 2], ['strikeFighters', 'jet', 2], ['enemyASF', 'asf', 2]]){ let a0 = 0, a1 = 0;
+        for (let i = 0; i < 300; i++){ S.armies = S.armies.filter(a => !a.air); const g = patrol('asf', 2), X = R.addArmy(1, E.foeP, {[T]:k}); X.air = {base:E.foeP, cd:0}; X.m = 80; const hx = R.effHP(X), hg = R.effHP(g);
+          R.resolveStrike(X, E.ownP); a0 += hx - R.effHP(X); a1 += hg - R.effHP(g); }
+        out[nm] = [+a0.toFixed(6), +a1.toFixed(6)]; }
+      let aw = 0; for (let i = 0; i < 200; i++){ S.armies = S.armies.filter(a => !a.air); patrol('asf', 2); const A = R.addArmy(1, E.foeP, {awacs:1}); A.air = {base:E.foeP, cd:0}; A.m = 80; A.fly = {tgt:nb, kind:'orbit', ph:'over', t:0, hrs:16}; const h0 = R.effHP(A); R.loiterHour(A); aw += h0 - R.effHP(A); }
+      out.awacs = +aw.toFixed(6); out.rows = R.unitStrength(0, 'asf', {u_asf:1}).rows.filter(r => ['jet', 'heli', 'drone'].includes(r.k)).map(r => [r.k, r.atk, r.def]); return out; };
+    const a = air(new Function(srcOf(old))()), b = air(load());
+    console.log('air-to-air, 4daba2a vs now (HP lost by the raiders and by the ASF patrol over 300 raids):', JSON.stringify(a), '|', JSON.stringify(b));
+    ok(JSON.stringify(a) === JSON.stringify(b), 'dogfights identical to the decimal: bombers, Strike Fighters and enemy ASFs into an ASF patrol, an AWACS hunted, Army Info air rows', {a, b}); } }
+
+// ---- 12. an old save (4daba2a) with an ASF in the middle of an Attack
+{ let old = null; try { cp.execSync('git cat-file -e 4daba2a', {cwd:ROOT, stdio:'ignore'}); old = f => cp.execSync(`git show 4daba2a:${f}`, {cwd:ROOT, maxBuffer:1 << 26}).toString(); } catch (e) {}
+  if (!old){ console.log('skip 12: 4daba2a not in this checkout'); }
+  else { const Rm = new Function(srcOf(old))(), Em = setup(Rm), Sm = Em.S; Sm.armies = Sm.armies.filter(a => !a.air && a.owner !== 1);
+    const fm = Rm.addArmy(1, Em.foeP, {inf:2}), wm = wingAt(Rm, Em.base, 'asf'); Rm.orderAir(wm, Em.foeP, 'strike'); Em.api.tick();
+    const id = wm.id, fid = fm.id, fly0 = JSON.stringify(wm.fly), save = Em.api.saveJSON();
+    const R = load(); R.IM.api.newGame(1, 0, SEATS); const okL = R.IM.api.restore(typeof save === 'string' ? JSON.parse(save) : save), S = R.S, w = S.armies.find(a => a.id === id), foe = S.armies.find(a => a.id === fid);
+    ok(okL && w && w.fly && w.fly.ph === 'out' && w.fly.kind === 'strike' && w.fly.foe === undefined, 'an ASF mid-Attack saved by 4daba2a loads, still flying out', fly0);
+    const h0 = R.effHP(foe), phs = []; let h = 0; while (w.fly && h < 20){ R.IM.api.tick(); phs.push(w.fly ? w.fly.ph : 'home'); h++; }
+    const d = h0 - R.effHP(foe) + 0.0834*h;
+    ok(phs.includes('over') && !w.fly && w.at === Em.base && d > 0.5 && d < 1.6, 'its strike lands with this build\'s damage (about 1 HP) and it comes home', {phs:phs.join(' '), d}); } }
 
 console.log(`${n - bad}/${n} checks passed`); process.exit(bad ? 1 : 0);

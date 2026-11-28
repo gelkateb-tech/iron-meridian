@@ -26,15 +26,22 @@ const INF_NEEDS = ['fac'];
    any coast). NAVAL_CITIES is the one switch: false gives the game exactly as it was before (no Marines, landings on any coast). */
 const NAVAL_CITIES = true;
 const INF_T = ['inf', 'at', 'spec', 'para', ...(NAVAL_CITIES ? ['mar'] : [])];   // the infantry units (their req and req2 are set from INF_NEEDS below the table)
-/* ASF ATTACK ORDER (owner playtest 2026-11-27, item 2a; PROPOSED NUMBERS, the owner OKs them before merge). The Air Superiority Fighter keeps its
-   job of winning the air (vs air 3.0, unchanged) and may also be sent to attack enemy ground forces and ships (the Attack button: orderAir with
-   want 'strike', rules/air.js asfStrike). These are its damage multipliers against each class on such a strike (its attack 9 x these: 2.25 soft,
-   1.8 armoured, 2.7 naval; a Strike Fighter does 9.6 / 12.8 / 8), the same numbers the unit had before, so nothing else changes. Measured with the
-   real resolveStrike (one aircraft, open plains, morale 80): about 2.3 HP a sortie on a 10 HP infantry unit (a Strike Fighter 9.4), 1.6 on a tank
-   (11.5), 2.3 on artillery (8.8). links: whether its strike also hurts the land under it as a Strike Fighter's does (cuts the road and rail
-   links for LINK_DMG.strike hours, adds war damage); false: the forces only. No research needed. Option B, a little stronger: soft 0.3,
-   armored 0.3, naval 0.3. */
-const ASF_ATTACK = {soft:0.25, armored:0.2, naval:0.3, links:false};
+/* ASF ATTACK ORDER (owner playtest 2026-11-27, item 2a; owner 2026-11-28: "make its Attack even weaker: about 1 HP of damage per strike against
+   ground troops and ships, as a plain attack number in its stats, on the same scale as every other unit. Its air-to-air strength stays as it is").
+   The Air Superiority Fighter keeps its job of winning the air (attack 9 x vs air 3.0, unchanged) and may also be sent to attack enemy ground
+   forces and ships (the Attack button: orderAir with want 'strike', rules/air.js asfStrike), for harassment: troops at sea, armies on the move.
+   atk: its attack on ground forces and ships, ONE number on the scale of every unit's attack in Army Info (Motorized Infantry 3, Main Battle
+   Tank 6, a Strike Fighter 9.6 on infantry): against infantry, armour, artillery, ships and submarines alike. Set into UNITS.asf.vs below the
+   table (vs soft, armored, naval = atk / its attack 9), so research that raises its attack raises this too, as for any unit. Measured with the
+   real resolveStrike (one aircraft, open plains, morale 80, .test/asf-attack.js): about 1.0 HP a sortie on infantry, 0.9 on a tank, 0.8 on a
+   frigate, 1.5 on infantry at sea without warships (AT_SEA below; 0.75 with them). Until 2026-11-28 it was three multipliers (soft 0.25,
+   armoured 0.2, naval 0.3: 2.25, 1.8, 2.7 on that scale, about 2.3 HP on infantry). links: whether its strike also hurts the land under it as a
+   Strike Fighter's does (cuts the road and rail links for LINK_DMG.strike hours, adds war damage); false: the forces only. No research needed. */
+const ASF_ATTACK = {atk:1, links:false};
+/* TROOPS AT SEA (rules/tick.js battles, rules/air.js strikes): ground units aboard ships in a sea zone take more damage, as in Conflict of
+   Nations: AT_SEA.alone (1.5x) with no warship of their own nation in that sea zone, AT_SEA.escort (0.75x) with one. The same factor in battles
+   at sea, in air strikes and UAV salvoes on forces at sea, and in Army Info ('at sea', rules/combat.js armyStrength): atSeaF. */
+const AT_SEA = {alone:1.5, escort:0.75};
 const UNITS = {
   inf:  {name:'Motorized Infantry',short:'INF', cls:'soft',    cost:25, oil:0, metal:0, iron:0, elec:0, rare:0, mp:10, atk:3, def:3, hp:10, spd:4,  build:24, upk:1, fuel:0,   req:{b:'fac', l:1},          tech:null,  role:'Line infantry that holds ground and captures provinces.'},
   art:  {name:'Mobile Artillery',  short:'ART', cls:'soft',    cost:36, oil:3, metal:4, iron:7, elec:0, rare:0, mp:10, atk:7, def:3, hp:9,  spd:3,  build:48, upk:2, fuel:0,   req:{b:'fac', l:1}, tech:null,  vs:{soft:1.4}, role:'Self-propelled howitzer that fires on enemy forces from a distance.'},
@@ -59,7 +66,7 @@ const UNITS = {
   bomb: {name:'Heavy Bomber', short:'HBR', cls:'air', bmb:1, cost:132, oil:20, metal:24, iron:6, elec:14, rare:0, mp:6, atk:10, def:2, hp:14, spd:9, build:96, upk:7, fuel:3, req:{b:'air', l:2}, tech:'bomb1', vs:{soft:1.2, armored:0.8, naval:0.6, air:0.3}, role:'Long-range bomber that strikes cities and buildings.'},
   mpa:  {name:'Maritime Patrol Aircraft', short:'MPA', cls:'air', cost:74, oil:10, metal:12, iron:0, elec:11, rare:0, mp:5, atk:6, def:2, hp:10, spd:14, build:66, upk:4, fuel:2, req:{b:'air', l:1}, tech:'mpa1', vs:{naval:1.3, soft:0.2, armored:0.1, air:0.1}, vsU:{sub:2.5}, role:'Patrol aircraft that searches the sea for ships and submarines.'},
   awacs:{name:'AWACS',              short:'AEW', cls:'air',     cost:96, oil:10, metal:14, iron:0, elec:18, rare:5, mp:5, atk:0, def:2, hp:10, spd:15, build:72, upk:5, fuel:2, req:{b:'air', l:2}, tech:'awacs1', vs:{soft:0, armored:0, air:0, naval:0}, role:'Airborne radar that spots enemy forces from afar.'},
-  asf:  {name:'Air Superiority Fighter', short:'ASF', cls:'air', cost:78, oil:11, metal:12, iron:0, elec:12, rare:2, mp:5, atk:9, def:5, hp:10, spd:22, build:72, upk:6, fuel:2, req:{b:'air', l:2}, tech:'asf1', vs:{air:3.0, soft:ASF_ATTACK.soft, armored:ASF_ATTACK.armored, naval:ASF_ATTACK.naval}, vsU:{bomb:3.0, awacs:3.0, mpa:3.0, drone:2.4, sdrone:2.6, swarm:1.8}, role:'Fighter built to win control of the air; it can also attack ground forces, weakly.'},
+  asf:  {name:'Air Superiority Fighter', short:'ASF', cls:'air', cost:78, oil:11, metal:12, iron:0, elec:12, rare:2, mp:5, atk:9, def:5, hp:10, spd:22, build:72, upk:6, fuel:2, req:{b:'air', l:2}, tech:'asf1', vs:{air:3.0}, vsU:{bomb:3.0, awacs:3.0, mpa:3.0, drone:2.4, sdrone:2.6, swarm:1.8}, role:'Fighter built to win control of the air; it can also harass ground forces and ships, very weakly.'},
   // bmb: bomb load as a share of the Heavy Bomber's (bombers wreck cities, buildings and roads); lo: low-observable airframe, the share of hits that find it
   // (ad: Mobile SAMs, frigates and cruisers; air: fighters and other aircraft), each measured against what the same shooter does to a Heavy Bomber
   stealth:{name:'Stealth Bomber', short:'STB', cls:'air', bmb:0.6, lo:{ad:0.35, air:0.4}, cost:330, oil:26, metal:34, iron:6, elec:40, rare:8, mp:8, atk:8, def:4, hp:12, spd:10, build:168, upk:14, fuel:3.5, req:{b:'air', l:3}, tech:'bomb3', vs:{soft:1.0, armored:0.7, naval:0.6, air:0.2}, role:'Long-range bomber that is hard to detect.'},
@@ -67,6 +74,9 @@ const UNITS = {
 // Marines (NAVAL CITIES): amphibious infantry, a little stronger and dearer than Motorized Infantry; trained at an Army Base in a coastal city
 // (coastal: mobBlock, rules/production.js); a force of Marines alone boards and lands on any coast (amphib, rules/movement.js)
 if (NAVAL_CITIES) UNITS.mar = {name:'Marines', short:'MAR', cls:'soft', cost:34, oil:0, metal:3, iron:2, elec:0, rare:0, mp:10, atk:4, def:3, hp:10, spd:4, build:36, upk:1.5, fuel:0, req:{b:'fac', l:1}, tech:null, coastal:1, amph:1, role:'Amphibious infantry: boards ships and lands on any coast, not only at naval cities. Trained at an Army Base in a coastal city.'};
+// the Air Superiority Fighter's attack on ground forces and ships (ASF_ATTACK.atk, above) as its damage classes: atk / its attack, so Army Info
+// reads ASF_ATTACK.atk against infantry, armour, ships and submarines (its air-to-air, vs air 3.0 and vsU, is its own)
+for (const k of ['soft', 'armored', 'naval']) UNITS.asf.vs[k] = ASF_ATTACK.atk/UNITS.asf.atk;
 // Anti-Tank Infantry ('at') is gone (owner 2026-11-27, BUILD-REQS): a type in INF_T with no unit is dropped from it here, before anything reads it
 // (an old save's Anti-Tank Infantry becomes Motorized Infantry on load: atMigrate, rules/state.js)
 for (let i = INF_T.length - 1; i >= 0; i--) if (!UNITS[INF_T[i]]) INF_T.splice(i, 1);
