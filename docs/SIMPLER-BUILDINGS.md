@@ -1,15 +1,15 @@
 # Simpler buildings: art direction test (owner 2026-11-27)
 
-Owner's ask: simpler buildings that match the new cities. Two options are shown next to today's look, on Berlin and Kolkata, at play zoom and closest zoom. Nothing here replaces today's look: it stays the default until the owner picks A, B or today's.
+Owner's ask: simpler buildings that match the new cities. Two options were shown next to today's look, on Berlin and Kolkata, at play zoom and closest zoom.
 
-## Option B: buildings drawn in code (this branch, `?bld=b`)
+**The owner picked option B (2026-11-28)**, with an extra round giving the HQ and the smaller buildings more character, and skipped option A and its test picture. On this branch B is now the default look: open the page as it is. `?bld=pic` in the page's address (for example `index.html?bld=pic`) shows today's pictures, unchanged, for comparison; `?bld=b` still works and is the same as no switch. Nothing is merged.
 
-Open the page with `?bld=b` in its address (for example `index.html?bld=b`). Without it the map shows today's pictures, unchanged.
+## Option B: buildings drawn in code (this branch, the default look)
 
-With it, every building in a town (the HQ, Army Base, Airbase, Naval Yard, Bunker, Recruiting Office, Arms Industry, Missile Silo, levels I-V, and a building going up) is a handful of parts drawn the way the town's own blocks are drawn: the same camera (from the south-south-west, roofs leaning east), the same light from the north-west, the same wall shades, roof rims, windows and shadows, and the same night (the roofs go dark, lit windows and lamps). There are no picture files, so no image calls.
+Every building in a town (the HQ, Army Base, Airbase, Naval Yard, Bunker, Recruiting Office, Arms Industry, Missile Silo, levels I-V, and a building going up) is a handful of parts drawn the way the town's own blocks are drawn: the same camera (from the south-south-west, roofs leaning east), the same light from the north-west, the same wall shades, roof rims, windows and shadows, and the same night (the roofs go dark, lit windows and lamps). There are no picture files, so no image calls.
 
 - Same lots as today (`cityLots`, `bnLayout`): the same ground, sizes and the Naval Yard's water side, so the comparison is fair.
-- Close in (the town's canvas with its lots open), the parts are part of the town's canvases (`bdTownParts` in `cityPlanDraw`, their ground in `cityLotDraw`). There is one depth order with the blocks, so no second layer is drawn in front. Each frame only the HQ's (and the Recruiting Office's) flags, a crane over a level going up, the progress ring and a Naval Yard's piers and ships are drawn over the map. The town canvases are kept to the land, so piers and ships out over the water are drawn on top.
+- Close in (the town's canvas with its lots open), the parts are part of the town's canvases (`bdTownParts` in `cityPlanDraw`, their ground in `cityLotDraw`). There is one depth order with the blocks, so no second layer is drawn in front. Each frame only the flags (the HQ's, the Recruiting Office's and, from round 2, the Army Base's), a crane over a level going up, the progress ring and a Naval Yard's piers and ships are drawn over the map. The town canvases are kept to the land, so piers and ships out over the water are drawn on top.
 - Further out (play zoom) or off its lot, a building is a small canvas of the same parts (`bdSprite`), darkened at night as the town is.
 - Kept off the water (`bdDry`): a part whose foot touches the water the map draws (the sea, a lake, the delta's water, a river line) is drawn smaller round its middle, else left out, with what stands on it.
 - The map's lines under the roofs (`bdHole`): the roads (also those drawn over the fog and by night), the railways and the province borders end at one outline round each building's lot and parts, as they end at a lot's fence today; the pictures, drawn over the map, used to hide them.
@@ -17,7 +17,7 @@ With it, every building in a town (the HQ, Army Base, Airbase, Naval Yard, Bunke
 - A construction's third and the HQ's style are in the town's signature (`bdSig`), so the town is made again at each third.
 - Buildings in the countryside (a province with no town) keep their pictures; that is a separate job.
 
-What each building is made of (`bdParts`; each level adds to the one before):
+What each building is made of (`bdParts`; each level adds to the one before; round 2's additions in the next section):
 
 | Building | I | II | III | IV | V |
 |---|---|---|---|---|---|
@@ -32,6 +32,21 @@ What each building is made of (`bdParts`; each level adds to the one before):
 | Going up | first third: a dug pit, a site cabin, stacks, a tower crane; second: the level I building at half height in netting, open at the top; last: its full height as a bare frame | | | | |
 
 At night: barracks, offices and the HQ have lit windows; halls, hangars and sheds are mostly dark; the runway has edge lights (green and red at its ends); masts, cranes and chimneys have red lamps; the quay and the bunker doors have dim lamps.
+
+### Round 2: more character (owner 2026-11-28)
+
+The owner's note: "Close in, the HQ reads as a white block with a dome, and some buildings, like the Bunker and the Recruiting Office, need their labels or a tap to be sure what they are." Each building got a few large, recognisable parts in the blocks' flat style, light and colours (no ground pads, no picture files):
+
+| Building | Added in round 2 |
+|---|---|
+| HQ (all 7 styles) | a columned portico at its door (a dark recess under the cornice and light columns: `por`, drawn by `bdWall`), three broad stone steps down to the forecourt, lamps either side of them, a flag on its top (on the dome, the spire's tip, the upper roof or the slab), and a forecourt in its own style with the holder's flags: western two lawns and a row of 6 flags along the front; eastern-europe a paved parade square, a monument on its plinth, 6 flags down both sides; middle-east a long pool with 3 fountains, 6 flags along it; east-asia a gate on the walk (two red posts under a dark roof), gardens, 6 flags down both sides; south-asia a long narrow pool between lawns, 6 flags along the front; africa a round plaza with a monument, 5 flags round its south side; latin-america a plaza with a round fountain, 6 flags down both sides. East-asia's walls and columns are red again (its red had fallen back to slate) |
+| Recruiting Office | a red sign band across its front over the canopy, lit (not shaded like a wall) with white lettering, glowing by night (a lit strip, `lamp`'s length); a flag on its roof (on the taller middle from IV); a queue of recruits from its door, one dot each (close in) |
+| Bunker | a concrete pillbox with dark firing slits on its walls, in a ring of sandbags open to the back; sandbags round every vault's door; a radar mast with a dish from I and a tall antenna from III; the vaults kept to the lot's west part to make room; the blockhouse at V has slits too |
+| Army Base | a fence round it (close in) with a gate to the south: two posts, a red and white boom, a guard house beside it, a road in to the parade ground; lamps at the gate; a flag by the gate (the holder's flag, like the HQ's); watchtowers on four legs with a cab and a red lamp, one from I and a second from III (the old lookout tower at V goes) |
+| Missile Silo | a yellow warning stripe round each hatch's pad, with black bars close in; the radar mast from I (a second at V); bigger radar dishes |
+| Arms Industry | the rail spur from I (was IV) with 2-3 wagons on it; a yellow gantry crane over the works yard (its rails, four legs, the bridge and its trolley, a red lamp); at V the assembly hall is a little narrower, with the crane over a yard beside it |
+
+Speed: these add a few parts per building (the HQ about 10 more, the others 5-12), drawn once into the town's canvases or a building's small canvas, not each frame; only the flags (one more on the HQ's top and the Recruiting Office's roof, one on the Army Base) are drawn each frame. Far out (`kz`: the building a few pixels wide, where its flags are not drawn) the small parts are left out: the HQ's steps, flagpoles and gate, the Army Base's gate posts and flag, the watchtowers' four legs (one post), the cranes' legs and trolley, the sandbags' dark foot; so at play zoom the HQ has fewer parts than in round 1. The measured numbers are in the round's report.
 
 ## Option A: simpler pictures (priced and prompted only; no picture made)
 
