@@ -227,6 +227,17 @@ def _jam():
     return U(tr, box_.difference(R(4.2, 13.4, 12.8, 1.1)), mast, head, waves.difference(R(0, 6.0, 32, 30)))
 I['jam'] = _jam()
 
+# RECON VEHICLE: a low, slab-sided 4x4 scout car facing right, a small remote gun on the roof and a tall sensor mast with its head
+def _rcn():
+    hull = Polygon([(2.0, 23.0), (2.0, 17.4), (4.0, 15.4), (19.6, 15.4), (23.8, 17.2), (30.0, 19.0), (30.0, 23.0)])
+    gap = unary_union([C(x, 23.6, 3.9) for x in (8.0, 23.6)])
+    win = Polygon([(20.2, 16.4), (23.4, 17.8), (20.2, 17.8)])
+    rws = U(R(12.0, 13.2, 4.4, 2.4), R(15.6, 13.8, 6.2, 1.1))
+    mast = R(6.0, 4.4, 1.6, 11.2)
+    head = RR(3.6, 2.0, 6.4, 3.4, 1.2)
+    return U(hull.difference(gap).difference(win), rws, mast, head, tyres((8.0, 23.6), 23.6, 3.0, 0.38))
+I['rcn'] = _rcn()
+
 # ---- aircraft, seen from above, nose up (drawn half and mirrored about x 16)
 # STRIKE FIGHTER: swept wings carrying two bombs, twin tails
 def _jet():
@@ -454,7 +465,7 @@ I['stack'] = _stack()
 # SUPPLY TRUCK (supply runs)
 I['truck'] = U(truck(), R(2.6, 9.6, 18.6, 8.4).difference(R(4.0, 11.2, 15.8, 1.1)))
 
-ORDER = ['inf', 'mot', 'at', 'spec', 'para', 'ifv', 'tank', 'art', 'mlrs', 'sam', 'jam', 'heli', 'jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs',
+ORDER = ['inf', 'mot', 'at', 'spec', 'para', 'ifv', 'rcn', 'tank', 'art', 'mlrs', 'sam', 'jam', 'heli', 'jet', 'int', 'asf', 'bomb', 'stealth', 'mpa', 'awacs',
          'drone', 'drone4', 'sdrone', 'swarm', 'frig', 'crui', 'carr', 'sub', 'cargo', 'cm', 'bm', 'icbm', 'stack', 'truck']
 
 def fit(g, m=1.0):
