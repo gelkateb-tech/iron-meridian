@@ -1,0 +1,2 @@
+FLAG (flagged: side, scene, top)
+- Point 1: Tail fin, intakes, and dorsal openings are inconsistent across all pictures, showing flipped asymmetrical features in side and scene, but symmetrical layout in top view.

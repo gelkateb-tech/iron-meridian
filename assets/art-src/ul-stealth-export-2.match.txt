@@ -1,0 +1,2 @@
+FLAG (flagged: side, scene)
+- Point 4 (side, scene): small warning triangle marking visible on the fuselage below the cockpit.
