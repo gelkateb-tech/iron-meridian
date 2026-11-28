@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- point 1 (top): propellers have 2 blades instead of the 4 blades shown in the side view
+- point 1 (top): nose markings and antennas differ from the side view

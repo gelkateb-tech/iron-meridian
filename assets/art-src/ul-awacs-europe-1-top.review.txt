@@ -1,0 +1,2 @@
+FLAG
+- 1: Radome is mounted on the mid-fuselage instead of on top of the tail fin as in reference.

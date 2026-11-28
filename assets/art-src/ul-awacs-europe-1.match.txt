@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- 1 (top): rotodome is placed too far forward compared to the fin-mounted rotodome in the side view
+- 1 (top): engines have 2-bladed propellers instead of the 3-bladed propellers seen in the side view

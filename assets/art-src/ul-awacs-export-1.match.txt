@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- point 1 (top): engines have two-bladed propellers instead of the three-bladed propellers shown in the side view

@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- 2 (top): The dark blue solar panels on the lower wings seen in the side view and scene are missing, colored plain grey instead.

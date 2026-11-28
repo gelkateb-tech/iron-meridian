@@ -1,0 +1,2 @@
+FLAG
+- Point 1: Propellers have two blades instead of the four blades shown in the reference.

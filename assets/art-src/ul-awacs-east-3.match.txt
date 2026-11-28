@@ -1,0 +1,2 @@
+FLAG (flagged: side)
+- Point 3: picture 1 is a rear three-quarter view from behind, not a front three-quarter side view.

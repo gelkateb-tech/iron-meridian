@@ -1,0 +1,2 @@
+FLAG (flagged: top)
+- Point 1 (top): propellers have 4 straight blades instead of the 6 curved scimitar blades seen in the side view.

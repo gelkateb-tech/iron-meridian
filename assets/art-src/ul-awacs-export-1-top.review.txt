@@ -1,0 +1,2 @@
+FLAG
+- 1. SAME UNIT: Propellers have two blades instead of three as seen in the reference.

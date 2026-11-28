@@ -1,0 +1,2 @@
+FLAG
+- 1. Tail configuration does not match reference: shows a conventional vertical fin instead of the V-tail.

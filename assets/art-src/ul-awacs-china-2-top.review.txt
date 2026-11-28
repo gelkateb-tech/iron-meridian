@@ -1,0 +1,2 @@
+FLAG
+- 1: Tail shape differs from reference; shows a central vertical fin instead of the twin outward-canted fins.

@@ -1,0 +1,2 @@
+FLAG
+- 4. Aircraft faces toward the lower left instead of the lower right as required.

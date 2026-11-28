@@ -1,0 +1,3 @@
+FLAG (flagged: top)
+- point 1 (top): rear fuselage features a prominent dorsal fin not present on the master side view
+- point 1 (top): missing antennas behind the rotodome that are visible on the side view
