@@ -30,11 +30,17 @@
 // 11. air-to-air identical to the build before the change (4daba2a, git show): 300 bomber raids into an ASF patrol, 300 Strike Fighter raids into
 //    one, an AWACS hunted, the same seed: the same HP to the decimal; Army Info's air rows for the ASF the same
 // 12. an old save (4daba2a's rules) with an ASF in the middle of an Attack loads and the strike lands, with this build's damage
+// 13. fog of war (repair 1): an Attack sent at a contact its nation has not identified (a '?' plate: rules/vision.js armyKnown false) names no
+//    nation anywhere: the strike report on an unidentified hostile convoy reads 'Attack on unidentified forces at sea in ...' (an identified one
+//    still 'Attack on <Nation> troops at sea in ...'); a '?' convoy of a nation at peace: the order is taken without 'You are not at war with
+//    <Nation>' (an identified one is refused with it), the wing follows it (trailOf) and hits nothing, no war starts, and the report names no
+//    nation ('found no targets (the contact it was sent at was not hostile)')
 'use strict';
 const fs = require('fs'), path = require('path'), cp = require('child_process'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
 const EXP = '\nreturn {IM, get S(){ return S; }, get G(){ return G; }, UNITS, ASF_ATTACK: typeof ASF_ATTACK === "undefined" ? null : ASF_ATTACK, setRel, addArmy, count, armyHP, effHP, resolveStrike, removeEmpty, airCheck, capOver: typeof capOver === "undefined" ? null : capOver, loiterHour: typeof loiterHour === "undefined" ? null : loiterHour, nbs: p => G.P[p].nbs, orderAir, wingRange, hexDist, stationaryAt, S_dmg: () => S.dmg, unitStrength, AT_SEA: typeof AT_SEA === "undefined" ? null : AT_SEA, provNow: typeof provNow === "undefined" ? null : provNow, foesIn: typeof foesIn === "undefined" ? null : foesIn, asfHome: typeof asfHome === "undefined" ? null : asfHome, orderMove, armyById, uavSalvo,'
-  + ' recallAir: typeof recallAir === "undefined" ? null : recallAir, splitWing: typeof splitWing === "undefined" ? null : splitWing, mergeWings: typeof mergeWings === "undefined" ? null : mergeWings};';
+  + ' recallAir: typeof recallAir === "undefined" ? null : recallAir, splitWing: typeof splitWing === "undefined" ? null : splitWing, mergeWings: typeof mergeWings === "undefined" ? null : mergeWings,'
+  + ' armyKnown, visibleSet, nationName, atWar, trailOf: typeof trailOf === "undefined" ? null : trailOf, resetVis: () => { visCache = null; }};';
 const srcOf = read => { const html = read('index.html'); const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]); return "'use strict';\n" + FILES.map(read).join('\n') + EXP; };
 const load = () => new Function(srcOf(f => fs.readFileSync(path.join(ROOT, f), 'utf8')))();
 let bad = 0, n = 0; const ok = (c, msg, info) => { n++; if (!c){ bad++; console.log('FAIL  ' + msg + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 400) : '')); } else if (process.env.V) console.log('ok    ' + msg + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 200) : '')); };
@@ -214,11 +220,11 @@ const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w
     const w = wingAt(R, E.base, 'asf'), c = R.airCheck(w, p, null, 'strike', foe.id), cp0 = R.airCheck(w, p, null, 'strike');
     ok(c.ok && c.kind === 'strike' && cp0.ok, 'an ASF may Attack the troops at sea, sent at the force or at the zone', [c, cp0]);
     ok(R.orderAir(w, p, 'strike', foe.id) && w.fly.foe === foe.id, 'the Attack records the force it was sent at (fly.foe)', w.fly);
-    const d = sortie(w, foe), l = feed().find(t => /^Attack on .*troops at sea/.test(t));
+    const d = sortie(w, foe), l = feed().find(t => /^Attack on .*(troops|forces) at sea/.test(t));
     console.log('troops at sea struck:', d.toFixed(2), 'HP;', l);
     ok(d > 0.8 && d < 2.1, 'it hits them, about 1.5 HP (one aircraft, troops at sea alone: 1.5x)', d);
     ok(foe.to !== null || foe.path.length || foe.at === far.id, 'and they sail on (harassment: it does not stop them)', {to:foe.to, path:foe.path});
-    ok(!!l, 'the report reads "Attack on ... troops at sea in ..."', feed().slice(0, 3));
+    ok(!!l, 'the report reads "Attack on ... troops at sea in ..." (unidentified: "Attack on unidentified forces at sea in ...", 13)', feed().slice(0, 3));
     ok(cj.ok, '(a Strike Fighter may still strike the zone, and hits only forces standing in it: unchanged)', cj); }
   // (b) infantry marching towards our capital
   { S.armies = S.armies.filter(a => !a.air && a.owner !== 1); const foe = R.addArmy(1, E.foeP, {inf:2}); R.orderMove(foe, E.base);
@@ -289,5 +295,35 @@ const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w
     const h0 = R.effHP(foe), phs = []; let h = 0; while (w.fly && h < 20){ R.IM.api.tick(); phs.push(w.fly ? w.fly.ph : 'home'); h++; }
     const d = h0 - R.effHP(foe) + 0.0834*h;
     ok(phs.includes('over') && !w.fly && w.at === Em.base && d > 0.5 && d < 1.6, 'its strike lands with this build\'s damage (about 1 HP) and it comes home', {phs:phs.join(' '), d}); } }
+
+// ---- 13. fog of war: a '?' contact sent at names no nation and starts no war
+{ const R = load(), E = setup(R), S = E.S, G = E.G, B = G.P[E.base]; S.armies = S.armies.filter(a => !a.air && a.owner !== 1 && a.owner !== 2);
+  const z = G.P.filter(q => q.sea && R.hexDist(B.cc, q.cc) >= 4 && R.hexDist(B.cc, q.cc) <= 9).sort((a, b) => R.hexDist(B.cc, a.cc) - R.hexDist(B.cc, b.cc))[0];
+  const feed = () => (S.log || []).map(x => x.text), N1 = R.nationName(1), N2 = R.nationName(2), known = b => R.armyKnown(b, R.visibleSet(0));
+  let fr = null; const reveal = (p, on) => { if (fr){ S.armies.splice(S.armies.indexOf(fr), 1); fr = null; } if (on) fr = R.addArmy(0, p, {frig:1}); R.resetVis(); };   // (identified: a frigate of ours beside it)
+  ok(!R.atWar(0, 2), '(nation 2 is at peace with us)');
+  // (a) a hostile convoy at sea, not identified
+  { const foe = R.addArmy(1, z.id, {inf:2}), w = wingAt(R, E.base, 'asf'); S.log = []; reveal(z.id, false);
+    ok(!known(foe), 'a hostile convoy at sea that we have not identified (a ? contact)', {at:foe.at});
+    ok(R.orderAir(w, z.id, 'strike', foe.id), 'Attack sent at it'); R.resolveStrike(w, z.id); const l = feed().find(t => /^Attack on /.test(t)) || '';
+    console.log('unidentified convoy report:', l);
+    ok(/^Attack on unidentified forces at sea in /.test(l) && !l.includes(N1), 'the report names no nation and no type: "Attack on unidentified forces at sea in ..."', l);
+    reveal(z.id, true); ok(known(foe), '(identified: a frigate of ours sails beside it)'); S.log = []; w.fly = {tgt:z.id, kind:'strike', ph:'out', t:0.9, hrs:0, foe:foe.id}; R.resolveStrike(w, z.id);
+    const l2 = feed().find(t => /^Attack on /.test(t)) || ''; console.log('identified convoy report:', l2);
+    ok(l2.startsWith(`Attack on ${N1} troops at sea in `), 'identified, it names them as before: "Attack on <Nation> troops at sea in ..."', l2); }
+  // (b) a convoy of a nation at peace, not identified
+  { reveal(z.id, false); S.armies = S.armies.filter(a => !a.air && a.owner !== 1 && a.owner !== 2); S.log = []; R.resetVis();
+    const far = G.P.filter(q => q.sea && q.id !== z.id && G.P[z.id].nbs.includes(q.id) && R.hexDist(B.cc, q.cc) <= 8)[0];
+    const foe = R.addArmy(2, z.id, {inf:2}), w = wingAt(R, E.base, 'asf'), h0 = R.effHP(foe); R.resetVis();
+    ok(!known(foe), 'a convoy of a nation at peace, not identified (a ? contact)');
+    const c = R.airCheck(w, z.id, null, 'strike', foe.id);
+    ok(c.ok && !JSON.stringify(c).includes(N2), 'the Attack on it is taken, naming no nation (not "You are not at war with ...")', c);
+    reveal(z.id, true); const ck = R.airCheck(w, z.id, null, 'strike', foe.id); reveal(z.id, false);
+    ok(!ck.ok && ck.why === `You are not at war with ${N2}.`, 'identified, the same Attack is refused as before (the panel offers the surprise attack)', ck);
+    R.resetVis(); ok(R.orderAir(w, z.id, 'strike', foe.id) && w.fly.foe === foe.id && R.trailOf(w) === foe, 'sent: the wing goes after it (trailOf) as after a hostile one', w.fly);
+    if (far){ foe.at = far.id; ok(R.asfHome(w) && w.fly.tgt === far.id, 'it follows the contact into the next sea zone', {tgt:w.fly.tgt, far:far.id}); foe.at = z.id; w.fly.tgt = z.id; }
+    S.log = []; R.resolveStrike(w, z.id); const l = feed().find(t => /^Strike on |^Attack on /.test(t)) || ''; console.log('peace contact report:', l);
+    ok(R.effHP(foe) === h0 && !R.atWar(0, 2), 'it hits nothing and starts no war', {hp:[h0, R.effHP(foe)]});
+    ok(/found no targets \(the contact it was sent at was not hostile\)|found no targets: the contact it was sent at was not hostile/.test(l) && !l.includes(N2), 'the report names no nation ("... found no targets: the contact it was sent at was not hostile")', l); } }
 
 console.log(`${n - bad}/${n} checks passed`); process.exit(bad ? 1 : 0);

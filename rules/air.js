@@ -37,14 +37,20 @@ const provNow = a => a.to != null ? meetProv(a.at, a.to, armyXY(a)) : a.at;
 const foesIn = (p, o, surprise = null) => S.armies.filter(b => (b.at === p || b.to === p) && !b.air && !b.fly && b.owner !== o && count(b) > 0 && (atWar(o, b.owner) || (surprise && surprise.includes(b.owner))) && provNow(b) === p);
 // the force an ASF Attack was sent at (fly.foe), while it can still be hit: there, hostile, not in the air
 const foeOf = a => { const f = a.fly, b = f && f.foe != null ? armyById(f.foe) : null; return b && count(b) > 0 && !b.air && !b.fly && b.owner !== a.owner && atWar(a.owner, b.owner) ? b : null; };
-// what an ASF Attack hit, for its report: troops at sea, a force on the move, or forces (with their nation)
-const asfWhat = (defs, p) => { const b = defs[0], mv = defs.some(x => x.to != null || x.sail), sea = G.P[p].sea && defs.some(ground);
+// the force an ASF Attack was sent at that the wing follows: foeOf, or one it could not identify when sent (fog of war: a '?' contact, perhaps of a
+// nation at peace, which no strike will hit: the wing goes after it all the same, as it would after a hostile one, so its flight tells nothing)
+const trailOf = a => { const b = foeOf(a); if (b) return b; const f = a.fly, c = f && f.foe != null ? armyById(f.foe) : null;
+  return c && count(c) > 0 && !c.air && !c.fly && c.owner !== a.owner && !atWar(a.owner, c.owner) && !armyKnown(c, visibleSet(a.owner)) ? c : null; };
+// what an ASF Attack hit, for its report: troops at sea, a force on the move, or forces (with their nation). known false: forces its nation has
+// not identified (a '?' contact): no nation and no type, as a Strike Fighter's report on them ('Air strike on X')
+const asfWhat = (defs, p, known = true) => { const b = defs[0], mv = defs.some(x => x.to != null || x.sail), sea = G.P[p].sea && defs.some(ground);
+  if (!known) return `unidentified ${G.P[p].sea ? 'forces at sea' : mv ? 'forces on the move' : 'forces'}`;
   return `${b.owner >= 0 ? nationName(b.owner) + ' ' : ''}${sea ? 'troops at sea' : mv ? 'forces on the move' : 'forces'}`; };
 // whether nation n has warships in sea zone p (standing or on the move there): its troops at sea are escorted (AT_SEA, rules/data.js)
 const escortAt = (p, n) => !!G.P[p].sea && S.armies.some(b => b.owner === n && (b.at === p || b.to === p) && !b.air && !b.fly && shipsN(b) > 0 && provNow(b) === p);
 // the wing follows its target force (fly.foe) while it flies out: to the province it counts in now, if that is within range (the share of the
 // flight already flown is kept as distance: fly.t rescaled to the new leg). near: only a province next to the target (the strike hour)
-function asfHome(a, near = false){ const f = a.fly, b = foeOf(a); if (!b) return false; const q = provNow(b); if (q === f.tgt) return true;
+function asfHome(a, near = false){ const f = a.fly, b = trailOf(a); if (!b) return false; const q = provNow(b); if (q === f.tgt) return true;
   if (near && !G.P[f.tgt].nbs.includes(q)) return false;
   const B = G.P[a.air.base], d0 = Math.max(1, hexDist(B.cc, G.P[f.tgt].cc)), d1 = Math.max(q === a.air.base ? 0 : 1, hexDist(B.cc, G.P[q].cc));
   if (d1 > wingRange(a)) return false;
@@ -124,7 +130,8 @@ function airCheck(a, p, surprise = null, want = null, foe = null){
   if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(surprise && surprise.includes(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   // (an ASF Attack: enemy forces there standing or on the move, foesIn; sent at one force, foe, that force must be there)
   if (k === 'strike' && want === 'strike' && foe != null){ const b = armyById(foe); if (!b || !count(b) || b.air || b.fly || b.owner === a.owner || provNow(b) !== p) return {ok:false, why:'That force is no longer there.'};
-    if (!atWar(a.owner, b.owner) && !(surprise && surprise.includes(b.owner))) return {ok:false, why:`You are not at war with ${nationName(b.owner)}.`}; }
+    if (!atWar(a.owner, b.owner) && !(surprise && surprise.includes(b.owner))){ if (armyKnown(b, visibleSet(a.owner))) return {ok:false, why:`You are not at war with ${nationName(b.owner)}.`};
+      return {ok:true, kind:k, d, hours:Math.max(1, Math.ceil(d/wingSpd(a)))}; } }   // (a '?' contact of a nation at peace: the order is taken as on any other, naming no nation; the wing follows it, trailOf, and strikes only hostile forces)
   if (k === 'strike' && want === 'strike' && !(!G.P[p].sea && o >= 0 && o !== a.owner) && !foesIn(p, a.owner, surprise).length) return {ok:false, why:'No enemy forces there to attack.'};
   return {ok:true, kind:k, d, hours:Math.max(1, Math.ceil(d/wingSpd(a)))};
 }
@@ -288,7 +295,7 @@ function resolveStrike(a, p){
   // force (fly.foe) hits that force alone while it is there. foes: every hostile force counted there (their air defence fires on the ASF)
   const city = G.P[p].city, asfK = asfStrike(a) && a.fly && a.fly.kind === 'strike', foes = asfK ? foesIn(p, o) : null, tgtF = asfK ? foeOf(a) : null, tgtHere = !!tgtF && foes.includes(tgtF);
   const defs = asfK ? (tgtHere ? [tgtF] : foes) : stationaryAt(p).filter(b => atWar(o, b.owner) && count(b) > 0);
-  const missed = asfK && a.fly.foe != null && !tgtHere ? (armyById(a.fly.foe) && count(armyById(a.fly.foe)) ? 'the force it was sent at had moved out of reach' : 'the force it was sent at was gone') : '';
+  const fb0 = asfK && a.fly.foe != null ? armyById(a.fly.foe) : null, missed = asfK && a.fly.foe != null && !tgtHere ? (fb0 && count(fb0) ? (!fb0.air && !fb0.fly && provNow(fb0) === p && fb0.owner !== o && !atWar(o, fb0.owner) ? 'the contact it was sent at was not hostile' : 'the force it was sent at had moved out of reach') : 'the force it was sent at was gone') : '';
   // bombers run the target's air defence on the way in: only the survivors drop (the rest of the fire comes after the drop)
   const BF = rBombF(a.owner, T);   // bomb load: 1 Heavy Bomber, 0.6 Stealth Bomber, 0 anything else
   let preLost = 0; if (BF){ const aaD = defs.filter(b => (b.u.sam || 0) + (b.u.frig || 0) + (b.u.crui || 0) > 0); if (aaD.length){ const b0 = count(a); aaFire(a, aaD, 1.2); preLost = b0 - count(a);
@@ -315,7 +322,7 @@ function resolveStrike(a, p){
   if (!UNITS[T].dr) aaFire(a, foes || defs, BF ? 1.2 : 2);
   const dealt = Math.round(hpBefore.reduce((s0, h, i) => s0 + h - effHP(defs[i]), 0)), killed = unitsBefore - defs.reduce((s0, b) => s0 + count(b), 0), lost = myBefore - count(a);
   IM.emit('fxStrike', {a, p, T, by:o, bnote:!!bnote, dealt, killed, owner:defs[0] ? defs[0].owner : null, ids:defs.map(b => b.id)});   // the client shows it where its seat struck or can see
-  if (isSeat(o)){ tell(o, `${asfK ? `Attack on ${asfWhat(defs, p)} ${G.P[p].sea ? 'in' : 'at'} ` : label + ' on '}${where}${missed ? ` (${missed})` : ''}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${bnote ? ', ' + bnote : ''}${lost ? `, ${lost} ${UNITS[T].dr ? 'drone' : 'aircraft'}${lost > 1 && UNITS[T].dr ? 's' : ''} lost` : ''}.`, killed || dealt > 20 || bnote ? 'good' : 'info', p); cue(o, 'battle'); bump(o, 'unitsKilled', killed); bump(o, 'unitsLost', lost); }
+  if (isSeat(o)){ const kn = !asfK || (v => defs.every(b => armyKnown(b, v)))(visibleSet(o)); tell(o, `${asfK ? `Attack on ${asfWhat(defs, p, kn)} ${G.P[p].sea ? 'in' : 'at'} ` : label + ' on '}${where}${missed ? ` (${missed})` : ''}: ${dealt} damage${killed ? `, ${killed} enemy unit${killed > 1 ? 's' : ''} destroyed` : ''}${bnote ? ', ' + bnote : ''}${lost ? `, ${lost} ${UNITS[T].dr ? 'drone' : 'aircraft'}${lost > 1 && UNITS[T].dr ? 's' : ''} lost` : ''}.`, killed || dealt > 20 || bnote ? 'good' : 'info', p); cue(o, 'battle'); bump(o, 'unitsKilled', killed); bump(o, 'unitsLost', lost); }
   for (const me of seatsBut(o)) if (defs.some(b => b.owner === me)){ tell(me, `${nationName(o)} ${label.toLowerCase()} hit your forces at ${where} (${dealt} damage${killed ? `, ${pluN(killed, 'unit')} lost` : ''}${bnote ? ', ' + bnote : ''}${adLost ? `; ${adLost} drones downed` : ''}).`, 'bad', p); bump(me, 'unitsLost', killed); }
   removeEmpty();
 }

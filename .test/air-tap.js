@@ -14,7 +14,9 @@
 // 4. home from station, after Return and when its patrol hours run out: a calm curve off the track and home at about the rules' speed, no dash
 // 5. (owner 2026-11-28) a Strike Fighter wing's bar: Strike, Patrol, Rebase, Split, Merge, Return; Patrol armed, a tap on a province sends it on
 //    patrol there (rules/air.js jetPatrol), its panel says so; an AWACS wing's mission button reads Orbit (was Patrol)
-// Screenshots: <outdir>/air-tap-<phone|desk>-z<hexPx>.png (the selected wing after a tap); air-tap-<phone|desk>-jet-bar.png, -awacs-bar.png
+// 6. (repair 1) fog of war: an Attack tapped on a '?' contact (an AWACS's, over the Baltic) names no nation and starts no war (details there)
+// Screenshots: <outdir>/air-tap-<phone|desk>-unk-peace.png, -unk-hostile.png (the wing sent at a '?'), -unk-report.png (after the strike);
+//    <outdir>/air-tap-<phone|desk>-z<hexPx>.png (the selected wing after a tap); air-tap-<phone|desk>-jet-bar.png, -awacs-bar.png
 const { chromium } = require('playwright'); const path = require('path'), fs = require('fs'), pickNation = require('./pick-nation.js');
 const MODE = process.argv[2] || 'both', OUT = process.argv[3] || path.join(__dirname, 'air-tap-shots'); fs.mkdirSync(OUT, { recursive: true });
 const ZOOMS = process.env.ZOOMS ? process.env.ZOOMS.split(',').map(Number) : [6, 16, 40, 90, 200], FAST = process.env.ZOOMS ? [] : [40, 200];
@@ -153,6 +155,40 @@ async function run(phone){
     ok(/Flying to patrol/.test(pj.side), `${tag}: its panel says it flies to patrol`, pj.side.slice(0, 160));
     const ph = await p.evaluate(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id); for (let i = 0; i < 12 && a.fly && a.fly.ph !== 'patrol'; i++) im.tick(); im.selectArmy(id); return { ph: a.fly && a.fly.ph, side: document.getElementById('side').textContent.match(/Patrolling[^:]*:/) }; }, ids.jet);
     ok(ph.ph === 'patrol' && ph.side && /and its neighbours/.test(ph.side[0]), `${tag}: on station it patrols ${info.name} and its neighbours`, ph);
+    await clear(); }
+  // 6. (repair 1, fog of war) an Attack on a '?' contact names no nation and starts no war: an AWACS on orbit over the Baltic shows a United
+  //    Kingdom convoy (at peace) and a hostile one as '?' plates (located, not identified); Attack armed, a real tap on each '?' sends the wing
+  //    after it (fly.foe) with no 'Declare war?' dialog, no war, and a status that names no nation ('Attacking unidentified forces at sea in
+  //    Baltic Sea IV'); the strike on the hostile one reports 'Attack on unidentified forces at sea in ...', no nation
+  { await p.evaluate(() => { window.__im.S.speed = 0; }); await clear();
+    const U = await p.evaluate(cap => { const im = window.__im, S = im.S, G = im.G, z = G.P.find(q => q.name === 'Baltic Sea IV'), C = G.P[z.nbs.find(v => !G.P[v].sea && S.owner[v] === 0)];
+      const foeN = S.armies.map(a => a.owner).find(n => n > 0 && n !== 4 && !atWar(0, n) && nationName(n) !== 'United Kingdom') ?? 5;
+      setRel(0, foeN, 'war');
+      const mk = (t, k) => { const w = addArmy(0, cap, { [t]: k }); w.air = { base: cap, cd: 0 }; w.m = 80; return w; };
+      const aw = mk('awacs', 1), w1 = mk('asf', 1), w2 = mk('asf', 1); orderAir(aw, z.id); for (let i = 0; i < 12 && aw.fly && aw.fly.ph !== 'over'; i++) im.tick();
+      const at = f => [C.x + (z.x - C.x)*f, C.y + (z.y - C.y)*f], uk = addArmy(4, z.id, { inf: 2 }), hz = addArmy(foeN, z.id, { inf: 2 }); uk.pos = at(0.25); hz.pos = at(0.7);
+      visCache = null; const v = visibleSet(0);
+      return { z: z.id, uk: uk.id, hz: hz.id, w1: w1.id, w2: w2.id, foeN, ukName: nationName(4), foeName: nationName(foeN), aw: aw.fly && aw.fly.ph,
+        unk: [uk, hz].map(a => !armyShown(a, v) && !armyKnown(a, v) && armyLocated(a, v)), mid: at(0.47) }; }, info.cap);
+    ok(U.aw === 'over' && U.unk.every(Boolean), `${tag}: an AWACS orbits the Baltic; a ${U.ukName} convoy (at peace) and a ${U.foeName} one (at war) show as '?' contacts only`, U);
+    // (the wing selected and Attack armed first: on a phone its sheet opens and the camera may move; then the view is set on the convoys)
+    const tapUnk = async (wid, fid, shot) => { await p.evaluate(id => { const im = window.__im; im.clearSel(); im.selectArmy(id); }, wid); await p.click('#cmdbar [data-act="cm-attack"]'); await p.waitForTimeout(300);
+      await p.evaluate(([x, y]) => { const im = window.__im, v = im.view, s = 40/12, r = document.getElementById('map').getBoundingClientRect(); v.s = s; v.x = r.width/2 - x*s; v.y = r.height*0.3 - y*s; im.redraw(); }, U.mid);
+      await p.waitForTimeout(1200); await settle();
+      const h = await p.evaluate(id => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), h = im.v3c.hits().find(q => q.ids.includes(id)); return h && [h.x + h.w/2 + r.left, h.y + h.h/2 + r.top]; }, fid);
+      if (!h) return { none: true };
+      await press(h); await p.waitForTimeout(400); if (!phone) await p.mouse.move(300, 860); await p.waitForTimeout(150); if (shot) await p.screenshot({ path: path.join(OUT, `air-tap-${tag}-${shot}.png`) });
+      return p.evaluate(([wid, fid, n]) => { const im = window.__im, w = im.S.armies.find(x => x.id === wid), m = document.getElementById('modal'), st = document.querySelector('#side .status');
+        return { foe: w.fly && w.fly.foe, kind: w.fly && w.fly.kind, war: atWar(0, n), modal: m && !m.hidden ? m.textContent.replace(/\s+/g, ' ').slice(0, 160) : '', status: st ? st.textContent.trim() : '' }; }, [wid, fid, 4]); };
+    const r1 = await tapUnk(U.w1, U.uk, 'unk-peace');
+    ok(r1.foe === U.uk && r1.kind === 'strike' && !r1.war && !/Declare war|United Kingdom/.test(r1.modal), `${tag}: a tap on the ${U.ukName} '?' with Attack armed sends the wing after it: no 'Declare war?' dialog, no war`, r1);
+    ok(/^Attacking unidentified forces at sea in Baltic Sea IV/.test(r1.status) && !r1.status.includes(U.ukName), `${tag}: its status names no nation`, r1.status);
+    await clear(); await p.evaluate(([id, w1]) => { const S = window.__im.S, a = S.armies.find(x => x.id === id); S.armies.splice(S.armies.indexOf(a), 1); recallAir(S.armies.find(x => x.id === w1)); }, [U.uk, U.w1]);   // (its plate is not under the next tap; the first wing turns home)
+    const r2 = await tapUnk(U.w2, U.hz, 'unk-hostile');
+    ok(r2.foe === U.hz && r2.kind === 'strike' && /^Attacking unidentified forces at sea in Baltic Sea IV/.test(r2.status) && !r2.status.includes(U.foeName), `${tag}: the hostile '?' the same: sent at it, its status names no nation`, r2);
+    const rep = await p.evaluate(([wid, z]) => { const im = window.__im, w = im.S.armies.find(x => x.id === wid); for (let i = 0; i < 12 && w.fly && w.fly.ph === 'out'; i++) im.tick(); return (im.S.log || []).map(x => x.text).filter(t => /^Attack on |^Strike on /.test(t)).slice(0, 3); }, [U.w2, U.z]);
+    await p.waitForTimeout(500); await p.screenshot({ path: path.join(OUT, `air-tap-${tag}-unk-report.png`) });
+    ok(rep.some(t => /^Attack on unidentified forces at sea in Baltic Sea IV: \d+ damage/.test(t)) && !rep.some(t => t.includes(U.foeName) || t.includes(U.ukName)), `${tag}: its strike report names no nation`, rep);
     await clear(); }
   ok(!errors.length, `${tag}: no page errors`, errors.slice(0, 3));
   await ctx.close(); await b.close(); }
