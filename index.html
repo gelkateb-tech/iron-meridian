@@ -6636,6 +6636,11 @@ let ILEG = '';
 function drawIntelLegend(vis, nUnk){ const el = document.getElementById('ilegend'); if (!el) return; const k = (vis.locs.length && nUnk) || vis.uav.size ? 'on' : ''; if (k === ILEG) return; ILEG = k; el.hidden = !k; }
 // unidentified contact: the flat plate with a '?' in a neutral cell and a small radar mark in the tab (no type, size or nation colour); static
 // the hover text and the panel of an unidentified force: nothing about it but that it is there (and how it was found: spotted or an AWACS contact)
+// the ground recon unit whose sight identifies foreign force a for the view v (the identifying circles the rules tag with the unit, rules/vision.js
+// idn s[6]): 'Identified by Special Forces' or 'Identified by Recon Vehicle' in the hover tip, or null (another sensor: the tip's general line)
+const idBy = (v, a) => { const [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea; let t0 = null;
+  for (const s of v.idn || []) if (s[6] && (s[5] !== VK.sea || sea) && visIn(s, x, y) && (t0 === null || s[6] === 'spec')) t0 = s[6];
+  return t0 ? 'Identified by ' + UNITS[t0].name : null; };
 const UNK_HOW = 'Nation, size and unit types unknown. Recon identifies it: a UAV or other drone over it, a satellite, Special Forces or a Recon Vehicle within their sight, a Phased-Array AWACS, or a battle with it.';
 const unkTipHTML = fa => `<b>Unidentified army</b><div class="small" style="color:#9fd8ff">${fa.some(a => shownNow(a, visibleSet(PLAYER))) ? 'Spotted' : 'Detected by AWACS'}: unidentified</div><div class="small muted">${UNK_HOW}</div>`;
 function unkHTML(a){ const spotted = shownNow(a, visibleSet(PLAYER));
@@ -11308,7 +11313,7 @@ function tipShow(x, y){ tip.classList.remove('dugtip');
     let h = `<b>${o === PLAYER ? armyName(a0) : armyLabel(a0, PLAYER)}${fa.length > 1 ? ` <span class="muted" style="font-weight:400">+${fa.length - 1} more</span>` : ''}</b><div class="small muted">${o >= 0 ? flagHTML(o, 12) : provFlagHTML(a0.at, 12)} ${o === PLAYER ? 'Your forces' : nationName(o)} · ${a0.to !== null ? 'moving to ' : ''}${G.P[at].city ? G.P[at].cityName : G.P[at].name}</div>`;
     h += `<div class="r"><span>Units</span><span>${n}${o === PLAYER ? "" : ` · ${Math.round(fa.reduce((s0, a) => s0 + power(a), 0))} str`}</span></div>`;
     if (o === PLAYER) h += `<div class="small" style="margin-top:3px">${fa.map(comp).join('')}</div>`;
-    else { const v0 = visibleSet(PLAYER), src = isAlly(PLAYER, o) ? 'Allied force' : S.battles.includes(a0.at) && a0.to === null && stationaryAt(a0.at).some(b => b.owner === PLAYER) ? 'Identified in battle' : v0.uav && v0.uav.has(at) ? 'Identified by UAV' : G.P[at].sea && v0.sonar && v0.sonar.has(at) ? 'Identified by sonar / maritime patrol' : 'Identified by recon (drone, satellite, special forces or radar)';
+    else { const v0 = visibleSet(PLAYER), src = isAlly(PLAYER, o) ? 'Allied force' : S.battles.includes(a0.at) && a0.to === null && stationaryAt(a0.at).some(b => b.owner === PLAYER) ? 'Identified in battle' : v0.uav && v0.uav.has(at) ? 'Identified by UAV' : G.P[at].sea && v0.sonar && v0.sonar.has(at) ? 'Identified by sonar / maritime patrol' : idBy(v0, a0) || 'Identified by recon (drone, satellite, Special Forces, Recon Vehicle or radar)';
       h += `<div class="small" style="color:#8fd18f;margin-top:2px">${src}</div><div class="small" style="margin-top:3px">${fa.map(compFoe).join('')}</div>`; }
     tip.innerHTML = h; tip.hidden = false;
     const tw = 230, th = tip.offsetHeight; let tx = x + 14, ty = y + 14;

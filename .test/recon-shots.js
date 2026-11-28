@@ -6,7 +6,7 @@
 //   scene   Russia; in Kazakhstan (at peace), from Astana, a Russian stack of 2 infantry and 1 recon vehicle with Kazakh armies 25 and 45 km away
 //           (inside its 70 km), one 90 km away (outside it, spotted by a second Russian stack of 2 infantry 30 km beyond: '?'); each selected; then the
 //           same scene with the recon vehicle taken out (only infantry: every army '?'). A build without the recon vehicle shoots the infantry
-//           scene only
+//           scene only. On the desktop also the hover tip of the nearest Kazakh army (scene-*-tip1: 'Identified by Recon Vehicle' / unidentified)
 //   card    the Mobilize list of a city with an Army Base I, the Recon Vehicle's unit card from it, the research tree's Armoured Forces column and
 //           the Recon Vehicle's node (a build without it: the list and the column)
 //   figure  a recon stack (and a recon vehicle alone) on the map at play zoom and at close zoom (its picture figure and counter)
@@ -68,6 +68,11 @@ async function partScene(phone){ const o = await open(phone, 'Russia'), p = o.p;
   const views = () => p.evaluate(ids => (visCache = null, ids).map(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id), v = armyView(a, visibleSet(0)); return v ? (v.unk ? '?' : JSON.stringify(v.u)) : 'unseen'; }), sc.foes);
   const run = async tagS => { log(o.tag, tagS, 'views', JSON.stringify(await views()));
     await p.evaluate(() => window.__im.clearSel()); await o.center(sc.cx, sc.cy, o.phone ? 150 : 200); await o.away(); await o.shot(`${tagS}-map`);
+    // the desktop's hover tip on the nearest Kazakh army (its 'Identified by' line; a phone has no hover: its panel is the foe shots below)
+    if (!o.phone){ const hb = await p.evaluate(id => { const h = window.__im.v3c.hits().find(q => q.ids.includes(id)); if (!h) return null; const r = document.getElementById('map').getBoundingClientRect(); return [r.left + h.x + h.w/2, r.top + h.y + h.h/2]; }, sc.foes[0]);
+      if (hb){ await p.mouse.move(hb[0], hb[1]); await p.waitForTimeout(500); await p.screenshot({ path: path.join(OUT, `${LABEL}-${o.tag}-${tagS}-tip1.png`) }); log(o.tag, 'shot', `${tagS}-tip1`);
+        log(o.tag, tagS, 'tip', await p.evaluate(() => { const t = document.getElementById('tip'); return t && !t.hidden ? t.innerText.replace(/\s+/g, ' ').slice(0, 300) : 'no tip'; })); await o.away(); }
+      else log(o.tag, tagS, 'tip', 'no plate found for foe 1'); }
     for (const [i, id] of sc.foes.entries()){ await p.evaluate(id => { const im = window.__im; im.clearSel(); im.selectFoe(id); }, id); await p.waitForTimeout(700); await o.shot(`${tagS}-foe${i + 1}`); log(o.tag, tagS, 'foe', i + 1, await sideText(p)); } };
   if (has){ await run('scene-recon');
     await p.evaluate(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id); a.u.rcn = 0; a.w.rcn = 0; visCache = null; im.redraw(); }, sc.me); }
