@@ -9,9 +9,11 @@ Kept up to date as tasks start and finish. Everything goes to the **Dev Build** 
 - **Merging (2026-11-13):** every finished task is merged into master and published to the Dev Build as soon as its tests pass and it doesn't break the map, then the owner is told what changed. Only real design choices stop and wait for the owner. Map jobs merge one at a time.
 - **Pause is not cancel (owner, 2026-11-21):** a pause or stop click from the owner never cancels a job; only "cancel" plus the job's name does. Paused jobs are resumed from where they stopped.
 - **Old phones are not a target (owner, 2026-11-21, verbatim):** "we dont want to focus on bad phones becasue these players probably wont spend anyway". No work aimed at old or low-end phones; keep things fast on ordinary modern phones and desktops.
+- **Screenshots to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule for screenshots: every screenshot or sheet you send me, also save to the repo so I can review it in my other Claude chat. - Put them on a separate branch called "shots", never on master and never merged. - One folder per day and job, e.g. shots/2026-11-26/rebels/berlin-before.jpg. - Save them as JPG, at most 1600 px wide, so the repo stays small. - In each message to me, name the folder. - Clean up automatically: keep only the last 14 days, and rewrite the branch when you remove old ones so they don't pile up in the history." Done with `python3 -I tools/push-shots.py <date> <job> <files...>` (worktree /home/user/iron-meridian-shots, orphan branch shots; prunes and squashes past 14 days).
+- **Messages to the shots branch (owner, 2026-11-26, verbatim):** "Standing rule: every message you send me, also save word for word to the shots branch, in a separate top-level folder: messages/<date>/<HH-MM>-<job>.md, one file per message, with the folder names of any pictures it refers to. Keep the picture folders (shots/<date>/<job>/) pictures only. Same 14-day cleanup for both." Done with `python3 -I tools/push-shots.py --msg <date> <HH-MM> <job> <file.md> --pics <folders>` (times UTC), before the message is sent.
 - **New messages never cancel running jobs (owner, 2026-11-19):** a new message from the owner never cancels or replaces a running job unless the owner says "cancel" or "stop" with the job's name. Each new block is extra work added to the queue. If a message seems to change a running job, ask the owner before stopping it. Every job brief quotes the owner's request it comes from, so a worker never mistakes a newer, unrelated message for its own task.
 
-Last updated: 2026-11-22 (map surface merged, Dev Build v66; playtest waiting for review; cities redo running).
+Last updated: 2026-11-28 (helper agents working again; fighter merged, Dev Build v73; running: MERGE CHAIN 2 (combat display, missiles, cities-redo), recon vehicle built (65a7d10, waiting for the owner's OK to merge); one-figure follow-up done, waiting to merge).
 
 ## Pace (owner, 2026-11-18, after the usage reset)
 
@@ -22,18 +24,393 @@ Gemini: log every batch with the running total since the top-up; stop and ask if
 
 | Job | What | Model | Branch |
 |---|---|---|---|
-| **CITIES REDO** (2026-11-21, with the CITIES follow-up) | owner's brief verbatim in Next free slots item 1 (now running): real 3D buildings that pop at play zoom, no slab, greenery, a different road layout per city, lit windows at night, cached once per zoom; build, art and tech critique, repair, recheck, polish; before/after sheets for Berlin, Kabul and a small town at play and closest zoom; NOTHING merged until the owner has seen them | Opus | cities-redo |
-| **UNITS IN CITIES** (2026-11-22, extra job: cancels and replaces nothing) | owner, verbatim: "Units in cities: on the map I can't tell whether an army is in the middle of a city or just near it, and the units get lost in the city texture. Fix both: 1. Each city's centre point (where armies stand to hold or capture it) gets a clear marker, visible at every zoom. 2. When an army stands on that point, its position dot snaps onto the marker and the marker lights up with a ring in the army's side colour, so "in the city" is obvious at a glance. Armies near the city but not on the point clearly look outside it. 3. Make units stand out on busy city ground with a soft dark shadow and a thin outline under each unit and badge, without making them bigger. 4. Tapping a city shows who's inside, e.g. "In the city: 1st Infantry Division (5 units)". Show me screenshots on a 440 px phone at play zoom and close zoom: my army in Berlin, one just outside it, and an enemy army in a city. Don't merge until I've seen them." Unit/overlay layer and the city sheet only (no city building drawing, so it runs beside CITIES REDO); rules unchanged; build, look and tech critique, repair, recheck. **Not merged until the owner has seen the phone sheets.** | Opus | units-in-cities |
+| **FIGHTER ROUND 2 + MERGE** (2026-11-28, owner verbatim in the second-version block) | DONE 2026-11-28: fighter-asf cfc66e0 (d797998 build, cfc66e0 fog repair: '?' contacts name no nation, start no war), merged 48d6643, master 9907704, Dev Build v73. Attack 1, harassment at sea and on the move, at-sea factor on all air strikes and UAV salvoes. Troops-at-sea HP proposal in docs/TROOPS-AT-SEA-PROPOSAL.md (half HP = AT_SEA 3.0/1.5), waiting for the owner. Shots shots/2026-11-28/fighter2/ and fighter2-fog/ (wf_928c3294-507) | Opus | fighter-asf, merge-1128 |
+| **MERGE CHAIN 2** (2026-11-28, owner's third-version MERGE list) | combat-display (own label may sit further out), then missiles (tutorial-card hint CSS, AI saves for a silo only with positive income), then cities-redo (revert a4fbeb0 put back; player's capital lots first; night darkening of pictures; no code frame); one at a time into merge-1128 with full checks, independent check on the cities fixes (wf_c83e4276-031) | Opus | combat-display, missiles, cities-redo, merge-1128 |
+| **RECON VEHICLE BUILD** (2026-11-28; owner's playtest item 4 and answers: sight 70/80 km, Special Forces keep identifying, a lone recon can't capture) | rcn per docs/RECON-VEHICLE-PROPOSAL.md, the recon pictures from unit-art-3 only, START_ARMY.recon = {rcn:1}; independent check, one repair; not merged (wf_4ee5f12c-09b). DONE 65a7d10: check caught a recon-only computer attack in wartime, tooltip text, fleet sight under Signature Reduction; all fixed. Waits for the owner's OK to merge | Opus | recon-vehicle |
+| **ONE FIGURE FOLLOW-UP** (2026-11-28) | DONE 2026-11-28: one-figure 3bc0eae (d3a0d73 build, 3bc0eae repair after the look critic). One figure is the default (?fig=0 = old look); rifleman 2x the transport's scale; marching figures stay on their road to the halt, then glide onto their spot (phone probe p90 0.001 world px, was about 1.5 below the road). anchor-check (3) kept strict and fails 132/4073 (faded names over figures): owner's call. Shots shots/2026-11-28/one-figure2/. Merges after chain 2 | Opus | one-figure |
+| **CITY BUILDING LOTS** (2026-11-25, on cities-redo; the cities merge of 2026-11-25 was reverted on master, a4fbeb0, at the owner's request) | **Brief now Part A of the owner notes of 2026-11-25 (below, verbatim: A1-A7 and the sheets with no buildings, all built, one under construction), which replaces the earlier text.** Earlier, verbatim: "CITIES redo (branch cities-redo): I like it, don't change the look. One problem before merging: the capital HQ and every building I build (Army Base, Airbase, Naval Yard, Bunker, etc.) sits on top of the city blocks like a sticky note. Fix it so they look built into the city: 1. Fixed building lots: every city reserves a lot for each building type in its street plan. The city blocks never cover those lots, and roads lead to them. 2. The HQ sits in the centre on a city square. The Army Base and Bunker go near the centre. The Airbase goes at the edge of town on open ground. The Naval Yard goes on the waterfront. 3. Before a building exists, its lot shows as normal city ground (a small park or open square). While it's being built, show the crane and scaffolding on that lot. 4. The lot is part of the city's ground (paving, grass, a fence line). It's not a slab under the picture, so my no-slab rule still holds. 5. Draw city blocks and building pictures in one depth order, so a block in front of a building covers it and a block behind it sits behind. Same light direction and shadows for both. Show me Berlin, Hamburg and Kolkata at play zoom and closest zoom, before and after, with all buildings built and with one under construction. Don't merge until I've seen them." **Owner re-sent the brief (2026-11-25) with two more points and an extra sheet case, verbatim:** "6. Make the built buildings smaller so they match the city's scale: only a little bigger than the biggest normal city buildings, like a landmark that stands out but fits in. Players tap the city, not the building, so they don't need to be big. 7. The city grows around what's built: when a building finishes, and again as it levels up, the area around it changes to fit. New access roads, a few extra city blocks and greenery around it, so the city looks like it grew around the building. Only redraw that one city when this happens, to keep it fast. Show me Berlin, Hamburg and Kolkata at play zoom and closest zoom, before and after, with no buildings, with all buildings built, and with one under construction." The running round (points 1-5) was not stopped (standing rule); points 6-7 and the no-buildings sheets run as a follow-up round on cities-redo as soon as it finishes, then the owner sees the sheets. **2026-11-26:** points 1-5 done on cities-redo 7f463c8 (2 polish rounds used); sheets sent to the owner (Berlin, Hamburg, Kolkata, lots overview, Hamburg close-up). Open: Hamburg's buildings stand on grass east of town with no street; 34 lots in 13 towns still use the old cluster; mid zoom hex 50-60. **Follow-up job CITY LOTS GROW running (wf_1078e43c-aa0):** points 6-7 plus the Hamburg fix, at most 2 polish rounds, new sheets incl. a growth sequence and a phone frame. Build, look and tech critique, repair, two rechecks. Keeps the city centre point free for UNITS IN CITIES. **Not merged until the owner has seen the sheets.** | Opus | cities-redo |
 
 ## Next free slots (in this order)
 
-1. **(RUNNING since 2026-11-21, see Running)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
+**BUILD-REQS 2: started 2026-11-27 (see Running). SIMPLER BUILDINGS TEST: started 2026-11-27.** Was: BUILD-REQS 2 (build-reqs; Opus; owner 2026-11-27, verbatim: "Build requirements: yes to 2, 3 and 4. 1. Naval Yard: use these levels instead of your table: - Level 1: Corvette, Frigate - Level 2: Destroyer - Level 3: Cruiser, Attack Submarine - Level 4: no new units, builds faster - Level 5: Aircraft Carrier, Ballistic Missile Submarine, builds faster still. Corvette, Destroyer and Ballistic Missile Submarine don't exist yet, so give them marked slots, like the recon vehicle. Build the rest now."): Naval Yard I Frigate, III Cruiser and Attack Submarine, V Aircraft Carrier, marked slots for Corvette (I), Destroyer (II), Ballistic Missile Submarine (V); the computer's Naval Yard upgrades to match; "Needs Army Base II" wording like the other bases (answer 4); answers 2 and 3 as built; the independent recheck of the round-1 repair (Army Base III at war) that was promised; checks and before/after screens.
+
+**ART DIRECTION TEST** (owner 2026-11-27, verbatim; test pictures and proposals only, one round, then wait):
+
+```
+ART DIRECTION TEST (queue it; test pictures and proposals only, one round, then wait for my OK):
+
+1. INFANTRY: test a new infantry look: one soldier plus his transport vehicle (the unit is Motorized Infantry). Do this inside the queued one-figure job, so it's one job. Show it on the map in a fight and on a road, next to today's look.
+
+2. SIMPLER BUILDINGS: I think simpler buildings would match the vibe of our new cities better. Show me two options on Berlin and Kolkata, at play zoom and closest zoom, next to today's look:
+- A: simpler building pictures, in the same style, light and colours as the city blocks.
+- B: buildings drawn in code like the city blocks themselves, each with a shape you can recognise (runway for the Airbase, piers for the Naval Yard, and so on). No Gemini cost.
+Cover every building and the HQ. Start after the city lots job is done. In the province buildings job, make no new building pictures (Bunker, Field Hospital) until I've picked A, B or today's look.
+
+Tell me the Gemini cost before making any picture. Screenshots on desktop and phone, saved to the shots branch.
+```
+How it runs: item 1 is folded into the ONE FIGURE PER ARMY TEST (below). Item 2 is its own job, SIMPLER BUILDINGS TEST, second at the next free slots (after BUILD-REQS 2; the city lots job is already done), on a branch from cities-redo, never merged without the owner's pick: option B built in code first (free); option A's test pictures (it absorbs the single Army Base camera test from the pasted-on check) priced first and made only on the owner's OK. The province buildings job makes no new pictures until the owner picks A, B or today's look.
+
+**FIRST, when CITY LOTS 3 (round 3 and the pasted-on check) has finished, before the list below:** PROVINCE BUILDINGS AND HOSPITALS (Opus; proposals first, one round, then wait; takes the slot city lots frees, as its own job). Owner 2026-11-27, verbatim:
+
+```
+QUEUE THIS: don't start until the city lots job (round 3 and the pasted-on check) has finished. Then run it on its own. Don't cancel or change any running job.
+
+Province buildings and hospitals (proposals first, then wait for my OK; one round only):
+
+1. RULE: a building in a province must never look the same as its city version. Province versions are plainer and lower-key. Add this rule to docs/ART-BIBLE.md.
+
+2. RECRUITING OFFICE: cities only. Remove it from provinces, and tell me what happens to ones already built there.
+
+3. BUNKER:
+- Save the bunker art option sheets from 2026-11-18 (A, B, C, levels 1 and 5, with map previews) to the shots branch so I can pick one.
+- Propose a separate, plainer province Bunker (like sandbags and a dugout) that's different from the city one.
+
+4. CITY HOSPITAL (city building, levels 1–5):
+- Use the 5 hospital pictures we already have.
+- Heals armies in or next to the city faster, more at each level.
+- Add one Hospital lot to the city lots plan. Leave every other lot as it is.
+
+5. FIELD HOSPITAL (any province, levels 1–3):
+- Low-key look: a small tent with a red cross, much plainer than the city Hospital, growing slightly with each level.
+- Heals armies in that province, less than a city Hospital, more at each level.
+
+For the hospitals: propose cost, build time and healing amounts, and how they stack with the healing research. The computer should build them sensibly. Any new pictures: tell me the Gemini cost and wait for my OK. Screenshots on desktop and phone, saved to the shots branch as usual.
+```
+Notes: the 2026-11-18 bunker option sheets are in docs/bunker-options (bunker-art branch). The Hospital lot is added on cities-redo, so this job waits for city lots to finish.
+
+Set 2026-11-27 (owner block above). Each starts when a slot frees up (at most 5 at once):
+1. **UNIT-ART-3 FINISH** (unit-art-3; Opus; PRICED 2026-11-27: guard re-based on the owner's $24.05 (df4576d); batches A Marines about $1.74, B AWACS about $1.79, C Stealth Bomber about $1.79, D 5 uniques about $0.60, E recon about $2.1-2.3; each waits for the owner's OK; open decisions 3-6 shape the prompts): the sets that stopped at the floor (AWACS, Stealth Bomber, Marines, the 5 uniques; about $3.6 by the 2026-11-19 estimate, to be re-priced exactly). Cost of each batch to the owner first, run only on the OK. Not merged until the owner has seen it (and the open unit-art-3 decisions stand). Then the RECON VEHICLE pictures once the owner OKs its proposal (start-armies job).
+2. **MISSILES POLISH 2** (missiles; Opus; 2nd and last round): MS1 (the computer answers chemical with chemical; nuclear answers only for nuclear strikes or desperation), MS2 (Conventional Warhead researched readily at war), the desktop aiming hint clear of the mini world map, the strip says "Damaged" for a knocked-out silo; MS3-MS5 stay as built. Missiles plan 2 (ranges, HP, names) is a separate build job once the owner answers its questions 1-8.
+3. **COMBAT DISPLAY** (one round, then wait; Opus): first tell the owner how combat timing works now; then "Fighting" plus the enemy army on panel and map label, a countdown to the next damage tick on both, the damage each side took after each tick; the fixed-tick change itself only as described to the owner. Desktop and phone screenshots.
+4. **ONE FIGURE PER ARMY TEST** (own branch; Opus; with ART DIRECTION TEST item 1: a new Motorized Infantry look, one soldier plus his transport vehicle, on the map in a fight and on a road next to today's look; Gemini cost first if any picture is needed): one main-unit model per army with our bigger count badge, smooth turning along roads, moving/fighting/idle animations; side-by-side one figure vs three, in a fight and on a road; wait for the owner's pick.
+5. **LOGISTICS BUILDING PROPOSAL** (DONE 2026-11-27: docs/LOGISTICS-PROPOSAL.md, sheets shots/2026-11-27/logistics/, questions 1-9; waiting for the owner. proposal only; Opus): any province, no levels, +25% move speed through it, thicker roads to show it, cost, build time, stacking with roads and the stack-size penalty, computer use along main routes and borders; wait for the OK.
+
+6. **NEW SHIPS PROPOSAL** (DONE 2026-11-27: docs/NEW-SHIPS-PROPOSAL.md, sheet shots/2026-11-27/new-ships/, questions 1-9; pictures about $7 batch for 3 full sets or about $2.7 look 1 only; waiting for the owner. Opus; proposal only, then wait; owner 2026-11-27, verbatim: "NEW SHIPS (queue as its own job, Opus, proposal only, then wait for my OK): Add three ships. Surface ships go Corvette, Frigate, Destroyer, Cruiser, small to big. Submarines are the Attack Submarine and the Ballistic Missile Submarine. Carriers stay. - Corvette: small, cheap, fast coastal ship for patrol and anti-submarine work. - Destroyer: between the Frigate and the Cruiser. - Ballistic Missile Submarine: nuclear sub that carries and fires missiles (cruise, ballistic and nuclear) from the sea, like Conflict of Nations. Its nukes count inside the nation's nuke limit from missiles plan 2. This is the "ships later" answer to plan 2 question 5 (USA, Japan, Australia, Brazil). - Propose stats, cost, build time, research lines and how the computer uses them. Show them next to our 4 current ships, so each ship has a clear job. - Pictures: today the Frigate uses the corvette picture and the Cruiser uses the destroyer picture. Tell me which pictures to move and which new ones we need, with the Gemini cost. Don't spend credit without my OK.")
+
+
+- **REBELS PICTURES** (owner 2026-11-26, verbatim: "REBELS unit picture: rebels need their own unit pictures like every other unit, instead of the code-drawn 3D figure. - Make the same set as the other units: the 3/4 side view for the info card, the card scene, and the top-down picture for the map. Same camera, size, light and framing as the other unit sets, following ART-BIBLE.md and docs/UNIT-LOOKS-PROMPTS.md. - The look: a small group of irregular fighters in mixed civilian and military clothes, scarves and headwraps, carrying generic rifles (no real brand designs), tan and khaki tones, with a small crossed-rifles flag to match the rebels badge. Make it clearly different from regular infantry and from the Export armed pickup. - Show me the prompt first, then one test picture with its cost, and wait for my OK before making the rest. - Save the pictures to the shots branch as usual."): prompts in tools/gen-art.py (ul-reb-side/scene/top); test side view made (about $0.105, check PASS), sent with the prompt (shots/2026-11-26/rebels-pictures/). **Waiting for the owner's OK** (and on the rifle wording) before the scene and top-down. Art balance: the owner's real figure is $24.05 (2026-11-27); $5 floor kept.
+
+- **PASTED-ON CHECK** (owner 2026-11-26, verbatim: "After A6, tell me honestly whether the building pictures still look pasted on: their own ground pad, a different light direction or angle from the city blocks, or too much detail next to them. Don't redraw anything. If you think they need it, show me the problem and a single Army Base test picture with the cost, and wait for my OK."): runs when CITY LOTS GROW finishes. An independent look critic that has not seen the job's reports, plus my own look at full size, on the three points (ground pad, light and angle, detail). Only if they need it: one Army Base test picture, cost logged against the $5 floor, then wait for the owner's OK. No other picture is redrawn.
+
+1. **(DONE 2026-11-22, waiting for the owner; see Ready)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
+
+
+## Owner answers 2026-11-28, third version (verbatim, the new part; the rest repeats the second version)
+
+```
+NAVAL YARDS (new job, after cities-redo merges; one round, then wait for me): the picture doesn't match the coast in most coastal cities. It faces the wrong way or sits at odd angles to the water.
+- For every city with a Naval Yard, turn or mirror the picture so its docks face the nearest water.
+- Place it across the shoreline: the land part on the coast, the docks and piers out over the water. It doesn't need to trace the coast exactly; overlapping the shore hides the mismatch. Never fully on land or fully out at sea.
+- Work inside the city lots plan: change only the Naval Yard's own waterfront lot. Every other lot, the HQ square and the city blocks stay exactly as they are. If a Naval Yard lot has to move, tell me which cities and why before changing them.
+- Coasts that no turned or mirrored picture can face (like the 29 facing up the map): tell me the cost of a new picture first, and don't make it without my OK.
+- Check all 349 coastal cities with a script, and list any that still look wrong.
+- Before and after screenshots of 6 cities with different coast directions (north, south, east, west and two diagonals), on desktop and phone.
+```
+Also restated: "Screenshots on desktop and phone for everything, saved to the shots branch as usual."
+Plan: NAVAL YARDS runs right after the cities-redo merge (merge chain 2), before one figure; one round, then wait. Paused with everything else until the helper-agent limit resets (2 Dec 04:00 UTC).
+
+## Owner answers 2026-11-28, second version (verbatim; replaces the first version where they differ; extra work, cancels nothing)
+
+```
+BUILDINGS: keep today's building pictures for now. Don't merge option B and skip option A. I want to see the cities (city lots round 3) in the Dev Build first, then I'll decide. Until then, make no new building pictures: no Army Base test, no province building pictures, no Bunker change.
+
+FIGHTER:
+- Attack hits ground troops and ships, as built (no roads, railways or buildings).
+- Make its Attack even weaker: about 1 HP of damage per strike against ground troops and ships, as a plain attack number in its stats, on the same scale as every other unit. Its air-to-air strength stays as it is.
+- The point is harassment: it must be able to hit troops at sea in transports (cargo) and armies on the move, like infantry marching towards you. Check that both work and show me.
+- Troops at sea are weak, like in Conflict of Nations, so the same 1 damage hurts them more. Today unescorted troops at sea take 1.5× damage (0.75× with warships escorting). Make sure that applies to the fighter's strikes too. Conflict of Nations transports have very low HP, so propose a number for troops at sea (about half their land HP is my guess).
+- Yes to Patrol for the Strike Fighter, like Conflict of Nations.
+
+ANTI-AIR, SPEEDS AND STACKS (new job, Opus; proposal with numbers first, then wait for my OK):
+[items 1-3 as before]
+4. Stacks: 10 units per army at most, and about 4–5 armies in a province, never one giant stack. The computer still made a 128-unit stack: find out why (a bug or merged counters) and fix it. Overstacking should cut both damage and speed more than it does today.
+5. Ships and aircraft: limit 5 per army, like Conflict of Nations, with the same stronger damage and speed penalty above 5. Troops in transports count towards the sea limit of 5 (today they count against the land limit of 10), so a convoy of more than 5 gets the penalty too.
+6. EFFICIENCY, shown when you tap an army, like Conflict of Nations:
+- A percentage in the army panel: 100% at or under the limit (10 ground, 5 ships, 5 aircraft), dropping the further the army goes over it.
+- Under it, the exact damage and speed loss.
+- No warning marks on the map and no pop-up warnings.
+Screenshots on desktop and phone.
+```
+(The rest of the second version repeats the first: MERGE order, ONE FIGURE, MISSILES PLAN 2, COMBAT DISPLAY, LOGISTICS and NEW SHIPS, PICTURES.)
+
+Changes this makes: simpler-bldg (option B, rounds 1-2) is NOT merged and waits for the owner after the cities merge; the province buildings job makes no building drawings or pictures until then; the fighter gets a second round before merging (Attack about 1 HP as a plain stat, harassment of troops at sea and marching armies shown, the at-sea damage factor applied to its strikes, a proposed HP for troops at sea); the anti-air proposal gets an addendum for items 4 (damage too), 5 and 6.
+
+**2026-11-28 status: the weekly usage limit for helper agents was reached (resets 2 December, 04:00 UTC).** Done before it: merges of pinpoint-3, build-reqs and start-armies (full checks after each) on master 55b317e, Dev Build v72; picture batches A-D and the recon test picture (balance about $17.87). Paused until the reset: the fighter round 2 and merge (its Strike Fighter Patrol and AWACS Orbit are on fighter-asf 4daba2a), merge chain 2, the recon set, the ships pictures, the anti-air addendum, and everything after.
+
+## Owner answers 2026-11-28 (verbatim; every open question; extra work, cancels nothing)
+
+```
+Answers to every open question: take your default (in brackets) everywhere, except where I say otherwise below.
+
+MERGE (Dev Build only, one at a time, checks after each, nothing to public): waypoints first, then build requirements (both rounds), starting armies (with the balance re-run), the fighter, combat display, missiles (as it is, with the two small fixes), cities-redo (with the revert put back).
+
+ONE FIGURE: one figure per army, code-drawn infantry with the rifleman a bit bigger, and the dot stays on the hull. Yes to the small follow-up fixing marching figures that sit below their road. Merge it after the others.
+
+SIMPLER BUILDINGS: option B (drawn in code), plus the extra round giving the HQ and smaller buildings more character. Skip option A and the single Army Base test picture.
+
+PROVINCE BUILDINGS AND HOSPITALS: for 9 and 11, no new pictures. Draw the Field Hospital, the province Bunker and the building site in code in the option B style, plainer than the city versions (province rule).
+
+MISSILES PLAN 2: defaults on 1–4 and 6–8. Build it as its own job on top of the merged missiles.
+
+FIGHTER: yes to Patrol for the Strike Fighter, like Conflict of Nations.
+
+COMBAT DISPLAY: keep 15-minute rounds for now.
+
+LOGISTICS and NEW SHIPS: build both after the merges.
+
+PICTURES (Gemini, batches only, stop at the $5 floor), in this order: unit batches A to D (about $5.92), the recon test picture then its set, then the new ships look 1 only (about $2.7, not the $7 full sets). Tell me the balance after each batch.
+
+ANTI-AIR, SPEEDS AND STACKS (new job, Opus; proposal with numbers first, then wait for my OK):
+1. Three anti-air units: a cheap Mobile Anti-Air gun (the marked slot at Army Base II), the Mobile SAM as today, and a Missile Defence unit that only shoots missiles (the marked slot at Army Base V). Make it the best missile stopper in plan 2's HP model.
+2. Remove the Interceptor. The Air Superiority Fighter takes over its job. In old saves, Interceptors become Air Superiority Fighters.
+3. Ground speeds: tanks and artillery slower than now. Mobile Anti-Air, SAMs and Missile Defence much slower.
+4. Stacks: 10 units per army at most, and about 4–5 armies in a province, never one giant stack. The computer still made a 128-unit stack: find out why (a bug or merged counters) and fix it. Overstacking should slow armies down more than it does today.
+```
+
+Plan from these answers (2026-11-28):
+- **MERGE CHAIN 1** (now): pinpoint-3, build-reqs (both rounds), start-armies (balance re-run; its Anti-Tank stand-in swapped), fighter-asf (plus Strike Fighter Patrol and the AWACS "Orbit" label, defaults/answer) into merge branch merge-1128, full checks after each, then master and the Dev Build.
+- **MERGE CHAIN 2** (after chain 1): combat-display (plus the default "own full label may sit further out"), missiles (plus the tutorial-card hint fix and the silo-saving income guard), cities-redo (revert of a4fbeb0 put back; plus the defaults: player's capital lots first, proper night darkening of pictures, no frame). Then the Dev Build.
+- **After chain 2:** ONE FIGURE follow-up (bigger rifleman; marching figures on their road) then its merge; SIMPLER BUILDINGS round 2 (B with more character; starts now on simpler-bldg) then its merge after cities-redo; MISSILES PLAN 2 build on merged missiles; LOGISTICS build; NEW SHIPS build; PROVINCE BUILDINGS AND HOSPITALS build (defaults; Field Hospital, province Bunker and the building site drawn in code in the B style, plainer; no new pictures); RECON VEHICLE build (proposal defaults: sight 70/80 km, a lone recon can't capture, Special Forces keep identifying); starting armies border-city habit (default yes).
+- **PICTURES** (one batch at a time, the balance reported after each, stop at the $5 floor): unit batches A Marines, B AWACS, C Stealth Bomber, D the 5 uniques; the recon test picture, then its set; the new ships look 1 only. The defaults also cover the rebels card scene and top-down from test 2 with the flag raised (about $0.06-0.10), run last.
+- **ANTI-AIR ADDENDUM** (owner second version items 4-6): DONE 2026-11-28, docs/ANTIAIR-ADDENDUM.md, sheets shots/2026-11-28/antiair-addendum/, questions A1-A7; waiting for the owner together with the main proposal.
+- **ANTI-AIR, SPEEDS AND STACKS** proposal: DONE 2026-11-28, docs/ANTIAIR-SPEEDS-STACKS-PROPOSAL.md, sheet shots/2026-11-28/antiair-proposal/, questions 1-10; the "128" was 14 armies drawn as one counter, piled by a yes/no capital threat test (bug). Waiting for the owner.
+- **PICTURES BATCH A** Marines: DONE 2026-11-28 (unit-art-3 3c00097, about $1.80, balance about $22.25; sheets shots/2026-11-28/pictures-a-marines/). Batch B AWACS DONE (c808024, about $1.89, balance about $20.36; sheets shots/2026-11-28/pictures-b-awacs/). Batch C Stealth Bomber DONE (a3834f9, about $1.73, balance about $18.63; sheets shots/2026-11-28/pictures-c-stealth/). Batch D uniques DONE (27a4cad, about $0.71, balance about $17.92; sheets shots/2026-11-28/pictures-d-uniques/). A-D together about $6.13. Recon set DONE (f68bf2a, about $2.32 with the test, balance about $15.60; sheets shots/2026-11-28/pictures-recon/). New ships look 1 DONE (1efc570, about $2.28, balance about $13.32; sheets shots/2026-11-28/pictures-ships/). The owner's picture order is complete; the redo batch waits for the owner's OK on the list and price.
+- Not doing: option A pictures, the single Army Base test picture, new province pictures, the full new-ship sets.
+
+## Owner block 2026-11-27 (missiles answers, Gemini credit, combat display, one figure per army, logistics; verbatim; extra work, cancels nothing)
+
+```
+Missiles answers (these didn't reach you earlier):
+- MS1–MS5: your defaults.
+- Ranges: no separate answer needed, missiles plan 2 covers them.
+- Two small fixes for the missiles branch: move the aiming hint so the mini world map doesn't hide it on desktop, and make the missile strip say "Damaged" instead of "Ready" for a knocked-out silo.
+
+Gemini credit: my real balance is $24.05, not $5.32. Your number is out of date, so check it again before deciding anything.
+- Keep the $5 floor.
+- When a slot frees up, finish the last unit picture sets that stopped at the floor, then the recon vehicle once I OK its proposal.
+- Tell me the cost before each batch and wait for my OK.
+
+Combat display (one round only, then wait for me):
+Make fights read like Conflict of Nations:
+- Damage lands on a fixed tick, like CoN's hourly round. Tell me how combat timing works now before changing it.
+- While two armies fight, each army's panel and map label shows "Fighting" plus the enemy army it's fighting.
+- Show a countdown to the next damage tick, both in the panel and on the map label.
+- After each tick, briefly show the damage each side took.
+
+One figure per army (test first, on its own branch):
+- Show one model per army on the map: its main unit, like CoN, instead of three figures. Keep our bigger unit-count badge.
+- The figure turns smoothly to follow roads and bends, and has moving, fighting and idle animations.
+- Show me a side-by-side of one figure vs the current three, in a fight and on a road, then wait for my pick.
+
+Logistics building (proposal first):
+- A new building that can be built in any province, not just cities. No levels: one building per province.
+- Armies move 25% faster through a province that has it.
+- To show it's built: the roads in that province get thicker, like Conflict of Nations does it. No extra model on the map.
+- Propose cost, build time, and how it stacks with roads and the stack-size speed penalty, then wait for my OK.
+- The computer should build it sensibly, mostly along its main routes and borders.
+
+Show me screenshots on desktop and phone, saved to the shots branch as usual.
+```
+
+**Art balance (2026-11-27):** the owner's real balance is **$24.05** (my $5.32 was an estimate from per-branch logs and was out of date). $5 floor kept: about $19.05 can be spent, each batch's cost shown to the owner first and run only on the OK. The art job re-baselines tools/gen-art.py's guard to $24.05 at its branch's current log totals before any call.
+
+## Owner playtest changes 2026-11-27 (Thanksgiving; verbatim; extra work, cancels nothing)
+
+```
+Playtest changes (Thanksgiving, Dev Build). Extra work: cancels nothing in docs/QUEUE.md. Opus. Check docs/QUEUE.md and the open branches first so nothing is fixed twice. Save screenshots, clips and your messages to the shots branch as usual. Don't merge until I've seen them.
+
+1. WAYPOINTS: setting a waypoint still moves the army to the centre of the province, not the exact spot I tapped. This is the third time pinpoint movement has broken. Find which change broke it again and why the earlier fix didn't hold, fix it for land units, ships and waypoints, and add a test to the standard checks so it can't silently break again.
+
+2. AIR SUPERIORITY FIGHTER (the one every capital starts with):
+   a. It has no Attack button. Add an Attack order. Its main job stays fighting aircraft, but it can also hit ground units, with weak damage (much less than a strike fighter). Propose the numbers and show me before changing them.
+   b. Its unit panel is missing buttons compared with the other aircraft. List what it has now next to what a strike fighter has, and add the missing ones that make sense.
+   c. Patrol looks fake: the plane races around the very edge of its patrol circle, much too fast. Make it fly a calm, realistic patrol: a slow, wide racetrack or loop inside the area at a believable speed, turning smoothly. Show me a 15-second clip that starts on the map, zoomed in, with no menus.
+   d. Once it's on patrol I can't tap it to select it again. Make patrolling aircraft tappable at every zoom, with the same unit panel as any selected unit.
+
+3. STARTING ARMIES (same for every nation, players and computer alike). Right now Russia starts with 8 units in Moscow, which is too many. Change it to:
+   - Capital: 2 infantry, 1 artillery, plus the air superiority fighter at its Airbase.
+   - Two more stacks, each in a different city outside the capital: 1 recon vehicle + 2 infantry each. Pick the cities that make sense (e.g. towards the borders or main roads) and tell me your rule for choosing them.
+   - No tanks at the start.
+
+4. RECON VEHICLE (new unit if it doesn't exist yet):
+   - Its job is scouting: anything inside its sight range is fully identified, so I see exactly which units are in each enemy army there (types and counts), not just "unidentified". Other ground units only see that something is there, as in my fog-of-war rule.
+   - Keep it realistic: sight range only a little more than infantry, nothing crazy. Fast, lightly armed, weak in a fight.
+   - If it doesn't exist yet, propose its stats, research line and which pictures it needs, with the Gemini cost, before adding it. Don't spend Gemini credit without my OK.
+
+Run the balance and headless checks and show me the starting setup for Russia, Germany and a small nation before merging.
+```
+
+Jobs from it (Opus, at most 2 polish rounds each, none merged until the owner has seen them): PINPOINT-3 (item 1), FIGHTER-ASF (item 2; Attack numbers built on the branch as proposed, owner OKs them before merge), START-ARMIES (item 3; the outer stacks' recon slot stays empty until the owner OKs the recon vehicle) with the RECON VEHICLE proposal (item 4; proposal only, no Gemini spend).
+
+## Owner answers 2026-11-26 (verbatim; extra work, cancels nothing)
+
+> Answers:
+> - R1–R17 (rebels plan): all your suggested answers, OK. Start REBELS.
+> - M1–M15 (missiles plan): all OK, except M13: send me the gas and radiation zone mockup first.
+> - D4–D13, K1–K8, U1–U4, E1–E8, F1–F6: all your defaults, except D10: fix it, so a computer nation refuses deals where it gets nothing back.
+> - Merge Market, Fog-clash and UI-fixes.
+> - Merge auto-test/fixes (the playtest's 16 bug fixes) after re-running the checks on top of today's merges, and go with your defaults on Q1–Q31.
+> - Keep the rules from before: at most 2 polish rounds per job, Sonnet for interface follow-ups.
+
+Jobs from it: MERGE CHAIN (Market, then Fog-clash, then UI-fixes, then auto-test/fixes re-checked on top, then D10-FIX), REBELS (R1-R17 defaults; running), Q-DEFAULTS (Q1-Q31 defaults that need code, after the auto-test/fixes merge), MISSILES (after REBELS and the auto-test/fixes merge, per M14; M13 zones wait for the owner's look at the mockup). Rule kept: at most 2 polish rounds per job; Sonnet for interface follow-ups.
+
+## Owner notes 2026-11-25 (verbatim; extra work, cancels nothing)
+
+```
+Two sets of changes from me. This is extra work: it cancels nothing in docs/QUEUE.md. Split it into jobs by area (max 5 at once, no overlapping files). Use Opus for the rule, economy and city changes and Sonnet for the small interface fixes. First check auto-test/fixes so nothing gets fixed twice. Anything visual: send me before/after screenshots before merging. Rule changes: run the balance and headless checks. If you already have my CITIES building-lots request from earlier tonight, this replaces it.
+
+=== PART A: CITIES (branch cities-redo) ===
+I like the new 3D cities, don't change the look. One problem before merging: the capital HQ and every building I build (Army Base, Airbase, Naval Yard, Bunker, etc.) sits on top of the city blocks like a sticky note. Fix it so they look built into the city:
+A1. Fixed building lots: every city reserves a lot for each building type in its street plan. The city blocks never cover those lots, and roads lead to them.
+A2. The HQ sits in the centre on a city square. The Army Base and Bunker go near the centre. The Airbase goes at the edge of town on open ground. The Naval Yard goes on the waterfront.
+A3. Before a building exists, its lot shows as normal city ground (a small park or open square). While it's being built, show the crane and scaffolding on that lot.
+A4. The lot is part of the city's ground (paving, grass, a fence line). It's not a slab under the picture, so my no-slab rule still holds.
+A5. Draw city blocks and building pictures in one depth order, so a block in front of a building covers it and a block behind it sits behind. Same light direction and shadows for both.
+A6. Make the built buildings smaller to match the city's scale: only a little bigger than the biggest normal city buildings, like a landmark that stands out but fits in. Players tap the city, not the building, so they don't need to be big.
+A7. The city grows around what's built: when a building finishes, and again as it levels up, the area around it changes to fit, with new access roads, a few extra city blocks and greenery. Only redraw that one city when this happens, to keep it fast.
+Show me Berlin, Hamburg and Kolkata at play zoom and closest zoom, before and after, with no buildings, with all buildings built, and with one under construction. Don't merge until I've seen them.
+
+=== PART B: PLAYTEST NOTES (14 points) ===
+
+BUGS
+1. Enemy units pass each other without fighting. They should meet and fight.
+2. Fog of war: enemy armies outside my territory still show as "unidentified". They shouldn't show at all. I only see them once they cross into my land, or when one of my units sees them within its sight range (infantry sees only up close; a fighter on patrol sees much further).
+3. Research tree: the infantry picture doesn't fit inside its research icon. Fit it properly, like the other units.
+4. The Build button is grey even when I can afford it, so it looks like I can't build. Make it blue when I can afford it, and grey only when I can't.
+
+START OF GAME
+5. Every capital starts with a level 1 Airbase already built and one air superiority fighter based there (on top of its Fortifications), so every nation can patrol and scout from day one. The same goes for computer nations.
+
+ECONOMY
+6. The level 1 Army Base costs too much: on day one I can only afford it in 5 cities. Make it cheaper so I can build one in every city, and an Arms Industry in any city. I should also be able to afford the infantry research on day one. The level 1 Army Base builds in 30 minutes instead of 20 hours.
+7. Mobilization queue: free players lose it (one unit at a time per city). It becomes a paid membership feature. Add a membership on/off flag with a dev toggle so I can test both. Don't build any payment system yet.
+
+OCCUPATION, MORALE AND REBELS: copy Conflict of Nations' system and numbers exactly.
+8. Annexing: an occupied city gives 25% of its resources and can't mobilize units. Annexing raises it to 50% and lets it mobilize. Annexing is built like a building from the city's build list ("Annex City"), with a high cost (money and manpower, more for bigger cities) and a build time. Propose the cost and time and show me before building. I can start it any time, even while the city is burning. If the city is captured, it loses its annexed status. If I have troops in the city, rebels attack them, the city stays mine, my troops get the +25% dug-in city bonus and the annexing carries on. If the city is empty and rebels take it, I lose the city, the annexing and its cost.
+9. Morale:
+   - Every city and province starts the game at 70%. A newly occupied city or province drops to 25%; a liberated homeland one to 55%.
+   - At every day change, morale moves toward its target by (target − current) ÷ 8.
+   - Base targets: homeland cities 90%, annexed cities 75%, occupied cities 60%, countryside provinces 100%.
+   - Modifiers on the target:
+     - Distance to the capital: −5 per unit of distance, rounded. Propose how distance is measured and show me.
+     - Wars: −2 per nation I'm at war with, rebels included, nations with 0 VP not counted, max −25.
+     - Enemy neighbours: −5 per adjacent province held by a nation I'm at war with.
+     - Enemy units in the province: −1.
+     - Low-morale neighbours (my adjacent provinces at 40% or less): −7 each for a city, −4 each for a countryside province.
+     - High-morale neighbours (my adjacent provinces at 100%): +3 each for a city, +1 each for a countryside province.
+     - Resource shortage (any resource short with negative production): up to −50.
+     - Civilian casualties: up to −30, shrinking by a third each day.
+     - Capital lost: −20 on every province's target.
+     - The capital city itself: +25.
+     - Bunker level 1–5: +5 / +10 / +20 / +35 / +50.
+   - Show the target and every modifier in the city panel, as a morale factors list.
+   - Keep today's link between morale and output.
+   This replaces today's unrest system, plus the daily per-unit changes and "integration" in docs/REBELS-PLAN.md.
+10. Rebels:
+   - A city at 33% morale or lower can rebel, and shows a burning fire-and-smoke animation. Above 33%, the fire goes out and the risk is gone. Countryside never rebels. The fire must stay light on phones.
+   - Check once a day at the day change. The chance rises from 0% at 33% morale to 50% at 25%, and higher below that. Troops in the city lower the chance: propose how much and show me.
+   - Rebels attack any troops in the city in a real fight, with my troops getting the +25% dug-in city bonus. If the city is empty, rebels take it.
+   - Keep the rest of the rebels plan (crossed-rifles badge, rebels as their own side).
+11. Occupying a country I trade with should hurt my economy: I lose that trade, on top of the morale drop. The occupied cities stay weak until their morale recovers, and after that, holding and annexing them pays off. The difference between occupying a trade partner and a non-trade partner should be clearly noticeable.
+
+MISSILES
+12. The Missile Silo needs Conventional Warhead researched first. Cruise missiles don't. Add chemical and nuclear warheads as new missile units in research. Start from the weapons table in docs/RESEARCH.md 12.5 and write the plan first: research days, costs, effects, limits, and how they show on the map. Show me before building.
+
+INTERFACE
+13. Market rework: for each material, show the top 3 sellers and the top 3 buyers.
+14. Diplomacy has too many buttons. Simplify it: show me 2–3 layout options before changing anything.
+
+Points 8 to 10 replace parts of the REBELS job, which still hasn't started. Run REBELS next and build them together with it.
+
+Log any questions in docs/QUESTIONS.md and keep going.
+```
+
+Jobs from these notes (split by area, at most 5 at once): CITY BUILDING LOTS (Part A, running), FOG-CLASH (B1-B2, running), ECON-START (B5-B7, running), PROPOSALS (B8-B11 plan, B12 plan, B14 layout options; docs and mockups only, running), UI-FIXES (B3, B4, B13; Sonnet; queued, starts when UNITS IN CITIES finishes), then REBELS (B8-B10 built with the REBELS job once the owner OKs the proposals; B11 with it), MISSILES (after the owner OKs the plan), DIPLOMACY (owner sent a reference layout instead of picking an option: built to it, queued after UI-FIXES).
+
+## Owner notes 2026-11-25, Diplomacy (verbatim; replaces point 14's "show me 2–3 layout options"; extra work, cancels nothing)
+
+```
+Point 14, Diplomacy: here's the reference you asked for (4 Conflict of Nations screenshots attached: the list, a real player's page, the conversation screen, and a computer nation's page). Match this layout instead of making 2–3 options. Style only: no copying their art, names or icons. Build everything now, even though online play isn't live yet; it works with computer nations today and real players later.
+
+LIST SCREEN
+- Header "DIPLOMACY" with the red close button. Three tabs: Information, Coalitions, Messages & Trades.
+- Under the tabs: a Sort dropdown (default: Points), a direction toggle and a Search button.
+- One row per nation, sorted by points: big flag on the left, then "COUNTRY | player or leader name" in bold, a trophy with their victory points, a city icon with how many cities they hold, and their coalition's emblem and name if they're in one.
+- On the right of each row, two relation diamonds: "their" (how they treat me) and "your" (how I treat them). Each of our relations gets its own colour and icon: war, ceasefire, peace, non-aggression pact (NAP), right of way, and shared-intel alliance.
+- No other buttons on the rows. Tapping a row opens that nation's page.
+
+NATION PAGE: two versions
+Both versions:
+- Back button, title "ABOUT PLAYER", close button.
+- Big flag with a "Progress towards victory" bar and percentage.
+- "Their relation ⇄ Your relation" diamonds with a dropdown arrow. Tapping mine opens the menu to change it: declare war, offer peace or ceasefire, Offer NAP (20 days), ask for right of way, propose an alliance, embargo. Keep the current rules and the treaty-breaker warning.
+- Stats list: Provinces, Average Morale, Victory Points, Capital, Known Army Size (shows "Unknown" unless my scouts or spies have seen their forces, matching the fog-of-war rule), and At War With (a list of nations, rebels included; empty if none).
+A) Nation played by a real player:
+- The player's name with an Add Friend button, and their motto under it.
+- Buttons beside the flag: Send Message, Player Profile, Mute Player.
+B) Computer nation (not playable, or not taken by a real player):
+- The nation's leader name instead of a player name, no motto. Invented leader names only, never real politicians.
+- No Add Friend, Send Message, Player Profile or Mute buttons. Just one New Trade button beside the flag, so I can still trade with them and buy or sell territory.
+
+CONVERSATION SCREEN (real players only: Send Message, or a conversation in the Messages & Trades tab)
+- Header with the player's name over a faded flag, back button and close button.
+- Empty state: "Create a new trade or type a message below to start this conversation."
+- Messages and trade offers show as a chat history, newest at the bottom.
+- At the bottom: a message box on the left, and on the right three buttons: Send Message, New Trade, Mute Player.
+- Mute hides that player's messages and trade offers until I unmute.
+
+TRADES (both real players and computer nations)
+- New Trade opens a trade builder. Each side picks what it gives: money, any resource, cities and provinces (our territory selling stays, it's our big difference), and treaties (peace, NAP, right of way, alliance).
+- Offers show Accept, Decline and Counter buttons. With a real player, the offer appears in the chat. With a computer nation, it answers with the AI's existing deal logic (accept, decline or counter, with a short reason) in the Messages & Trades tab.
+- The Messages & Trades tab lists every conversation and trade, newest first, with unread counts.
+
+KEEP WHAT'S OURS
+- Keep every diplomacy action we already have, just moved into this layout: nothing gets removed.
+
+Show me all screens on a 440 px phone before merging, including a computer nation's page and a real player's page.
+```
+
+## Owner notes 2026-11-25, Market (verbatim; replaces point 13's one line; extra work, cancels nothing)
+
+```
+Point 13, Market rework: reference attached (Conflict of Nations "Stock Market" screenshot). Match its layout, style only, and keep our price chart and seller flags.
+
+LAYOUT
+- Header "STOCK MARKET" with a chart-style banner and the red close button.
+- A row of resource tabs under the header, one per tradable resource, using our resource icons.
+- Each tab shows only the best 3 offers on each side:
+  - BUY section: the 3 cheapest sell offers I can buy from. Each row has the resource icon, the amount in green (+4,000), the unit price with the money icon, and a green Buy button.
+  - SELL section: the 3 highest buy offers I can sell to. Each row has the amount in red (−2,070), the unit price, and a yellow Sell button.
+  - All other offers wait in line. When one of the top 3 is filled or cancelled, the next best moves up.
+- Bottom buttons: Create Offer and Order Book. Order Book shows the full queue for that resource, plus my own open offers with a Cancel button.
+- Prices in money only.
+
+KEEP OURS
+- The price chart: a slim chart at the top of each resource tab showing that resource's price over the whole game. Tap it to expand to full size.
+- Seller and buyer flags on every offer row, so I can see who I'm trading with and avoid nations I'll fight later. Make the flags sleek, in the same style as the unit badges: the real flag with a light fabric sheen, a thin dark edge and a soft shadow, small and neat. Tapping a flag opens that nation's diplomacy page.
+
+ALSO
+- Make sure computer nations actually post buy and sell offers (the playtest found they sit on goods and never sell, IMP-2), so the market is never empty.
+
+Show me each resource tab and the Order Book on a 440 px phone, before and after, before merging.
+```
 
 ## Ready, waiting for the owner
 
 | Job | State | Branch |
 |---|---|---|
-| **AUTOTEST** (2026-11-21, extra job: cancels and replaces nothing in this file) | autonomous playtest session (owner brief and the owner's changes quoted in each workflow): rollback point pre-auto-test (tag local, branch on origin) at 2dc5573; setup extends the existing tools (headless, balance, eco-check, stack-duel, nations-balance, rebels-sim, perf) with invariants, scenarios and stats, sanity breaks; new files in docs/ (DECISIONS, IMPROVEMENTS, ROUND_LOG, QUESTIONS) plus a LATER.md section; max 3 rounds, 1 prototype per round on idea/*; bug fixes only on branch auto-test/fixes (never merged, owner reviews at the end); hands off map, cities, weather, research screen (bugs there logged for those jobs). **Round 1 done:** 16 bugs fixed (auto-test/fixes 6c522d0), IMP-1..13, prototype idea/sea-legs a0e4982. **Round 2 done:** 23 more bugs fixed (auto-test/fixes d3670ca), IMP-14..20, prototype idea/port-sortie d7a2ea0. **Round 3 (last) done:** 18 more bugs fixed in 17 commits (auto-test/fixes e379c0e, 60 commits on master, merges cleanly), IMP-21..27, Q25-Q31, prototype idea/phone-group 4ac62da. **Session over; waiting for the owner to review auto-test/fixes and the three idea branches.** | auto-test/fixes, idea/sea-legs, idea/port-sortie, idea/phone-group |
+| **CITY LOTS 3** (2026-11-26; owner verbatim in docs/QUESTIONS.md "second set": roads curve round the HQ square, no visible lot outline, lots closer to the core, Airbase at the edge and off the highway, yard on the water) | DONE 2026-11-27: cities-redo 368bfc6 (round 3 + polish 2 of 2, recheck 2 READY): lots nearer the core, ring road round the HQ square that carries on, no lot outline or fence, Airbase at the edge off the highway, yards on water. Sheets shots/2026-11-27/city-lots-r3/. Open: night-lights cap mid 236 (limit 230), bld-zoom HQ 4.6 px hop at game start, Manila lone road, Paris/Tokyo/Riyadh ring nits. PASTED-ON CHECK: yes, still pasted on (pads baked into 5 of 8 types, corner view, far more detail; night not darkened); sheets shots/2026-11-27/pasted-on-check/; one Army Base test picture proposed (about $0.04 batch / $0.08 direct), waiting for the owner. Earlier: on cities-redo c09d832 (A6/A7 done, recheck 2 READY, sheets sent: shots/2026-11-26/city-lots-a6a7/); plus the independent PASTED-ON CHECK on c09d832 (honest yes/partly/no on ground pad, light/angle, detail; an Army Base test picture only if needed, then wait for the owner); at most 2 polish rounds | Opus | cities-redo |
+| **PROVINCE BUILDINGS AND HOSPITALS** (2026-11-27, owner verbatim in "Next free slots") | DONE 2026-11-27: proposal docs/PROVINCE-HOSPITALS-PROPOSAL.md, art rule added to docs/ART-BIBLE.md (details marked waiting), 3 sheets sent (shots/2026-11-27/province-hospitals/), questions PH1-PH11; new pictures about $0.47 (at most $0.73), after the Army Base camera test verdict. Waiting for the owner. Earlier: proposals only, one round (wf_bc1e8df4-2c2): art rule text, Recruiting Office cities only, province Bunker, City Hospital with its lot, Field Hospital; costs, healing, Gemini costs, desktop/phone previews; bunker option sheets saved to shots/2026-11-27/bunker-options/ | Opus | none |
+| **BUILD-REQS** (2026-11-27; owner verbatim: "Build requirements (one round only, then wait for me): 1. ARMY BASE levels (keep research days and costs): Level 1: Infantry, Motorized Infantry, Recon vehicle, Mobile Artillery; Level 2: Infantry Fighting Vehicle, Main Battle Tank, Mobile Anti-Air, Paratroopers, Swarm Drones; Level 3: Rocket Artillery, Mobile SAM, Special Forces, Mobile Jammer; Level 4: no new units, builds faster; Level 5: Missile Defence, builds faster still. There's no ground radar unit yet, so leave radar as it is. REMOVE Anti-Tank Infantry: take it out of research, build lists and the computer's choices. In old saves it turns into regular Infantry. 2. AIRBASE levels (keep research days and costs): Level 1: Recon UAV, Attack Helicopter, Air Superiority Fighter; Level 2: Strike Fighter, Strike Drone; Level 3: Maritime Patrol Aircraft, AWACS, Heavy Bomber; Level 4: no new units, builds faster; Level 5: Stealth Bomber, builds faster still. 3. NAVAL BASE: same idea. Spread the ships across levels 1-5 realistically (small ships low, carriers and submarines high), with levels 4 and 5 building faster. Show me the table before changing it. 4. BUILD SPEED: only levels 4 and 5 add build speed, on all three bases. Levels 1-3 just unlock units; the Recruiting Office stays the main way to speed up building. Make sure all three bases go up to level 5. Update the build lists, requirement text and the computer's build choices. Tell me what changed before and after.") | ROUND 2 DONE 2026-11-27: build-reqs d7378f5 (8e72279 + golden d7378f5; recheck of both rounds READY): Naval Yard I Frigate (+Corvette slot), II Destroyer slot, III Cruiser and Attack Submarine, V Aircraft Carrier (+Ballistic Missile Submarine slot); "Needs Army Base II" wording; computer climbs main yards to III (44-46 yard-III cities by day 60, cruisers 13-14), about 8% fewer units at day 30, no carriers by day 60 (as master); queued ships in too-low yards finish. Screens shots/2026-11-27/build-reqs-2/. Waiting for the owner's merge OK. Round 1: build-reqs b8cba48 (b497842 build, bf6716c golden, b8cba48 repair: computer builds Army Base III at war). Owner's lists exact; speed only at IV (x0.9) and V (x0.8) on all three bases; Anti-Tank Infantry removed (old saves to Motorized Infantry, refunds); Naval Yard table proposed only (I Frigate, II Cruiser, III Submarine, V Carrier). Slots marked: rcn, maa (Mobile Anti-Air), mdef (Missile Defence) - those units don't exist. Open for the owner: fewer tanks and strike fighters, Special Forces never built by the computer, no anti-armour answer in cities (2 stack-duel city cases informational), the repair was not independently rechecked. Screens shots/2026-11-27/build-reqs/. Owner 2026-11-27: yes to 2, 3 and 4; Naval Yard levels given (BUILD-REQS 2, next free slot). Earlier: one round (wf_ca510132-1dc): study, build, independent verify, a repair pass only for bugs the build introduced; Naval Base unlocks a table only; Recon slot marked; then wait for the owner | Opus | build-reqs |
+| **START-ARMIES + RECON** (2026-11-27 playtest items 3-4) | DONE 2026-11-27: start-armies e60b96e (78c92da build, 30b5eca polish 1: computer capitals no longer left empty, golden re-recorded; e60b96e polish 2: better second cities). Every nation: capital 2 inf + 1 art + the fighter, two outer stacks of 2 inf (recon slot START_ARMY.recon null until the OK), nothing else: 8 units a nation (544 world-wide, 2010 before). City rule: biggest city outside the capital, then the biggest on another side (60 degrees) or far from the first; another nation's border or a highway counts x1.5; own-land reachable only; never next to the capital or the other stack. Sheets shots/2026-11-27/start-armies/. Recon proposal docs/RECON-VEHICLE-PROPOSAL.md (sight 70 km option A or 60 km option B; about $2.1-2.3 batch). Open: about 250 empty computer cities on day 60 (border-city habit offered), map quirks (NZ capital on the South Island, Israel cut off by the West Bank, Philippines/Indonesia strait links), balance tool to re-run with disk space. Waiting for the owner. Earlier: new start for every nation, city rule, AI adjust, balance and headless checks, sheets for Russia, Germany and a small nation; recon vehicle proposal only (stats, research, pictures, Gemini cost; no spend) (wf_09f62ac2-e69) | Opus | start-armies |
+| **FIGHTER-ASF** (2026-11-27 playtest item 2) | DONE 2026-11-27: fighter-asf 2d826e8 (c343402 rules, 32cc778 page, 2d826e8 polish 1 of 2; final critics READY). Attack order with today's ground numbers in one entry ASF_ATTACK (soft 0.25, armoured 0.2, naval 0.3: about a quarter of a strike fighter vs infantry, a seventh vs tanks; Option B 0.3 each) - waiting for the owner's OK on the numbers; new buttons Attack, Split, Merge, Return and Army Info; calm racetrack patrol at the rules' flight speed (about 450 km/h, a lap in about 16 s); patrolling aircraft tappable at every zoom (tests asf-attack 43, air-tap 54). Sheets and clips shots/2026-11-27/fighter-asf/. Earlier: button list vs strike fighter, Attack order on proposed numbers (owner OKs before merge), calm racetrack patrol with 15 s clip, patrolling aircraft tappable at every zoom; look and rules critics (wf_503da938-700) | Opus | fighter-asf |
+| **COMBAT DISPLAY** (2026-11-27, owner verbatim in the block above) | DONE 2026-11-27: combat-display c985d93 (f1292fb build, c985d93 repair after the independent check). Today's timing: damage already lands every 15 game minutes (4 rounds an hour); the CoN-style hourly round is proposed only (docs/COMBAT-TIMING-PROPOSAL.md; reverses CMB-1, golden re-record after other merges). Built: Fighting + enemy (fog respected) in the panel and on a map label, countdown with a filling ring, a 'lost -x%' chip per side after each round (counts artillery, air and missiles too); old floating -N removed. Sheets shots/2026-11-27/combat-display/ (clip made before the repair). Open: zoomed out with 3 counters fighting, your label is the short one. Waiting for the owner. Earlier: one round (wf_c13e2fdc-fb1): today's timing explained, fixed tick proposed only; Fighting + enemy, countdown, damage readout on panel and map label; desktop and phone shots, a clip | Opus | combat-display |
+| **PINPOINT-3** (2026-11-27 playtest item 1, verbatim above) | DONE 2026-11-27: pinpoint-3 0dfe140 (46b6ff4 fix, f05891a polish 1, 0dfe140 polish 2; final check READY). Cause: the arrival auto-join (since 333f8d1) merged a force into its own garrison within about 50 km of the city; earlier fixes were UI-only and the tests emptied the map. Ships: c67d74a made a Waypoint tap on water deselect. Fix: join only on the very same spot (0.1 km), byForce snap, group orders share one point, Waypoint taps on water add stops. Guard .test/pinpoint-guard.js (202 checks, fails on master) in tools/checks.sh with waypoints.js. Shots being re-made (my cleanup deleted the first ones). Earlier: find what broke waypoints again and why the earlier fix didn't hold; fix land, ships, waypoints; guard test in the standard checks; independent verify (wf_b440f18a-f9b) | Opus | pinpoint-3 |
+| **SIMPLER BUILDINGS TEST** (2026-11-27, ART DIRECTION TEST item 2, verbatim in Next free slots) | DONE 2026-11-27: simpler-bldg e597899 (option B behind ?bld=b; look critic found 4 faults, repair fixed them; Kolkata hex-240 night bake churn is cities-redo's memory budget, both looks). Speed level with today. Option A priced only: 3-picture test about $0.12, full 45 about $1.85 batch (no top-up needed at $24.05). Sheets shots/2026-11-27/simpler-bldg-repair1/. Waiting for the owner's pick (A, B or today). Earlier: option B code-drawn buildings behind a switch on branch simpler-bldg (from cities-redo), option A priced only; Berlin and Kolkata, play and closest zoom, desktop and phone; look critic, one repair (wf_da1c3e1f-515) | Opus | simpler-bldg |
+| **ONE FIGURE PER ARMY TEST** (2026-11-27, with ART DIRECTION TEST item 1, verbatim in Next free slots) | DONE 2026-11-27: one-figure 42c72ad (f29263b build, 42c72ad repair after the look critic: heading follows travel, smoke kept off a lone figure, names fade under figures, re-framed shots). Behind ?fig=1. Main unit = the badge's rule (count x health); Motorized Infantry = code-drawn generic 4x4 transport + rifleman (stands, rides the hatch, kneels to fire); 32-view turning, idle/moving/fighting animations; neutral figure for unidentified armies. Speed level with today. Picture alternative priced only (test about $0.09). Sheets and clips shots/2026-11-27/one-figure-repair1/. Waiting for the owner's pick. Earlier: one main-unit figure per army behind a switch, Motorized Infantry as soldier + vehicle (code-drawn; picture alternative priced only), side-by-side sheets and clips; look critic, one repair (wf_30c41f58-c56) | Opus | one-figure |
+| **MISSILES PLAN 2** (2026-11-27; owner verbatim: "Missiles plan update (replaces my rename message; everything else in my last missiles block stands): 1. Nuclear warheads come on three missile types, in this order: Nuclear Cruise Missile, Nuclear Ballistic Missile, and later Nuclear ICBM. No \"Tactical\" name anywhere. 2. Each step up has a longer range and a bigger blast: Cruise: short range, smallest blast. Ballistic: medium range, bigger blast. Not world range: today's 16,200 km for ballistic missiles is too far. ICBM: world range, biggest blast. Propose Conflict of Nations-style ranges and blast sizes for all three (conventional, chemical and nuclear versions) and show me a table before changing anything. 3. Every missile has HP while flying, so anti-missile defences and anti-air can damage and shoot it down. Faster, tougher missiles are harder to stop: cruise easiest, ICBM hardest. Show the missile's HP on its marker and in the launch card. 4. ICBMs stay for later, but plan their research and silo needs now so they fit. Save the sheets to the shots branch.") | DONE 2026-11-27: 4 sheets sent (shots/2026-11-27/missiles-plan2/), proposal docs/MISSILES-PLAN2.md on missiles 728c58a; questions 1-9 (9 = MS1-MS5 defaults). With the OK it becomes MISSILES polish 2 of 2. Earlier: planning only, no code (wf_719fd073-5cb): facts from the code and CoN reference numbers, one proposal (table, HP model, ICBM plan), balance and code-fit critics, final proposal and table sheets. Then the owner sees the table; nothing changes on missiles until the OK. The MISSILES merge waits for this. | Opus | none (missiles stays bcb7067) |
+| **MISSILES** (2026-11-26; owner: M1-M15 OK, M13 with the stronger gas zone) | POLISH 2 DONE 2026-11-27 (2 of 2 used, recheck READY): missiles fdd6d1e: MS1 chemical answered with chemical (nuclear only for nuclear or desperation), MS2 Conventional Warhead readily at war (3-8 nations build and fire missiles by day 60), desktop aiming hint clear of the minimap, Damaged on the strip; sheets shots/2026-11-27/missiles-polish2/. Open: tutorial card overlaps the hint at 1280 wide (one CSS line at merge), broke nations hold back the silo price (net-income guard suggested). Still waiting on plan 2 answers 1-4 and 6-8 and the owner's merge OK. Earlier: DONE 2026-11-27: missiles bcb7067 (rules, screens, map zones; rules and look critics; polish 1 of 2 used; recheck READY). 7 sheets sent (shots/2026-11-27/missiles/). Questions MS1-MS5 in docs/QUESTIONS.md. **Not merged until the owner has seen the sheets.** | missiles |
+| **PROPOSALS** (2026-11-25; DONE 2026-11-25, plans-1125 19dd3af, sent to the owner; waiting for OK on R1 and the missiles plan, questions R1-R17 and M1-M15 in docs/QUESTIONS.md) | owner notes points 8-11 (occupation, morale, annex, rebels plan with the three proposals: Annex City cost and time, distance measure, troop effect on rebel chance), 12 (missiles plan) and 14 (2-3 Diplomacy layout options; **superseded 2026-11-25 by the owner's reference layout, see "Owner notes 2026-11-25, Diplomacy"**: the options draft was already done, its button inventory in docs/DIPLOMACY-OPTIONS.md is the checklist of actions to keep). Docs and mockups only, nothing built; shown to the owner before building. | Opus (diplomacy mockups Sonnet) | plans-1125 |
 | **BUNKER ART options** | done 2026-11-18 (bunker-art): A concrete command bunker with earth berm, B bunker half sunk into a grassy hillock (recommended), C pillbox with trench on its own earth block (slab-like, not recommended); level 1 and 5 each, no ground patch; about $0.20; sheets and map previews sent; nothing in the game changed | bunker-art |
 | **UNIT-ART tank sets** | done 2026-11-18 (unit-art): 45 pictures, 5 groups x 3 looks x (side / scene / top-down), $1.83 with checks (log 365 calls, about $12.10; estimated balance $39.05); 7 single-check flags and 8 three-way flags (mostly mirrored roof details on the top-downs); nothing redone; full set 1,095 pictures, about $44.49 (about $42.67 left, a top-up of about $8.6 needed to keep the $5 floor); sheets sent; NOT merged | unit-art |
 | **CITIES** | done 2026-11-18 (7129852): block clusters, a quarter smaller, owner colour from the town coat, towers lower, hidden at hexPx 26 and below, brighter night windows; checks pass; faster than master except desktop day close-zoom panning +4.7% per frame (probably noise); screenshots sent | cities-3d |
@@ -161,6 +538,12 @@ Radar stations, coastal naval batteries, province anti-air sites, a Hospital; mu
 
 | Task | Model |
 |---|---|
+| **UNITS IN CITIES** (v71, 2026-11-26, merged 7ad43fb; owner: "UNITS IN CITIES: UC1 and UC3–UC6: your defaults; UC2 as I corrected. Merge once I've seen the dot fix sheets."): centre diamond, hold ring, dot always at the army's true spot with the counter moved aside on a thin line, shadows and outlines, city sheet lists. Dot fix sheets sent (shots/2026-11-26/uc-dot/). Speed check: phone mid zoom was about 3 ms/frame slower at CPU x2; polish 2 (14250bf) trimmed the markers to level. All checks pass on master after the merge (controls 49/49 run alone; anchor (G) as on master). Open: UC7 (long leader lines at hex 240). | Sonnet |
+| **REBELS** (v70, 2026-11-26, merged cb0378c after the owner's OK: "REBELS: approved. RB1–RB5: your defaults, including the new wording of RB5. Merge it now."): morale replaces unrest, Annex City, burning cities and risings, rebels as their own side, trade partners occupied (option C), computer garrisons and annexing; Q27 A / Q28 B. All checks pass on master after the merge (balance, nations-balance, eco, duel, rebels2 168, d10, dealings). Rebels unit pictures: separate job, waiting for the owner. | Opus |
+| **Q-DEFAULTS** (v69, 2026-11-26, merged 4859784; owner: "go with your defaults on Q1–Q31" and "D10: fix it"): triage found every Q1-Q31 default already in force or "unchanged" (no new code); Q8/Q19 handed to MISSILES, Q27/Q28 to REBELS (done on rebels-2). D10 tightened: a friend gives at most about 16% more value than it gets back, two favours in 3 days and the next deal must pay its way, no empty counter-offers, 20-day wait to re-ally after leaving, opinion from deals at most once a day. Recheck READY; 2880 random deals, footer always matched. Open: 20 days right? $1M steps for small deals? favours reason in the footer? | Opus |
+| **MERGE 1126** (v68, 2026-11-26, merged 8448af9 after the owner's OK: "Merge Market, Fog-clash and UI-fixes." / "Merge auto-test/fixes ... after re-running the checks on top of today's merges" / "D10: fix it"): Stock Market to the reference (computer nations post buy and sell offers; flag opens ABOUT PLAYER with "« Market"), fog (enemy armies outside your land and sight hidden), columns that meet fight, blue Build/Upgrade/Train buttons when affordable, infantry icon fits its diamond, the playtest's 16 fixes, D10 (a computer nation refuses a deal where it gets nothing back). Independent verify SAFE; all checks pass. Known gap: a $1M token payment still gets round D10 (follow-up in Q-DEFAULTS). | Opus |
+| **ECON-START** (v67, 2026-11-26, merged 244638b after the owner's OK: "Merge the economy and diplomacy. I like them."): capital Airbase and fighter at the start, level 1 Army Base $10M and 30 minutes, mobilization queue as a membership feature with a dev toggle; independent verify identical to a scratch merge, all checks pass; units about 10-15% fewer than before at day 60 (balance look later) | Opus |
+| **DIPLOMACY** (v67, 2026-11-26, merged 244638b, same OK): reference layout list, ABOUT PLAYER pages, conversation, trade builder with Accept / Decline / Counter; every old action kept; cherry-pick trailers reworded at merge (same code) | Opus |
 | **MAP SURFACE** (v66, 2026-11-22): texture back at every zoom (far colours kept, faster detail tiles), jungle look C reworked from Google Earth, sea look B at every zoom; sea mixes built but off until the owner picks. Merged one at a time (texture, jungle, sea); golden, headless, sea-mix, battery and zoom-look checks pass. | Opus |
 | Naval cities (Dev Build v65, merge 0898d01, owner OK 2026-11-19): anchor at 349 coastal cities, troops board and land only at naval cities (assault landings at enemy or independent ones, 45 min, first-day penalty), Marines (new unit, any coast when the force is all Marines; infantry pictures until their own exist). Also brings the buildings follow-up (cities-2): buildings on land as drawn, 17% smaller, Naval Yards on the water. | Opus |
 | Unit pictures set 2 (Dev Build v64, packed two files a unit by UNIT-ATLAS so the build stays under 511 files): 17 units x 45 pictures, wrong-way pictures flipped, pale plate removed; the cloud colour fix (clouds stay white and grey) | Sonnet / Opus |

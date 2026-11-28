@@ -88,13 +88,16 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     return N;
   });
   S = {v:4, scn:SCN, len:DAY_LIMIT, seed, hour:0, speed:0, owner, bld:G.P.map(() => newBld()), cons:G.P.map(() => null), queue:G.P.map(() => []),
-       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], unrest:G.P.map(() => 0), spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
+       armies:[], cap:G.P.map(() => null), occ:G.P.map(() => null), home:owner.slice(), rel:{}, mem:{}, decl:[], offers:[], mor:G.P.map(P => P.sea ? 0 : MOR.start), cas:{}, anx:{}, spies:[], log:[], nid:1, rs:(seed ^ 0x9e3779b9) | 0, over:null, battles:[], q:0, nations, links:{}};
   S.mob = 1;   // made under the mobilization rule (see mobMigrate)
   S.ab = 1;   // made under the Army Base rule for infantry (see abMigrate)
   S.eco = 1;   // made under the city-resource economy (see ecoMigrate)
   S.rsv = 2;   // made under the research tree by unit (see researchMigrate)
   S.rk = RES_K;   // goods counted at the resource scale RES_K (see resKMigrate)
   S.bk = 1;   // made under the Bunker rule (levels 1-5; see bunkerMigrate)
+  S.mv = 1;   // made under the morale rule (owner points 8-11; see moraleMigrate)
+  S.noAt = 1;   // made after Anti-Tank Infantry was removed (BUILD-REQS; see atMigrate)
+  S.yl = 1;   // made under the Naval Yard levels of BUILD-REQS round 2 (see yardMigrate)
   if (NAVAL_CITIES) S.nc = 1;   // made under the naval-cities rule (see restore: a save without it keeps routes given before the rule)
   if (T){ S.w64 = W64; S.mode = mode; if (G.map) S.map = G.map; }   // (S.map: the map the save needs; absent for world.js)   // the nations world: its cities travel with the save, so a save keeps its own world when nations.js grows
   linksSync();
@@ -102,8 +105,8 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   else for (const n of S.nations){
     const np = S.owner.filter(o => o === n.id).length;
     n.cap0 = n.capital; n.small = np <= (GS > 1 ? 40 : 10);
-    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, income(n.id).gross.cash)));
-    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
+    n.boost = 1; n.boost = Math.max(1, Math.min(2.5, 220/Math.max(1, atPeaceMor(() => income(n.id).gross.cash))));   // (read at the peacetime morale: rules/economy.js morPeace)
+    for (const p of startRecs(n.id)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25); the capital and the two biggest other cities start with a Recruiting Office (manpower and training speed)
     addArmy(n.id, n.capital, {inf:4, tank:1});
     for (const P of G.P) if (S.owner[P.id] === n.id && P.city && P.id !== n.capital) addArmy(n.id, P.id, {inf:2});
     // compact powers (Germany, Japan, Britain...) start with a denser home army (their border guards had level I forts until the start-forts rule)
@@ -111,6 +114,7 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
     // power may attack them (graceFor), so the compact, dug-in powers next door do not pick them off in the second week
     n.mid = !n.small && GS > 1 && np <= 55; if (n.mid) addArmy(n.id, n.capital, {inf:3, art:1});
     S.bld[n.capital].fort = START_FORT;   // only the capital starts with Fortifications (every power)
+    startAir(n.id);   // and an Airbase with one fighter wing
     if (n.small){ addArmy(n.id, n.capital, {inf:3, tank:1, art:1});
       for (const P of G.P) if (S.owner[P.id] === n.id && P.id !== n.capital && !P.city && P.nbs.some(m => S.owner[m] !== n.id && !G.P[m].sea)) addArmy(n.id, P.id, {inf:2}); }
   }
@@ -118,17 +122,19 @@ function newGame(seed, pick, humans = []){ tickFinish();   // (an hour the page 
   S.own0 = S.owner.slice();
   for (const me of seats()) desk(me).sunOff = sunOffFor(me);   // display only: the seat's opening view over its capital is in daylight
   for (const P of G.P) if (S.owner[P.id] === NEUTRAL){ if (P.city) addArmy(NEUTRAL, P.id, {inf:5 + Math.floor(rng()*4)}); else if (GS === 1 || rng() < 0.4) addArmy(NEUTRAL, P.id, {inf:2 + Math.floor(rng()*2)}); }
-  INCC.v = -1; trS(); tradeGen(); INCC.v = -1;
-  if (T){ tierCatchUp(mode); INCC.v = -1; }
+  INCC.v = -1; trS(); atPeaceMor(tradeGen); INCC.v = -1;   // (the opening trade routes are laid out by the economies at their settled morale, as the catch-up below)
+  if (T){ atPeaceMor(() => tierCatchUp(mode)); INCC.v = -1; }   // (the catch-up is set at the morale every province settles at in peace, not at the starting 70: rules/economy.js morPeace)
+  bookOpen();   // the Market's first offers, on both sides where stocks allow (rules/economy.js)
   tellAll(me => `${S.nations[me].name} mobilizes. ${cap1(NUMW[S.nations.length - 1] || String(S.nations.length - 1))} rival powers are moving too.`, '');
   IM.emit('newGame');
 }
 // ---- the nations world: the start by tier (docs/NATIONS-PLAN.md 3.2 to 3.5; the numbers are tierKit's, rules/data.js)
-// Every nation: its tier's stocks, Fortifications I and a Recruiting Office in the capital (no Army Base: level I is cheap and takes a day, and the
+// Every nation: its tier's stocks, Fortifications I, an Airbase I with one fighter (startAir) and a Recruiting Office in the capital (no Army Base: level I is cheap and takes 30 minutes, and the
 // computer builds one in its capital on its first turn; infantry trains only where one stands), more
-// offices in its biggest cities, the capital force, 2 infantry in every other city (a tank more in the biggest), border guards facing the strongest
-// neighbour first (no forts: only the capital starts with them), a Naval Yard in the biggest port for coastal nations of tiers S and A (in place of kit.yardGuards guards).
-// Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
+// offices in its biggest cities, a Naval Yard in the biggest port for coastal nations of tiers S and A, and the starting army of START_ARMY
+// (rules/data.js; owner playtest 2026-11-27): the same for every nation, whatever its tier and the mode: the capital's force, the outer stacks in the
+// cities startOuter picks (each with the recon slot once the recon vehicle exists), and the city garrisons and border guards the table asks for (none
+// today; no forts: only the capital starts with them). Neighbours of the same giant (a land neighbour more than 3 times their strength) start as friends. No dice are used.
 function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L.map(powerStrength), nbs = L.map((_, i) => powerNeighbours(L, i));   // by nation id
   for (const N of S.nations){ const n = N.id, kit = tierKit(N.tier, mode);
     N.cap0 = N.capital;
@@ -136,24 +142,54 @@ function tierStart(mode){ const L = S.nations.map(N => POWERS[N.power]), str = L
     for (const k of ['cash', 'mp', 'oil', 'metal', 'iron', 'elec']) N[k] = kit[k];
     N.rare = [N.capital, ...cities.map(P => P.id)].some(p => G.P[p].main === 'rare') ? 40*RES_K : 60*RES_K;   // no rare-earth city: a little more in stock for the first weeks
     { const mains = new Set([N.capital, ...cities.map(P => P.id)].map(cityMain)), lack = ['oil', 'metal', 'iron', 'elec'].filter(k => !mains.has(k)); if (lack.length) N.reserve = lack; }   // the good(s) its cities lack: the capital makes ECO_RESERVE times its share (income0); after the big-country oil city of cityMains (rules/map.js), so oil is reserved only for a nation of under 8 cities without one
-    for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in a day; owner, START-RULES)
+    for (const p of startRecs(n, kit.recs)) S.bld[p].rec = 1;   // (no Army Base anywhere at the start: every nation builds its own, level I in 30 minutes; owner, START-RULES and 2026-11-25)
     S.bld[N.capital].fort = START_FORT;   // only the capital starts with Fortifications, in every tier
-    addArmy(n, N.capital, {inf:kit.inf, tank:kit.tank, art:kit.art});
-    cities.forEach((P, k) => addArmy(n, P.id, k < kit.cityTanks ? {inf:2, tank:1} : {inf:2}));
-    let guards = kit.guards;
-    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port){ S.bld[port.id].yard = 1; guards = Math.max(0, guards - kit.yardGuards); } }
+    const SA = START_ARMY;
+    addArmy(n, N.capital, startForce(SA.capital));
+    startAir(n);   // the capital's Airbase and its fighter wing
+    const outer = startOuter(n);   // the outer stacks, each with the recon slot (START_ARMY.recon: skipped until the recon vehicle exists)
+    for (const p of outer) addArmy(n, p, startForce(SA.outer, SA.recon));
+    if (SA.cities) for (const P of cities) if (!outer.includes(P.id)) addArmy(n, P.id, startForce(SA.cities));
+    const guards = SA.guards || 0;
+    if (kit.yard){ const port = [G.P[N.capital], ...cities].filter(P => P.coast).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id)[0]; if (port) S.bld[port.id].yard = 1; }
     // border provinces that are not cities, by the neighbour they face: playable neighbours strongest first, then independent land; one guard per neighbour in turn
     const face = new Map();
     for (const P of G.P){ if (S.owner[P.id] !== n || P.city) continue; for (const v of P.nbs){ const o = S.owner[v]; if (G.P[v].sea || o === n || o === SEA) continue; const f = face.get(o) || face.set(o, []).get(o); if (!f.includes(P.id)) f.push(P.id); } }
     const order = [...face.keys()].sort((a, b) => (b < 0 ? -1 : str[b]) - (a < 0 ? -1 : str[a]) || a - b), used = new Set();
     for (const f of face.values()) f.sort((a, b) => popOf(b) - popOf(a) || a - b);
     for (let g = 0, turn = 0, idle = 0; g < guards && order.length && idle < order.length; turn++){ const p = face.get(order[turn % order.length]).find(q => !used.has(q));
-      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, {inf:2}); g++; }
+      if (p == null){ idle++; continue; } idle = 0; used.add(p); addArmy(n, p, startForce(SA.guard)); g++; }
   }
   // friends of a shared giant
   const giants = S.nations.map(N => nbs[N.id].filter(k => str[k] > 3*str[N.id]));
   for (const A of S.nations) for (const B of S.nations) if (A.id < B.id && giants[A.id].some(k => giants[B.id].includes(k))){ addMem(A.id, B.id, 25); addMem(B.id, A.id, 25); }
 }
+// a starting force from START_ARMY's entries (rules/data.js), added together; a key that is not a unit (the recon slot's before the unit exists) is left out
+function startForce(...parts){ const u = {}; for (const f of parts) if (f) for (const t in f) if (UNITS[t] && f[t] > 0) u[t] = (u[t] || 0) + f[t]; return u; }
+// the cities of nation n that hold its outer starting stacks (START_ARMY.outerN of them; owner playtest 2026-11-27, the rule's numbers: START_OUTER):
+// the first in its biggest city outside the capital, the second in its biggest city away from the first: on another side of the capital (at least
+// `apart` degrees from the first as seen from it) or far from it (at least `far` times the capital's distance to the first, from the first and from
+// the capital alike); a city on another nation's border (independent land does not count) or on a highway counts as bigger (x border, x highway),
+// and equal weights go to the more populous city. Only cities the capital reaches over the nation's own land count (no exclave, no other island),
+// and none next to the capital or next to an earlier stack.
+// Fallbacks, in turn: cities next to the capital (when fewer than outerN remain), the next-heaviest city not next to an earlier stack, any other
+// eligible city, the nation's most populous border provinces (independent land counts here), the capital itself. The same in every game (no dice, not the seat)
+function startOuter(n){ const N = S.nations[n], c = N.capital, k = START_ARMY.outerN || 0, O = START_OUTER, P = G.P; if (k <= 0) return [];
+  const home = new Set([c]), q = [c];
+  for (let h = 0; h < q.length; h++) for (const v of P[q[h]].nbs) if (!home.has(v) && !P[v].sea && S.owner[v] === n){ home.add(v); q.push(v); }
+  const nb = v => !P[v].sea && S.owner[v] >= 0 && S.owner[v] !== n, border = p => P[p].nbs.some(nb), hwy = p => [...P[p].lk.values()].some(r => r.r0 >= 3);
+  const brg = p => Math.atan2(P[p].y - P[c].y, P[p].x - P[c].x)*180/Math.PI, gap = (x, y) => { const d = Math.abs(x - y) % 360; return d > 180 ? 360 - d : d; };
+  const km = (a, b) => kmBetween(P[a].x, P[a].y, P[b].x, P[b].y), away = (x, a) => gap(brg(x), brg(a)) >= O.apart || (km(x, a) >= O.far*km(c, a) && km(x, c) >= O.far*km(c, a));
+  const all = [...home].filter(p => p !== c && P[p].city);
+  let el = all.filter(p => !P[c].nbs.includes(p)); if (el.length < k) el = all;
+  const w = p => popOf(p)*(border(p) ? O.border : 1)*(hwy(p) ? O.highway : 1), by = (x, y) => w(y) - w(x) || popOf(y) - popOf(x) || x - y;
+  const picks = [], near = p => picks.some(a => a === p || P[a].nbs.includes(p));
+  while (picks.length < k){ let p = null;
+    if (!picks.length) p = el.slice().sort(by)[0] ?? null;
+    else { p = el.filter(x => !near(x) && picks.every(a => away(x, a))).sort(by)[0] ?? el.filter(x => !near(x)).sort(by)[0] ?? el.filter(x => !picks.includes(x)).sort(by)[0] ?? null; }
+    if (p == null) p = [...home].filter(x => x !== c && !picks.includes(x) && P[x].nbs.some(v => !P[v].sea && S.owner[v] !== n)).sort((x, y) => popOf(y) - popOf(x) || x - y)[0] ?? c;
+    picks.push(p); }
+  return picks; }
 // the opening catch-up by tier: money and manpower a day are brought to the tier's targets by a multiplier on the nation's home provinces (boost
 // for money and goods, boostM for manpower), between the mode's floor and 2.5; a nation already between its target and 10% above is left alone,
 // a richer one is held to 10% above (as far as the floor allows). Conquests are worth the same to everyone.
@@ -161,6 +197,9 @@ function tierCatchUp(mode){ const mult = (raw, trade, T, floor) => { const home 
   for (const N of S.nations){ N.boost = 1; N.boostM = 1; } INCC.v = -1;
   const raw = S.nations.map(N => income(N.id).gross), tr = S.nations.map(N => tradeIncome(N.id).cash);
   for (const N of S.nations){ const kit = tierKit(N.tier, mode); N.boost = mult(raw[N.id].cash, tr[N.id], kit.day, kit.floor); N.boostM = mult(raw[N.id].mp, 0, kit.mpDay, kit.floor); } }
+// the capital's Airbase at the start (START_AIR, rules/data.js; owner 2026-11-25): Airbase I and one Air Superiority Fighter based there, beside its
+// Fortifications, for every nation (seats and computer nations alike), so each can patrol and scout from day one. New games only (old saves keep their start)
+function startAir(n){ const cap = S.nations[n].capital; S.bld[cap].air = Math.max(S.bld[cap].air || 0, START_AIR); const a = addArmy(n, cap, {[START_AIR_UNIT]:1}); a.air = {base:cap, cd:0}; return a; }
 // where a nation's first Recruiting Offices stand: its capital, then its biggest other cities (k of them)
 function startRecs(n, k = 2){ const N = S.nations[n], cs = G.P.filter(P => S.owner[P.id] === n && P.city && P.id !== N.capital).sort((a, b) => popOf(b.id) - popOf(a.id) || a.id - b.id).slice(0, k).map(P => P.id); return [N.capital, ...cs]; }
 // saves from before infantry needed a Recruiting Office: every living nation gets one at its capital if it has none (units already in training carry on)
@@ -172,7 +211,7 @@ function mobMigrate(){ if (S.mob) return; S.mob = 1; const got = new Set();
 // queue is never checked against the rule, only new orders are). After mobMigrate
 function abMigrate(){ if (S.ab) return; S.ab = 1; const got = new Set();
   for (const N of S.nations){ const c = N.capital; if (!N.alive || S.owner[c] !== N.id || !S.bld[c] || S.bld[c].fac) continue; S.bld[c].fac = 1; got.add(N.id); }
-  for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: infantry (Motorized, Anti-Tank, Special Forces, Paratroopers) is mobilized only in cities with an Army Base of level I or more${INF_NEEDS.includes('rec') ? ' and a Recruiting Office' : '; the Recruiting Office no longer unlocks infantry and keeps its training-speed and manpower bonuses'}.${got.has(me) ? ' Your capital has been given an Army Base.' : ''} Units already in training carry on.`}); } }
+  for (const me of seats()){ const D = desk(me); if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: infantry (Motorized, Special Forces, Paratroopers) is mobilized only in cities with an Army Base of level I or more${INF_NEEDS.includes('rec') ? ' and a Recruiting Office' : '; the Recruiting Office no longer unlocks infantry and keeps its training-speed and manpower bonuses'}.${got.has(me) ? ' Your capital has been given an Army Base.' : ''} Units already in training carry on.`}); } }
 // saves from before the city-resource economy (each city one main resource; Arms Factory -> Army Base under the same key; Arms Industry new):
 // Refineries, Foundries and Rare Earth Mines are gone. Every level built is refunded to the province's owner at the un-raised price (money, materials
 // and iron), one under construction is cancelled and refunded, a knocked-out one forgotten. Materials and iron that would not fit in the stores are
@@ -203,6 +242,86 @@ function bunkerMigrate(){ if (S.bk) return; S.bk = 1; let mine = new Map();
     const o = S.owner[p]; if (l > 0 && isSeat(o)) mine.set(o, (mine.get(o) || 0) + 1); }
   delete S.bhp;
   for (const me of seats()){ const D = desk(me), k = mine.get(me) || 0; if (Array.isArray(D.log)) D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New rule: Fortifications are now the Bunker, with five levels, hidden from other nations. Fortifications I, II and III became Bunker levels 1, 3 and 5${k ? ` (${k} of yours)` : ''}. A bunker protects its garrison (33% to 82% less damage), its morale, the people and the other buildings of its province, and costs $1.0M to $1.4M a day.`}); } }
+// saves from before the morale rule (no S.mv; owner points 8-11, docs/REBELS-PLAN.md 8): each land province's morale is what it was (100 - unrest -
+// war damage), so nothing the player sees jumps on load; civilian casualties start at 0 (the war damage is in that morale already). Land occupied
+// for 10 days or more (it gave full output already), integrated, or held with no date of occupation is annexed at no cost; land occupied for less
+// stays occupied. Partisans become rebels: in the countryside, which no longer rebels, and in land held by its home nation (question Q27, option A)
+// they stand down; in a city without the holder's troops they wait 24 hours once (a.rbH) before the city goes over, with a dispatch, so a load
+// never loses a city on the spot; with troops there they fight on.
+// Unrest, integration and the old cooldowns are dropped (S.occ stays: it dates the occupation). The opening calibration is not redone. Each seat is told once
+function moraleMigrate(){ if (S.mv) return; S.mv = 1; const U = Array.isArray(S.unrest) ? S.unrest : [], D0 = Array.isArray(S.dmg) ? S.dmg : [], I = S.integ || {};
+  S.mor = G.P.map((P, p) => P.sea ? 0 : Math.round(Math.max(0, Math.min(100, 100 - (+U[p] || 0) - (+D0[p] || 0)))*100)/100);
+  S.cas = {}; S.anx = {};
+  for (let p = 0; p < G.P.length; p++){ const o = S.owner[p]; if (G.P[p].sea || !(o >= 0) || S.home[p] === o) continue; const t = S.occ ? S.occ[p] : null;
+    if (t == null || S.hour - t >= 240 || (I[p + ':' + o] || 0) >= 10) S.anx[p] = o; }
+  const wait = new Map();
+  for (const a of S.armies){ if (!a.rebel || !count(a)) continue; const p = a.at, o = S.owner[p]; delete a.hold;
+    if (!(o >= 0)){ delete a.rebel; continue; }   // (independent land: they are its garrison)
+    if (!G.P[p].city || S.home[p] === o){ for (const t of UT){ a.u[t] = 0; a.w[t] = 0; } continue; }   // (the countryside no longer rebels, and land back with its home nation has none (Q27 A): they stand down)
+    (S.rbl || (S.rbl = [])).push({id:a.id, p, o});
+    if (garrisonOf(p, o) === 0){ a.rbH = S.hour + 24; if (isSeat(o)) (wait.get(o) || wait.set(o, []).get(o)).push(p); } }
+  S.rbG = S.hour + 24;   // (no city rises in the first 24 hours: a converted city may sit at 33% or less, rules/economy.js rebelRolls)
+  removeEmpty();
+  delete S.unrest; delete S.integ; delete S.rcool; delete S.pcool;
+  for (const me of seats()){ const D = desk(me), w = wait.get(me) || []; if (!Array.isArray(D.log)) continue;
+    for (const p of w) D.log.unshift({h:S.hour, kind:'bad', p, text:`Rebels hold ${G.P[p].cityName || G.P[p].name} and you have no troops there: it goes over to them in 24 h unless troops arrive.`});
+    D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:'New rule: morale. Every province moves an eighth of the way to its morale target each day (homeland city 90, annexed city 75, occupied city 60, countryside 100, plus or minus distance, wars, enemy neighbours, shortages, casualties and more: see the city panel). Occupied land gives 25% of its output and cannot mobilize; build Annex City there for 50% and mobilization. A city at 33% morale or less can rise in revolt at the day change; each of your units there halves the chance. Land you held for 10 days or more has been annexed.'}); } }
+// saves from before Anti-Tank Infantry was removed (owner 2026-11-27, BUILD-REQS; no S.noAt). Two steps, both in restore: atMigrate (forces,
+// queues, orders) right after the forces' unit lists are filled in, atResMigrate (research) after the research migrations. Anti-Tank Infantry
+// becomes Motorized Infantry: a unit keeps its share of health (its wounds x 10/9: 9 HP then, 10 now; the force's morale and commander are per force
+// and stay), one queued or in training keeps its share trained (hours x 24/30) and the price difference is refunded (AT_OLD.extra), a repeat order
+// repeats infantry, a computer's saving for one is dropped, a force named for it is named again; an old Mark of it (very old saves) becomes the
+// infantry's. Research: Ceramic Body Armour, Firepower and Protection carry over to Motorized Infantry's (the higher level of the two is kept; levels
+// that add nothing there are refunded), Tandem Warheads, Thermal Sights and Guided Missile Teams are refunded at what they cost (AT_OLD.lv), a project
+// of the line still running is refunded and its slot freed. Goods that do not fit in the stores are paid in money at the base price. Each person's
+// nation is told once. Base levels need nothing: every base already went to level V, and a level stays valid whatever it unlocks now
+const AT_GONE = /^(\d+\w*) Anti-Tank Brigade$/;
+let AT_GOT = null;   // (what each nation got back, from atMigrate to atResMigrate in one restore)
+function atGot(n){ const G0 = AT_GOT || (AT_GOT = {}); return G0[n] || (G0[n] = {u:0, q:0, rep:0, cash:0, metal:0, iron:0, rare:0, res:[], kept:[]}); }
+function atMigrate(){ if (S.noAt) return; AT_GOT = {}; const hp = UNITS.inf.hp/AT_OLD.hp, hr = UNITS.inf.build/AT_OLD.build;
+  for (const a of S.armies){ const k = +a.u.at || 0, w = +a.w.at || 0; delete a.u.at; delete a.w.at; if (!(k > 0)) continue;
+    a.u.inf = (a.u.inf || 0) + k; a.w.inf = Math.min(a.u.inf*UNITS.inf.hp, (a.w.inf || 0) + w*hp); if (a.nm && AT_GONE.test(a.nm)) delete a.nm;
+    if (a.owner >= 0) atGot(a.owner).u += k; }
+  for (let p = 0; p < (S.queue || []).length; p++){ const q = S.queue[p]; if (!Array.isArray(q)) continue; const o = S.owner[p];
+    for (const it of q){ if (it.msl || it.t !== 'at') continue; it.t = 'inf'; it.h = Math.max(1, Math.round(it.h*hr)); it.h0 = Math.max(it.h, Math.round((it.h0 || it.h)*hr));
+      if (o >= 0 && S.nations[o]){ const d = docOf(o), f = d ? d.cost : 1, r = atGot(o); r.q++; r.cash += Math.round(AT_OLD.extra.cash*f); r.metal += kRound(AT_OLD.extra.metal*RES_K*f); r.iron += kRound(AT_OLD.extra.iron*RES_K*f); } } }
+  for (const N of S.nations){ if (N.uSave && N.uSave.t === 'at') N.uSave = null;
+    if (N.mk && N.mk.at != null){ N.mk.inf = Math.max(+N.mk.inf || 0, +N.mk.at || 0); delete N.mk.at; }   // (very old saves: a Mark of it; researchMigrate then reads the infantry's)
+    if (N.eng && N.eng.t === 'at') N.eng.t = 'inf'; }
+  for (const me of seats()){ const RP = desk(me).repeat; if (RP) for (const k in RP) if (RP[k] === 'at'){ RP[k] = 'inf'; atGot(me).rep++; } } }
+function atResMigrate(){ if (S.noAt) return; S.noAt = 1; const got = AT_GOT || {}; AT_GOT = null;
+  const price = (id, l) => { const v = AT_OLD.lv[id] && AT_OLD.lv[id][l - 1]; return v ? {cash:v[0], metal:v[1]*RES_K, iron:v[2]*RES_K, rare:v[3]*RES_K} : null; };
+  const add = (r, c) => { if (c) for (const k of ['cash', 'metal', 'iron', 'rare']) r[k] += c[k] || 0; };
+  for (const N of S.nations){ const T = N.tech || (N.tech = {}), r = got[N.id] || (got[N.id] = {u:0, q:0, rep:0, cash:0, metal:0, iron:0, rare:0, res:[], kept:[]});
+    for (const id of Object.keys(T)){ if (!AT_OLD.lv[id]) continue; const l = Math.max(0, Math.min(AT_OLD.lv[id].length, +T[id] || 0)), to = AT_OLD.carry[id]; delete T[id]; N.tv = (N.tv || 0) + 1; if (!l) continue;
+      if (to && RN[to] && l > (+T[to] || 0)){ T[to] = Math.min(RN[to].lv.length, l); r.kept.push(`${AT_OLD.name[id]}${AT_OLD.lv[id].length > 1 ? ' ' + l : ''} carries over to Motorized Infantry`); }
+      else { for (let i = 1; i <= l; i++) add(r, price(id, i)); r.res.push(AT_OLD.name[id] + (AT_OLD.lv[id].length > 1 ? ' ' + l : '')); } }
+    if (T.u_at != null){ delete T.u_at; N.tv = (N.tv || 0) + 1; }
+    for (const k of R_SLOTS){ const R = N[k]; if (R && AT_OLD.lv[R.id]){ add(r, price(R.id, Math.max(1, R.lv || 1))); r.res.push(`${AT_OLD.name[R.id]} (in progress)`); N[k] = null; } }
+    if (N.rPick && (N.rPick.id === 'u_at' || AT_OLD.lv[N.rPick.id])) N.rPick = null; }
+  for (const o in got){ const N = S.nations[o], r = got[o]; if (!N) continue; N.cash += r.cash; r.paid = r.cash; const cap = stockCap(+o);
+    for (const k of ['metal', 'iron', 'rare']){ const fit = Math.max(0, Math.min(r[k], kFloor(cap - N[k]))); N[k] += fit; if (r[k] > fit){ const x = (r[k] - fit)/MKT_LOT*MKT_BASE[k]; N.cash += x; r.paid += x; r[k] = fit; } } }
+  INCC.v = -1;
+  for (const me of seats()){ const D = desk(me), r = got[me], N = S.nations[me]; if (!r || !Array.isArray(D.log) || !(r.u || r.q || r.rep || r.kept.length || r.res.length)) continue; const parts = [];
+    if (r.u) parts.push(`your ${pluN(r.u, 'Anti-Tank Infantry unit')} ${r.u === 1 ? 'is' : 'are'} now Motorized Infantry, with the same share of health`);
+    if (r.q) parts.push(`${pluN(r.q, 'unit')} in training became Motorized Infantry (the time left cut to match)`);
+    if (r.rep) parts.push(`${r.rep === 1 ? 'a repeat order now repeats' : r.rep + ' repeat orders now repeat'} Motorized Infantry`);
+    if (r.kept.length) parts.push(r.kept.join(', '));
+    if (r.res.length) parts.push(`refunded: ${r.res.join(', ')}`);
+    const pay = r.paid >= 0.5 || r.metal || r.iron || r.rare ? ` You got back $${fmt(r.paid)}M${r.metal ? ', ' + fmt(r.metal) + ' materials' : ''}${r.iron ? ', ' + fmt(r.iron) + ' iron' : ''}${r.rare ? ', ' + fmt(r.rare) + ' rare materials' : ''}.` : '';
+    D.log.unshift({h:S.hour, kind:'info', p:N.capital, text:`Anti-Tank Infantry is no longer in the game: ${parts.join('; ')}.${pay} Infantry Kit (level 2) gives Motorized Infantry light anti-tank weapons; tanks, attack helicopters and strike aircraft are the main answer to armour.`}); } }
+// saves from before the Naval Yard's new levels (BUILD-REQS round 2, owner 2026-11-27: Frigates at I, Cruisers and Attack Submarines at III,
+// Aircraft Carriers at V; no S.yl). Nothing in the save changes: ships at sea stay, a yard keeps its level, and a ship queued or in training in a
+// yard that is now too low for it FINISHES AS QUEUED (the queue never checks the level again: prodHour); only new orders need the new level, and a
+// repeat order of such a ship pauses and says why (repeatHour) until the yard is upgraded. Each person's nation with such a ship or order is told once
+const yardLow = (p, t) => !!UNITS[t] && trainBase(t) === 'yard' && reqsOf(t).some(r => (S.bld[p][r.b] || 0) < r.l);
+function yardMigrate(){ if (S.yl) return; S.yl = 1;
+  for (const me of seats()){ const D = desk(me), RP = D.repeat || {}; if (!Array.isArray(D.log)) continue; let q = 0, rep = 0;
+    for (let p = 0; p < S.queue.length; p++){ if (S.owner[p] !== me || !Array.isArray(S.queue[p])) continue;
+      for (const it of S.queue[p]) if (!it.msl && yardLow(p, it.t)) q++;
+      if (RP[p] && yardLow(p, RP[p])) rep++; }
+    if (!q && !rep) continue;
+    D.log.unshift({h:S.hour, kind:'info', p:S.nations[me].capital, text:`New Naval Yard levels: ${baseUnits('yard', 1).join(' and ')} at level I, ${baseUnits('yard', BASE_LV.yard.crui).join(' and ')} at level ${ROMAN[BASE_LV.yard.crui]}, ${baseUnits('yard', BASE_LV.yard.carr).join(' and ')} at level ${ROMAN[BASE_LV.yard.carr]}; levels IV and V also build ships faster. Your ships at sea stay.${q ? ` ${q === 1 ? 'The ship' : 'The ' + q + ' ships'} already in training in a yard now too low for ${q === 1 ? 'it finishes' : 'them finish'} as queued; new ones need the new level.` : ''}${rep ? ` ${rep === 1 ? 'A repeat order' : rep + ' repeat orders'} of such ships ${rep === 1 ? 'pauses' : 'pause'} until the yard is upgraded.` : ''}`}); } }
 function newBld(){ const b = {}; for (const k of BK) b[k] = 0; return b; }
 function serialize(){ return JSON.parse(saveJSON()); }
 // the save as text in one pass: zero unit counts and wounds, and zero building levels, are left out (restore fills them back in), wounds rounded.
@@ -251,11 +370,13 @@ function restore(data){
   resetCaches();
   resKMigrate();   // first: everything below (trade routes laid out now, the migrations) counts goods at RES_K
   for (const a of S.armies){ if (a.m == null) a.m = 80; for (const t of UT){ if (a.u[t] == null) a.u[t] = 0; if (a.w[t] == null) a.w[t] = 0; } }
+  atMigrate();   // (Anti-Tank Infantry is gone: forces, queues and orders now; its research after the research migrations, atResMigrate)
   for (const b of S.bld) for (const k of BK) if (b[k] == null) b[k] = 0;
   if (!Array.isArray(S.own0) || S.own0.length !== S.owner.length) S.own0 = (Array.isArray(S.home) && S.home.length === S.owner.length ? S.home : S.owner).slice();   // very old saves: who held each province at the start, from its home owner (territory sales)
-  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.unrest = S.unrest || G.P.map(() => 0); S.spies = S.spies || [];
+  S.rel = S.rel || {}; S.mem = S.mem || {}; S.decl = S.decl || []; S.offers = S.offers || []; S.mstock = S.mstock || {}; S.inflight = S.inflight || []; S.spies = S.spies || [];
   fixWings();
   if (!S.trade){ trS(); tradeGen(); } else trS();   // saves from before trade routes: lay them out now
+  for (const a of S.armies){ if (a.raid && a.raid.r != null && !routeById(a.raid.r)) delete a.raid; if (a.blk && !shipsOnly(a)) delete a.blk; }   // (saves from before these orders were dropped with their route or fleet: rules/trade.js trEnded, movement.js merge)
   for (const N of S.nations) if (N.ai === undefined) N.ai = N.id !== 0;   // (every save so far carries the flag: nation 0 is the seat of a one-player game)
   for (const N of S.nations){ if (!N.tech) N.tech = {}; if (N.research === undefined) N.research = null; if (N.research2 === undefined) N.research2 = null; G.P[N.capital].city = true; }
   for (const me of seats()){ const D = desk(me); if (D.sunOff == null) D.sunOff = sunOffFor(me); }   // older saves: the same display-only daylight offset
@@ -266,9 +387,22 @@ function restore(data){
   ecoMigrate();
   researchMigrate();
   rRenameMigrate();   // the upgrades review's replacements (any save that holds one of the old nodes)
+  atResMigrate();   // Anti-Tank Infantry's research line (after the conversions above, which could still name its nodes)
+  yardMigrate();   // the Naval Yard's new levels: ships queued in a yard now too low finish as queued (the seat is told)
   rqueueMigrate();   // after researchMigrate: a queued project of the old tree is read in the new one
+  moraleMigrate();   // (after the other migrations)
   // saves from when boarding and landing took whole hours (6 h, 12 h): the time left is cut to the force's new full time (rules/movement.js)
   for (const a of S.armies){ if (a.emb != null) a.emb = Math.min(+a.emb || 0, embarkH(a)); if (a.land > 0) a.land = Math.min(a.land, landH(a, a.at)); }
+  // saves from before NAVAL CITIES (S.nc unset): ships standing on land that is no naval city (they docked on any coast then) put out to sea: to the first sea zone next to
+  // them (else the nearest naval city of their own); ships sailing into such land stay on the water they sail from. A fleet plans its old
+  // destination again over the water; ships in a force with troops leave it as a fleet of their own (the troops stay, or land where they were going)
+  if (NAVAL_CITIES && !S.nc) for (const a of S.armies.slice()){ if (a.air || a.fly || !shipsN(a)) continue;
+    const ashore = !G.P[a.at].sea && !navalCity(a.at) && !(a.to !== null && G.P[a.to].sea), docking = G.P[a.at].sea && a.to !== null && !G.P[a.to].sea && !navalCity(a.to); if (!ashore && !docking) continue;
+    let z = docking ? a.at : G.P[a.at].nbs.find(v => G.P[v].sea); if (z === undefined){ z = -1; const seen = new Set([a.at]), Q = [a.at]; for (let i = 0; i < Q.length && z < 0; i++) for (const v of G.P[Q[i]].nbs){ if (seen.has(v)) continue; seen.add(v); if (!G.P[v].sea && navalCity(v) && S.owner[v] === a.owner){ z = v; break; } Q.push(v); } }
+    if (z < 0) continue;
+    let f = a, dest = null; if (shipsOnly(a)){ dest = a.path.length ? a.path[a.path.length - 1] : a.to; a.to = null; a.t = 0; a.legFrom = null; a.pos = null; delete a.sail; a.dest = null; if (a.wp) delete a.wp; }
+    else { f = addArmy(a.owner, a.at, {}); for (const t of UT) if (UNITS[t].cls === 'naval'){ f.u[t] = a.u[t]; f.w[t] = a.w[t]; a.u[t] = 0; a.w[t] = 0; } f.m = a.m; }
+    atMove(f, z); f.path = dest != null && dest !== z ? pathFor(f, z, dest) : []; }
   // saves from before NAVAL CITIES (S.nc unset): troops already at sea (or sailing out) whose route comes ashore away from a naval city still land
   // there (a.oldLand: rules/tick.js; it goes with the landing, or with a new order). A force still on land with such a route is planned again now
   // through a naval city (keeping its old route only when there is none: the hourly check then stops it at sea, with a message). A save of this
@@ -278,6 +412,7 @@ function restore(data){
     if (!off) continue; if (G.P[a.at].sea || (a.to !== null && G.P[a.to].sea)){ a.oldLand = 1; continue; }
     const q = pathFor(a, a.to ?? a.at, a.path[a.path.length - 1]); if (q.length) a.path = q; }
   if (NAVAL_CITIES) S.nc = 1;
+  bookMigrate();   // last: a save from before the Market's depth floor gets its first computer offers now (rules/economy.js)
   IM.emit('restored');
   return true;
 }
@@ -300,7 +435,7 @@ function resMigrate(){
   // Farms are gone: each level is refunded ($20M), a farm under construction is cancelled (refunded), a knocked-out one forgotten
   for (let p = 0; p < S.bld.length; p++){ const b = S.bld[p], o = S.owner[p], N = o >= 0 ? S.nations[o] : null;
     if (b && b.farm){ if (N) N.cash += 20*b.farm; } if (b) delete b.farm;
-    const c = S.cons[p]; if (c && !BUILD[c.k] && !ECO_OLD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
+    const c = S.cons[p]; if (c && !consB(c.k) && !ECO_OLD[c.k]){ if (N) N.cash += 20; S.cons[p] = null; }
     if (S.bdis && S.bdis[p] && typeof S.bdis[p] === 'object') delete S.bdis[p].farm; }
   // food listings: a sell offer's food is gone, a buy offer's money goes back to its owner
   if (Array.isArray(S.book)) S.book = S.book.filter(o => { if (MKT_K.includes(o.res)) return true; if (isBid(o) && S.nations[o.seller]) S.nations[o.seller].cash += o.qty/MKT_LOT*o.price; return false; });
@@ -332,15 +467,15 @@ function armyAdded(a){ const A = S.armies;
   if (AX !== null && AX.A === A && AX.n === A.length - 1){ AX.n++; if (!(a.id > AX.last)) AX.up = false; AX.last = a.id; const p = a.at; if ((p | 0) === p){ const l = AX.by[p]; if (l !== undefined){ if (l === NONE) AX.by[p] = [a]; else l.push(a); } } } }
 // nation n holds research node id (at any level); also true for the kept bonuses of the removed Economy branch (eco1-3)
 const has = (n, id) => rLevel(n, id) > 0;
-const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', at:'Anti-Tank Brigade', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', stealth:'Stealth Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', mar:'Marine Brigade', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
-const NAME_T = ['inf', 'at', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec', 'jam', ...(NAVAL_CITIES ? ['mar'] : [])];   // (a force's name: its dearest ground type)
-function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Partisans' : 'Garrison';
+const KIND_NAME = {mlrs:'Rocket Artillery Brigade', spec:'Special Operations Group', inf:'Infantry Division', art:'Artillery Brigade', sam:'Air Defence Brigade', ifv:'Mechanized Division', tank:'Armored Division', para:'Airborne Brigade', heli:'Gunship Squadron', drone:'UAV Squadron', swarm:'Drone Swarm Group', sdrone:'Strike Drone Squadron', bomb:'Bomber Wing', stealth:'Stealth Bomber Wing', mpa:'Maritime Patrol Squadron', awacs:'Early Warning Squadron', asf:'Fighter Wing', jam:'Electronic Warfare Battalion', mar:'Marine Brigade', air:'Air Wing', sea:'Fleet', sub:'Submarine Flotilla', carr:'Carrier Group'};
+const NAME_T = ['inf', 'art', 'sam', 'ifv', 'tank', 'para', 'mlrs', 'spec', 'jam', ...(NAVAL_CITIES ? ['mar'] : [])];   // (a force's name: its dearest ground type)
+function armyName(a){ if (!a) return ''; if (a.nm) return a.nm; if (a.owner === NEUTRAL) return a.rebel ? 'Rebels' : 'Garrison';
   let k = a.air ? (['heli', 'drone', 'swarm', 'sdrone', 'bomb', 'stealth', 'mpa', 'awacs', 'asf'].find(t => a.u[t]) || 'air') : shipsOnly(a) ? (a.u.carr ? 'carr' : a.u.sub === count(a) ? 'sub' : 'sea') : null;
   if (!k){ let best = 'inf', bv = -1; for (const t of NAME_T){ const v = a.u[t]*UNITS[t].cost; if (v > bv){ bv = v; best = t; } } k = best; }
   const c = (S.ncnt || (S.ncnt = {})), key = a.owner + ':' + k; c[key] = (c[key] || 0) + 1;
   a.nm = `${ord(c[key])} ${KIND_NAME[k]}`; return a.nm; }
 // a force as nation `me` names it: its own by name alone, another's with the nation in front
-const armyLabel = (a, me) => a.owner === me ? armyName(a) : `${nationName(a.owner)} ${armyName(a)}`;
+const armyLabel = (a, me) => a.owner === me ? armyName(a) : a.rebel ? 'Rebels' : `${nationName(a.owner)} ${armyName(a)}`;   // (rebels are just "Rebels", not "Independent Rebels")
 const STC = [];
 function st(o, t, k){
   if (o < 0) return UNITS[t][k] || 0;
@@ -373,9 +508,9 @@ function knockOut(p, k, h){ const d = bdisOf(p) || ((S.bdis || (S.bdis = {}))[p]
 const GROUND_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored'), NAVAL_T = Object.keys(UNITS).filter(t => UNITS[t].cls === 'naval');
 // the unit counts and health of a force, the hottest helpers of the rules: written out type by type (a named property is read many times faster than
 // u[UT[i]]), in UT order, so every sum is the same as the loop's. Used only while the unit types are exactly these (UT_ROLL), else the loops
-const UT_ROLL = UT.join(',') === 'inf,at,art,sam,ifv,tank,jet,int,frig,sub,crui,mlrs,spec,carr,heli,drone,para,swarm,sdrone,jam,bomb,mpa,awacs,asf,stealth' + (NAVAL_CITIES ? ',mar' : '') && GROUND_T.join(',') === 'inf,at,art,sam,ifv,tank,mlrs,spec,para,jam' + (NAVAL_CITIES ? ',mar' : '') && NAVAL_T.join(',') === 'frig,sub,crui,carr';
-const count = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v; v = u.at; if (v) s += v; v = u.art; if (v) s += v; v = u.sam; if (v) s += v; v = u.ifv; if (v) s += v; v = u.tank; if (v) s += v; v = u.jet; if (v) s += v; v = u.int; if (v) s += v; v = u.frig; if (v) s += v; v = u.sub; if (v) s += v; v = u.crui; if (v) s += v; v = u.mlrs; if (v) s += v; v = u.spec; if (v) s += v; v = u.carr; if (v) s += v; v = u.heli; if (v) s += v; v = u.drone; if (v) s += v; v = u.para; if (v) s += v; v = u.swarm; if (v) s += v; v = u.sdrone; if (v) s += v; v = u.jam; if (v) s += v; v = u.bomb; if (v) s += v; v = u.mpa; if (v) s += v; v = u.awacs; if (v) s += v; v = u.asf; if (v) s += v; v = u.stealth; if (v) s += v; v = u.mar; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v) s += v; } return s; };
-const groundN = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v; v = u.at; if (v) s += v; v = u.art; if (v) s += v; v = u.sam; if (v) s += v; v = u.ifv; if (v) s += v; v = u.tank; if (v) s += v; v = u.mlrs; if (v) s += v; v = u.spec; if (v) s += v; v = u.para; if (v) s += v; v = u.jam; if (v) s += v; v = u.mar; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < GROUND_T.length; i++){ const v = u[GROUND_T[i]]; if (v) s += v; } return s; };
+const UT_ROLL = UT.join(',') === 'inf,art,sam,ifv,tank,jet,int,frig,sub,crui,mlrs,spec,carr,heli,drone,para,swarm,sdrone,jam,bomb,mpa,awacs,asf,stealth' + (NAVAL_CITIES ? ',mar' : '') && GROUND_T.join(',') === 'inf,art,sam,ifv,tank,mlrs,spec,para,jam' + (NAVAL_CITIES ? ',mar' : '') && NAVAL_T.join(',') === 'frig,sub,crui,carr';
+const count = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v; v = u.art; if (v) s += v; v = u.sam; if (v) s += v; v = u.ifv; if (v) s += v; v = u.tank; if (v) s += v; v = u.jet; if (v) s += v; v = u.int; if (v) s += v; v = u.frig; if (v) s += v; v = u.sub; if (v) s += v; v = u.crui; if (v) s += v; v = u.mlrs; if (v) s += v; v = u.spec; if (v) s += v; v = u.carr; if (v) s += v; v = u.heli; if (v) s += v; v = u.drone; if (v) s += v; v = u.para; if (v) s += v; v = u.swarm; if (v) s += v; v = u.sdrone; if (v) s += v; v = u.jam; if (v) s += v; v = u.bomb; if (v) s += v; v = u.mpa; if (v) s += v; v = u.awacs; if (v) s += v; v = u.asf; if (v) s += v; v = u.stealth; if (v) s += v; v = u.mar; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const v = u[UT[i]]; if (v) s += v; } return s; };
+const groundN = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v; v = u.art; if (v) s += v; v = u.sam; if (v) s += v; v = u.ifv; if (v) s += v; v = u.tank; if (v) s += v; v = u.mlrs; if (v) s += v; v = u.spec; if (v) s += v; v = u.para; if (v) s += v; v = u.jam; if (v) s += v; v = u.mar; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < GROUND_T.length; i++){ const v = u[GROUND_T[i]]; if (v) s += v; } return s; };
 const shipsN = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.frig; if (v) s += v; v = u.sub; if (v) s += v; v = u.crui; if (v) s += v; v = u.carr; if (v) s += v; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < NAVAL_T.length; i++){ const v = u[NAVAL_T[i]]; if (v) s += v; } return s; };
 const shipsOnly = a => shipsN(a) > 0 && shipsN(a) === count(a);
 // SHIPS NEVER ON LAND: a fleet may only be in a sea zone or docked in a PORT (a coastal city of its own or a friendly power); never in other land
@@ -386,11 +521,11 @@ const portOk = (n, v) => G.P[v].sea || (navalCity(v) && (S.owner[v] === n || fri
 // a ships-only force's place is lawful: water, or a port city on the coast (any owner: a captured port keeps its fleet until the next move). Used by dev spawn and the tests
 const shipPlaceOk = p => { const P = G.P[p]; return !!P && (P.sea || (!!P.coast && !!P.city)); };
 const ground = a => groundN(a) > 0;
-const armyHP = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v*UNITS.inf.hp; v = u.at; if (v) s += v*UNITS.at.hp; v = u.art; if (v) s += v*UNITS.art.hp; v = u.sam; if (v) s += v*UNITS.sam.hp; v = u.ifv; if (v) s += v*UNITS.ifv.hp; v = u.tank; if (v) s += v*UNITS.tank.hp; v = u.jet; if (v) s += v*UNITS.jet.hp; v = u.int; if (v) s += v*UNITS.int.hp; v = u.frig; if (v) s += v*UNITS.frig.hp; v = u.sub; if (v) s += v*UNITS.sub.hp; v = u.crui; if (v) s += v*UNITS.crui.hp; v = u.mlrs; if (v) s += v*UNITS.mlrs.hp; v = u.spec; if (v) s += v*UNITS.spec.hp; v = u.carr; if (v) s += v*UNITS.carr.hp; v = u.heli; if (v) s += v*UNITS.heli.hp; v = u.drone; if (v) s += v*UNITS.drone.hp; v = u.para; if (v) s += v*UNITS.para.hp; v = u.swarm; if (v) s += v*UNITS.swarm.hp; v = u.sdrone; if (v) s += v*UNITS.sdrone.hp; v = u.jam; if (v) s += v*UNITS.jam.hp; v = u.bomb; if (v) s += v*UNITS.bomb.hp; v = u.mpa; if (v) s += v*UNITS.mpa.hp; v = u.awacs; if (v) s += v*UNITS.awacs.hp; v = u.asf; if (v) s += v*UNITS.asf.hp; v = u.stealth; if (v) s += v*UNITS.stealth.hp; v = u.mar; if (v) s += v*UNITS.mar.hp; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp; } return s; };
+const armyHP = UT_ROLL ? a => { const u = a.u; let s = 0, v; v = u.inf; if (v) s += v*UNITS.inf.hp; v = u.art; if (v) s += v*UNITS.art.hp; v = u.sam; if (v) s += v*UNITS.sam.hp; v = u.ifv; if (v) s += v*UNITS.ifv.hp; v = u.tank; if (v) s += v*UNITS.tank.hp; v = u.jet; if (v) s += v*UNITS.jet.hp; v = u.int; if (v) s += v*UNITS.int.hp; v = u.frig; if (v) s += v*UNITS.frig.hp; v = u.sub; if (v) s += v*UNITS.sub.hp; v = u.crui; if (v) s += v*UNITS.crui.hp; v = u.mlrs; if (v) s += v*UNITS.mlrs.hp; v = u.spec; if (v) s += v*UNITS.spec.hp; v = u.carr; if (v) s += v*UNITS.carr.hp; v = u.heli; if (v) s += v*UNITS.heli.hp; v = u.drone; if (v) s += v*UNITS.drone.hp; v = u.para; if (v) s += v*UNITS.para.hp; v = u.swarm; if (v) s += v*UNITS.swarm.hp; v = u.sdrone; if (v) s += v*UNITS.sdrone.hp; v = u.jam; if (v) s += v*UNITS.jam.hp; v = u.bomb; if (v) s += v*UNITS.bomb.hp; v = u.mpa; if (v) s += v*UNITS.mpa.hp; v = u.awacs; if (v) s += v*UNITS.awacs.hp; v = u.asf; if (v) s += v*UNITS.asf.hp; v = u.stealth; if (v) s += v*UNITS.stealth.hp; v = u.mar; if (v) s += v*UNITS.mar.hp; return s; } : a => { const u = a.u; let s = 0; for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v) s += v*UNITS[t].hp; } return s; };
 const healthFrac = a => { const hp = armyHP(a); return hp ? 1 - UT.reduce((s, t) => s + a.w[t], 0)/hp : 0; };
 // remaining strength against the force's recent peak (units lost count, not just wounds)
 const strengthFrac = a => { const cur = effHP(a), pk = Math.max(a.peak || 0, cur); return pk ? cur/pk : 0; };
-const power = a => { const u = a.u, V = a.owner < 0 ? ST_NEU : stRows(a.owner); let s = 0; if (UT_ROLL){ let v, r; v = u.inf; if (v){ r = V.inf; s += v*(r.atk + r.def)*r.hp/10; } v = u.at; if (v){ r = V.at; s += v*(r.atk + r.def)*r.hp/10; } v = u.art; if (v){ r = V.art; s += v*(r.atk + r.def)*r.hp/10; } v = u.sam; if (v){ r = V.sam; s += v*(r.atk + r.def)*r.hp/10; } v = u.ifv; if (v){ r = V.ifv; s += v*(r.atk + r.def)*r.hp/10; } v = u.tank; if (v){ r = V.tank; s += v*(r.atk + r.def)*r.hp/10; } v = u.jet; if (v){ r = V.jet; s += v*(r.atk + r.def)*r.hp/10; } v = u.int; if (v){ r = V.int; s += v*(r.atk + r.def)*r.hp/10; } v = u.frig; if (v){ r = V.frig; s += v*(r.atk + r.def)*r.hp/10; } v = u.sub; if (v){ r = V.sub; s += v*(r.atk + r.def)*r.hp/10; } v = u.crui; if (v){ r = V.crui; s += v*(r.atk + r.def)*r.hp/10; } v = u.mlrs; if (v){ r = V.mlrs; s += v*(r.atk + r.def)*r.hp/10; } v = u.spec; if (v){ r = V.spec; s += v*(r.atk + r.def)*r.hp/10; } v = u.carr; if (v){ r = V.carr; s += v*(r.atk + r.def)*r.hp/10; } v = u.heli; if (v){ r = V.heli; s += v*(r.atk + r.def)*r.hp/10; } v = u.drone; if (v){ r = V.drone; s += v*(r.atk + r.def)*r.hp/10; } v = u.para; if (v){ r = V.para; s += v*(r.atk + r.def)*r.hp/10; } v = u.swarm; if (v){ r = V.swarm; s += v*(r.atk + r.def)*r.hp/10; } v = u.sdrone; if (v){ r = V.sdrone; s += v*(r.atk + r.def)*r.hp/10; } v = u.jam; if (v){ r = V.jam; s += v*(r.atk + r.def)*r.hp/10; } v = u.bomb; if (v){ r = V.bomb; s += v*(r.atk + r.def)*r.hp/10; } v = u.mpa; if (v){ r = V.mpa; s += v*(r.atk + r.def)*r.hp/10; } v = u.awacs; if (v){ r = V.awacs; s += v*(r.atk + r.def)*r.hp/10; } v = u.asf; if (v){ r = V.asf; s += v*(r.atk + r.def)*r.hp/10; } v = u.stealth; if (v){ r = V.stealth; s += v*(r.atk + r.def)*r.hp/10; } v = u.mar; if (v){ r = V.mar; s += v*(r.atk + r.def)*r.hp/10; } } else for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v){ const r = V[t]; s += v*(r.atk + r.def)*r.hp/10; } } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
+const power = a => { const u = a.u, V = a.owner < 0 ? ST_NEU : stRows(a.owner); let s = 0; if (UT_ROLL){ let v, r; v = u.inf; if (v){ r = V.inf; s += v*(r.atk + r.def)*r.hp/10; } v = u.art; if (v){ r = V.art; s += v*(r.atk + r.def)*r.hp/10; } v = u.sam; if (v){ r = V.sam; s += v*(r.atk + r.def)*r.hp/10; } v = u.ifv; if (v){ r = V.ifv; s += v*(r.atk + r.def)*r.hp/10; } v = u.tank; if (v){ r = V.tank; s += v*(r.atk + r.def)*r.hp/10; } v = u.jet; if (v){ r = V.jet; s += v*(r.atk + r.def)*r.hp/10; } v = u.int; if (v){ r = V.int; s += v*(r.atk + r.def)*r.hp/10; } v = u.frig; if (v){ r = V.frig; s += v*(r.atk + r.def)*r.hp/10; } v = u.sub; if (v){ r = V.sub; s += v*(r.atk + r.def)*r.hp/10; } v = u.crui; if (v){ r = V.crui; s += v*(r.atk + r.def)*r.hp/10; } v = u.mlrs; if (v){ r = V.mlrs; s += v*(r.atk + r.def)*r.hp/10; } v = u.spec; if (v){ r = V.spec; s += v*(r.atk + r.def)*r.hp/10; } v = u.carr; if (v){ r = V.carr; s += v*(r.atk + r.def)*r.hp/10; } v = u.heli; if (v){ r = V.heli; s += v*(r.atk + r.def)*r.hp/10; } v = u.drone; if (v){ r = V.drone; s += v*(r.atk + r.def)*r.hp/10; } v = u.para; if (v){ r = V.para; s += v*(r.atk + r.def)*r.hp/10; } v = u.swarm; if (v){ r = V.swarm; s += v*(r.atk + r.def)*r.hp/10; } v = u.sdrone; if (v){ r = V.sdrone; s += v*(r.atk + r.def)*r.hp/10; } v = u.jam; if (v){ r = V.jam; s += v*(r.atk + r.def)*r.hp/10; } v = u.bomb; if (v){ r = V.bomb; s += v*(r.atk + r.def)*r.hp/10; } v = u.mpa; if (v){ r = V.mpa; s += v*(r.atk + r.def)*r.hp/10; } v = u.awacs; if (v){ r = V.awacs; s += v*(r.atk + r.def)*r.hp/10; } v = u.asf; if (v){ r = V.asf; s += v*(r.atk + r.def)*r.hp/10; } v = u.stealth; if (v){ r = V.stealth; s += v*(r.atk + r.def)*r.hp/10; } v = u.mar; if (v){ r = V.mar; s += v*(r.atk + r.def)*r.hp/10; } } else for (let i = 0; i < UT.length; i++){ const t = UT[i], v = u[t]; if (v){ const r = V[t]; s += v*(r.atk + r.def)*r.hp/10; } } return s*(typeof moraleF === 'function' && S && S.armies ? moraleF(a) : 1); };
 const landSpeed = a => Math.min(...UT.filter(t => a.u[t] > 0).map(t => st(a.owner, t, 'spd')), 99)*rMoveF(a.owner)*(1 + 0.15*cmdF(a, 'blitz'))*stackSpd(a);   // (stackSpd: over the stack limit, slower)
 const armyById = id => S.armies.find(a => a.id === id);
 const nationName = o => o === NEUTRAL ? 'Independent' : o === SEA ? 'Open sea' : S.nations[o].name;
@@ -407,8 +542,9 @@ function checkNation(n, by = NEUTRAL){
   if (!cities.length){
     N.alive = false; relChanged();
     const annex = by >= 0 && S.nations[by].alive && !isSated(by);   // (the nations world: a computer nation that has grown enough for now leaves the rest independent)
+    // (the annexer's own home land among it comes back unoccupied, as on a capture)
     for (let p = 0; p < G.P.length; p++) if (S.owner[p] === n){ S.queue[p] = []; S.cons[p] = null;
-      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.hour; } else { S.owner[p] = NEUTRAL; ownChanged(); addArmy(NEUTRAL, p, {inf:2}); } }
+      if (annex){ S.owner[p] = by; ownChanged(); S.occ[p] = S.home[p] === by ? null : S.hour; morCaptured(p, by); } else { S.owner[p] = NEUTRAL; ownChanged(); if (S.anx) delete S.anx[p]; addArmy(NEUTRAL, p, {inf:2}); } }
     for (const a of S.armies) if (a.owner === n) for (const t of UT) a.u[t] = 0;
     removeEmpty(); geoChanged();
     tellAll(me => n === me ? `${N.name} has fallen.` : annex ? `${N.name} has collapsed. ${S.nations[by].name} annexes its remaining land.` : `${N.name} has collapsed. Its land is now independent.`, me => n === me ? 'bad' : by === me ? 'good' : 'info');

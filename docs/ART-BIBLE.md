@@ -45,6 +45,50 @@ Original generic designs. No text, letters, numbers, flags, emblems, logos or wa
 - Regional HQs: unchanged.
 - No real-product look-alikes.
 
+## Province buildings (owner's rule, 27 November 2026)
+
+A building in a province (the countryside, any province that is not a city) must never look the same as its city version. The province version is plainer and lower-key.
+
+- **Plainer:** fewer and smaller parts; earth, canvas, timber, logs and sandbags instead of concrete and glass; no crowd of vehicles; no paved yard; no towers, fences or helipads.
+- **Two picture sets:** a building that can stand both in cities and in the countryside has a city set (`bn-<key>-N`) and a province set (`bn-<key>p-N`, for example `bn-fortp-1..5`). A building that stands only in the countryside has only its own set under its own key (the Field Hospital: `bn-fhosp-1..3`). The game picks the set by whether the province is a city, on the map and in the panels alike. It never shows a city picture in the countryside.
+- **Size:** a province picture is drawn smaller than the smallest city building of the same kind (its size factor, bnF, is set so that even its top level stays below the city level 1).
+- **Building going up in the countryside:** never the city crane and scaffolding. Until a province building-site picture exists, the province level-1 picture is shown faded while it goes up.
+
+### This section overrides three lines above, for province pictures only
+
+1. "One fixed angled view, about 45 degrees, three-quarter view" (Art style and STYLE_V2) does **not** apply. Province pictures use the city-block camera (point 2 below).
+2. "Detail must match the style anchors" does **not** apply. Province pictures have much less detail (point 3 below). The anchors are used for materials and colours only.
+3. "Each next level is made by editing the previous level's picture" (Building rules) is replaced: each higher province level is an edit of **level 1** (see Making them).
+
+In tools/gen-art.py this is a separate style, `STYLE_V2_PROV`: STYLE_V2 with its camera sentence replaced and its "realistic materials, subtle wear" detail sentence toned down, made with a replace-and-assert like STYLE_V2_UNIT and STYLE_V2_SIDE.
+
+### Province pictures avoid the three pasted-on faults from the start
+
+1. **No ground of their own.** No pad, slab, patch, mound, apron or soil block under them. Only the objects and their soft shadow. The background is the usual plain light grey `#D9D9D9` (never white), so the cut-out tool works as for every other picture.
+2. **The same camera as the city blocks.** Seen from a little west of south, from above at the same slant as the map's city blocks (they lean east with height), square to the screen. Not a 45-degree corner (diamond) view. The camera reference passed to Gemini is a cropped screenshot of the game's city blocks; at most one style anchor is passed, for materials and colours only, and the prompt says so. The wording follows the camera test made in the pasted-on check (the Army Base test), so the game has one new camera, not two.
+3. **Little detail.** A few large, simple shapes that read when the picture is tiny on the map.
+
+The light stays as today: from the north-west, with the shadow to the south-east.
+
+### Making them
+
+- Level 1 is made first and shown to the owner. Every higher level is an **edit of level 1** (as Bunker option C was), not of the level before, so the higher levels can go in one batch.
+- No flags and no emblems, as everywhere. The one exception is the **red cross** on hospital pictures (the owner's choice, the Hospital line in Building rules): the prompt says so explicitly, with the same override wording as SUBJECTS['v2-hospital-1'].
+- Gemini only flags a picture (the flag-only check); it never redoes one by itself.
+- Acceptance checks for every new province picture: no ground under it; the city-block camera; little detail; and an **alpha-hole check** (the cut-out must not punch holes in pale roofs, canvas or the white square behind the cross). Pale areas at risk are protected with a mask in the local cut (tools/cutout-angled.py), at no Gemini cost. Then tools/bn-foot.py writes BNMETA and BNFOOT, and the footprint anchor is checked by eye, because the tool was tuned on corner views.
+
+### What this covers (planned)
+
+The rule itself is the owner's and holds now. The details below (picture names, the province Bunker, the Hospital and Field Hospital) are the 2026-11-27 proposal and wait for the owner's OK; nothing is drawn yet.
+
+| Building | City | Countryside |
+|---|---|---|
+| Bunker (fort) | concrete pillbox set bn-fort-1..5 (option C version 1), cutaways bn-fortcut-1..5 in the panels | sandbags and a dugout, bn-fortp-1..5, on the map and in the panels |
+| Recruiting Office (rec) | bn-rec-1..5 | none: the office is city-only |
+| Hospital (hosp) | bn-hospital-1..5 | none: city-only |
+| Field Hospital (fhosp) | none: countryside only | a small tent with a red cross, bn-fhosp-1..3 |
+| Any building going up | crane and scaffolding (bn-crane, bn-build-1..3) | its province level-1 picture, faded |
+
 ## Unit pictures (owner's decisions 2026-11-18; prompts in docs/UNIT-LOOKS-PROMPTS.md)
 
 - One set of pictures per look, each kind for its place: the side view in the research tree's diamond, the card scene on the card, the top-down on the map and in the army bar's unit details. All three show the same vehicle.

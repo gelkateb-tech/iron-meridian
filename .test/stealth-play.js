@@ -22,21 +22,21 @@ const THREE_LOCAL = '/home/user/iron-meridian/tools/vendor/three.min.js';
   await p.click('[data-dev="tog"][data-k="res"]'); await p.click('[data-dev="tog"][data-k="research"]'); await p.click('[data-dev="resall"]'); await p.click('[data-dev="tog"][data-k="instant"]'); await p.waitForTimeout(150);
   ok('research all includes Strategic Bomber Upgrade and Stealth Bombers', await p.evaluate(() => { const t = window.__im.S.nations[0].tech; return !!(t.bomb_up && t.u_stealth && t.jet_lo); }));
   ok('the developer spawn list offers the Stealth Bomber', await p.evaluate(() => [...document.querySelectorAll('#devt option')].some(o => o.value === 'stealth' && /Stealth Bomber/.test(o.textContent))));
-  // mobilize through the game's own buttons: Airbase to level III in the capital, then three Stealth Bombers
+  // mobilize through the game's own buttons: Airbase to level V in the capital (the Stealth Bomber's level since BUILD-REQS), then three Stealth Bombers
   const cap = await p.evaluate(() => window.__im.S.nations[0].capital);
   await p.evaluate(c => window.__im.selectProv(c), cap);
   for (let i = 0; i < 4; i++) await act({ 'data-act': 'build', 'data-k': 'fac' });
-  for (let i = 0; i < 3; i++) await act({ 'data-act': 'build', 'data-k': 'air' });
+  for (let i = 0; i < 5; i++) await act({ 'data-act': 'build', 'data-k': 'air' });
   const air = await p.evaluate(c => window.__im.S.bld[c].air, cap);
   for (let i = 0; i < 3; i++) await act({ 'data-act': 'recruit', 'data-t': 'stealth' });
   const w0 = await p.evaluate(c => { const S = window.__im.S, w = S.armies.find(a => a.owner === 0 && a.air && a.u.stealth > 0); return w ? { id: w.id, n: w.u.stealth, base: w.air.base, name: armyName(w), range: wingRange(w) } : null; }, cap);
-  ok('mobilized: three Stealth Bombers form one wing at the capital (Airbase III)', air >= 3 && w0 && w0.n === 3 && w0.base === cap && /Stealth Bomber Wing/.test(w0.name), { air, w0 });
+  ok('mobilized: three Stealth Bombers form one wing at the capital (Airbase V)', air >= 5 && w0 && w0.n === 3 && w0.base === cap && /Stealth Bomber Wing/.test(w0.name), { air, w0 });
   // an enemy within reach, at war, with a SAM stack in its nearest city; and a stealth wing of its own
   const T = await p.evaluate(({ cap, wid }) => { const im = window.__im, S = im.S, G = im.G, w = S.armies.find(a => a.id === wid), r = wingRange(w);
     const cs = G.P.filter(P => S.owner[P.id] > 0 && P.city && !P.sea && hexDist(G.P[cap].cc, P.cc) <= r).sort((x, y) => hexDist(G.P[cap].cc, x.cc) - hexDist(G.P[cap].cc, y.cc)); const P = cs[0], E = S.owner[P.id];
     S.rel['0,' + E] = { st: 'war', since: S.hour, until: null }; S.rel[E + ',0'] = S.rel['0,' + E];
     devSpawn(E, P.id, 'sam', 4); devSpawn(E, P.id, 'inf', 6); S.bld[P.id].fac = Math.max(3, S.bld[P.id].fac || 0);
-    const ec = S.nations[E].capital; S.bld[ec].air = Math.max(3, S.bld[ec].air || 0); const ew = devSpawn(E, ec, 'stealth', 2);
+    const ec = S.nations[E].capital; S.bld[ec].air = Math.max(5, S.bld[ec].air || 0); const ew = devSpawn(E, ec, 'stealth', 2);
     return { p: P.id, name: P.cityName || P.name, E, foe: S.nations[E].name, ew: ew ? ew.id : null, check: airCheck(w, P.id, null) }; }, { cap, wid: w0.id });
   ok('the wing can raid the enemy city', T.check.ok && T.check.kind === 'strike', T);
   ok('developer spawn gives an AI nation a stealth wing', T.ew != null);

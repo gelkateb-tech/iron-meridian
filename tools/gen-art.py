@@ -1187,6 +1187,63 @@ unit_def('inf', 'motorized infantry rifleman', 'man', 'soldier',
                  "modern export kit: a helmet with a rail and a visor, a plate-carrier vest with bolt-on pouches, a compact rifle with a sight, knee pads, a practical, mixed look made to be sold to many armies."])},
     gens=["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer kit: ", "Generation 3 of 3, the newest, a near-future kit: "])
 
+# ---- Rebels (key reb; owner 2026-11-26): one set only (no nation groups, no looks): side view, card scene, top-down, in the infantry's
+# camera, size, light and framing. The owner asked for a small crossed-rifles flag to match the rebels badge, so the "no flags" line is
+# replaced for this set only by the one flag described; everything else in the style is unchanged. The export rifleman (look 1) is attached
+# for the camera, figure size and framing only, and as the look the rebels must clearly differ from.
+REB_DESC = ("Irregular fighters, clearly NOT a regular army, all three dressed in the same street-and-work style: "
+            "hooded sweatshirts and worn work jackets, padded or army-surplus vests, "
+            "an ammunition bandolier across the chest or loose canvas pouches on a belt, jeans or work trousers, worn lace-up boots. Two "
+            "of them wear a cloth bandana pulled up over the nose and mouth, one with his hood up; the third has a bare face and wears a "
+            "plain knitted beanie or a soft cap. NO headwraps, NO turbans, NO sandals, NO helmets, no matching uniform, no camouflage "
+            "pattern, no body armour plates. They must not look like clones: vary the colours a little between them, in muted browns, "
+            "greys, olive and faded blue (for example one brown hoodie, one grey work jacket over a faded blue hoodie, one olive padded "
+            "vest), worn and dusty. Each carries a generic rifle of an older pattern with a curved magazine and a plain wooden-look stock "
+            "(an original generic design, not a copy of any real rifle line for line). One of them holds upright a small hand-held flag on a "
+            "short thin pole: a plain grey cloth flag with two white rifles crossed in an X, muzzles up; the flag is small, about the size of "
+            "a fighter's head and shoulders, and it is the only emblem in the picture. Practical, determined. No vehicle, no "
+            "pickup truck, no mounted gun.")
+REB_TAIL = (" Original generic design made for this game. Apart from that one small crossed-rifles flag: no text, no letters, no numbers, "
+            "no other flags, no stars, no national markings, no logos, no badges.")
+REB_FLAG_STYLE = lambda st: st.replace("No text, no letters, no numbers, no flags, no emblems, no logos, no watermark.",
+                                       "No text, no letters, no numbers, no logos, no watermark; no flag or emblem except the one small crossed-rifles flag described above.")
+REB_CROP_SIDE = ("Cropped and centred so the whole group (boots to the tops of the heads, weapons and the flag included) fills about 85 percent "
+                 "of the picture's height, each fighter as tall as a single soldier would be in the same frame, nothing cut off. ")
+_reb_unit = 'group of three rebel fighters'
+UNIT_LOOKS['ul-reb-side'] = {
+    'unit': _reb_unit, 'unit_key': 'reb', 'cls': 'man', 'kind': 'side', 'group': 'reb', 'look': 1, 'fresh': True, 'aspect': '1:1',
+    'prefix': (UNIT_PREFIX_SIDE_NEW + " The third attached picture is a regular infantry soldier from the same game, seen from the same view: use "
+               "it ONLY as the reference for the camera angle, the size of each figure in the frame, the framing, the lighting and the rendering "
+               "style. Do not copy him: the rebels must look clearly different from this regular soldier (no helmet, no uniform, no camouflage)."),
+    'subject': ("A small group of three rebel fighters standing close together as one compact group, slightly overlapping, seen from a front "
+                "three-quarter side view from slightly above (about 30 degrees down), in ready poses with their rifles held ready, turned toward "
+                "the lower right of the picture so that the viewer sees their fronts and one side. The group is centred left to right and top to "
+                "bottom and fills about 85 percent of the picture's height; every figure, rifle and the flag are inside the frame with a margin all "
+                "round. Only these three fighters: no other person, no vehicle, no ground, only faint, tight soft shadows under their feet. "
+                + REB_DESC + REB_TAIL),
+    'style': REB_FLAG_STYLE(STYLE_V2_SIDE.replace(_CROP_SIDE, REB_CROP_SIDE)),
+    'refs': UNIT_ANCHORS + ['ul-inf-export-1-side']}
+UNIT_LOOKS['ul-reb-scene'] = {
+    'unit': _reb_unit, 'unit_key': 'reb', 'cls': 'man', 'kind': 'scene', 'group': 'reb', 'look': 1, 'fresh': False, 'aspect': '3:2',
+    'prefix': UL_PREFIX_SCENE.format(unit=_reb_unit, detail="the same three fighters with the same clothes, scarves, headwraps, rifles, bags and the same small crossed-rifles flag"),
+    'subject': ("The same three rebel fighters moving along a dry dirt track through rough, rocky scrubland, one keeping watch, a light trail of "
+                "dust at their feet. The setting: dry hills, low thorn bushes, a few scattered trees, a dusty dirt track, a hot pale sky. Seen from a "
+                "low front three-quarter angle at about eye height, the group fills about half the picture's height and stands in the middle of the "
+                "frame, the horizon in the upper third, natural daylight with the sun from the upper left. The scene fills the whole picture edge to "
+                "edge. Only these three fighters: no other person, no vehicle, no buildings, no signs. No close-up faces. The fighters are described "
+                "in words as: " + REB_DESC + REB_TAIL),
+    'style': REB_FLAG_STYLE(STYLE_UL_SCENE), 'refs': ['ul-reb-side']}
+UNIT_LOOKS['ul-reb-top'] = {
+    'unit': _reb_unit, 'unit_key': 'reb', 'cls': 'man', 'kind': 'top', 'group': 'reb', 'look': 1, 'fresh': False, 'aspect': '1:1',
+    'prefix': UL_PREFIX_TOP.format(unit=_reb_unit, detail="the same three fighters with the same clothes, scarves, headwraps, rifles, bags and the same small crossed-rifles flag"),
+    'subject': ("The same three rebel fighters seen exactly straight down from above (a true top-down plan view), in a small wedge facing the top "
+                "of the picture, rifles held ready in front, the headwraps, scarves and shoulders clearly visible from above, the small flag held "
+                "out flat so its crossed rifles show. The whole group is centred left to right and top to bottom and fills about 85 percent of the "
+                "picture's height. Only these three fighters: no other person, no vehicle, no ground, no shadow on the background. " + REB_DESC + REB_TAIL),
+    'style': REB_FLAG_STYLE(STYLE_UL_TOP.replace(_CROP_NEW, UL_CLS['man']['crop'])), 'refs': ['ul-reb-side']}
+assert all('crossed-rifles flag' in UNIT_LOOKS[k]['style'] for k in ('ul-reb-side', 'ul-reb-scene', 'ul-reb-top'))
+assert REB_CROP_SIDE in UNIT_LOOKS['ul-reb-side']['style']
+
 # ---- Frigate (key frig)
 unit_def('frig', 'frigate (a small warship)', 'ship', 'warship',
     "steaming at moderate speed, a white bow wave at its stem and a long white wake behind it",

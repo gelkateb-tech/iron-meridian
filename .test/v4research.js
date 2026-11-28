@@ -153,7 +153,7 @@ const T0 = Date.now();
   ck('phone: Esc-free close (the red button), and the column headers use the short names', !ph3.card && ph3.short === 'Artillery' && !ph3.long, ph3);
   await q.evaluate(() => { document.querySelector('[data-act="rback"]').click(); }); await q.waitForTimeout(150); await q.click('[data-act="rbranch"][data-b="cmd"]'); await q.waitForTimeout(300);
   const ph4 = await q.evaluate(() => ({ cols: document.querySelectorAll('.rk-hd').length, nodes: document.querySelectorAll('.rnode').length, solo: document.querySelectorAll('.rsolo').length, ftip: !document.getElementById('ftip').hidden, w: document.documentElement.scrollWidth }));
-  ck('phone: Command & Logistics shows one column per doctrine, a diamond each; no tip card over the tree', ph4.cols === 4 && ph4.nodes === 4 && !ph4.solo && !ph4.ftip && ph4.w <= 431, ph4);
+  ck('phone: Command & Logistics shows one column per doctrine (five since CBRN Defence), a diamond each; no tip card over the tree', ph4.cols === 5 && ph4.nodes === 5 && !ph4.solo && !ph4.ftip && ph4.w <= 431, ph4);
   // a 390 px phone: the banners stay scenes with their names whole; in every category every diamond is whole inside the tree, clear of the day column
   const r3 = await boot({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await r3.click('[data-act="research-open"]'); await r3.waitForTimeout(500);

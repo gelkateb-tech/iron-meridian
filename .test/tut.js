@@ -13,6 +13,7 @@ const { chromium } = require('playwright');
   const cap = await p.evaluate(() => window.__im.S.nations[0].capital);
   await p.evaluate(c => window.__im.selectProv(c), cap); await p.waitForTimeout(400); out.push(await step());   // -> Build an Army Base
   const card = await p.evaluate(() => document.querySelector('#tut p')?.textContent || '');
+  const price = await p.evaluate(c => window.__im.buildCost(0, 'fac', 1, c).cash, cap);   // (Army Base I: $10M, 30 minutes, owner point 6)
   await p.click('#csheet [data-act="cs-bld"]'); await p.waitForTimeout(300); await p.click('#sheet .bld[data-bk="fac"] [data-act="build"]'); await p.waitForTimeout(400); out.push(await step());   // -> Start the clock
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   await p.click('#sp1'); await p.waitForTimeout(400); out.push(await step());   // -> Resources
@@ -32,7 +33,7 @@ const { chromium } = require('playwright');
   await p.evaluate(() => { for (let i = 0; i < 24*3; i++) window.__im.tick(); }); await p.keyboard.press('n'); await p.waitForTimeout(200); await p.screenshot({ path: __dirname + '/r13-paper.png' });
   const want = ['Your nation', 'Open your capital', 'Build an Army Base', 'Start the clock', 'Resources', 'Recruit', 'Select your army', 'Plan an attack', 'Send it', 'Dug in'];
   const bad = want.filter((w, i) => !(out[i] || '').endsWith(' ' + w));
-  const fail = bad.length || errs.length || !waitNext || !/\$18M/.test(card);
+  const fail = bad.length || errs.length || !waitNext || !card.includes('$' + price + 'M, 30 min');
   console.log(JSON.stringify(out), 'diff', diff, '| build step:', card, '| recruit waits with Next:', waitNext, errs);
   console.log(fail ? 'FAIL ' + bad.join(', ') : 'PASS the tutorial builds an Army Base, starts the clock and recruits once it stands');
   await b.close(); process.exit(fail ? 1 : 0);

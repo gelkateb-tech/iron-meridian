@@ -10,7 +10,7 @@
 'use strict';
 const IM = { subs:{},
   on(t, f){ (this.subs[t] || (this.subs[t] = [])).push(f); },
-  emit(t, a, b, c, d){ const L = this.subs[t]; if (L) for (let i = 0; i < L.length; i++) L[i](a, b, c, d); } };
+  emit(t, a, b, c, d, e, f){ const L = this.subs[t]; if (L) for (let i = 0; i < L.length; i++) L[i](a, b, c, d, e, f); } };   // (up to six values: fxRanged sends its aim point and kill details as the fifth and sixth)
 
 // ---- the tick's lookups. While a tick runs (tickQ, rules/tick.js: tickDepth > 0) only rule code changes the state, so a few lookups the rules ask
 // for again and again (the forces in a province, the provinces a nation holds, a nation's wars) are kept until a rule changes what they hold, and
@@ -19,7 +19,9 @@ const IM = { subs:{},
 // only ever return what the scan they stand for would return, in the same order (docs: BUILD.md, "Rules speed"). A rule moves a force to another
 // province with atMove(a, p) (a.at = p, and the forces-by-province lookup follows: rules/combat.js armiesAt)
 let tickDepth = 0, tickSess = 0, ATV = 0, OWNV = 0, RELV = 0;
-const ownChanged = () => { OWNV++; }, relChanged = () => { RELV++; };
+// (ownChanged also destroys a chemical or nuclear stock whose city its builder no longer holds, at once: wmdSweep, rules/air.js, M8; so a city
+// lost and retaken within one hour does not keep it)
+const ownChanged = () => { OWNV++; if (S.mstock) wmdSweep(); }, relChanged = () => { RELV++; };
 // the rules keep answers for the hour (income, powers, borders, ports, fog: worked out at their first use in the hour). While the page runs an hour
 // over several frames (rules/tick.js tickQSlice) it reads between its steps: keep() is false then, and what it asks is worked out without being
 // kept, so the hour's own first use still makes the hour's answer, as when the hour runs at once

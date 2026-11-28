@@ -14,7 +14,8 @@
 //                   not across a drawn (real) country border
 //  (9) PLATES     two counters never cover each other: far badges measured by their own squares, pinned badges by their boxes
 //  (G) GAP          the gap between a flag tag's bottom and the top of its group stays 4-16 css px at every zoom models show (the diamond
-//                   stands on its group's middle and fades out as the pictures fade in: it is left out of (G) and of covering its own group)
+//                   stands on its group's middle and fades out as the pictures fade in: it is left out of (G) and of covering its own group;
+//                   the tag of a force standing on a city's centre point stands just above the city's marker instead: left out of (G))
 //  (D) DEPTH        stacks with >= 3 unit classes show >= 3 distinct models at max zoom
 //  (H) HUD          a plate or model under the HUD (rail, controls, minimap, side panel, dock) is faded to <= 30%
 //  (T) TOGETHER     a group's models fade in together (equal alpha) and are big enough when they appear (soldier >= 15 css px tall,
@@ -57,7 +58,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     const fr = N.findIndex(n => n.name === 'France'), uk = N.findIndex(n => n.name === 'United Kingdom');
     S.rel[Math.min(0, fr) + ',' + Math.max(0, fr)] = { st: 'war', since: S.hour, until: null };
     const ber = by('Berlin'), mun = by('Munich'), ham = by('Hamburg'), WI = 631, KA = 632, SEA = 3346;
-    const A = im.addArmy(0, ber.id, { tank: 3, inf: 3, ifv: 2 }), B = im.addArmy(0, ber.id, { mlrs: 2, sam: 1, inf: 1 }), C = im.addArmy(0, ber.id, { art: 2, at: 2 });
+    const A = im.addArmy(0, ber.id, { tank: 3, inf: 3, ifv: 2 }), B = im.addArmy(0, ber.id, { mlrs: 2, sam: 1, inf: 1 }), C = im.addArmy(0, ber.id, { art: 2 });
     const U = im.addArmy(uk, ber.id, { inf: 2, tank: 1 });
     try { im.air.spawn(0, ber.id, 'jet'); im.air.spawn(0, ber.id, 'heli'); } catch (e) { out.airErr = e.message; }
     const gw = im.addArmy(0, WI, { inf: 3, tank: 1 }), fw = im.addArmy(fr, WI, { tank: 3, inf: 2 }), fk = im.addArmy(fr, KA, { inf: 2, sam: 1 });
@@ -97,7 +98,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
     // is on screen belongs to the view of the last drawn frame, which a zoom step since may have moved on)
     window.__acCap = () => { if (im.rd){ if (im.rd.n === window.__acN) return null; window.__acN = im.rd.n; } const v = im.rd ? { x: im.rd.vx, y: im.rd.vy, s: im.rd.vs } : im.view, D = window.__dbgBoxes || {};
       const plates = im.hits.filter(h => !h.unk && h.w > 0).map(h => { const own = (h.own || h.ids).slice().sort((a, b) => a - b), wx = (h.cx - v.x)/v.s, wy = (h.cy - v.y)/v.s, al = allowed(own), pv = provW(wx, wy);
-        return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: (al.has(pv) || lend(al, pv)) && !across(al, wx, wy) ? 1 : 0, pv, tag: h.tag ? 1 : 0 }; });
+        return { k: own.join(',') + (h.tag ? 'T' : ''), ids: h.ids, own, r: [h.x, h.y, h.x + h.w, h.y + h.h], d: h.d, c: [h.cx, h.cy], w: [wx, wy], a: h.a == null ? 1 : h.a, mv: moving(own) ? 1 : 0, inP: (al.has(pv) || lend(al, pv)) && !across(al, wx, wy) ? 1 : 0, pv, tag: h.tag ? 1 : 0, heart: h.heart ? 1 : 0 }; });
       const models = im.TM.dbg.map(q => { const a = S.armies.find(z => z.id === q.id), al = allowed(q.ids), pv = provW(q.wx, q.wy);
         return { k: q.id + ':' + q.t, id: q.id, ids: q.ids, t: q.t, at: a && a.at, cut: q.cut, x: q.x, y: q.y, w: [q.wx, q.wy], box: q.box, len: q.len, a: q.a, tiny: q.tiny, owner: q.owner, mv: q.moving, air: q.air, sea: q.sea, inP: (al.has(pv) || lend(al, pv)) && !across(al, q.wx, q.wy) ? 1 : 0, pv }; });
       return { hp: v.s*12, v: [v.x, v.y, v.s], plates, models, hud: hud(), lab: (D.lab || []).map(l => l.b), pn: (D.pn || []).filter(q => q.b).map(q => q.b), mk: (D.mk || []).map(m => [m[0] - m[2], m[1] - m[2], m[0] + m[2], m[1] + m[2]]), hq: D.tb && (D.tba == null || D.tba > 0.5) ? D.tb : null, bbar: D.bbar || [] }; };
@@ -170,7 +171,7 @@ const med = v => v.slice().sort((a, b) => a - b)[v.length >> 1];
         for (const m of g){ if (m.a <= 0.2) continue; const h = m.box[3] - m.box[1], L = m.len || Math.max(m.box[2] - m.box[0], h);   // (a picture: its drawn length)
           if ((SQUAD.has(m.t) && h < LIM.solMin) || (m.t === 'tank' && L < LIM.tankMin)){ small++; if (sex.length < 4) sex.push(`${c.mode}@${r1(c.hp)} ${m.k} ${r1(SQUAD.has(m.t) ? h : L)} px`); } }
         const vis0 = g.filter(m => m.a > 0.2); if (!vis0.length || g.some(m => m.mv || m.cut)) continue;   // (a group partly off screen draws only its pictures on screen: its top is not measured)
-        const pl = c.plates.find(q => q.own.includes(+id) && q.a > 0.2 && q.tag); if (!pl || !VIS(pl.r)) continue;   // (the flag tag: the diamond stands on its pictures' middle and fades out as they fade in)
+        const pl = c.plates.find(q => q.own.includes(+id) && q.a > 0.2 && q.tag); if (!pl || !VIS(pl.r) || pl.heart) continue;   // (units in cities: the tag of the force on a city's centre point stands just above the marker's ring, not over its pictures)   // (the flag tag: the diamond stands on its pictures' middle and fades out as they fade in)
         const top = Math.min(...vis0.map(m => m.box[1])), gap = top - pl.r[3]; n++; gaps.push(gap);
         if (gap < LIM.gap[0] || gap > LIM.gap[1]){ bad++; if (ex.length < 6) ex.push(`${c.mode}@${r1(c.hp)} ${pl.k}: ${r1(gap)} px`); } } }
     M.gap = { samples: n, bad, min: gaps.length ? r1(Math.min(...gaps)) : null, max: gaps.length ? r1(Math.max(...gaps)) : null, examples: ex };

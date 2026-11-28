@@ -42,8 +42,10 @@ const tag = (LABEL ? LABEL + '-' : '') + (PHONE ? 'phone' : 'desk') + '-' + NATI
   await p.goto('file://' + PAGE + '?start=nations'); await p.waitForSelector('[data-act="pick"]', { timeout: 60000 }); T.startScreenMs = Date.now() - tl0;
   const regs = await p.$$eval('[data-act="pickreg"]', a => a.map(x => x.dataset.k)); ok('start screen: no region tabs, one search box', regs.length === 0 && await p.locator('#pickq').count() === 1, regs);
   await shot('start');
-  // one A-Z list of every nation
-  const names = await p.$$eval('[data-act="pick"] b', a => a.map(x => x.textContent)); ok('start screen: all nations in one A-Z list', names.length === 68 && names.join() === names.slice().sort((x, y) => x.localeCompare(y)).join(), names.length);
+  // one list of every nation, the biggest powers first (35b2c23): by provinces, then cities, then name (as .test/nat-world.js checks it)
+  const cards = await p.$$eval('[data-act="pick"]', a => a.map(e => ({ n: e.querySelector('b').textContent, prov: +((e.querySelector('.pn') || {}).textContent || '').replace(/\D+/g, ''), cit: +((e.querySelector('.pc') || {}).textContent || '').replace(/\D+/g, '') })));
+  const bySize = cards.every((c, i) => !i || c.prov < cards[i - 1].prov || (c.prov === cards[i - 1].prov && (c.cit < cards[i - 1].cit || (c.cit === cards[i - 1].cit && cards[i - 1].n.localeCompare(c.n) <= 0))));
+  ok('start screen: all nations in one list, biggest first', cards.length === 68 && bySize && cards.every(c => c.prov > 0), { n: cards.length, first: cards.slice(0, 3) });
   await pickNation(p, NATION); await p.waitForTimeout(150); await shot('picked');
   const tb = Date.now(); await p.click('[data-act="begin"]'); await p.waitForSelector('[data-act="start"]', { timeout: 60000 }); T.beginMs = Date.now() - tb;
   await p.click('[data-act="start"]'); await p.waitForFunction(() => window.__im && window.__im.S && window.__im.S.started && !window.__im.camFly, null, { timeout: 60000 }).catch(() => {});
@@ -69,8 +71,14 @@ const tag = (LABEL ? LABEL + '-' : '') + (PHONE ? 'phone' : 'desk') + '-' + NATI
   { const r = await p.evaluate(q => { const S = window.__im.S, b = [...document.querySelectorAll('[data-act="build"]')].find(x => !x.disabled); if (!b) return { none: true }; const k = b.dataset.k; b.click(); return { k, cons: S.cons[q] ? S.cons[q].k : null }; }, me.cap);
     ok('build from the city sheet', r.cons != null, r); }
   // mobilize / train: an infantry (or the first unit that can be trained here)
-  { await p.evaluate(q => window.__im.selectProv(q), me.cap); await p.waitForTimeout(200);
-    const r = await p.evaluate(q => { const S = window.__im.S, q0 = S.queue[q].length, B = [...document.querySelectorAll('[data-act="recruit"]')].filter(x => !x.disabled), b = B.find(x => x.dataset.t === 'inf') || B[0]; if (!b) return { none: true, q0 }; b.click(); return { t: b.dataset.t, q0, q1: S.queue[q].length }; }, me.cap);
+  // (capitals start without an Army Base: build one from the city sheet once nothing else is going up, run the rules' clock until it stands,
+  // then click a card that can be trained now: not disabled, not aria-disabled, not blocked)
+  { const base = await p.evaluate(async q => { const im = window.__im, S = im.S, wait = () => new Promise(r => setTimeout(r, 20)); let h = 0;
+      for (; h < 24*6 && !S.bld[q].fac; h++){ if (!S.cons[q]){ im.selectProv(q); await wait(); const b = document.querySelector('[data-act="build"][data-k="fac"]'); if (b && !b.disabled) b.click(); } im.tick(); }
+      return { fac: S.bld[q].fac, hours: h }; }, me.cap);
+    await p.evaluate(q => window.__im.selectProv(q), me.cap); await p.waitForTimeout(200);
+    const r = await p.evaluate(q => { const S = window.__im.S, q0 = S.queue[q].length, B = [...document.querySelectorAll('[data-act="recruit"]')].filter(x => !x.disabled && x.getAttribute('aria-disabled') !== 'true' && !x.classList.contains('blk')), b = B.find(x => x.dataset.t === 'inf') || B[0]; if (!b) return { none: true, q0, cards: B.length }; b.click(); return { t: b.dataset.t, q0, q1: S.queue[q].length }; }, me.cap)
+    r.base = base;;
     ok('mobilize a unit in the capital', r.q1 > r.q0, r); }
   // a pinpoint move: an own land force to a point in a neighbouring own province (Move, then a tap on the map)
   { const pick = await p.evaluate(me => { const im = window.__im, S = im.S, G = im.G;

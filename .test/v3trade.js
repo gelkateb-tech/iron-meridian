@@ -115,6 +115,7 @@ const fails = [], ok = (c, m, extra) => { if (!c) fails.push(m + (extra !== unde
       // another popup (an event, a briefing) is in front: close it first; 'd' toggles, so it is only pressed with no popup open
       const open = await p.evaluate(() => { const m = document.getElementById('modal'); if (m.hidden) return false; const x = m.querySelector('[data-act="resume"]'); if (x) x.click(); return true; });
       if (open){ await p.waitForTimeout(150); if (!(await p.evaluate(() => document.getElementById('modal').hidden))){ await p.keyboard.press('Escape'); await p.waitForTimeout(150); } continue; }
+      await p.evaluate(() => { const D = window.__im.dp.DV; D.tab = 'msg'; D.routes = true; });   // (the routes card: Messages & Trades, opened)
       await p.keyboard.press('d'); await p.waitForFunction(() => { const m = document.getElementById('modal'), b = m.querySelector('.trl [data-act="trade-close"]'); return !m.hidden && !!b && b.getClientRects().length > 0; }, null, { timeout: 1500 }).catch(() => {}); } };
   await p.waitForTimeout(300); await openDiplo(); await p.waitForTimeout(100);
   const r7 = await p.evaluate(() => ({rows:document.querySelectorAll('.trr').length, mine:window.__im.S.trade.routes.filter(r => r.a === 0 || r.b === 0).length, hasOpen:!!document.querySelector('[data-act="trade-open"]')}));
@@ -186,8 +187,8 @@ const fails = [], ok = (c, m, extra) => { if (!c) fails.push(m + (extra !== unde
   // the Give tab in the UI has every resource including manpower
   await p.waitForTimeout(300); await p.evaluate(() => { const m = document.getElementById('modal'); if (!m.hidden){ const x = m.querySelector('[data-act="resume"]'); if (x) x.click(); } }); await p.keyboard.press('d'); await p.waitForTimeout(200);
   const caId = await p.evaluate(() => window.__im.S.nations.findIndex(N => N.name === 'Canada'));
-  await p.click(`[data-act="nat-open"][data-id="${caId}"][data-k="give"]`); await p.waitForTimeout(150);
-  const r9b = await p.evaluate(() => [...document.querySelectorAll('input[data-act="gift-res"]')].map(i => i.dataset.k).join(','));
+  await p.click('[data-act="dp-tab"][data-k="coal"]'); await p.waitForTimeout(100); await p.click(`[data-act="dp-give"][data-id="${caId}"]`); await p.waitForTimeout(150);   // (Coalitions: Give on a partner)
+  const r9b = await p.evaluate(() => [...document.querySelectorAll('input[data-act="dp-tv"][data-side="give"]')].map(i => i.dataset.k).join(','));
   ok(r9b === 'cash,oil,metal,iron,elec,rare,mp', 'give tab lists every resource', r9b);
   await p.screenshot({ path: __dirname + '/v3-trade-give.png' }); await p.keyboard.press('Escape');
 

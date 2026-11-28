@@ -12,22 +12,22 @@ const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/eco-v1-save.json', 
   await pickNation(p, 'France'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]'); await p.waitForTimeout(700);
   const r = await p.evaluate(save => { const im = window.__im, ok = im.restore(JSON.parse(JSON.stringify(save))), S = im.S, N = S.nations[0], out = {ok, rsv:S.rsv, day:im.rs.day(), stats:{}, lv:{}};
     for (const n of [0, 3]){ out.stats[n] = {}; for (const t of im.mob.UT()) out.stats[n][t] = {atk:im.rs.st(n, t, 'atk'), def:im.rs.st(n, t, 'def'), spd:im.rs.st(n, t, 'spd'), hp:im.rs.st(n, t, 'hp'), can:im.rs.unlocked(n, t)}; }
-    for (const id of ['inf_armor', 'at_armor', 'inf_g2', 'inf_g3', 'at_warhead', 'u_ifv', 'u_spec', 'tank_armor', 'tank_gun', 'ifv_gun', 'u_jet', 'u_int', 'jet_pgm', 'int_msl', 'jet_lo', 'u_bomb', 'bomb_up', 'u_drone', 'drone_g2', 'frig_gun', 'crui_gun', 'u_carr', 'log1', 'msl1', 'sat1', 'art_radar', 'art_shell', 'u_mlrs', 'u_jam', 'u_heli', 'eco1',
-      'tank_fp', 'tank_pr', 'inf_fp', 'inf_pr', 'awacs_pr', 'awacs_fp', 'bomb_fp', 'at_fp', 'at_pr', 'art_fp', 'art_guided', 'u_asf']) out.lv[id] = im.rs.level(0, id);
+    for (const id of ['inf_armor', 'inf_g2', 'inf_g3', 'u_ifv', 'u_spec', 'tank_armor', 'tank_gun', 'ifv_gun', 'u_jet', 'u_int', 'jet_pgm', 'int_msl', 'jet_lo', 'u_bomb', 'bomb_up', 'u_drone', 'drone_g2', 'frig_gun', 'crui_gun', 'u_carr', 'log1', 'msl1', 'sat1', 'art_radar', 'art_shell', 'u_mlrs', 'u_jam', 'u_heli', 'eco1',
+      'tank_fp', 'tank_pr', 'inf_fp', 'inf_pr', 'awacs_pr', 'awacs_fp', 'bomb_fp', 'art_fp', 'art_guided', 'u_asf']) out.lv[id] = im.rs.level(0, id);
     out.old = Object.keys(N.tech).filter(id => /^(inf|tank|art|air|nav)[123]$|^(asf|awacs|mpa|bomb|drone|jam|swarm|sdrone|heli|para)1$|^uav\d$|^bomb[23]$/.test(id)); out.mk = N.mk === undefined; out.eng = N.eng && {...N.eng};
     out.slots = [N.research && {...N.research}, N.research2 && {...N.research2}]; out.uav = im.air.uavLv(0); out.lv3 = {tank_armor:im.rs.level(3, 'tank_armor'), inf_fp:im.rs.level(3, 'inf_fp'), drone_g2:im.rs.level(3, 'drone_g2')};
     out.log = ((S.log || [])[0] || {}).text || ''; return out; }, FX.save);
   ck('the old save loads', r.ok && r.rsv === 2, [r.ok, r.rsv]);
-  { const low = []; for (const n of [0, 3]) for (const t in FX.stats[n]) for (const k of ['atk', 'def', 'spd', 'hp']) if (r.stats[n][t][k] < FX.stats[n][t][k] - 1e-9) low.push(`${n} ${t} ${k}: ${FX.stats[n][t][k]} -> ${r.stats[n][t][k]}`);
+  { const low = []; for (const n of [0, 3]) for (const t in FX.stats[n]) for (const k of ['atk', 'def', 'spd', 'hp']) if (r.stats[n][t] && r.stats[n][t][k] < FX.stats[n][t][k] - 1e-9) low.push(`${n} ${t} ${k}: ${FX.stats[n][t][k]} -> ${r.stats[n][t][k]}`);
     ck('no unit stat is lower than under the old rules (two nations, every type)', !low.length, low);
-    const lost = []; for (const n of [0, 3]) for (const t in FX.stats[n]) if (FX.stats[n][t].can && !r.stats[n][t].can) lost.push(n + ' ' + t);
+    const lost = []; for (const n of [0, 3]) for (const t in FX.stats[n]) if (t !== 'at' && FX.stats[n][t].can && !r.stats[n][t].can) lost.push(n + ' ' + t);   // (Anti-Tank Infantry is gone: BUILD-REQS, its units became infantry)
     ck('every unit that could be built still can', !lost.length, lost);
     const s0 = FX.stats[0], s1 = r.stats[0];
     ck('same attack and defense where nothing was added (tank: armour, gun and Mark III)', Math.abs(s1.tank.atk - s0.tank.atk) < 1e-9 && Math.abs(s1.tank.def - s0.tank.def) < 1e-9, [s0.tank, s1.tank]);
-    ck('Mechanized and Assault Infantry carry health now (infantry +4)', s1.inf.hp === s0.inf.hp + 4 && Math.abs(s1.inf.atk - s0.inf.atk) < 1e-9, [s0.inf, s1.inf]); }
+    ck('Mechanized and Assault Infantry carry health now (infantry +4; its attack higher: the anti-tank Mark IV became the infantry\'s, BUILD-REQS)', s1.inf.hp === s0.inf.hp + 4 && s1.inf.atk > s0.inf.atk, [s0.inf, s1.inf]); }
   ck('old project ids are gone from N.tech, the Marks map too', !r.old.length && r.mk, [r.old, r.mk]);
-  ck('projects became their nodes', ['inf_armor', 'at_armor', 'inf_g2', 'inf_g3', 'u_ifv', 'u_spec', 'tank_armor', 'tank_gun', 'ifv_gun', 'u_jet', 'u_int', 'jet_pgm', 'int_msl', 'jet_lo', 'u_bomb', 'bomb_up', 'u_drone', 'drone_g2', 'frig_gun', 'crui_gun', 'u_carr', 'log1', 'msl1', 'sat1', 'art_radar', 'art_shell', 'u_mlrs', 'u_jam', 'u_heli', 'eco1'].every(id => r.lv[id] === 1) && r.lv.at_warhead === 2 && r.uav === 2, r.lv);
-  ck('Marks became Firepower and Protection levels (tank III -> 2, infantry II -> 1, anti-tank IV -> 3)', r.lv.tank_fp === 2 && r.lv.tank_pr === 2 && r.lv.inf_fp === 1 && r.lv.inf_pr === 1 && r.lv.at_fp === 3 && r.lv.at_pr === 3 && r.lv.bomb_fp === 1, r.lv);
+  ck('projects became their nodes (Anti-Tank Infantry\'s are gone: BUILD-REQS)', ['inf_armor', 'inf_g2', 'inf_g3', 'u_ifv', 'u_spec', 'tank_armor', 'tank_gun', 'ifv_gun', 'u_jet', 'u_int', 'jet_pgm', 'int_msl', 'jet_lo', 'u_bomb', 'bomb_up', 'u_drone', 'drone_g2', 'frig_gun', 'crui_gun', 'u_carr', 'log1', 'msl1', 'sat1', 'art_radar', 'art_shell', 'u_mlrs', 'u_jam', 'u_heli', 'eco1'].every(id => r.lv[id] === 1) && r.uav === 2, r.lv);
+  ck('Marks became Firepower and Protection levels (tank III -> 2; infantry II and anti-tank IV -> infantry 3, Anti-Tank Infantry being gone: BUILD-REQS)', r.lv.tank_fp === 2 && r.lv.tank_pr === 2 && r.lv.inf_fp === 3 && r.lv.inf_pr === 3 && r.lv.bomb_fp === 1, r.lv);
   ck('the AWACS has Protection only', r.lv.awacs_pr === 3 && r.lv.awacs_fp === 0, [r.lv.awacs_pr, r.lv.awacs_fp]);
   ck('another nation is converted too', r.lv3.tank_armor === 1 && r.lv3.inf_fp === 1 && r.lv3.drone_g2 === 1, r.lv3);
   ck('converted levels stay although their day has not come (Heavy Bomber on day 5, its unlock opens on day 6)', r.day === 5 && r.lv.u_bomb === 1 && r.stats[0].bomb.can, [r.day, r.lv.u_bomb]);
@@ -47,8 +47,8 @@ const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/eco-v1-save.json', 
   ck('the running Mark finishes as Firepower 1 and Protection 1', e.art_fp === 1 && e.art_pr === 1 && !e.eng, e);
   ck('screen: the engineering bar is gone when it is done', await p.evaluate(() => !/rs-eng/.test(window.__im.rs.html()) && /rs-slot empty/.test(window.__im.rs.html())), null);
   // saved again and loaded again: nothing is converted twice
-  const again = await p.evaluate(() => { const im = window.__im, d = JSON.parse(im.rs.save()), before = JSON.stringify(im.S.nations[0].tech); const ok = im.restore(d); return { ok, same: JSON.stringify(im.S.nations[0].tech) === before, rsv: im.S.rsv, w: im.rs.level(0, 'at_warhead') }; });
-  ck('a save of the new format is not converted again', again.ok && again.same && again.rsv === 2 && again.w === 2, again);
+  const again = await p.evaluate(() => { const im = window.__im, d = JSON.parse(im.rs.save()), before = JSON.stringify(im.S.nations[0].tech); const ok = im.restore(d); return { ok, same: JSON.stringify(im.S.nations[0].tech) === before, rsv: im.S.rsv, w: im.rs.level(0, 'inf_g2') }; });
+  ck('a save of the new format is not converted again', again.ok && again.same && again.rsv === 2 && again.w === 1, again);
   // saves from before two slots: a project queued for slot #2 under an old id is read in the new tree (art1 -> Counter-Battery Radar starts);
   // one that cannot start yet (bomb3 -> the Stealth Bomber opens on day 14, the save is on day 5) is dropped with a dispatch that says why
   const q = await p.evaluate(save => { const im = window.__im, d = JSON.parse(JSON.stringify(save)), n0 = d.nations[0], n3 = d.nations[3];

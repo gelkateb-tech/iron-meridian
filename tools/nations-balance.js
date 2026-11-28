@@ -18,7 +18,7 @@ const TIERS = ['S', 'A', 'B', 'C'];
 function load(){ globalThis.window = globalThis; if (!globalThis.WORLD){ require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js')); }
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
   return new Function("'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-    + '\nreturn {IM, UNITS, income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
+    + '\nreturn {IM, UNITS, atPeaceMor:typeof atPeaceMor === "function" ? atPeaceMor : (f => f()), income, tradeIncome, tierKit, tierMode, TIER_MODES, powerStrength, powerNeighbours, ECO_CAPITAL, winCapsFor, winShareFor, landNeed, cityMain, get WIN_CAPS(){ return WIN_CAPS; }, get POWERS(){ return POWERS; }};')(); }
 const hash = s => { let h1 = 0x811c9dc5, h2 = 0x1b873593; for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = Math.imul(h2 + c, 0x85ebca6b) ^ (h2 >>> 13); } return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0'); };
 const provs = S => { const c = S.nations.map(() => 0); for (const o of S.owner) if (o >= 0) c[o]++; return c; };
 const unitsOf = S => { const c = S.nations.map(() => 0); for (const a of S.armies) if (a.owner >= 0) for (const k in a.u) c[a.owner] += a.u[k] || 0; return c; };
@@ -67,7 +67,9 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
   const R = load(), api = R.IM.api, NAT = globalThis.NATIONS;
   api.useScenario('world64'); api.newGame(12345, 0, []); const S = api.S, G = api.G, mode = S.mode;
   const kitOf = N => R.tierKit(N.tier, mode);
-  const open = S.nations.map(N => { const g = R.income(N.id).gross; return {N, cash:g.cash, mp:g.mp, units:unitsOf(S)[N.id], kit:kitOf(N), cities:G.P.filter(P => S.owner[P.id] === N.id && P.city)}; });
+  // (the opening income read at the morale each province settles at in peace, as the catch-up is set (rules/economy.js morPeace): a game starts every
+  // province at 70% morale, owner point 9, so the first days' income is about 16% lower and rises as morale settles, docs/REBELS-PLAN.md 2.6)
+  const open = S.nations.map(N => { const g = R.atPeaceMor(() => ({...R.income(N.id).gross})); return {N, cash:g.cash, mp:g.mp, units:unitsOf(S)[N.id], kit:kitOf(N), cities:G.P.filter(P => S.owner[P.id] === N.id && P.city)}; });
   if (has('table')){ console.log(`nations world, ${S.nations.length} nations, mode ${mode} (spread ${R.tierMode(mode).spread}, floor ${R.tierMode(mode).floor}); capitals to win ${R.WIN_CAPS}, land to win ${R.landNeed(0)}+`);
     for (const o of open) console.log(`${o.N.tier} ${o.N.name.padEnd(15)} ${String(R.POWERS[o.N.power].region).padEnd(12)} prov ${String(provs(S)[o.N.id]).padStart(4)} cities ${String(o.cities.length).padStart(3)}  $/day ${o.cash.toFixed(0).padStart(4)} (target ${o.kit.day}, x${o.N.boost.toFixed(2)})  mp/day ${o.mp.toFixed(0).padStart(3)} (target ${o.kit.mpDay}, x${o.N.boostM.toFixed(2)})  units ${String(o.units).padStart(3)}  stock $${o.N.cash} mp ${o.N.mp} rare ${o.N.rare}  mains ${o.cities.map(P => (R.cityMain(P.id) || '?')[0]).sort().join('')}`);
     process.exit(0); }
@@ -86,8 +88,8 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
     say('T1 Structure', ok && !bad.length, bad.length ? bad.join('; ') : `${open.length} nations, regions open: ${NAT.open.join(', ') || 'none'}` + (notes.length ? ` (not yet reworked: ${notes.join('; ')})` : '')); }
 
   // T2 opening (owner: normal mode starts close to equal): money a day within 10% of the tier's target, or up to 1.3 times it for a nation the
-  // catch-up holds back at its floor; the targets of the richest and poorest tier at most 25% apart; median manpower a day and median opening
-  // units in tier order (S at least A at least B at least C, and S above the lowest tier present)
+  // catch-up holds back at its floor; the targets of the richest and poorest tier at most 25% apart; median manpower a day in tier order (S at least
+  // A at least B at least C, and S above the lowest tier present); every nation opens with the same number of units (START_ARMY)
   { const bad = [], tiers = TIERS.filter(t => open.some(o => o.N.tier === t));
     for (const o of open){ const r = o.cash/o.kit.day; if (r < 0.9 || r > 1.3 || (r > 1.105 && o.N.boost > o.kit.floor + 1e-9)) bad.push(`${o.N.name} $${o.cash.toFixed(0)} a day (target ${o.kit.day})`); }
     const tg = tiers.map(t => R.tierKit(t, mode).day), spread = Math.max(...tg)/Math.min(...tg); if (spread > 1.25) bad.push(`tier targets ${spread.toFixed(2)} apart`);
@@ -97,7 +99,8 @@ const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? 
     const mm = tt.map(t => med(done.filter(o => o.N.tier === t).map(o => o.mp))), mu = tt.map(t => med(done.filter(o => o.N.tier === t).map(o => o.units)));
     const inOrder = a => a.every((v, i) => i === 0 || v <= a[i - 1] + 1e-9) && (a.length < 2 || a[0] > a[a.length - 1]);
     if (!inOrder(mm)) bad.push('median manpower a day not in tier order: ' + tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', '));
-    if (!inOrder(mu)) bad.push('median opening units not in tier order: ' + tt.map((t, i) => t + ' ' + mu[i]).join(', '));
+    // (opening units: the same starting army for every nation, START_ARMY, owner playtest 2026-11-27; before it, the median in tier order)
+    { const u = open.map(o => o.units); if (Math.min(...u) !== Math.max(...u)) bad.push('opening units differ between nations: ' + open.filter(o => o.units !== med(u)).map(o => `${o.N.name} ${o.units}`).slice(0, 8).join(', ')); }
     say('T2 Opening', !bad.length, bad.length ? bad.join('; ') : `money a day ${Math.min(...open.map(o => o.cash)).toFixed(0)} to ${Math.max(...open.map(o => o.cash)).toFixed(0)} (targets ${tiers.map((t, i) => t + ' ' + tg[i]).join(', ')}); median manpower ${tt.map((t, i) => t + ' ' + mm[i].toFixed(0)).join(', ')}; median units ${tt.map((t, i) => t + ' ' + mu[i]).join(', ')}${NAT.open.length ? ` (medians over the ${done.length} nations of ${NAT.open.join(', ')})` : ''}`); }
 
   // T9 seats: a nation started as a seat nobody plays, 3 days: no error and it receives its dispatches (every new nation of the step; at step 0 two of the 15)

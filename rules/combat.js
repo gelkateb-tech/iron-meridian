@@ -59,6 +59,7 @@ function healInfo(a){ const hurtN = UT.some(t => a.w[t] > 0.01);
   if (a.to === null && S.battles.includes(a.at)) return {kind:'fight', rate:0, city:false};
   if (!a.air && !supplied(a) && !cmdF(a, 'supply')) return {kind:'cut', rate:0.04, city:false};
   if (!hurtN) return {kind:'full', rate:0, city:false};
+  if (hazHeal(a)) return {kind:'haz', rate:0, city:false, z:hazAt(a.at).k};   // no healing in a gas or radiation zone (rules/air.js, armyUpkeep)
   const own = a.to === null && S.owner[a.at] === a.owner && !!G.P[a.at].city; return {kind:'heal', rate:healPerDay(a), city:own}; }
 // damage factors of the missiles against each class of unit (a missile's strength times these)
 const MSL_VS = {soft:1.2, armored:1, air:0.4, naval:0.9};
@@ -90,7 +91,7 @@ function armyStrength(a, blind = false, viewer = null){   // blind: a force that
   const aF = t => blind ? {} : ({morale:mrl*wear, supply:sup, terrain:TFo ? (t === 'spec' ? rSpecTerr(o, TFo[t]) : TFo[t]) : 1, stack:se[DOM_T[t]], commander:cB*(t === 'art' || t === 'sam' || t === 'mlrs' ? cG : 1),
     landing:land, season:szn, river:t === 'ifv' && riv < 1 && has(o, 'ifv_terr') ? 1 : riv, shortage:shortFx(o, t, 'atk')});
   // the damage taken is scaled by dF (the product of these): the defence is its inverse
-  const bk = mine && a.to === null && !a.air && !a.fly && (viewer == null || bunkerSeen(p, viewer)) ? bunkerLv(p) : 0, dd = docOf(o), sea1 = sea && ground(a) ? (shipsN(a) > 0 ? 0.75 : 1.5) : 1;
+  const bk = mine && a.to === null && !a.air && !a.fly && (viewer == null || bunkerSeen(p, viewer)) ? bunkerLv(p) : 0, dd = docOf(o), sea1 = sea ? atSeaF(p, a, shipsN(a) > 0) : 1;
   const dTake = t => blind ? {} : ({'home soil':mine ? 1/1.25 : 1, bunker:1 - bunkerRed(bk), doctrine:mine && dd && dd.home && S.home[p] === o ? dd.home : 1, terrain:!sea && (mine || (holder < 0 && o < 0)) ? 1/terr(p).def : 1,
     'field hospitals':rHospF(o), 'at sea':UNITS[t].cls === 'soft' || UNITS[t].cls === 'armored' ? sea1 : 1, commander:mine ? 1 - 0.12*cmdF(a, 'shield') : 1, 'dug in':digF(a)});
   const out = [];
@@ -142,7 +143,7 @@ function unitStrength(n, t, T){
   const ul = (() => { const i = UAV_TECH.findIndex(id => !hasT(id)); return Math.max(1, i < 0 ? UAV_TECH.length : i); })(), uav = t === 'drone' ? UAV_LV[ul] : null;
   const atk = stat('atk'), def = stat('def'), uavK = [1, 1.15, 1.3][lv('drone_sens')] || 1;
   const vis = uav ? Math.round(uav.vis*uavK) : t === 'awacs' ? VIS_KM.aew*([1, 1.15, 1.3][lv('awacs_radar')] || 1) : t === 'mpa' ? VIS_KM.mpa*([1, 1.2, 1.4][lv('mpa_sonar')] || 1)
-    : U.vis*((t === 'at' && hasT('at_eye')) || (t === 'spec' && hasT('spec_eye')) ? 1.5 : 1);
+    : U.vis*(t === 'spec' && hasT('spec_eye') ? 1.5 : 1);
   const rng = air ? (uav ? uav.range : (AIR_RANGE[t] || 12) + stat('rng'))*KM_HEX : RANGE_KM[t] ? RANGE_KM[t] + (t === 'mlrs' && hasT('mlrs_rng') ? RANGE_ER : 0) : null;
   const spd = Math.round((air ? AIR_SPEED*(AIR_SPF[t] || 1)*(U.spd ? stat('spd')/U.spd : 1)*24 : stat('spd'))*KM_HEX/10)*10;   // (aircraft: flight speed with the research speed bonus, rAirSpdF)
   const rows = STR_ROWS.filter(R => R.k !== 'pop').map(R => { const r = {k:R.k, name:R.name, atk:null, def:null, immune:false, unit:''};
@@ -209,6 +210,8 @@ const dugIn = a => !!a && !a.air && !a.fly && a.to === null && !a.path.length &&
 // friend's province: a force on the move is never dug in (dugIn), and one with the Defend stance in a province held by a foe is attacking
 const DIG_DEF = 1/1.1, DIG_CITY = 1/1.25;
 const digP = p => G.P[p] && G.P[p].city ? DIG_CITY : DIG_DEF;   // (the dug-in damage factor of a province: DIG_CITY in a city, DIG_DEF in the open)
+// troops at sea (AT_SEA, rules/data.js): the damage factor of force a in sea zone p, with or without warships of its own escorting it
+const atSeaF = (p, a, escorted) => G.P[p].sea && ground(a) ? (escorted ? AT_SEA.escort : AT_SEA.alone) : 1;
 const digF = a => dugIn(a) && (S.owner[a.at] === a.owner || friendly(a.owner, S.owner[a.at])) ? digP(a.at) : 1;
 /* ---------------- The Bunker (BUILD.fort, levels 1-5; owner #17; the table: BUNKER_LV in rules/data.js, docs/COMBAT.md section 7) ----------------
    - the garrison (the province holder's own forces standing there) takes red less damage from everything that strikes it there: battles, ranged
@@ -340,12 +343,12 @@ function rangedStep(hourly){ let grid = null, gone = false, IW = null;
     let base = 0; const fired = [];   // (fired: the unit types that fired, for the client's effects only)
     for (const [t, n] of rangedOf(a)){ const hit = G0.filter(e => e.ts.includes(t)); if (!hit.length) continue; fired.push(t);
       const tot = hit.reduce((s0, e) => s0 + armyHP(e.b), 0) || 1;
-      const b0 = n*st(a.owner, t, 'atk')*K*RANGED_F/BATTLE_Q*mf*(RANGE_HIT[t] === 'land' ? cG : 1)*(t === 'crui' && land && has(a.owner, 'crui_rng') ? 1.3 : 1)*(0.8 + rng()*0.4)*cov*se[DOM_T[t]];
+      const b0 = n*st(a.owner, t, 'atk')*K*RANGED_F/BATTLE_Q*mf*(RANGE_HIT[t] === 'land' ? cG : 1)*(t === 'crui' && land && has(a.owner, 'crui_rng') ? 1.3 : 1)*(0.8 + rng()*0.4)*cov*se[DOM_T[t]]*hazFight(a.at);
       base += b0;
       for (const e of hit){ let d = av.get(e); if (!d) av.set(e, d = {soft:0, armored:0, air:0, naval:0}); for (const k of CLASSES) d[k] += b0*multO(a.owner, t, k)/tot; } }
     if (!base) continue;
     for (const [e, d] of av){ const b = e.b, h0 = effHP(b), u0 = count(b);
-      hurt(b, d, (land ? bunkerF(b, best) : 1)*digF(b));
+      hurt(b, d, (land ? bunkerF(b, best) : 1)*digF(b)/hazFight(b.at));
       const lost = Math.max(0, h0 - effHP(b)), k = a.id + ':' + b.id, R = RANGED_SHOWN.get(k); if (R) R.lost += lost; else RANGED_SHOWN.set(k, {a, b, p:b.at, lost, x:e.x, y:e.y});
       if (u0 - count(b) > 0){ bump(a.owner, 'unitsKilled', u0 - count(b)); bump(b.owner, 'unitsLost', u0 - count(b)); if (!count(b)) gone = true; } }
     cmdXP(a, base*0.4); if (land) warDamage(best, 1.2/BATTLE_Q);
@@ -370,9 +373,9 @@ function bombardInfo(a, p, b = null){ const R = rangedOf(a), range = R.reduce((m
 function orderBombard(a, p, b = null){ if (!bombardInfo(a, p, b).ok) return false;
   a.path = []; a.chase = null; a.dest = null; if (a.wp) delete a.wp; delete a.join; a.tgt = b ? {id:b.id} : {p}; if (a.fire === 'hold') a.fire = 'free'; return true; }
 // a force sent to join another (dragged onto its counter) merges into it on arrival; it follows if the other force moved on
-function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a)) continue; const b = armyById(a.join);
+function joinHour(){ let any = false; for (const a of S.armies){ if (a.join == null || !count(a) || a.fly) continue; const b = armyById(a.join);
     if (!b || b === a || b.owner !== a.owner || !count(b) || b.air || b.fly){ delete a.join; continue; }
-    if (a.to !== null || a.path.length) continue;
+    if (a.to !== null || a.path.length || a.sail) continue;   // (still walking to the other force's spot: it merges there)
     if (a.at === b.at && b.to === null){ delete a.join; merge(b, a); any = true; if (isSeat(a.owner)){ const sp = stackPenalty(b); tell(a.owner, `${armyName(a)} joined ${armyName(b)} at ${G.P[b.at].cityName || G.P[b.at].name}: ${pluN(count(b), 'unit')}.${sp.over ? ` ${stackText(sp)}.` : ''}`, sp.over ? 'bad' : 'good', b.at); IM.emit('merged', a.id, b.id); } continue; }
     const pth = pathFor(a, a.at, b.to ?? b.at); if (pth.length){ a.path = pth; a.forced = true; } else delete a.join; }
   if (any) removeEmpty(); }
@@ -391,17 +394,22 @@ function hurt(a, d, f){
     if (!a.u[t]) a.w[t] = 0; }
 }
 function capture(p, O){
-  const prev = S.owner[p], wasCap = isCapital(p);
+  const prev = S.owner[p], wasCap = isCapital(p), cons = S.cons[p];
   IM.emit('fxCapture', p, O, prev);   // before the owner changes: the client marks the capture on the map
   S.owner[p] = O; ownChanged(); S.cap[p] = null; S.queue[p] = []; S.cons[p] = null; S.bld[p].fort = Math.max(0, S.bld[p].fort - 1); bunkerFull(p);   // (a captured bunker loses a level; the new holder now knows it)
   for (const a of S.armies) if (a.hrt === p) delete a.hrt;   // (the heart reached: done with, rules/movement.js atHeart)
   if (!S.occ) S.occ = G.P.map(() => null);
   S.occ[p] = (S.home && S.home[p] === O) ? null : S.hour;
-  S.unrest = S.unrest || G.P.map(() => 0); S.unrest[p] = S.home[p] === O ? 0 : Math.max(unrestOf(p), G.P[p].city ? 30 : 15);
+  morCaptured(p, O);   // (morale 25, or 55 for land of the captor's homeland; an annexed status is lost: rules/economy.js)
   geoChanged();
-  const nm = G.P[p].name;
+  const nm = G.P[p].cityName || G.P[p].name;
   if (isSeat(O)){ const D = desk(O); (D.tut || (D.tut = {})).capture = true; bump(O, 'taken'); cue(O, 'capture'); }
-  for (const w of S.armies){ if (!w.air || w.fly || w.air.base !== p || w.owner === O) continue; const nb = nearestAirbase(w.owner, p); if (nb >= 0 && nb !== p){ w.air.base = nb; atMove(w, nb); w.air.cd = 4; if (isSeat(w.owner)) tell(w.owner, `Your air wing escaped from ${G.P[p].cityName || G.P[p].name} to ${G.P[nb].cityName || G.P[nb].name}.`, 'info', nb); } else { for (const t of UT) w.u[t] = 0; if (isSeat(w.owner)) tell(w.owner, `Your air wing was destroyed on the ground at ${G.P[p].cityName || G.P[p].name}.`, 'bad', p); } }
+  wingsFlee(p, O);   // (air wings based here escape: rules/economy.js)
+  if (cons && cons.k === 'annex' && isSeat(prev)) tell(prev, `The annexing of ${G.P[p].cityName || nm} was lost with the city.`, 'bad', p);
+  // ground forces of nations at peace with the new holder (neither at war with it nor its friend) may not stand in its land: they go home now, as
+  // strandedHour would send them in a few hours (rules/diplomacy.js sendHome: along a route, or a jump when there is none). MOV-6
+  for (const w of S.armies){ const m = w.owner; if (w.at !== p || w.air || w.fly || w.to !== null || m < 0 || m === O || shipsN(w) || !count(w) || atWar(m, O) || friendly(m, O)) continue;
+    if (sendHome(w) && isSeat(m)) tell(m, `${armyName(w)} leaves ${nm}: ${nationName(O)} took it, and you are not at war with them.`, 'info', w.at); }
   if (isSeat(prev)){ bump(prev, 'lost'); cue(prev, 'lose'); }
   tellAll(me => O === me ? `You captured ${nm}${wasCap ? `, capital of ${nationName(prev)}` : ''}.` : prev === me ? `${nationName(O)} captured ${nm}.` : wasCap ? `${nationName(O)} took ${nm}, capital of ${nationName(prev)}.` : null, me => O === me ? 'good' : prev === me ? 'bad' : '', p);
   if (prev >= 0) checkNation(prev, O);

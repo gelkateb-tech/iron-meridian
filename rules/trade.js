@@ -210,6 +210,7 @@ function trPortsOk(r){ if (r.kind === 'land') return S.owner[r.pa] === r.a && S.
   return okP(r.pa, r.a) && okP(r.pb, r.b, r.nc); }
 // why a route can no longer run (null if it can)
 function trInvalid(r){ const T = trS(), M = mkt();
+  if (r.a === r.b) return 'gone';   // (a route of a nation with itself: an old save's, from before tradeOpen refused it)
   if (!S.nations[r.a].alive || S.owner[S.nations[r.a].capital] !== r.a) return 'gone';
   if (r.b >= 0){ if (!S.nations[r.b].alive || S.owner[S.nations[r.b].capital] !== r.b) return 'gone';
     if (atWar(r.a, r.b) || S.decl.some(d => (d.by === r.a && d.to === r.b) || (d.by === r.b && d.to === r.a))) return 'war';
@@ -226,8 +227,24 @@ const TR_WHY = {war:'war broke out', embargo:'an embargo', refused:'they no long
 function trMake(a, b, kind, nc = null){ const T = trS(), r = {id:T.nid++, a, b, nc:b === NEUTRAL ? nc : null, kind, key:trKey(a, b, nc), t0:S.hour, f:1, why:'', by:-1, bz:-1, raid:-1e9, raidZ:-1, acc:0, accN:0, va:null, vb:null, sunk:0};
   if (trInvalid(r) || !trPlace(r)) return null; T.routes.push(r); T.ver = (T.ver || 0) + 1; trStatus(r); return r; }
 function trEnded(r, why){ const T = trS(); T.ver = (T.ver || 0) + 1;
-  for (const a of S.armies) if (a.escort === r.id) delete a.escort;
-  if (why !== 'closed') for (const me of [r.a, r.b]) if (isSeat(me)) tell(me, `The ${trName(r, me)} trade route has ended: ${TR_WHY[why] || why}.`, 'info', r.path[Math.floor(r.path.length/2)]); }
+  for (const a of S.armies){ if (a.escort === r.id) delete a.escort; if (a.raid && a.raid.r === r.id) delete a.raid; }   // (escort and raid orders on it end with it)
+  const lost = why === 'war' && r.b >= 0; if (lost) (T.lost || (T.lost = {}))[r.key] = {a:r.a, b:r.b, kind:r.kind, h:S.hour, va:r.va ? {...r.va} : null, vb:r.vb ? {...r.vb} : null};
+  if (why !== 'closed') for (const me of [r.a, r.b]) if (isSeat(me)) tell(me, `The ${trName(r, me)} trade route has ended: ${TR_WHY[why] || why}.${lost ? ` Its slot stays empty while you are at war with ${trName(r, me)} or hold its cities without annexing them; holding them also costs you 25% on your other routes.` : ''}`, 'info', r.path[Math.floor(r.path.length/2)]); }
+/* ---- point 11 (owner question 15, option C): occupying a trade partner. A route that ended in a war (trEnded 'war') is kept in S.trade.lost
+   ({a, b, kind, h, va, vb}, by the route's key). While its two nations are at war, or either holds an occupied (not annexed) city of the other, the
+   slot it left stays empty on both sides (tradeGen) and the pair forms no new route; then the entry ends. While a nation holds such a city of a
+   former partner, its other routes pay TR_SHOCK less (tradeIncome: "your partners are wary of you"); annexing those cities ends the shock. */
+const TR_SHOCK = 0.25;
+// nation n holds an occupied city of nation m's homeland
+function holdsOcc(n, m){ if (!(n >= 0) || !(m >= 0)) return false; for (const p of ownedBy(n)) if (G.P[p].city && S.home[p] === m && occSt(p) === 'occ') return true; return false; }
+const trLostOn = L => !!S.nations[L.a] && !!S.nations[L.b] && S.nations[L.a].alive && S.nations[L.b].alive && (atWar(L.a, L.b) || holdsOcc(L.a, L.b) || holdsOcc(L.b, L.a));
+// the lost routes still in force (the ended ones are dropped)
+function trLost(){ const T = trS(), out = []; if (!T.lost) return out; for (const k in T.lost){ const L = T.lost[k]; if (trLostOn(L)) out.push(Object.assign({key:k}, L)); else delete T.lost[k]; } return out; }
+// the trade shock on nation n: it holds an occupied city of a nation whose route with it was lost to war
+function trShock(n){ const L = S.trade && S.trade.lost; if (!L) return false; for (const k in L){ const e = L[k]; if (e.a !== n && e.b !== n) continue; if (holdsOcc(n, e.a === n ? e.b : e.a)) return true; } return false; }
+// the lost routes nation n sees (the trade panel's dimmed rows): partner, kind, what it paid n a day, why it is still lost
+const lostRoutesOf = n => { if (!S.trade || !S.trade.lost) return []; const out = []; for (const k in S.trade.lost){ const L = S.trade.lost[k]; if (L.a !== n && L.b !== n) continue; const m = L.a === n ? L.b : L.a;
+  out.push({key:k, partner:m, kind:L.kind, h:L.h, v:L.a === n ? L.va : L.vb, war:atWar(n, m), held:holdsOcc(n, m) || holdsOcc(m, n), shock:holdsOcc(n, m)}); } return out; };
 // pre-trade money income: the economy that drives a route's value
 const trGdp = n => { const i = income(n); return Math.max(40, i.gross.cash - (i.trade ? i.trade.cash : 0)); };
 function neuGdp(nc){ const c = G.countries[nc]; let s = 0; for (const p of c.provs) if (S.owner[p] === NEUTRAL) s += G.P[p].city ? 12 : 3; return Math.max(30, Math.min(260, 30 + s)); }
@@ -246,6 +263,7 @@ const trSide = (r, n) => r.a === n ? r.va : r.b === n ? r.vb : null;
 // a nation's trade income today: each route's value times its status factor (blockade, detour, sunk convoy, paused)
 function tradeIncome(n){ const o = {cash:0, oil:0, metal:0, iron:0, elec:0, rare:0, n:0, cut:0, paused:0}; if (!S.trade) return o;
   for (const r of S.trade.routes){ if (!trMine(r, n)) continue; const v = trSide(r, n); if (!v) continue; o.n++; if (r.pause != null) o.paused++; else if (r.f < 1) o.cut++; o.cash += v.cash*r.f; if (o[v.k] != null) o[v.k] += v.q*r.f; }
+  if (trShock(n)){ o.shock = TR_SHOCK; for (const k of ['cash', ...TR_GOODS]) o[k] *= 1 - TR_SHOCK; }   // (point 11: a former partner's cities held unannexed)
   return o; }
 // which armies stand in each sea zone (for blockades, raids and escorts), rebuilt with the blockade; fleets under way (moving, or sailing to a
 // spot inside their zone) are not in it
@@ -362,6 +380,7 @@ function tradeGen(){ const T = trS(); NEUP = null;
   const live = S.nations.filter(N => N.alive && S.owner[N.capital] === N.id).map(N => N.id), gdp = {}; for (const n of live) gdp[n] = trGdp(n);
   const used = new Set(T.routes.map(r => r.key)), cnt = {}; for (const n of live) cnt[n] = {sea:0, land:0, neu:0};
   for (const r of T.routes){ const k = r.b === NEUTRAL ? 'neu' : r.kind; if (cnt[r.a]) cnt[r.a][k]++; if (r.b >= 0 && cnt[r.b]) cnt[r.b][k]++; }
+  for (const L of trLost()){ used.add(L.key); const k = L.kind === 'land' ? 'land' : 'sea'; if (cnt[L.a]) cnt[L.a][k]++; if (cnt[L.b]) cnt[L.b][k]++; }   // (a route lost to war keeps its slot empty: point 11)
   const seaSlots = n => 2 + (gdp[n] > 300 ? 1 : 0) + (gdp[n] > 450 ? 1 : 0), neuSlots = n => 1 + (gdp[n] > 350 ? 1 : 0);
   const C = n => G.P[S.nations[n].capital];
   // opinions are costly: checked lazily, once per pair, only for the pairs a pass actually considers
@@ -390,9 +409,13 @@ function tradeGen(){ const T = trS(); NEUP = null;
   for (const r of T.routes) trValue(r);
   T.ver = (T.ver || 0) + 1; }
 // nation n opens a route with nation b (or with the unaligned country nc), or closes its route id
-function tradeOpen(n, b, nc = null, kind = null){ const T = trS(), key = trKey(n, b, nc); delete T.closed[key]; T.want[key] = kind || 1;
+function tradeOpen(n, b, nc = null, kind = null){ if (b === n) return 'not with yourself';   // (a route of a nation with itself would make money and goods from nothing)
+  const T = trS(), key = trKey(n, b, nc);
+  if (isSeat(n) && !T.routes.some(r => r.key === key) && routesOf(n).length >= TR_MAX) return `you can run at most ${TR_MAX} trade routes: close one first`;   // (a player's limit, NAV-4)
+  delete T.closed[key]; T.want[key] = kind || 1;
   if (T.routes.some(r => r.key === key)) return true;
-  if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force'; if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
+  if (b >= 0){ if (atWar(n, b)) return 'you are at war'; if (embargoed(n, b)) return 'an embargo is in force';
+    { const L = T.lost && T.lost[key]; if (L && trLostOn(L)) return 'this route was lost to war: it stays closed while either of you holds the other\'s cities without annexing them'; } if (opinion(b, n) < -30) return `${S.nations[b].name} refuses: opinion too low`; }
   const r = trMake(n, b, kind === 'land' ? 'land' : 'sea', nc) || (b >= 0 && borders(n, b) ? trMake(n, b, 'land') : null);
   if (!r) return 'no route can be laid: no port or sea path';
   trValue(r); INCC.v = -1; tell(n, `Trade route opened with ${trName(r, n)}: +$${fmt1(r.va.cash)}M and ${fmt(r.va.q)} ${rlbl(r.va.k)} a day while it runs.`, 'good', r.path[Math.floor(r.path.length/2)]); return true; }

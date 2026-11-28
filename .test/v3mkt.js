@@ -48,7 +48,7 @@ const fails = [], ok = (c, m, extra) => { if (!c) fails.push(m + (extra !== unde
   // the aircraft cap: a power full of strike jets that is being bombed still picks air-superiority fighters (and AWACS) at an Airbase II
   const a = await p.evaluate(() => { const im = window.__im, S = im.S, G = im.G, cn = S.nations.findIndex(N => N.name === 'China'), jp = S.nations.findIndex(N => N.name === 'Japan'), N = S.nations[cn], g = o => { for (const k in o) if (k !== 'cash') o[k] *= RES_K; return o; };
     for (const id of ['u_jet', 'u_int', 'jet_pgm', 'int_msl', 'u_asf', 'u_awacs', 'u_bomb', 'u_mpa']) N.tech[id] = 1; N.cash = 300;
-    const P = G.P.find(q => S.owner[q.id] === cn && q.city); S.bld[P.id].air = 2; S.bld[P.id].fac = Math.max(1, S.bld[P.id].fac || 0); S.bld[P.id].rec = 1;   /* infantry needs a Recruiting Office (mobilization rule) */
+    const P = G.P.find(q => S.owner[q.id] === cn && q.city); S.bld[P.id].air = 3;   /* (AWACS: Airbase III since BUILD-REQS) */ S.bld[P.id].fac = Math.max(1, S.bld[P.id].fac || 0); S.bld[P.id].rec = 1;   /* infantry needs a Recruiting Office (mobilization rule) */
     if (!im.fix.atWar(cn, jp)) S.rel[[cn, jp].sort((x, y) => x - y).join(',')] = {st:'war', since:S.hour, until:null};
     // the wing is a stand-in counted by the pick (not a flying wing): it is removed before the next tick
     let wing = null; const tally = u => { if (wing) S.armies = S.armies.filter(x => x !== wing); im.tick(); wing = im.addArmy(cn, P.id, u); wing.air = true;

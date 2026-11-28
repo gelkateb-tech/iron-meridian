@@ -41,13 +41,13 @@ const { chromium } = require('playwright');
     const foe = (() => { for (const P of G.P) if (S.owner[P.id] === n) for (const v of P.nbs){ const o = S.owner[v]; if (o >= 0 && o !== n && o !== ME) return o; } return -1; })();
     const N = S.nations[n], keep = {cash:N.cash, metal:N.metal, oil:N.oil, mp:N.mp, tech:{...N.tech}};
     const C2 = cities(n).find(P => P.id !== N.capital) || cities(n)[0];
-    const setup = () => { for (const k of ['u_jet', 'u_int', 'jet_pgm', 'int_msl', 'u_bomb']) N.tech[k] = 1; S.bld[C2.id].air = 2; S.bld[C2.id].fac = Math.max(1, S.bld[C2.id].fac); S.bld[C2.id].rec = 1; N.cash = 3000; N.metal = 600*RES_K; N.oil = 400*RES_K; N.mp = 600; N.uSave = null; N.research = N.research || {id:'eco1', h:999, h0:999}; clearQ(n); };
-    // 3. bomber doctrine: at war, Strategic Bombers and an Airbase II -> the AI wants bombers and queues one
+    const setup = () => { for (const k of ['u_jet', 'u_int', 'jet_pgm', 'int_msl', 'u_bomb']) N.tech[k] = 1; S.bld[C2.id].air = 3; S.bld[C2.id].fac = Math.max(1, S.bld[C2.id].fac); S.bld[C2.id].rec = 1; N.cash = 3000; N.metal = 600*RES_K; N.oil = 400*RES_K; N.mp = 600; N.uSave = null; N.research = N.research || {id:'eco1', h:999, h0:999}; clearQ(n); };
+    // 3. bomber doctrine: at war, Strategic Bombers and an Airbase III (the Heavy Bomber's level since BUILD-REQS) -> the AI wants bombers and queues one
     setup(); war(n, foe); out.want = im.r2.bomberWant(n);
     let turns = 0; for (; turns < 72 && !qOf(n, 'bomb'); turns++) im.tick();   // three days of play (its turns come every 4 h)
     out.bomber = {nation:N.name, foe:S.nations[foe].name, city:C2.name, want:out.want, turns, queued:qOf(n, 'bomb'), save:N.uSave && N.uSave.t, q:S.queue[C2.id].map(j => j.t), cash:Math.round(N.cash), metal:Math.round(N.metal/RES_K), oil:Math.round(N.oil/RES_K), mp:Math.round(N.mp), air:S.bld[C2.id].air, owner:S.owner[C2.id] === n};
-    ck('an AI at war with Strategic Bombers and an Airbase II wants 2-4 bombers', out.want >= 2 && out.want <= 4, out.bomber);
-    ck('... and queues one at its Airbase II within three days', qOf(n, 'bomb') >= 1 && S.queue[C2.id].some(j => j.t === 'bomb'), out.bomber);
+    ck('an AI at war with Strategic Bombers and an Airbase III wants 2-4 bombers', out.want >= 2 && out.want <= 4, out.bomber);
+    ck('... and queues one at its Airbase III within three days', qOf(n, 'bomb') >= 1 && S.queue[C2.id].some(j => j.t === 'bomb'), out.bomber);
     // control: at peace (or without the research) it does not want any
     clearQ(n); peace(n, foe); for (const o of S.nations) if (o.id !== n && F.atWar(n, o.id)) peace(n, o.id); out.wantPeace = im.r2.bomberWant(n); war(n, foe); N.tech.u_bomb = 0; delete N.tech.u_bomb; out.wantNoTech = im.r2.bomberWant(n); N.tech.u_bomb = 1;
     ck('no bomber wanted at peace or without Strategic Bombers', out.wantPeace === 0 && out.wantNoTech === 0, {peace:out.wantPeace, noTech:out.wantNoTech});

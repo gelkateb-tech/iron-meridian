@@ -7,11 +7,12 @@
    - a flying wing or air drop: flightPos; a city and an airbase: the province point (P.x, P.y), where the map draws the city
    - a UAV on station, an AWACS orbit, a maritime patrol: the mission's target point; a satellite: this hour's stretch of its ground track
    Ranges (km), one table per kind, so each can be tuned: VIS_KM in rules/data.js, UNITS[t].vis per unit type, UAV_LV vis in rules/air.js
-   - own and allied land: all of it, whatever stands there
-   - city (any level) 80, airbase 100 (the old ~600 km radar ring around every city and airbase is gone)
-   - ground force or fleet: the farthest-seeing unit type in it, 50 (UNITS[t].vis), plus the province it is moving to. Recon/scout units 100:
-     Special Forces (VIS_RECON; the game has no recon vehicle or scout helicopter). Thermal Sights / Night Optics: Anti-Tank Infantry / Special
-     Forces see 50% farther (rSightF)
+   - own and allied land: all of it, whatever stands there, and nothing past its border: a city or an airbase no longer sees beyond it (owner
+     2026-11-25, "enemy armies outside my territory ... shouldn't show at all. I only see them once they cross into my land, or when one of my
+     units sees them within its sight range"; the 80 / 100 km of VIS-1 are kept in VIS_KM, unused)
+   - ground force or fleet: the farthest-seeing unit type in it, 50 (UNITS[t].vis), not the province it is moving to. Recon/scout units 100:
+     Special Forces (VIS_RECON; the game has no recon vehicle or scout helicopter). Night Optics: Special Forces see
+     50% farther (rSightF)
    - aircraft in flight 150; drones 200 (VIS_DRONE: the Recon UAV, and the armed drones: Strike Drones and Swarm Drones); fighter patrols and any
      wing on a recon mission see at least 200 (VIS_KM.patrol)
    - UAV on station, by its level (UAV I-V): 250, 300, 350, 400, 500; it marks what it sees as identified by UAV (vis.uav) and leaves the provinces
@@ -24,11 +25,13 @@
    Nothing sees the neighbouring provinces by default any more: only what lies inside a range counts.
    What is seen
    - visibleSet(n) stays the province set the rest of the game uses (fog, province sheets, battles, effects): a province is in sight when it is
-     own or allied land, revealed (S.reveal), the province one of the nation's forces is moving to (these are vis.whole: everything in them is
-     seen), the province a sensor stands in, or when its point (P.x, P.y) lies inside an identifying range
-   - armyVisible: a foreign force is seen when it stands in (or marches into, or flies over) a vis.whole province, or its own spot lies inside an
-     identifying range. So a force at the far edge of a province in sight can still be hidden: the map draws the fog to match, clearing the
+     own or allied land or revealed (S.reveal) (these are vis.whole: everything in them is seen), the province a sensor stands in, or when its
+     point (P.x, P.y) lies inside an identifying range
+   - armyVisible: a foreign force is seen when it stands in a vis.whole province, or (on the move: marching, walking, flying) its spot is over
+     one, or its own spot lies inside a sight range. A column marching into your land shows the moment it crosses the border, not when it sets
+     off. So a force at the far edge of a province in sight can still be hidden: the map draws the fog to match, clearing the
      vis.whole provinces and, elsewhere, exactly the circles (visTouch lists the ranges that reach into a province)
+   - armyShown (the screen): what armyVisible sees, and the forces your own are fighting (fightsMe); armyLocated: AWACS '?' contacts
    - kept: a submerged submarine shows only to sonar or a maritime patrol (or in a battle); special forces only inside the range of one of the
      viewer's (or an ally's) own ground forces or fleets, never to cities, aircraft, satellites or radar; a stealth bomber wing in flight only to a
      Mobile SAM or jammer standing in its province or next to it (loSpotted, unchanged) or as an AWACS contact
@@ -82,8 +85,9 @@ function visibleSet(n){
   const v = new Set(); v.n = n; C.set(n, v);
   const al = new Set([n, ...alliesOf(n)]), whole = new Set(), ids = [], locs = [], uav = new Set(), loc = new Set(), sonar = new Set(), idn = [];
   const circ = (x, y, km, k = VK.id, rc = false) => { if (km > 0){ const s = [x, y, x, y, km*KM_W, k]; ids.push(s); if (rc) idn.push(s); } };   // (rc: a recon range: it also identifies)
-  // a nation's land (and its allies') shows itself; cities and airbases see around their point
-  for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])){ whole.add(p); const P = G.P[p], ab = S.bld[p] && S.bld[p].air; if (P.city || ab) circ(P.x, P.y, Math.max(P.city ? VIS_KM.city : 0, ab ? VIS_KM.airbase : 0)); }
+  // a nation's land (and its allies') shows itself, all of it and nothing past its border (owner 2026-11-25: cities and airbases no longer see
+  // beyond it; VIS_KM.city and .airbase are kept in the table but unused)
+  for (let p = 0; p < G.P.length; p++) if (al.has(S.owner[p])) whole.add(p);
   if (S.reveal) for (const k in S.reveal) if (S.reveal[k] > S.hour) whole.add(+k);
   for (const a of S.armies){ if (!al.has(a.owner)) continue; const f = a.fly;
     if (f && f.ph === 'over'){ const T = G.P[f.tgt];
@@ -97,7 +101,7 @@ function visibleSet(n){
       if (f.ph === 'patrol' || f.kind === 'recon') km = Math.max(km, VIS_KM.patrol);
       const dr = a.air && VIS_DRONE.some(t => a.u[t] > 0); circ(x, y, km, VK.id, dr); continue; }   // (a drone in flight is recon: it identifies what it sees)
     if (a.air) continue;
-    const [x, y] = armyXY(a); circ(x, y, armyVisKm(a), VK.gf); if (a.to !== null) whole.add(a.to);   // a force: around its spot, and the province it is moving to
+    const [x, y] = armyXY(a); circ(x, y, armyVisKm(a), VK.gf);   // a force: around its spot (not the province it is moving to: owner 2026-11-25)
     if (a.u.spec > 0) idn.push([x, y, x, y, UNITS.spec.vis*rSightF(a.owner, 'spec')*KM_W, VK.gf]); }   // Special Forces (the recon unit) identify within their own sight
   for (const st of (S.sats || [])) if (al.has(st.owner)){ const s = [...satStrip(st), VK.id]; ids.push(s); idn.push(s); }   // (a reconnaissance satellite identifies along its strip)
   const idp = new Set(); if (S.intel) for (const m of al){ const I = S.intel[m]; if (I) for (const k in I) if (I[k] > S.hour) idp.add(+k); }   // recon reveals still running (intelNote)
@@ -117,14 +121,22 @@ function armyVisible(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   if (a.owner === vis.n) return true;
   const M = vis.seen, c = M && M.get(a); if (c !== undefined) return c;
   const r = armySeen(a, vis); if (M) M.set(a, r); return r; }
-function armySeen(a, vis){ const me = vis.n;
+// the screen's test for a foreign force on the move by where the map draws it: dp, the province drawn under it (the page's armyPos follows the
+// road, ahead of and beside the spot at the hour mark, and the drawn border runs up to a cell off the cells' edge). As armyVisible, but over
+// own or allied land by dp, so a column shows as it is drawn crossing the border and hides as it is drawn leaving (sight ranges still reach its
+// spot). Not cached (the drawn point moves every frame)
+function armyVisibleAt(a, vis, dp){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
+  return a.owner === vis.n || armySeen(a, vis, dp); }
+function armySeen(a, vis, dp = null){ const me = vis.n;
   if (a.owner >= 0 && friendly(me, a.owner) && rel(me, a.owner).st === 'ally') return true;
   const ids = vis.ids || [], [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea, W0 = vis.whole || vis;
   if (a.owner >= 0 && specOnly(a)) return ids.some(s => s[5] === VK.gf && visIn(s, x, y));   // special forces: only seen up close, by a force
   if (a.owner >= 0 && subOnly(a) && sea && !S.battles.includes(a.at) && rel(me, a.owner).st !== 'ally')   // submerged: only sonar (warships next to it) or maritime patrol finds it
     return (!!vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) || ids.some(s => s[5] === VK.sea && visIn(s, x, y));
-  if (a.fly){ const c = worldToCell(x, y), p0 = c >= 0 ? G.prov[c] : -1; if (p0 >= 0 && W0.has(p0)) return true; }   // flying over own or allied land (or revealed ground)
-  else if (W0.has(a.at) || (a.to !== null && W0.has(a.to))) return true;   // on own or allied land, revealed, or where a force of yours is going
+  // in own or allied land (or a revealed province): a force standing in it; a force on the move (or flying) whose spot is over it, so a column
+  // marching in shows the moment it crosses the border, not when it sets off (owner 2026-11-25)
+  if (!a.fly && a.to === null && !a.sail){ if (W0.has(a.at)) return true; }
+  else { const p0 = dp != null ? dp : provOfPt(x, y); if (p0 >= 0 && W0.has(p0)) return true; }   // (dp: where the screen draws it, armyVisibleAt)
   for (const s of ids) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
   return false; }
 /* Identified or only spotted (owner's rule, 2026-11-18, as in Conflict of Nations): seeing a foreign force (armyVisible) only tells that something
@@ -137,26 +149,35 @@ function armySeen(a, vis){ const me = vis.n;
    - a Mobile SAM or jammer (radar): aircraft in flight over its province or the ones next to it
    - Special Forces: inside their own sight (100 km, 150 with Night Optics)
    - battle: a force in a province where a force of yours (or an ally's) is fighting, for as long as the battle lasts
-   Ordinary sight (any other unit, infantry included, cities, airbases, own land, a revealed province, aircraft, a plain AWACS) only spots.
+   Ordinary sight (any other unit, infantry included, own land, a revealed province, aircraft, a plain AWACS) only spots.
    Own and allied forces are always known. Nothing is remembered once the recon has gone, except the UAV's and the agent's span.
-   The rules themselves never ask (the AI plays on the full state; ranged fire needs only a spotted target): this is what a seat's screen shows. */
+   The rules themselves never ask (the AI plays on the full state; ranged fire needs only a spotted target, armyVisible, the same sight the
+   screen shows), but for what a seat is told: this is what a seat's screen shows, and the border warning counts only forces it has identified
+   (rules/tick.js: it names their nation and strength). */
 const isAlly = (me, o) => o >= 0 && me >= 0 && friendly(me, o) && rel(me, o).st === 'ally';
+// a foreign force standing in a battle against vis.n's own (or an ally's) force: seen and identified for as long as the battle lasts, however far
+// apart the two stand in the province (VIS-2, UNI-9). For the screen only (armyShown, armyKnown, armyView): the rules never ask, and armyVisible,
+// which ranged fire and the AI read, is left as it is
+const fightsMe = (a, vis) => a.to === null && !a.air && !a.fly && a.owner !== vis.n && S.battles.includes(a.at) && atWar(vis.n, a.owner) && stationaryAt(a.at).some(b => count(b) > 0 && (b.owner === vis.n || isAlly(vis.n, b.owner)));
+// what a seat's screen shows at all: what it sees (armyVisible), and the forces its own are fighting
+const armyShown = (a, vis) => armyVisible(a, vis) || fightsMe(a, vis);
 function armyKnown(a, vis){ /*@DEV*/if (DEV.reveal) return true;/*@ENDDEV*/
   if (a.owner === vis.n || isAlly(vis.n, a.owner)) return true;
-  if (!armyVisible(a, vis)) return false;
+  if (!armyShown(a, vis)) return false;
   const M = vis.known, c = M && M.get(a); if (c !== undefined) return c;
   const r = armyIdent(a, vis); if (M) M.set(a, r); return r; }
 function armyIdent(a, vis){ const me = vis.n, [x, y] = armyXY(a), sea = !a.air && !a.fly && G.P[a.at].sea;
   const p0 = a.fly ? (c => c >= 0 ? G.prov[c] : -1)(worldToCell(x, y)) : a.at;
+  if (a.rebel && !a.fly && a.to === null && S.owner[a.at] === me) return true;   // rebels in a province you hold: its people tell you who they are (rules/economy.js)
   if (vis.idp && p0 >= 0 && (vis.idp.has(p0) || (!a.fly && a.to !== null && vis.idp.has(a.to)))) return true;   // a recon reveal still running
-  if (!a.fly && !a.air && a.to === null && S.battles.includes(a.at) && atWar(me, a.owner) && stationaryAt(a.at).some(b => count(b) > 0 && (b.owner === me || isAlly(me, b.owner)))) return true;   // fighting it
+  if (fightsMe(a, vis)) return true;   // fighting it
   if (sea && vis.sonar && (vis.sonar.has(a.at) || (a.to !== null && vis.sonar.has(a.to)))) return true;   // ships at sea: sonar, maritime patrol
   if (a.fly && p0 >= 0 && (loSpotted(me, p0) || alliesOf(me).some(m => loSpotted(m, p0)))) return true;   // aircraft over a Mobile SAM's or jammer's radar
   for (const s of vis.idn || []) if ((s[5] !== VK.sea || sea) && visIn(s, x, y)) return true;
   return false; }
 // what nation vis.n may be told about force a: null when not seen; only where it is when it is not identified ({unk:true}: no nation, size, types,
 // name or health); the whole force once identified (a host that sends a seat its view, a later server, sends this and nothing more)
-function armyView(a, vis){ if (!armyVisible(a, vis)) return null; const [x, y] = armyXY(a), base = {id:a.id, at:a.at, to:a.to, x, y, air:!!a.air, fly:!!a.fly};
+function armyView(a, vis){ if (!armyShown(a, vis)) return null; const [x, y] = armyXY(a), base = {id:a.id, at:a.at, to:a.to, x, y, air:!!a.air, fly:!!a.fly};
   if (!armyKnown(a, vis)) return {...base, unk:true};
   const u = {}; for (const t of UT) if (a.u[t]) u[t] = a.u[t]; return {...base, unk:false, owner:a.owner, n:count(a), u, name:armyName(a)}; }
 // a seat's recon reveal: provinces ps identified for nation n until hour h (the AI plays on the full state, so only seats keep one; pruned as it goes)

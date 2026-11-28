@@ -8,28 +8,36 @@ function ucost(n, t){ const U = UNITS[t], d = docOf(n), f = d ? d.cost : 1, c = 
 const reqsOf = t => { const U = UNITS[t]; return U && U.reqs ? U.reqs : U && U.req ? (U.req2 ? [U.req, U.req2] : [U.req]) : []; };   // (U.reqs: infantry, from INF_NEEDS)
 const bldOk = (p, t) => (!UNITS[t].coastal || navalCity(p)) && reqsOf(t).every(r => S.bld[p][r.b] >= r.l && !bdis(p, r.b));   // (Marines: a coastal city)
 // why nation n cannot mobilize unit t in province p: null when it can, else {kind, why, b}: kind 'own' (not its province), 'city' (not a city),
-// 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
+// 'occ' (an occupied city: annex it first), 'tech' (research missing), 'bld' (building missing or too low; b = the building), 'ko' (building knocked out for a while)
 function mobBlock(n, p, t){ const U = UNITS[t]; if (!U) return {kind:'unit', why:'Unknown unit'};
   if (S.owner[p] !== n) return {kind:'own', why:'Not your city'};
   if (!G.P[p].city) return {kind:'city', why:'Units are mobilized in cities'};
+  if (occSt(p) === 'occ') return {kind:'occ', why:'Occupied: annex the city to mobilize here'};   // (an occupied city: rules/economy.js annexCity)
   if (!unlocked(n, t)) return {kind:'tech', why:`Research required: ${RN[U.tech].name}`};
   if (U.coastal && !navalCity(p)) return {kind:'coast', why:`${U.name} train only in a coastal city (a naval city)`};
   for (const r of reqsOf(t)){ const B = BUILD[r.b], lv = S.bld[p][r.b] || 0, c = S.cons[p];
-    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${c.h} h` : r.b === 'fac' ? `Needs ${B.name} level ${r.l}` : r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};
+    if (lv < r.l) return {kind:'bld', b:r.b, l:r.l, why:!canBuildHere(p, r.b) ? `Needs ${artA(B.name)}: none can be built here` : c && c.k === r.b && c.lvl >= r.l ? `${B.name}${r.l > 1 ? ' ' + ROMAN[r.l] : ''} ready in ${hoursTxt(c.h)}` : r.b === 'fac' || r.l > 1 ? `Needs ${B.name} ${ROMAN[r.l]}` : `Build ${artA(B.name)} first`};   // ('Needs Army Base I', 'Needs Army Base II', 'Needs Naval Yard III': Roman numerals on every base, owner 2026-11-27)
     if (bdis(p, r.b)) return {kind:'ko', b:r.b, why:`${B.name} knocked out · ${bdisH(p, r.b)} h`}; }
   return null; }
 // the one rule everything asks (city sheet, production list, queueing, the AI): '' when nation n may mobilize unit t in city p, else the reason in words
 function canMobilize(n, p, t){ const k = mobBlock(n, p, t); return k ? k.why : ''; }
 const reqText = (p, t, n) => canMobilize(n, p, t);
-// ---------- training queue limit: at most QUEUE_MAX units waiting or training per city, for everyone (the AI too). A future premium pass gives
-// extra slots (LATER.md): ask queueMax(n), not the constant. Old saves with longer queues keep them but cannot add more until below the limit.
-// Missiles (silo) are not unit training and do not count.
-const QUEUE_MAX = 2;
-const queueMax = n => QUEUE_MAX;
+// a time left in game hours, in words: minutes under an hour (a quick build: "30 min", "15 min"), else whole hours ("24 h")
+const hoursTxt = h => h > 0 && h < 1 ? `${Math.max(1, Math.round(h*60))} min` : `${Math.ceil(h)} h`;
+// ---------- training queue limit: how many units may wait or train in one city at once. The mobilization queue is a membership feature (owner,
+// 2026-11-25): a seat (a nation a person plays) without a membership trains one unit at a time per city (QUEUE_FREE: the unit in training, nothing
+// waiting); a member's city queues QUEUE_MAX. Computer nations keep QUEUE_MAX (their strength and every all-computer balance baseline as before).
+// The flag is S.nations[n].member (true, or absent: no membership), saved with the nation; there is no payment here: a host (the page's developer
+// tools today, a store later) sets it with setMember. Ask queueMax(n), not the constants. Old saves have no flag (no membership) and keep the
+// queues they hold, but cannot add to a city until it is below the limit. Missiles (silo) are not unit training and do not count.
+const QUEUE_MAX = 2, QUEUE_FREE = 1;
+const isMember = n => n >= 0 && !!(S.nations[n] && S.nations[n].member);
+function setMember(n, on){ const N = S.nations[n]; if (!N) return false; if (on) N.member = true; else delete N.member; return true; }
+const queueMax = n => isSeat(n) && !isMember(n) ? QUEUE_FREE : QUEUE_MAX;
 const queueUsed = p => S.queue[p].reduce((c, it) => c + (it.msl ? 0 : 1), 0);
 const queueFull = (n, p) => queueUsed(p) >= queueMax(n);
 // '' when city p can take another unit, else the reason in words
-const queueWhy = (n, p) => queueFull(n, p) ? `Training queue full (${queueMax(n)}/${queueMax(n)})` : '';
+const queueWhy = (n, p) => !queueFull(n, p) ? '' : queueMax(n) < QUEUE_MAX ? `One unit at a time (members queue ${QUEUE_MAX})` : `Training queue full (${queueMax(n)}/${queueMax(n)})`;
 const nextLvl = (p, k) => S.bld[p][k] + 1;
 // ---------- Recruiting Office (levels I-V): every unit trained in its city trains 10% faster per level, and the city gives 3k manpower a day at level I
 // and 1.5k more per level. recPct / recMp are per level (the page words its tooltips from them), recSpeed is the city's training-time factor
@@ -53,24 +61,30 @@ function recRetime(p, f0){ S.queue[p].forEach((it, i) => { if (it.msl || !(f0[i]
 const trainResBefore = n => ownedBy(n).filter(p => S.queue[p] && S.queue[p].length).map(p => [p, S.queue[p].map(it => it.msl || !UNITS[it.t] ? 1 : rTrainF(n, it.t))]);
 function trainResRetime(n, f0){ for (const [p, f] of f0) S.queue[p].forEach((it, i) => { if (it.msl || !UNITS[it.t] || !(f[i] > 0)) return; const r = rTrainF(n, it.t)/f[i]; if (r < 1) retimeIt(it, r); }); }
 // Army Base and Arms Industry prices rise 40% for every OTHER province of the nation that already has one of the same kind (built, or under construction),
-// cash, materials and iron alike; the two do not raise each other's price. RISE_FREE: that many other provinces raise nothing (the Army Base: the first
-// two cost the base price, the third 40% more, the fourth 96% more...), so every nation opens its first bases cheaply (owner, START-RULES 2026-11-15)
+// cash, materials and iron alike; the two do not raise each other's price. RISE_FREE: that many other provinces raise nothing. RISE_FROM: the level
+// from which the price rises, and the level another province needs to count (default 1). The Army Base: level I costs the same everywhere and counts
+// for nothing, so a nation can open one in every city (owner, 2026-11-25); levels II-V: the first two cost the base price, the third 40% more, the
+// fourth 96% more..., counting the other provinces with level II or higher (built, or going up to it)
 const FAC_RISE = 1.4;
 const RISE_K = {fac:1, arms:1};
 const RISE_FREE = {fac:1};
-function facOthers(n, p, k = 'fac'){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= 1 || (S.cons[q] && S.cons[q].k === k))) c++; return c; }
-const riseOf = (n, k, p) => RISE_K[k] ? Math.pow(FAC_RISE, Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0))) : 1;
-const riseCnt = (n, k, p) => Math.max(0, facOthers(n, p == null ? -1 : p, k) - (RISE_FREE[k] || 0));   // how many of the others raise the price (the page's words)
+const RISE_FROM = {fac:2};
+function facOthers(n, p, k = 'fac', l = 1){ let c = 0; for (const q of ownedBy(n)) if (q !== p && ((S.bld[q][k] || 0) >= l || (S.cons[q] && S.cons[q].k === k && S.cons[q].lvl >= l))) c++; return c; }
+const riseCnt = (n, k, p, lvl = 1) => !RISE_K[k] || Math.max(1, lvl) < (RISE_FROM[k] || 1) ? 0 : Math.max(0, facOthers(n, p == null ? -1 : p, k, RISE_FROM[k] || 1) - (RISE_FREE[k] || 0));   // how many of the others raise the price of level lvl (the page's words)
+const riseOf = (n, k, p, lvl = 1) => Math.pow(FAC_RISE, riseCnt(n, k, p, lvl));
 function buildCost(n, k, lvl, p){ if (BUILD[k].lv){ const c = lvCost(k, lvl); if (k === 'fort' && has(n, 'log2')){ c.cash = Math.round(c.cash/2); c.metal = kRound(c.metal/2); c.iron = kRound(c.iron/2); c.elec = kRound(c.elec/2); } return c; }   // (a table's price; Combat Engineers: a Bunker at half price)
-  const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }
-// training time factors from the buildings in province p: Army Base for ground units, the units an Army Base or a Recruiting Office mobilizes
-// (-20%/level to III, then -5%/level), Naval Yard III-V for ships, Airbase II-V for aircraft
-const facF = l => l <= 3 ? 1 - 0.2*l : 0.4 - 0.05*(l - 3);
-const baseTrains = t => reqsOf(t).some(r => r.b === 'fac' || r.b === 'rec');
-function trainF(p, t){ const B = S.bld[p], c = UNITS[t].cls; return (baseTrains(t) ? facF(B.fac || 0) : 1)*(c === 'naval' ? 1 - 0.1*Math.max(0, (B.yard || 0) - 2) : c === 'air' ? 1 - 0.1*Math.max(0, (B.air || 0) - 1) : 1)*recSpeed(p); }
+  const B = bldLv(k, lvl), m = Math.pow(1.6, lvl - 1)*(lvl === 1 && B.first ? B.first : 1)*riseOf(n, k, p, lvl), half = k === 'fort' && has(n, 'log2') ? 0.5 : 1; return {cash:Math.round(B.cost*m*half), metal:kRound(B.metal*m*half), iron:kRound((B.iron || 0)*m*half), elec:kRound(((B.elec || 0) + (lvl >= 4 ? (B.ecost || B.cost)*0.1*RES_K : 0))*m*half), h:B.hours != null ? B.hours : Math.round(B.days*24*(1 + 0.25*Math.max(0, lvl - 3)))}; }   // (B.hours: a level's own time, a fraction allowed)
+// training time factors from the buildings in province p (BUILD SPEED, owner 2026-11-27): the base that trains the unit (trainBase: its first
+// building need; the Army Base for ground units, Swarm Drones and Paratroopers, the Airbase for aircraft, the Naval Yard for ships) by its level
+// (BASE_SPD, rules/data.js: nothing at levels I-III, 10% faster at IV, 20% at V), times the Recruiting Office's (recSpeed). facF: the Army Base's
+const trainBase = t => { const r = reqsOf(t)[0]; return r ? r.b : null; };
+const baseSpd = (k, l) => { const T = BASE_SPD[k]; return T ? T[Math.max(0, Math.min(T.length - 1, l || 0))] : 1; };
+const facF = l => baseSpd('fac', l);
+function trainF(p, t){ const b = trainBase(t); return (b ? baseSpd(b, S.bld[p][b]) : 1)*recSpeed(p); }
 const trainH = (p, t, n) => Math.max(1, Math.round(UNITS[t].build*trainEff(p, t, n)*(n >= 0 ? rTrainF(n, t) : 1)));
 const mslH = (p, k) => Math.max(1, Math.round(MISSILES[k].build*(1 - 0.1*Math.max(0, (S.bld[p].silo || 0) - 1))));
-function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl1')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && navalCity(p))); }
+// (the Missile Silo needs Conventional Warhead, msl2: owner point 12. A silo an old save built with Cruise Missiles only stays and works)
+function canBuildHere(p, k){ const B = BUILD[k], P = G.P[p]; if (k === 'silo' && !has(S.owner[p], 'msl2')) return false; return !P.sea && (B.where === 'any' || (B.where === 'city' && P.city) || (B.where === 'port' && navalCity(p))); }
 function canAfford(n, t){ return unlocked(n, t) && hasC(S.nations[n], ucost(n, t)); }
 const canRecruit = (n, p, t) => !canMobilize(n, p, t) && !queueFull(n, p) && canAfford(n, t);
 function recruit(n, p, t){
@@ -80,6 +94,7 @@ function recruit(n, p, t){
   const h = trainH(p, t, n); S.queue[p].push({t, h, h0:h}); return true;
 }
 function build(n, p, k){
+  if (!BUILD[k]) return false;   // (no such building)
   const B = BUILD[k], N = S.nations[n], lvl = nextLvl(p, k), c = buildCost(n, k, lvl, p);
   if (S.owner[p] !== n || S.cons[p] || lvl > B.max || !canBuildHere(p, k)) return false;
   if (!isSeat(n) && !hasC(N, c)) aiBuyFor(n, c, 1.3, 40);   // an AI short of materials, iron or electronics for it buys them (a materials-poor power can still fortify)
@@ -89,34 +104,91 @@ function build(n, p, k){
 function spawn(n, p, t){
   const air = UNITS[t].cls === 'air';
   const RL = isSeat(n) ? desk(n).rally : null;   // a seat's rally points: new ground units march there on their own
-  if (!air && RL && RL[p] != null && RL[p] !== p){ const na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, RL[p]); if (!na.path.length) delete RL[p]; return; }
+  // (ground units only: a new ship stays in port and joins its fleet below. With no route there the rally point is dropped, the seat is told,
+  // and the unit joins the forces here as if there were none)
+  if (!air && DOM_T[t] !== 'sea' && RL && RL[p] != null && RL[p] !== p){ const r = RL[p], na = addArmy(n, p, {}); na.u[t] = 1; na.m = 80; orderMove(na, r); if (na.path.length) return;
+    na.u[t] = 0; removeEmpty(); delete RL[p]; const nm = v => G.P[v].cityName || G.P[v].name;
+    tell(n, `Rally point from ${nm(p)} to ${nm(r)} removed: new units have no route there. They stay in ${nm(p)}.`, 'info', p); }
   const k = rPack(n, t);   // (a card of swarm drones holds six)
   // new units join an idle force of the same kind here that has room under its stack limit (STACK_LIM), otherwise they form a new force
+  // (of the same kind: a new ship joins a fleet, ships only, and a ground unit a force with no ships, not the port's garrison or its docked fleet)
   const dm = DOM_T[t], room = x => stackSizes(x)[dm] + (dm === 'air' ? 1 + Object.values((x.air && x.air.pend) || {}).reduce((s0, v) => s0 + Math.ceil(v/k), 0) : k) <= STACK_LIM[dm];
   if (air){ const w = armiesOf(n).find(x => x.air && x.air.base === p && x.fly && UT.every(u => u === t || !x.u[u]) && room(x)); if (w && !armiesOf(n).some(x => x.air && x.at === p && !x.fly && UT.every(u => u === t || !x.u[u]))){ (w.air.pend || (w.air.pend = {}))[t] = (w.air.pend[t] || 0) + k; return; } }
-  let a = armiesOf(n).find(x => x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (!air || UT.every(u => u === t || !x.u[u])) && room(x));
+  let a = armiesOf(n).find(x => x.at === p && x.to === null && x.path.length === 0 && !x.fly && (!!x.air === air) && (air ? UT.every(u => u === t || !x.u[u]) : dm === 'sea' ? shipsOnly(x) : !shipsN(x)) && room(x));
   if (!a){ a = addArmy(n, p, {}); if (air) a.air = {base:p, cd:0}; }
   const h0 = armyHP(a); a.m = h0 ? ((a.m ?? 80)*h0 + 80*UNITS[t].hp*k)/(h0 + UNITS[t].hp*k) : 80;
   a.u[t] += k;
 }
-/* ---------------- Strategic missiles ---------------- */
-const mstock = p => (S.mstock || (S.mstock = {}))[p] || (S.mstock[p] = {cm:0, bm:0});
+/* ---------------- Strategic missiles ----------------
+   Where missiles are built and stored (owner point 12, docs/MISSILES.md 5 and 8): a Missile Silo builds and stores every kind its level allows
+   (MISSILES[k].silo: ballistic and chemical from level I, tactical nuclear from level II); Cruise Missiles need no silo: any city of yours with an
+   Army Base, Airbase or Naval Yard (any level) builds them too, at most MSL_CITY stored plus queued in a city without a silo. Chemical and nuclear
+   missiles have stock limits per silo and per nation, stored plus queued (MSL_WMD). A stock is kept per province (S.mstock[p] = {cm, bm, chem,
+   nuc}; an old save's {cm, bm} gets chem and nuc at 0 when first read). A chemical or nuclear stock belongs to the nation that built it (wo): when
+   the city changes hands it is destroyed (M8: the hourly wmdSweep, rules/air.js); cruise and ballistic stocks pass to the new holder (Q19) */
+const MSL_HOSTS = ['fac', 'air', 'yard'], MSL_CITY = 2;
+const mstock = p => { const M = S.mstock || (S.mstock = {}); let m = M[p]; if (!m) m = M[p] = {cm:0, bm:0, chem:0, nuc:0}; else if (m.chem == null){ m.chem = 0; m.nuc = 0; } return m; };
 const mslCost = M0 => ({cash:M0.cost, oil:M0.oil, metal:M0.metal, iron:M0.iron, elec:M0.elec, rare:M0.rare});
-function canBuildMissile(n, p, k){ const M0 = MISSILES[k], N = S.nations[n]; return S.owner[p] === n && S.bld[p].silo > 0 && has(n, M0.tech) && hasC(N, mslCost(M0)); }
+const mslHost = p => MSL_HOSTS.some(k => (S.bld[p][k] || 0) > 0);   // an Army Base, Airbase or Naval Yard: cruise missiles without a silo
+// city p can build and hold missile k: a silo of the missile's level, or (cruise missiles) a host city
+const mslSite = (p, k) => { const sl = S.bld[p].silo || 0, M0 = MISSILES[k]; return !!M0 && (sl > 0 ? sl >= Math.max(1, M0.silo) : !M0.silo && mslHost(p)); };
+// the launchers and the missile line of city p are out: its silo knocked out (a silo city), or every one of its Army Base, Airbase and Naval Yard (a city without a silo)
+const mslDown = p => (S.bld[p].silo || 0) > 0 ? bdis(p, 'silo') : MSL_HOSTS.every(k => !(S.bld[p][k] > 0) || bdis(p, k));
+const mslQueued = (p, k) => S.queue[p].reduce((c, it) => c + (it.msl && it.t === k ? 1 : 0), 0);
+// missiles of kind k held at p: stored plus queued (a chemical or nuclear stock only while it is its builder's, wo)
+const mslStored = (p, k) => { const m = S.mstock && S.mstock[p], v = (m && m[k]) || 0; return v > 0 && MSL_WMD[k] && m.wo !== S.owner[p] ? 0 : v; };
+const mslHeld = (p, k) => mslStored(p, k) + mslQueued(p, k);
+const mslNation = (n, k) => ownedBy(n).reduce((c, p) => c + mslHeld(p, k), 0);
+// nation n's stored missiles of kind k (held), how many of them stand where they can launch now (up: a silo kind in a working silo, a cruise
+// missile with a working launcher) and, when none can, the hours until the first knocked-out launcher that holds them works again (h; 0: none
+// will, the silo is gone). The missile strip reads "Damaged" for a kind with held > 0 and up 0
+const mslUp = (n, k) => { const M0 = MISSILES[k]; let held = 0, up = 0, h = 0;
+  for (const p of ownedBy(n)){ const v = mslStored(p, k); if (!v) continue; held += v; const sl = S.bld[p].silo || 0;
+    if (M0.silo && !sl) continue;
+    if (!mslDown(p)){ up += v; continue; }
+    const t = sl ? bdisH(p, 'silo') : bdisH(p); if (t > 0 && (!h || t < h)) h = t; }
+  return {held, up, h:up ? 0 : h}; };
+// why nation n cannot start missile k in city p, resources aside ('' when it can)
+function mslWhy(n, p, k){ const M0 = MISSILES[k], W = MSL_WMD[k]; if (!M0) return 'Unknown missile';
+  if (S.owner[p] !== n) return 'Not your city';
+  if (!has(n, M0.tech)) return `Research required: ${RN[M0.tech].name}`;
+  const sl = S.bld[p].silo || 0;
+  if (M0.silo > 1 && sl < M0.silo) return `Needs a Missile Silo ${ROMAN[M0.silo]}`;
+  if (M0.silo === 1 && !sl) return 'Needs a Missile Silo';
+  if (!sl && !mslHost(p)) return 'Needs an Army Base, Airbase, Naval Yard or Missile Silo';
+  if (!sl && mslHeld(p, k) >= MSL_CITY) return `At most ${MSL_CITY} ${M0.name}s in a city without a silo (stored and building)`;
+  if (W && mslHeld(p, k) >= W.perSilo) return `At most ${W.perSilo} ${M0.name}${W.perSilo > 1 ? 's' : ''} per silo (stored and building)`;
+  if (W && mslNation(n, k) >= W.perNation) return `At most ${W.perNation} ${M0.name}s in all (stored and building)`;
+  return ''; }
+function canBuildMissile(n, p, k){ const M0 = MISSILES[k]; return !!M0 && !mslWhy(n, p, k) && hasC(S.nations[n], mslCost(M0)); }
 function buildMissile(n, p, k){ if (!canBuildMissile(n, p, k)) return false; const M0 = MISSILES[k], N = S.nations[n]; payC(N, mslCost(M0)); const h = mslH(p, k); S.queue[p].push({t:k, h, h0:h, msl:true}); return true; }
+// a missile finished in city p: into its stock (a chemical or nuclear one marks the stock as its builder's)
+function mslDone(p, k){ const m = mstock(p); if (MSL_WMD[k]){ if (m.wo !== S.owner[p]){ m.chem = 0; m.nuc = 0; } m.wo = S.owner[p]; } m[k]++; }
 // the hour steps of production, construction, unit upgrades and research (one province / nation each; tick() runs them every game hour)
 function prodHour(p){ const q = S.queue[p];
     if (S.owner[p] < 0){ q.length = 0; return; }
-    { const it0 = q[0]; if (it0.msl ? bdis(p, 'silo') : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits
+    { const it0 = q[0]; if (it0.msl ? mslDown(p) || !mslSite(p, it0.t) : reqsOf(it0.t).some(r => bdis(p, r.b))) return; }   // knocked-out building: its line waits (missiles: the silo, or a city's every launcher; a missile whose silo level was wrecked below its own waits for it)
     const lines = 1 + S.bld[p].fac;            // each Army Base level adds a training line
     for (let i = 1; i < Math.min(lines, q.length); i++) if (q[i].h > 1) q[i].h--;
-    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mstock(p)[it.t]++; if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
+    if (q[0].msl){ if (--q[0].h <= 0){ const it = q.shift(); mslDone(p, it.t); if (isSeat(S.owner[p])){ tell(S.owner[p], `${MISSILES[it.t].name} ready in ${G.P[p].cityName}.`, 'good', p); fxAt('ready', p, {}, null, S.owner[p]); cue(S.owner[p], 'ready'); } } return; }
     if (--q[0].h <= 0){ const it = q.shift(); spawn(S.owner[p], p, it.t);
-      const o = S.owner[p]; if (isSeat(o)){ const RP = desk(o).repeat; fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p);
-        if (RP && RP[p] && !q.length && !recruit(o, p, RP[p])){ const why = canMobilize(o, p, RP[p]); tell(o, `Repeat production paused in ${G.P[p].cityName}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[RP[p]].name}.`, 'info', p); } } } }
+      const o = S.owner[p]; if (isSeat(o)){ fxAt('ready', p, {}, null, o); cue(o, 'ready'); tell(o, `${UNITS[it.t].name} ready in ${G.P[p].cityName || G.P[p].name}.`, '', p); } } }   // (Repeat production: repeatHour)
+// Repeat production (a seat's per-city order, desk(n).repeat: city -> unit type): every hour, after the production step, a ticked city of n with an
+// empty queue starts the next unit itself: right after one finishes, when it was ticked on an idle city, and again once a pause for resources is
+// over. A pause is told once (desk(n).repP marks it) and the restart is told too
+function repeatHour(n){ const D = desk(n), RP = D.repeat; if (!RP) return; const PS = D.repP || (D.repP = {});
+  for (const k in RP){ const p = +k, t = RP[k]; if (S.owner[p] !== n || S.queue[p].length || !UNITS[t]) continue; const nm = G.P[p].cityName || G.P[p].name;
+    if (recruit(n, p, t)){ if (PS[p]){ delete PS[p]; tell(n, `Repeat production resumed in ${nm}: ${UNITS[t].name}.`, 'info', p); } }
+    else if (!PS[p]){ PS[p] = 1; const why = canMobilize(n, p, t); tell(n, `Repeat production paused in ${nm}: ${why ? why.charAt(0).toLowerCase() + why.slice(1) : 'not enough resources'} for ${UNITS[t].name}. It starts again by itself.`, 'info', p); } }
+  for (const k in PS) if (!RP[k]) delete PS[k]; }
+// a construction of under an hour (h0 < 1: Army Base I, 30 minutes) counts down a quarter hour at each 15-minute step (consQuarter at the three
+// battle steps, consHour at the hour's own step), so it stands exactly on time; every other construction counts whole hours at the hour's step
+const consStep = c => c.h0 < 1 ? 0.25 : 1;
+function consQuarter(){ for (let p = 0; p < G.P.length; p++){ const c = S.cons[p]; if (c && c.h0 < 1) consHour(p); } }
 function consHour(p){ const c = S.cons[p];
     if (S.owner[p] < 0){ S.cons[p] = null; return; }
-    if (--c.h <= 0){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
+    if (c.k === 'annex'){ if (S.owner[p] !== c.o){ S.cons[p] = null; return; } if ((c.h -= 1) <= 1e-9) annexDone(p); return; }   // Annex City (rules/economy.js): whole hours
+    if ((c.h -= consStep(c)) <= 1e-9){ const f0 = c.k === 'rec' ? recBefore(p) : null; S.bld[p][c.k] = c.lvl; S.cons[p] = null; if (f0) recRetime(p, f0); if (c.k === 'fort') bunkerFull(p);
       if (isSeat(S.owner[p])) tell(S.owner[p], `${BUILD[c.k].name}${BUILD[c.k].max > 1 ? ' ' + ROMAN[c.lvl] : ''} completed in ${G.P[p].cityName || G.P[p].name}.${f0 && f0.length ? ' Units in training there will be ready sooner.' : ''}`, 'good', p); } }
 /*@DEV*/
 // developer mode rules (test build only). They finish, pay and create through the game's own steps: startResearch, researchHour,
@@ -127,7 +199,7 @@ function devDone(n){ const N = S && S.nations[n]; if (!N || !N.alive) return 0; 
   if (DEV.instant){
     if (N.eng){ N.eng.h = 1; engHour(N); k++; }
     for (let p = 0; p < G.P.length; p++){ if (S.owner[p] !== n) continue;
-      if (S.cons[p]){ S.cons[p].h = 1; consHour(p); k++; }
+      if (S.cons[p]){ S.cons[p].h = consStep(S.cons[p]); consHour(p); k++; }
       const q = S.queue[p]; for (let i = q.length; i > 0 && q.length; i--){ const L = q.length, it = q[0]; it.h = 1; prodHour(p); if (q.length === L && q[0] === it) break; k++; } } }   // (a knocked-out line waits; repeat orders run once per pass)
   if (k) visCache = null; return k; }
 function devHour(n){ const N = S.nations[n]; if (!N || !N.alive) return; if (DEV.res) devFill(N); devDone(n); }
