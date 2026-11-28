@@ -12,7 +12,9 @@
 // 3. drawn afresh while on patrol (a save loaded) it shows on its track at once; the panel's orders: the ASF's bar has Patrol, Attack, Rebase,
 //    Split, Merge, Return; Return sends it home (rules/air.js recallAir)
 // 4. home from station, after Return and when its patrol hours run out: a calm curve off the track and home at about the rules' speed, no dash
-// Screenshots: <outdir>/air-tap-<phone|desk>-z<hexPx>.png (the selected wing after a tap)
+// 5. (owner 2026-11-28) a Strike Fighter wing's bar: Strike, Patrol, Rebase, Split, Merge, Return; Patrol armed, a tap on a province sends it on
+//    patrol there (rules/air.js jetPatrol), its panel says so; an AWACS wing's mission button reads Orbit (was Patrol)
+// Screenshots: <outdir>/air-tap-<phone|desk>-z<hexPx>.png (the selected wing after a tap); air-tap-<phone|desk>-jet-bar.png, -awacs-bar.png
 const { chromium } = require('playwright'); const path = require('path'), fs = require('fs'), pickNation = require('./pick-nation.js');
 const MODE = process.argv[2] || 'both', OUT = process.argv[3] || path.join(__dirname, 'air-tap-shots'); fs.mkdirSync(OUT, { recursive: true });
 const ZOOMS = process.env.ZOOMS ? process.env.ZOOMS.split(',').map(Number) : [6, 16, 40, 90, 200], FAST = process.env.ZOOMS ? [] : [40, 200];
@@ -31,7 +33,7 @@ async function run(phone){
     const T = G.P.filter(P => !P.sea && S.owner[P.id] === 0 && P.id !== B.id && !S.bld[P.id].air).map(P => [P, Math.hypot(P.x - B.x, P.y - B.y)]).filter(q => q[1] > 30).sort((x, y) => x[1] - y[1])[0][0];
     const ok = im.orderAir(a, T.id); S.speed = 1; for (let i = 0; i < 12 && a.fly.ph !== 'patrol'; i++) im.tick();
     return { id: a.id, ok, T: T.id, name: T.cityName || T.name, tx: T.x, ty: T.y, ph: a.fly.ph, cap: B.id, bx: B.x, by: B.y }; });
-  ok(info.ok && info.ph === 'patrol', `${tag}: the ASF is on patrol over ${info.name}`, info);
+  ok(info.ok && info.ph === 'patrol', `${tag}: the ASF is on patrol over ${info.name}`, info); info.tx0 = info.tx; info.ty0 = info.ty;
   const center = hp => p.evaluate(([x, y, hp, id]) => { const im = window.__im, w = im.S.armies.find(q => q.id === id); if (w && w.fly && w.fly.ph === 'patrol') w.fly.hrs = 12;   /* (the test keeps it on patrol) */ const v = im.view, s = hp/12, r = document.getElementById('map').getBoundingClientRect(); v.s = s; v.x = r.width/2 - x*s; v.y = r.height*0.45 - y*s; im.redraw(); }, [info.tx, info.ty, hp, info.id]);
   const clear = () => p.evaluate(() => { const im = window.__im; im.clearSel(); document.querySelectorAll('.toast').forEach(t => t.remove()); });
   // 1. the patrol's drawn path
@@ -131,6 +133,27 @@ async function run(phone){
   const endBack = await p.evaluate(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id); a.fly.hrs = 1; im.tick(); return a.fly && a.fly.ph; }, info.id);
   const bE = backStats(await sampleBack(8000));
   ok(endBack === 'back' && bE.n > 10 && bE.maxStep < 1.2 && bE.curv < 0.6, `${tag}: its patrol hours over, it leaves for home calmly`, [endBack, bE]);
+  // 5. the Strike Fighter's Patrol and the AWACS's Orbit
+  { await p.evaluate(() => { window.__im.S.speed = 0; }); await clear();
+    const ids = await p.evaluate(cap => { const im = window.__im, mk = (t, k) => { const w = im.addArmy(0, cap, { [t]: k }); w.air = { base: cap, cd: 0 }; w.m = 80; return w.id; }; return { jet: mk('jet', 2), awacs: mk('awacs', 1) }; }, info.cap);
+    const barOf = id => p.evaluate(id => { const im = window.__im; im.clearSel(); im.selectArmy(id); const el = document.getElementById('cmdbar'); return [...el.querySelectorAll('button')].map(x => x.textContent.replace(/[A-Z]$/, '').replace(/^\W+/, '').trim() + (x.disabled ? '-' : '+')); }, id);
+    await center(40); await p.waitForTimeout(600); await settle();
+    const jb = await barOf(ids.jet); await p.waitForTimeout(300); await p.screenshot({ path: path.join(OUT, `air-tap-${tag}-jet-bar.png`) });
+    ok(['Strike+', 'Patrol+', 'Rebase+', 'Split+', 'Merge-', 'Return-'].every((t, i) => jb[i] === t) && jb.length === 6, `${tag}: a Strike Fighter wing's bar on the ground: Strike, Patrol, Rebase, Split, Merge greyed, Return greyed`, jb);
+    const ab = await barOf(ids.awacs); await p.waitForTimeout(300); await p.screenshot({ path: path.join(OUT, `air-tap-${tag}-awacs-bar.png`) });
+    ok(ab[0] === 'Orbit+' && !ab.some(x => /^Patrol/.test(x)), `${tag}: an AWACS wing's mission button reads Orbit`, ab);
+    // Patrol armed, then a real tap on the patrol province's centre (the plane over Moscow is away from it)
+    await barOf(ids.jet); await p.click('#cmdbar [data-act="cm-patrol"]');
+    const armed = await p.evaluate(() => ({ mode: window.__im.cmdMode, on: !!document.querySelector('#cmdbar [data-act="cm-patrol"].on'), hint: (document.getElementById('hint') || {}).textContent || '' }));
+    ok(armed.mode === 'patrol' && armed.on, `${tag}: the Patrol button arms Patrol`, armed);
+    const q = await p.evaluate(([x, y]) => { const im = window.__im, r = document.getElementById('map').getBoundingClientRect(), [sx, sy] = im.toScreen(x, y); return [sx + r.left, sy + r.top]; }, [info.tx0, info.ty0]);
+    await press(q); await p.waitForTimeout(300);
+    const pj = await p.evaluate(([id, T]) => { const im = window.__im, a = im.S.armies.find(x => x.id === id), side = document.getElementById('side'); return { fly: a.fly && { kind: a.fly.kind, tgt: a.fly.tgt, ph: a.fly.ph }, T, mode: im.cmdMode, side: side ? side.textContent.slice(0, 400) : '' }; }, [ids.jet, info.T]);
+    ok(pj.fly && pj.fly.kind === 'patrol' && pj.fly.tgt === info.T && pj.mode === null, `${tag}: a tap with Patrol armed sends the Strike Fighters on patrol over ${info.name}`, pj.fly || pj);
+    ok(/Flying to patrol/.test(pj.side), `${tag}: its panel says it flies to patrol`, pj.side.slice(0, 160));
+    const ph = await p.evaluate(id => { const im = window.__im, a = im.S.armies.find(x => x.id === id); for (let i = 0; i < 12 && a.fly && a.fly.ph !== 'patrol'; i++) im.tick(); im.selectArmy(id); return { ph: a.fly && a.fly.ph, side: document.getElementById('side').textContent.match(/Patrolling[^:]*:/) }; }, ids.jet);
+    ok(ph.ph === 'patrol' && ph.side && /and its neighbours/.test(ph.side[0]), `${tag}: on station it patrols ${info.name} and its neighbours`, ph);
+    await clear(); }
   ok(!errors.length, `${tag}: no page errors`, errors.slice(0, 3));
   await ctx.close(); await b.close(); }
 (async () => { if (MODE !== 'desk') await run(true); if (MODE !== 'phone') await run(false); console.log(fails ? `${fails} FAILED` : 'ALL OK'); process.exit(fails ? 1 : 0); })();

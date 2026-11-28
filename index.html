@@ -10992,7 +10992,7 @@ function tap(x, y, shift = false, long = false){
       const p = foeP >= 0 ? foeP : provAt(x, y); if (p < 0) return;   // (an aircraft sent at a foe's counter: the province it stands in)
       if (shift && !a.air){ stopTap(a, p, x, y); return; }   // Shift on a desktop, inside Move: one more stop
       if (a.to === null && p === a.at && !a.air){ if (!G.P[p].sea || shipsOnly(a)) spotMove(a, p, screenToWorld(x, y)); return; }   // (a spot in its own province or sea zone: it walks, or sails, there)
-      setTarget(a, p, a.air && mode === 'attack' ? 'strike' : null);   // (an aircraft's Attack: the strike of an Air Superiority Fighter wing, rules/air.js asfStrike)
+      setTarget(a, p, a.air && mode === 'attack' ? 'strike' : a.air && mode === 'patrol' ? 'patrol' : null);   // (an aircraft's Attack: the strike of an Air Superiority Fighter wing, rules/air.js asfStrike; Patrol: a Strike Fighter's patrol, jetPatrol)
       if (!a.air && targetPath && targetPath.length){ const foes = stationaryAt(p).filter(b => knowA(b) && armyShown(b, visibleSet(PLAYER)) && atWar(PLAYER, b.owner));
         if (foes.length && odds(a, p, foes, undefined, viaOf(a)) < 0.9){ toast('Likely defeat: see the odds in the panel, and press Attack anyway there if you mean it.', 'bad', null); return; } }   // (a likely defeat waits for a second look)
       if ((a.air && airCheck(a, p, sel.surprise, sel.want).ok) || (targetPath && targetPath.length)) sendToTarget(a); else if (!a.air) toast(embarkWhy(a, p) || 'No route there.', 'bad', null); renderSide(true); } return; }
@@ -11120,7 +11120,7 @@ function setTarget(a, p, want = null){ sel.target = p; sel.want = a.air ? want :
   if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea && byCity(p, sel.targetPt)) sel.targetPt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
-  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && (isStriker(a) || (sel.want === 'strike' && asfStrike(a))) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
+  if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && ((isStriker(a) && sel.want !== 'patrol') || (sel.want === 'strike' && asfStrike(a))) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
   hoverPath = null; renderSide(true); }
 // the exact end of the route being planned to province t (rules/movement.js etaHours: the last leg's time by its real length)
 const tgtEnd = t => sel.targetPt && t === sel.target ? {p:t, x:sel.targetPt[0], y:sel.targetPt[1]} : null;
@@ -11167,10 +11167,12 @@ function armiesHTML(){
 let cmdMode = null, wpMode = false;   // wpMode: the Waypoint button is on (each tap on the map adds a stop: stopTap)
 function cmdBarHTML(){ const a = sel.army !== null ? armyById(sel.army) : null; if (!a || a.owner !== PLAYER) return '';
   const b = (act, icon, label, key, on = false, dis = false, title = '') => `<button class="cb ${on ? 'on' : ''}" data-act="${act}" ${dis ? 'disabled' : ''} title="${title || label}${key ? ` (${key})` : ''}"><i>${icon}</i>${label}${key ? `<kbd>${key}</kbd>` : ''}</button>`;
-  // an air wing: its mission, Attack (Air Superiority Fighters: weak strikes on forces, rules/air.js asfStrike), Rebase; Split and Merge on the
-  // ground; Return (to base) while it flies. The other ground orders (Waypoint, Delay, Halt, Stance) mean nothing to a wing flying a mission
+  // an air wing: its mission (an AWACS's is its radar Orbit), Attack (Air Superiority Fighters: weak strikes on forces, rules/air.js asfStrike),
+  // Patrol (Strike Fighters, as in Conflict of Nations: rules/air.js jetPatrol), Rebase; Split and Merge on the ground; Return (to base) while it
+  // flies. The other ground orders (Waypoint, Delay, Halt, Stance) mean nothing to a wing flying a mission
   if (a.air){ const fl = !!a.fly, mates = fl ? 0 : mergeMates(a).length, flt = 'In the air: press Return to call it back';
-    return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : 'Patrol', 'M', cmdMode === 'move', fl, fl ? flt : '')
+    return b('cm-move', '✈', isDrone(a) ? 'Scout' : isStriker(a) ? 'Strike' : wingT(a) === 'awacs' ? 'Orbit' : 'Patrol', 'M', cmdMode === 'move', fl, fl ? flt : '')
+      + (jetPatrol(a) ? b('cm-patrol', '◎', 'Patrol', '', cmdMode === 'patrol', fl, fl ? flt : 'Patrol: tap a province to guard it for 12 h. Its fighters engage enemy aircraft over it and its neighbours (weaker in the air than an Air Superiority Fighter)') : '')
       + (asfStrike(a) ? b('cm-attack', '⚔', 'Attack', 'K', cmdMode === 'attack', fl, fl ? flt : `Attack: tap enemy forces or ships to strike them. Its job is the air: on the ground it hits weakly (about a quarter of a Strike Fighter against infantry, a seventh against tanks)`) : '')
       + b('cm-move', '⇄', 'Rebase', '', false, fl, fl ? flt : 'Tap an airbase or carrier')
       + '<span class="sep"></span>' + b('wing-split', '⑂', 'Split', '', false, fl || count(a) < 2, fl ? flt : 'Split: half the aircraft form a new wing at the same base')
@@ -11925,7 +11927,7 @@ function renderSide(force){
   else if (a && wpMode) hint = `Waypoints: tap to add stops (${stopsOf(a).length}). Undo${matchMedia('(pointer: fine)').matches ? ' or Backspace' : ''} removes the last.`;
   else if (a) hint = sel.target !== null ? (rangedOf(a).length && bombardInfo(a, sel.target, sel.chase != null ? armyById(sel.chase) : null).ok ? `In range: tap ${G.P[sel.target].name} again or press Bombard to fire from where it stands. Tap the force or press Esc to deselect.` : targetPath && targetPath.length ? `Tap ${G.P[sel.target].name} again or press Send to march. Tap the force or press Esc to deselect.` : `${embarkWhy(a, sel.target) || 'No route there.'} Tap the force or press Esc to deselect.`) : rangedOf(a).length ? 'Press Move (M), then tap the map; press Attack (K), then tap an enemy in the ring to bombard it. Tap empty map or press Esc to deselect.' : 'Press Move (M), then tap where it should go. Tap empty map or press Esc to deselect.';
   else if (S.speed === 0 && !S.over && $('modal').hidden) hint = 'Paused. Press 1× to start the clock.';
-  setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
+  setHTML($('hint'), cmdMode ? (cmdMode === 'attack' ? 'Attack: tap an enemy force or province. Esc cancels.' : cmdMode === 'patrol' ? 'Patrol: tap the province to guard. Esc cancels.' : 'Move: tap a destination. Esc cancels.') : hint); renderCmdBar(); csSync();
 }
 // nation n has an Army Base (built, or going up) in one of its cities: the first step of First steps and the tutorial
 const hasBase = n => ownedBy(n).some(p => S.bld[p].fac >= 1 || (S.cons[p] && S.cons[p].k === 'fac'));
@@ -12603,7 +12605,7 @@ function wingHTML(a){
   const f = a.fly, B = G.P[a.air.base];
   const status = !f ? ((a.air.cd || 0) > 0 ? `Rearming at ${B.cityName || B.name}: ready in ${a.air.cd} h` : `Ready at ${B.cityName || B.name}`)
     : f.ph === 'out' ? `${f.kind === 'strike' ? (asfStrike(a) ? 'Attacking forces at' : 'Striking') : f.kind === 'patrol' ? 'Flying to patrol' : f.kind === 'recon' ? 'Flying to watch' : f.kind === 'orbit' ? 'Flying to orbit over' : f.kind === 'hunt' ? 'Flying to hunt around' : 'Rebasing to'} ${G.P[f.tgt].cityName || G.P[f.tgt].name}`
-    : f.ph === 'patrol' ? `Patrolling ${G.P[f.tgt].cityName || G.P[f.tgt].name}${a.u.asf ? ' and its neighbours' : ''}: ${f.hrs} h left`
+    : f.ph === 'patrol' ? `Patrolling ${G.P[f.tgt].cityName || G.P[f.tgt].name}${a.u.asf || a.u.jet ? ' and its neighbours' : ''}: ${f.hrs} h left`
     : f.ph === 'over' && f.kind === 'recon' ? `Watching ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left${f.salvo ? ` · ${f.salvo} salvo left` : ''}` : f.ph === 'over' && f.kind === 'orbit' ? `Radar orbit over ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left`
     : f.ph === 'over' && f.kind === 'hunt' ? `Hunting ships around ${G.P[f.tgt].cityName || G.P[f.tgt].name}: ${f.hrs} h left` : f.ph === 'over' ? `Over ${G.P[f.tgt].cityName || G.P[f.tgt].name}` : `Returning to ${B.cityName || B.name}`;
   const T = wingT(a), L0 = uavOf(a.owner);
@@ -12616,7 +12618,7 @@ function wingHTML(a){
         : T === 'sdrone' ? `Precision strike in ${c.hours} h: hits units hard and knocks out the most valuable building for 24 h (sometimes a whole level). SAMs, fighters and jammers fire first.`
         : asfStrike(a) ? `Attack: fly out ${c.hours} h and fire on the enemy forces there, then return and rearm 6 h. A fighter's guns and missiles are weak against the ground: about a quarter of a Strike Fighter's damage on infantry and guns, a seventh on tanks, about two fifths on ships; buildings, roads and the land are not hit. Enemy fighters and air defence fire back.`
         : `Strike: fly out ${c.hours} h, hit everything hostile there with ${STRIKE}× firepower, then return and rearm 6 h. Air defence (SAMs, Interceptors, Frigates) fires back.`)
-        : c.kind === 'patrol' ? `Patrol for 12 h: intercepts enemy strikes, bombers and drones over this province${a.u.asf ? ' and its neighbours, and hunts loitering UAVs, AWACS and patrol planes there' : ' (and its neighbours under your AWACS)'}.`
+        : c.kind === 'patrol' ? `Patrol for 12 h: intercepts enemy strikes, bombers and drones over this province${a.u.asf || a.u.jet ? ' and its neighbours, and hunts loitering UAVs, AWACS and patrol planes there' : ' (and its neighbours under your AWACS)'}.${a.u.jet ? ' A Strike Fighter fights in the air at about a third of an Air Superiority Fighter\'s strength; it strikes nothing on patrol.' : ''}`
         : c.kind === 'recon' ? `Loiter ${L0.loiter} h after ${c.hours} h: identifies every enemy force within ${L0.vis} km (type, size, level, health)${L0.salvos ? `; fires ${L0.salvos} missile salvo${L0.salvos > 1 ? 's' : ''} at hostile forces there` : '; recon only, no weapons'}. Jammers and SAMs nearby can shoot it down.`
         : c.kind === 'orbit' ? `Radar orbit for 16 h after ${c.hours} h: every enemy force within ${Math.round(visAewKm(PLAYER)/10)*10} km shows as an unidentified contact (?); your fighters under it cover neighbouring provinces and fight 25% better. Keep it away from enemy fighters.`
         : c.kind === 'hunt' ? `Patrol the sea for ${rMpaH(PLAYER)} h after ${c.hours} h: spots every ship and submerged submarine within ${Math.round(visMpaKm(PLAYER)/10)*10} km and attacks hostile ships (subs first) every 3 h. Frigates fire back.`
@@ -13056,6 +13058,7 @@ document.addEventListener('click', e => {
     case 'cm-wp': wpMode = !wpMode; cmdMode = null; sel.target = null; targetPath = null; renderSide(true); break;
     case 'cm-undo': undoTap(); break;
     case 'cm-attack': cmdMode = cmdMode === 'attack' ? null : 'attack'; renderSide(true); break;
+    case 'cm-patrol': cmdMode = cmdMode === 'patrol' ? null : 'patrol'; wpMode = false; renderSide(true); break;
     case 'cm-delay': if (a){ const seq = [0, 3, 6, 12]; a.delay = seq[(seq.indexOf(a.delay || 0) + 1) % seq.length]; renderSide(true); } break;
     case 'cm-stance': if (a){ const ks = Object.keys(STANCES); a.stance = ks[(ks.indexOf(a.stance || 'hold') + 1) % ks.length]; a.home = null; toast(`${armyName(a)}: ${STANCES[a.stance][0]}. ${STANCES[a.stance][1]}`, 'info', null); renderSide(true); } break;
     case 'sat': if (launchSat(PLAYER, +b.dataset.id)) renderSide(true); break;

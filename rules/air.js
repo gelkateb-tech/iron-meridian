@@ -24,11 +24,16 @@ const AIR_T = UT.filter(t => UNITS[t].cls === 'air');
 const wingT = a => { let b = null; for (const t of AIR_T) if (a.u[t] && (!b || a.u[t] > a.u[b])) b = t; return b || 'jet'; };
 // a wing of Air Superiority Fighters alone: besides its patrols it may be sent to attack (want 'strike': airCheck), with ASF_ATTACK's numbers (rules/data.js)
 const asfStrike = a => a.u.asf > 0 && AIR_T.every(t => t === 'asf' || !a.u[t]);
+// a wing of Strike Fighters alone: besides its strikes it may fly a patrol (want 'patrol': the Patrol button, as in Conflict of Nations), over a
+// province of any owner like an Air Superiority Fighter's, and fights the enemy aircraft there (capOver) with its own air-to-air numbers
+const jetPatrol = a => a.u.jet > 0 && AIR_T.every(t => t === 'jet' || !a.u[t]);
 // a wing's flight speed (hexes an hour): the slowest of its types, each AIR_SPEED times its share (AIR_SPF) times its research speed bonus (rAirSpdF:
 // Fourth-Generation Interceptor +10%, Supersonic Bomber +33%), read every hour, so a wing in flight speeds up the hour the step is done
 const airSpdT = (n, t) => AIR_SPEED*(AIR_SPF[t] || 1)*rAirSpdF(n, t);
 const wingSpd = a => { let v = Infinity; for (const t of AIR_T) if (a.u[t]){ const x = airSpdT(a.owner, t); if (x < v) v = x; } return (v < Infinity ? v : AIR_SPEED)*stackSpd(a); };   // (a wing over its stack limit flies slower)
 const isFighterWing = b => b.u.int > 0 || b.u.asf > 0;
+// a wing that fights enemy aircraft from a patrol: the fighters, and a Strike Fighter wing on its Patrol order (jetPatrol)
+const patrolFighter = b => isFighterWing(b) || (jetPatrol(b) && b.fly && b.fly.kind === 'patrol');
 /* Strike wear and maintenance: every mission wears a wing's airframes, even unopposed: 3–6% per strike (more the farther it flies), patrols,
    orbits and loitering add 0.15% per hour aloft, rebasing 1%. Wear (a.air.wear, 0..WEAR_MAX) is repaired only on the ground at your own airbase
    (10% + 6% per airbase level a day; half while the base is knocked out or at an ally's base) or aboard your carrier (20% a day), and not during the
@@ -65,6 +70,7 @@ function fixWings(){
 const carrierAt = (n, p) => armiesOf(n).find(b => b.at === p && b.to === null && b.u.carr > 0) || null;
 function airMissionKind(a, p, want = null){
   if (want === 'strike' && asfStrike(a)) return 'strike';   // (the Attack button: airCheck says where it may)
+  if (want === 'patrol' && jetPatrol(a)) return 'patrol';    // (a Strike Fighter's Patrol button: a patrol wherever it is sent, its own home airbase too)
   if (G.P[p].sea && carrierAt(a.owner, p)) return 'rebase';
   if (isDrone(a)) return S.owner[p] === a.owner && S.bld[p].air && p !== a.air.base ? 'rebase' : 'recon';
   { const T = wingT(a); if (T === 'awacs' || T === 'mpa'){ const o0 = S.owner[p]; return (o0 === a.owner || (o0 >= 0 && friendly(a.owner, o0))) && S.bld[p].air && p !== a.air.base ? 'rebase' : T === 'awacs' ? 'orbit' : 'hunt'; } }
@@ -76,17 +82,19 @@ function airMissionKind(a, p, want = null){
 }
 // may wing a fly to p, and on what mission. surprise: the nations this order is allowed to attack without a war (the client passes the ones
 // its player is about to confirm a surprise attack on); a strike on any other nation's land needs a war. want 'strike': the Attack order of an
-// Air Superiority Fighter wing (asfStrike), allowed on hostile land or where hostile forces stand
+// Air Superiority Fighter wing (asfStrike), allowed on hostile land or where hostile forces stand. want 'patrol': the Patrol order of a Strike
+// Fighter wing (jetPatrol), allowed wherever an Air Superiority Fighter may patrol (no war needed: it strikes nothing)
 function airCheck(a, p, surprise = null, want = null){
   { const w = stormAt(p) || stormAt(a.air.base); if (w && !a.fly) return {ok:false, why:`Grounded: ${w.kind === 'blizzard' ? 'a blizzard' : 'a storm'} over ${stormAt(p) ? (G.P[p].cityName || G.P[p].name) : 'the airbase'}. Wait for it to pass.`}; }
   const d = Math.max(p === a.air.base ? 0 : 1, hexDist(G.P[a.air.base].cc, G.P[p].cc)), r = wingRange(a);
   if (a.fly) return {ok:false, why:'This wing is already on a mission.'};
   if ((a.air.cd || 0) > 0) return {ok:false, why:`Rearming: ready in ${a.air.cd} h.`};
   if (!G.P[a.air.base].sea && bdis(a.air.base, 'air') && a.air.car == null) return {ok:false, why:`Grounded: the airbase was knocked out by a strike (${bdisH(a.air.base, 'air')} h).`};
-  if (p === a.air.base && isStriker(a) && !stationaryAt(p).some(b => atWar(a.owner, b.owner))) return {ok:false, why:'That is its home airbase.'};
+  if (p === a.air.base && isStriker(a) && want !== 'patrol' && !stationaryAt(p).some(b => atWar(a.owner, b.owner))) return {ok:false, why:'That is its home airbase.'};
   if (d > r) return {ok:false, why:`Out of range: ${Math.round(d*KM_HEX/10)*10} km, this wing reaches ${r*KM_HEX} km.`};
   const k = airMissionKind(a, p, want), o = S.owner[p];
   if (want === 'strike' && !isStriker(a) && !asfStrike(a)) return {ok:false, why:'This wing does not attack ground targets.'};
+  if (want === 'patrol' && k !== 'patrol') return {ok:false, why:'This wing does not fly patrols.'};
   if (k !== 'rebase' && wingCond(a) < WEAR_GROUND) return {ok:false, why:`Grounded for maintenance: airframes at ${Math.round(wingCond(a)*100)}% condition. Repairs run at an airbase of yours or a carrier; rebasing is still possible.`};
   if (k === 'strike' && o >= 0 && o !== a.owner && !atWar(a.owner, o) && !(surprise && surprise.includes(o))) return {ok:false, why:`You are not at war with ${nationName(o)}.`};
   if (k === 'strike' && want === 'strike' && !(!G.P[p].sea && o >= 0 && o !== a.owner) && !stationaryAt(p).some(b => b.owner !== a.owner && count(b) > 0 && (atWar(a.owner, b.owner) || (surprise && surprise.includes(b.owner))))) return {ok:false, why:'No enemy forces there to attack.'};
@@ -165,8 +173,9 @@ let AEWC = {h:-1, S:null, m:new Map()};
 function aewCover(n){ const kp = keep(); if (kp && (AEWC.h !== S.hour || AEWC.S !== S)){ AEWC = {h:S.hour, S, m:new Map()}; } let c = AEWC.h === S.hour && AEWC.S === S ? AEWC.m.get(n) : undefined; if (c) return c; c = new Set();
   for (const b of S.armies) if (b.fly && b.fly.kind === 'orbit' && b.fly.ph === 'over' && b.u.awacs && (b.owner === n || (b.owner >= 0 && n >= 0 && rel(n, b.owner).st === 'ally'))) for (const q of nearList(b.fly.tgt, rAewR(b.owner))) c.add(q);
   if (kp) AEWC.m.set(n, c); return c; }
-// hostile fighter patrols able to engage over p: Interceptors over p itself; Air Superiority Fighters, and any fighters under their side's AWACS, over its neighbours too
-function capOver(p, o){ return S.armies.filter(b => b.fly && b.fly.ph === 'patrol' && b.owner !== o && atWar(o, b.owner) && isFighterWing(b) && count(b) && (b.fly.tgt === p || ((b.u.asf > 0 || aewCover(b.owner).has(p)) && G.P[b.fly.tgt].nbs.includes(p)))); }
+// hostile fighter patrols able to engage over p: Interceptors over p itself; Air Superiority Fighters, Strike Fighters on patrol (jetPatrol), and any
+// fighters under their side's AWACS, over its neighbours too
+function capOver(p, o){ return S.armies.filter(b => b.fly && b.fly.ph === 'patrol' && b.owner !== o && atWar(o, b.owner) && patrolFighter(b) && count(b) && (b.fly.tgt === p || ((b.u.asf > 0 || b.u.jet > 0 || aewCover(b.owner).has(p)) && G.P[b.fly.tgt].nbs.includes(p)))); }
 function dogfight(a, cap, p, scale){ const o = a.owner, mine = effHP(a), theirs = cap.reduce((s0, b) => s0 + effHP(b), 0), aw = n => aewCover(n).has(p) ? rAewF(n) : 1;
   const va = sideAV([a], o, scale*(0.8 + rng()*0.4)*aw(o)), vb = {};
   for (const b of cap){ const v = sideAV([b], b.owner, scale*(0.8 + rng()*0.4)*aw(b.owner)); for (const k in v) vb[k] = (vb[k] || 0) + v[k]; }

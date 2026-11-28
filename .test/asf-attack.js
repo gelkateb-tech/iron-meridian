@@ -12,10 +12,15 @@
 // 6. Split and Merge for wings (splitWing, mergeWings): half the aircraft leave with the same base, rearm hours and wear; wings of one type
 //    parked at one base merge (the longer rearm, the wear averaged), other types stay apart
 // 7. saves: an ASF wing on patrol saved by origin/master's rules (git show) loads into this build and keeps patrolling, then comes home
+// 8. the Strike Fighter's Patrol (owner 2026-11-28, "like Conflict of Nations"; rules/air.js jetPatrol, want 'patrol'): allowed over its own land,
+//    over enemy forces (a patrol, not a strike), over its home airbase and over a nation it is not at war with; refused for helicopters,
+//    bombers, AWACS, maritime patrol and drones; a whole patrol through the hours; while on patrol it is one of the fighters over that province
+//    and its neighbours (capOver), not on a strike; it shoots down enemy bombers there with its own air-to-air numbers (fewer than an Air
+//    Superiority Fighter, more than no patrol at all) and hunts a loitering AWACS; its Strike is unchanged
 'use strict';
 const fs = require('fs'), path = require('path'), cp = require('child_process'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'lines.js'));
-const EXP = '\nreturn {IM, get S(){ return S; }, get G(){ return G; }, UNITS, ASF_ATTACK: typeof ASF_ATTACK === "undefined" ? null : ASF_ATTACK, setRel, addArmy, count, armyHP, effHP, resolveStrike, removeEmpty, airCheck, orderAir, wingRange, hexDist, stationaryAt, S_dmg: () => S.dmg,'
+const EXP = '\nreturn {IM, get S(){ return S; }, get G(){ return G; }, UNITS, ASF_ATTACK: typeof ASF_ATTACK === "undefined" ? null : ASF_ATTACK, setRel, addArmy, count, armyHP, effHP, resolveStrike, removeEmpty, airCheck, capOver: typeof capOver === "undefined" ? null : capOver, loiterHour: typeof loiterHour === "undefined" ? null : loiterHour, nbs: p => G.P[p].nbs, orderAir, wingRange, hexDist, stationaryAt, S_dmg: () => S.dmg,'
   + ' recallAir: typeof recallAir === "undefined" ? null : recallAir, splitWing: typeof splitWing === "undefined" ? null : splitWing, mergeWings: typeof mergeWings === "undefined" ? null : mergeWings};';
 const srcOf = read => { const html = read('index.html'); const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]); return "'use strict';\n" + FILES.map(read).join('\n') + EXP; };
 const load = () => new Function(srcOf(f => fs.readFileSync(path.join(ROOT, f), 'utf8')))();
@@ -130,5 +135,49 @@ const wingAt = (R, base, t, k = 1) => { const w = R.addArmy(0, base, {[t]:k}); w
     ok(okL && w && w.fly && w.fly.ph === 'patrol' && w.fly.hrs === hrs, 'an ASF patrol saved by origin/master loads, still on patrol', w && w.fly);
     const phs = []; h = 0; while (w.fly && h < 30){ R.IM.api.tick(); phs.push(w.fly ? w.fly.ph : 'home'); h++; }
     ok(phs.filter(p => p === 'patrol').length >= hrs - 2 && !w.fly && w.at === Em.base, 'it keeps patrolling its hours, then comes home', phs.join(' ')); } }
+
+// ---- 8. the Strike Fighter's Patrol
+{ const R = load(), E = setup(R), S = E.S, G = E.G; S.armies = S.armies.filter(a => !a.air);
+  const wj = wingAt(R, E.base, 'jet', 2), foe = R.addArmy(1, E.foeP, {inf:2});
+  const c0 = R.airCheck(wj, E.ownP, null, 'patrol'), c1 = R.airCheck(wj, E.foeP, null, 'patrol'), c2 = R.airCheck(wj, E.base, null, 'patrol'), c3 = R.airCheck(wj, E.foeP);
+  ok(c0.ok && c0.kind === 'patrol', 'a Strike Fighter wing may Patrol over its own land', c0);
+  ok(c1.ok && c1.kind === 'patrol', 'Patrol over enemy forces is a patrol, not a strike', c1);
+  ok(c2.ok && c2.kind === 'patrol', 'Patrol over its own home airbase is allowed', c2);
+  ok(c3.ok && c3.kind === 'strike', 'without Patrol (its Strike button) the same tap is still a strike', c3);
+  R.setRel(0, 1, 'peace'); const c4 = R.airCheck(wj, E.foeP, null, 'patrol'), c4s = R.airCheck(wj, E.foeP); R.setRel(0, 1, 'war');
+  ok(c4.ok && c4.kind === 'patrol' && !c4s.ok, 'Patrol needs no war (a strike there still does)', [c4, c4s]);
+  const others = ['heli', 'bomb', 'awacs', 'mpa', 'sdrone', 'drone'].map(t => { const w = wingAt(R, E.base, t), c = R.airCheck(w, E.ownP, null, 'patrol'); S.armies.splice(S.armies.indexOf(w), 1); return [t, c.ok, c.why]; });
+  ok(others.every(x => !x[1] && /does not fly patrols/.test(x[2])), 'helicopters, bombers, AWACS, maritime patrol and drones are refused a Patrol order', others);
+  const wa = wingAt(R, E.base, 'asf'), ca = R.airCheck(wa, E.ownP, null, 'patrol'); S.armies.splice(S.armies.indexOf(wa), 1);
+  ok(ca.ok && ca.kind === 'patrol', 'an ASF given the same order simply patrols', ca);
+  const far = G.P.find(q => !q.sea && R.hexDist(G.P[E.base].cc, q.cc) > R.wingRange(wj) + 1);
+  if (far){ const cf = R.airCheck(wj, far.id, null, 'patrol'); ok(!cf.ok && /Out of range/.test(cf.why), 'Patrol out of range is refused', cf); }
+  // a whole patrol, hour by hour
+  ok(R.orderAir(wj, E.ownP, 'patrol') && wj.fly.kind === 'patrol', 'orderAir(wing, p, "patrol") sends the Strike Fighters on patrol', wj.fly);
+  const seen = []; let h = 0; for (; h < 40 && wj.fly; h++){ E.api.tick(); seen.push(wj.fly ? wj.fly.ph : 'home'); }
+  const np = seen.filter(x => x === 'patrol').length;
+  ok(np >= 11 && np <= 13 && seen.includes('back') && !wj.fly && wj.at === E.base && wj.air.cd >= 5, 'it flies out, patrols 12 h, comes home and rearms', {np, seen:seen.join(' '), cd:wj.air.cd});
+  ok(R.count(foe) === 2 && R.effHP(foe) > 0, '(the enemy force under nothing it patrolled was not struck)'); }
+
+// ---- 8b. on patrol it is a fighter over the province and its neighbours: enemy bombers lose aircraft to it, with its own numbers
+{ const R = load(), E = setup(R), S = E.S, G = E.G, P = G.P[E.ownP];
+  const nb = R.nbs(E.ownP).find(v => !G.P[v].sea) ?? R.nbs(E.ownP)[0];
+  const onPatrol = (t, k, p = E.ownP) => { const w = wingAt(R, E.base, t, k); w.fly = {tgt:p, kind:'patrol', ph:'patrol', t:0, hrs:12}; return w; };
+  S.armies = S.armies.filter(a => !a.air && a.owner !== 1);
+  { const w = onPatrol('jet', 2), cap = R.capOver(E.ownP, 1), capN = R.capOver(nb, 1);
+    ok(cap.includes(w) && capN.includes(w), 'a patrolling Strike Fighter wing guards its province and the neighbours (capOver)', {own:cap.map(b => b.id), nb:capN.map(b => b.id), w:w.id});
+    w.fly = {tgt:E.ownP, kind:'strike', ph:'over', t:0, hrs:1}; ok(!R.capOver(E.ownP, 1).includes(w), 'on a strike it is not a patrol fighter'); S.armies.splice(S.armies.indexOf(w), 1); }
+  // enemy bomber raids on a province, our patrol over it (none, two Strike Fighters, two ASF): bomber HP lost per raid over 300 raids
+  const raids = (t, N = 300) => { let lost = 0, downed = 0;
+    for (let i = 0; i < N; i++){ S.armies = S.armies.filter(a => !a.air); const g = t ? onPatrol(t, 2) : null; const B = R.addArmy(1, E.foeP, {bomb:2}); B.air = {base:E.foeP, cd:0}; B.m = 80; const h0 = R.effHP(B);
+      R.resolveStrike(B, E.ownP); lost += h0 - R.effHP(B); downed += 2 - R.count(B); }
+    S.armies = S.armies.filter(a => !a.air); return {hp:+(lost/N).toFixed(2), downed:+(downed/N).toFixed(3)}; };
+  const r0 = raids(null), rj = raids('jet'), ra = raids('asf');
+  console.log('bomber raids (HP and bombers lost per raid): no patrol', JSON.stringify(r0), 'Strike Fighters', JSON.stringify(rj), 'ASF', JSON.stringify(ra));
+  ok(rj.hp > r0.hp + 0.5, 'two patrolling Strike Fighters hurt an enemy bomber raid (vs no patrol)', {r0, rj});
+  ok(ra.hp > rj.hp*1.5, 'with their own air-to-air numbers: well under what two Air Superiority Fighters do', {rj, ra});
+  // a loitering enemy AWACS over a neighbour of the patrol loses aircraft to it
+  { let lost = 0; for (let i = 0; i < 200; i++){ S.armies = S.armies.filter(a => !a.air); onPatrol('jet', 2); const A = R.addArmy(1, E.foeP, {awacs:1}); A.air = {base:E.foeP, cd:0}; A.m = 80; A.fly = {tgt:nb, kind:'orbit', ph:'over', t:0, hrs:16}; const h0 = R.effHP(A); R.loiterHour(A); lost += h0 - R.effHP(A); }
+    S.armies = S.armies.filter(a => !a.air); ok(lost/200 > 0.2, 'it hunts a loitering AWACS over a neighbouring province', +(lost/200).toFixed(2)); } }
 
 console.log(`${n - bad}/${n} checks passed`); process.exit(bad ? 1 : 0);
