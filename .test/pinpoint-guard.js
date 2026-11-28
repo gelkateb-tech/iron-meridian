@@ -43,7 +43,13 @@ const idle = a => a.to === null && !a.path.length && !a.sail;
 // (W 'nations', Germany's seat, as in the page part) or the classic 15-power world of the old saves (the default, seat 0, the United States:
 // the old-save fixture was made with it)
 function game(W = 'classic'){ const R = new Function(SRC)(); R.IM.api.useScenario(W === 'nations' ? 'world64' : 'world');
-  R.IM.api.newGame(77, W === 'nations' ? R.POWERS.findIndex(N => N.name === 'Germany') : 0, [0]); R.me = 0; R.S.started = true; R.resetVis(); return R; }   // (the power picked is the seat, nation 0)
+  R.IM.api.newGame(77, W === 'nations' ? R.POWERS.findIndex(N => N.name === 'Germany') : 0, [0]); R.me = 0; R.S.started = true;
+  if (W === 'nations') garrison(R.G, R.S, 0, R.addArmy, R.count);
+  R.resetVis(); return R; }   // (the power picked is the seat, nation 0)
+// the nations world no longer starts with a garrison in every city (START_ARMY, owner playtest 2026-11-27): the seat's cities get the old start's
+// 2 infantry each, at the city (no spot), so the scenes below (a garrisoned city and its garrisoned neighbours) are there as before
+function garrison(G, S, n, addArmy, count){ for (const P of G.P) if (P.city && !P.sea && S.owner[P.id] === n
+    && !S.armies.some(a => a.owner === n && a.at === P.id && !a.air && !a.fly && !a.pos && count(a))) addArmy(n, P.id, { inf: 2 }); }
 const garrisons = (R, n) => R.S.armies.filter(a => a.owner === n && !a.air && !a.fly && R.count(a) && !R.shipsOnly(a) && !a.pos && idle(a));
 // a spot of land province B at km from its city, well inside B (1.5 world units, about 13 km, of B all round it)
 function spotAt(R, B, km, k0 = 0){ const { G } = R; for (let i = 0; i < 24; i++){ const an = ((i + k0) % 24)*Math.PI/12, w = [B.x + Math.cos(an)*km*R.KM_W, B.y + Math.sin(an)*km*R.KM_W];
@@ -198,6 +204,9 @@ async function pagePart(){ const pickNation = require('./pick-nation.js'), { chr
     await p.goto('file://' + __dirname + '/page.html' + Q); await p.waitForTimeout(500);
     await pickNation(p, 'Germany'); await p.click('[data-act="begin"]'); await p.click('[data-act="start"]');
     await p.waitForFunction(() => window.__im && window.__im.S && !window.__im.camFly, null, { timeout: 30000 }); await p.waitForTimeout(600);
+    // (the nations world: the old start's city garrisons put back for the seat, as in game() above)
+    if (Q) await p.evaluate(src => { const im = window.__im; new Function('G', 'S', 'addArmy', 'count', src)(im.G, im.S, im.addArmy, count); },
+      'return (' + garrison.toString() + ')(G, S, 0, addArmy, count);');
     const R = await p.evaluate(() => { const im = window.__im; im.S.speed = 0; document.querySelectorAll('.toast,.ftip').forEach(t => t.remove());
       // what the rules are handed (the order a tap gives), and every merge
       window.__log = []; for (const f of ['addStop', 'merge']){ const o = window[f]; window[f] = function(...A){ window.__log.push({ f, a: A[0] && A[0].id, b: f === 'merge' ? A[1] && A[1].id : undefined, p: f === 'addStop' ? A[1] : undefined }); return o.apply(this, A); }; }
