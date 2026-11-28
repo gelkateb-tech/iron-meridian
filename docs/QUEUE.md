@@ -91,6 +91,20 @@ Set 2026-11-27 (owner block above). Each starts when a slot frees up (at most 5 
 1. **(DONE 2026-11-22, waiting for the owner; see Ready)** **CITIES REDO, together with the CITIES follow-up** (Opus; owner 2026-11-21; started when SEA MIX and JUNGLE C REWORK finished, because map and cities wait for each other). Owner, verbatim: "CITIES redo (Opus). Branch cities-3d-2 isn't good enough, so don't merge it. Do this together with the CITIES follow-up already in the queue. Reference attached: Conflict of Nations, Mazar-i-Sharif zoomed in. Use it only for how the 3D buildings pop. Don't copy its look or its green tint. What's wrong now: each city is a flat pale slab floating on the map with a tiny, uniform block grid on top. You can't see any buildings. Keep: - Each city's outline exactly as it is now. - The realistic look and colours I like. No owner-colour tint over the whole city. Change: 1. Make the buildings pop: real 3D buildings you can see at normal play zoom, each with a lit roof, shaded sides and a shadow on the ground. Tall towers in the centre, low buildings at the edges, mixed sizes and shapes. 2. No slab or plate under the city. The ground between buildings is normal terrain, and the edge blends into the land around it. 3. Greenery in every city: clumps of trees, parks and tree-lined streets between the buildings. 4. Every city should look different: vary the road layouts. Curved, organic streets in old cities (Kabul, Damascus), grids only where they make sense (US cities), ring roads and big avenues in capitals. The main map roads connect into the city. Not the same grid everywhere. 5. Keep the night lights, with lit windows in the buildings. 6. It must stay fast on phones: draw each city once per zoom and cache it. Show me Berlin, Kabul and a small town at play zoom and at the closest zoom, before and after, before anything merges." Reference picture: scratchpad cities-ref/con-mazar.webp. Follow-up parts still open (check what naval cities v65 already did): building pictures on land and 15-20% smaller, the Naval Yard on the real coast at Kolkata, a building under construction; keep the night lights. Branch from master (not cities-3d-2).
 
 
+## Owner answers 2026-11-28, third version (verbatim, the new part; the rest repeats the second version)
+
+```
+NAVAL YARDS (new job, after cities-redo merges; one round, then wait for me): the picture doesn't match the coast in most coastal cities. It faces the wrong way or sits at odd angles to the water.
+- For every city with a Naval Yard, turn or mirror the picture so its docks face the nearest water.
+- Place it across the shoreline: the land part on the coast, the docks and piers out over the water. It doesn't need to trace the coast exactly; overlapping the shore hides the mismatch. Never fully on land or fully out at sea.
+- Work inside the city lots plan: change only the Naval Yard's own waterfront lot. Every other lot, the HQ square and the city blocks stay exactly as they are. If a Naval Yard lot has to move, tell me which cities and why before changing them.
+- Coasts that no turned or mirrored picture can face (like the 29 facing up the map): tell me the cost of a new picture first, and don't make it without my OK.
+- Check all 349 coastal cities with a script, and list any that still look wrong.
+- Before and after screenshots of 6 cities with different coast directions (north, south, east, west and two diagonals), on desktop and phone.
+```
+Also restated: "Screenshots on desktop and phone for everything, saved to the shots branch as usual."
+Plan: NAVAL YARDS runs right after the cities-redo merge (merge chain 2), before one figure; one round, then wait. Paused with everything else until the helper-agent limit resets (2 Dec 04:00 UTC).
+
 ## Owner answers 2026-11-28, second version (verbatim; replaces the first version where they differ; extra work, cancels nothing)
 
 ```
