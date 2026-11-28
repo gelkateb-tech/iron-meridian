@@ -492,9 +492,11 @@ function aiRecSite(n){ let best = -1, bl = 99;
 // training speed limits the AI in city p: it is at war, the city's queue is full (two or more waiting) and the money for the next level is spare
 function aiRecSlow(n, p){ const l = S.bld[p].rec || 0; return l >= 1 && l < BUILD.rec.max && S.queue[p].length >= 2 && warsOf(n).length > 0 && S.nations[n].cash > buildCost(n, 'rec', l + 1, p).cash + 300; }
 // what a nation at war with Conventional Warhead saves for (MS2, owner 2026-11-27): a Missile Silo while it has none built or building ('silo'),
-// then a first ballistic missile while it holds none, stored or building ('bm'); null otherwise (aiReserve holds the price back from recruiting)
+// then a first ballistic missile while it holds none, stored or building ('bm'); null otherwise (aiReserve holds the price back from recruiting).
+// The silo only while its daily income is positive (owner 2026-11-28): a broke nation at war kept the silo's price set aside for weeks and
+// recruited nothing with it; now it sets nothing aside and keeps recruiting (it may still build a silo from spare money, aiTurn0)
 const aiMslSave = n => { if (!warsOf(n).length || !has(n, 'msl2')) return null; const P = ownedBy(n);
-  if (!P.some(p => S.bld[p].silo > 0 || (S.cons[p] && S.cons[p].k === 'silo'))) return 'silo';
+  if (!P.some(p => S.bld[p].silo > 0 || (S.cons[p] && S.cons[p].k === 'silo'))) return income(n).net.cash > 0 ? 'silo' : null;
   return P.some(p => S.bld[p].silo > 0) && !P.some(p => mslHeld(p, 'bm') > 0) ? 'bm' : null; };
 const aiSiloWant = n => aiMslSave(n) === 'silo';
 // ---------- base levels (BUILD-REQS, owner 2026-11-27: units unlock by base level, rules/data.js BASE_LV; levels IV and V only train faster).

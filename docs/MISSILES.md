@@ -473,3 +473,17 @@ The owner: "MS1–MS5: your defaults" and two small fixes (the aiming hint behin
 The owner: missiles "as is, with the two small fixes: the tutorial-card hint CSS, and silo saving only with positive income".
 
 **The tutorial-card hint** (`index.html`, CSS only): with the tutorial card open (bottom left) a desktop's aiming hint (a missile, a move or an attack) now stands in the band between the card and the minimap, on windows 1260 px wide and wider; on a narrower desktop (821 to 1259 px) it goes to the top of the map, where neither is. Before, at 1280 x 800, the polish-2 position (half a hint left of the map's middle) slid it partly under the card and the minimap. Checked clear of both at 1024 x 768, 1100 x 800, 1260 x 720, 1280 x 800, 1366 x 768, 1440 x 900 and 1920 x 1080; the phone (440 px: the card at the top, the hint low) is unchanged. `.test/missiles-page.js` checks it at 1280 x 800 and 1440 x 900.
+
+**Silo saving only with positive income** (`rules/ai.js` `aiMslSave`): a nation at war with Conventional Warhead and no silo saves for one (the silo's price held back from new units, goods buying and research by `aiReserve`, and built first in its capital) only while its daily income (`income(n).net.cash`) is positive. A broke nation sets nothing aside and keeps recruiting; it may still put up a silo from spare money (the old rule: over $260M, or $160M at war). The saving for a first ballistic missile once a silo stands is unchanged. `.test/missiles.js` section 12: a broke nation (daily income -15.8) sets nothing aside, a tank its $80 covers is bought, and its turn with $900 recruits and puts up no silo (before the fix: $140 set aside, the tank waits, the turn built a silo and recruited nothing); with a positive income it still saves, the tank waits and the silo goes up with $200.
+
+The same 60-day games as in 22 (3 wars provoked every 10 days, seeds 12345 / 2024 / 7 / 99), counted by a script that gives the nation counts, money and income of the table in 22 exactly on polish 2 (fdd6d1e; it counts finished missiles, one or two fewer than 22's count):
+
+| | polish 2 (fdd6d1e) | polish 2 + this fix | merged (merge-1128), before | merged, after this fix |
+|---|---|---|---|---|
+| nations that built a missile, day 60 | 8 / 4 / 5 / 3 | 8 / 4 / 5 / 3 | 3 / 5 / 6 / 1 | 3 / 5 / 6 / 1 |
+| nations that fired one, day 60 | 8 / 3 / 5 / 3 | 8 / 3 / 5 / 3 | 3 / 5 / 6 / 1 | 3 / 5 / 6 / 1 |
+| missiles built (cruise + ballistic) | 16+2 / 11+1 / 18 / 6 | 13+2 / 11+1 / 18 / 6 | 8+1 / 9 / 11+1 / 2 | 8+1 / 9 / 11+1 / 2 |
+| silos standing, day 60 | 1 / 2 / 1 / 0 | 1 / 2 / 1 / 0 | 3 / 0 / 3 / 1 | 3 / 0 / 3 / 1 |
+| nation-days saving for a silo with income at or below 0 | 15 / 0 / 0 / 0 (one nation) | 0 | 0 | 0 |
+
+In the merged games no nation happened to save for a silo while broke, so the fix changes nothing there (the 10-day golden game is unchanged too); on polish 2's games it removes the one broke nation's 15 days of saving. Fewer nations take up missiles in the merged games (seed 99: one) because of the merged computer's other savings (Army Base, Airbase and Naval Yard levels, BUILD-REQS), not because of this fix.

@@ -11,7 +11,8 @@
 // on a third nation, every seat told, peace refused for 3 days, opinions back after 60 days; 9 the computer: research weights, silo rule, its
 // building and firing rules (scripted); 10 an old save of master 0fb9d76 (silo with Cruise Missiles only, stocks {cm, bm}) loads and plays 5 days;
 // 11 polish round 1; 12 polish round 2: MS1 (a chemical strike answered with a chemical one, nuclear only for a nuclear strike or desperation), MS2
-// (Conventional Warhead at war, missiles from $220M at war), mslUp (the strip's "Damaged").
+// (Conventional Warhead at war, missiles from $220M at war), the silo saved for only with a positive daily income (merge fix 2), mslUp (the
+// strip's "Damaged").
 'use strict';
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(process.env.IM_ROOT || path.join(__dirname, '..'));
 globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(path.join(ROOT, 'nations.js')); require(path.join(ROOT, 'lines.js'));
@@ -363,6 +364,20 @@ const strike = (k, from, to, n = PL) => { f('missileImpact')({id:S.nid++, owner:
     rich(DE); N.cash = 200; f('aiTurn')(DE); ok(S.cons[c] && S.cons[c].k === 'silo', 'MS2: at war with $200M: the silo goes up in its capital first');
     S.cons[c] = null; S.bld[c].silo = 1; S.queue[c] = []; ok(f('aiMslSave')(DE) === 'bm', 'MS2: the silo stands: it saves for a first ballistic missile');
     N.cash = 200; f('aiTurn')(DE); ok(S.queue[c].some(it => it.msl && it.t === 'bm') && f('aiMslSave')(DE) === null, 'MS2: ...builds it from $160M and saves no more'); }
+  // merge fix 2 (owner 2026-11-28, "silo saving only with positive income"): a nation at war with Conventional Warhead and no silo saves for one
+  // only while its daily income is positive. Broke (its far cities lost, 40 artillery to pay for): nothing set aside, a unit its money covers is
+  // bought, and with $900 its turn recruits instead of putting up a silo. Positive income: it still saves, the same unit waits, the silo goes up
+  { fresh([]); grant(DE, 'msl1', 'msl2'); const N = S.nations[DE], c = N.capital; api.declareWar(PL, DE); S.bld[c].fac = Math.max(1, S.bld[c].fac); S.bld[c].silo = 0; S.cons[c] = null;
+    for (const P of G.P.filter(P => S.owner[P.id] === DE && P.id !== c && !P.nbs.includes(c))) S.owner[P.id] = PL; X('ownChanged()');
+    f('addArmy')(DE, c, {art:40}); rich(DE); X('INCC.v = -1'); const net = f('income')(DE).net.cash, tc = f('ucost')(DE, 'tank').cash; N.cash = tc + 40;
+    ok(net < 0 && f('aiMslSave')(DE) === null && f('aiReserve')(DE) === 0 && f('aiReserve')(DE, 'metal') === 0, `silo saving: a broke nation (daily income ${net.toFixed(1)}) sets nothing aside for a silo (reserve ${f('aiReserve')(DE)})`);
+    ok(f('aiSpare')(DE, 'tank'), 'silo saving: ...and a tank its money covers ($' + Math.round(N.cash) + ') is bought');
+    N.cash = 900; const q = () => f('ownedBy')(DE).reduce((s0, p) => s0 + S.queue[p].filter(it => !it.msl).length, 0), q0 = q(); f('aiTurn')(DE);
+    ok(q() > q0 && !(S.cons[c] && S.cons[c].k === 'silo'), `silo saving: ...its turn with $900 recruits (${q0} -> ${q()} units queued) and puts up no silo`); }
+  { fresh([]); grant(DE, 'msl1', 'msl2'); const N = S.nations[DE], c = N.capital; api.declareWar(PL, DE); S.bld[c].fac = Math.max(1, S.bld[c].fac); S.bld[c].silo = 0; S.cons[c] = null; rich(DE); X('INCC.v = -1');
+    const net = f('income')(DE).net.cash, tc = f('ucost')(DE, 'tank').cash; N.cash = tc + 40;
+    ok(net > 0 && f('aiMslSave')(DE) === 'silo' && f('aiReserve')(DE) >= f('buildCost')(DE, 'silo', 1, c).cash && !f('aiSpare')(DE, 'tank'), `silo saving: with a positive daily income (${net.toFixed(1)}) it still saves for the silo (reserve ${f('aiReserve')(DE)}) and the tank waits`);
+    N.cash = 200; f('aiTurn')(DE); ok(S.cons[c] && S.cons[c].k === 'silo', 'silo saving: ...and builds its silo with $200'); }
   // the strip's "Damaged": mslUp counts the missiles that can launch now
   fresh(); grant(PL, 'msl1', 'msl2', 'msl_chem'); const w = siloAt(PL, 'Warsaw', 1), M = f('mstock')(w); M.chem = 1; M.bm = 1; M.wo = PL;
   const kr = G.P.find(P => P.city && S.owner[P.id] === PL && P.id !== w).id; S.bld[kr].silo = 0; S.bld[kr].fac = 1; f('mstock')(kr).cm = 2;
