@@ -265,7 +265,13 @@ const fightsOnWay = (a, path) => path.slice(0, -1).filter(v => !G.P[v].sea && S.
    (legRatio: from where the force stands, or the province centre, to the point, or the next centre), so a short last leg is quick and a
    long one slow, never a free jump. Ships do the same inside sea zones, on water only (a point on land is moved to the nearest water of the
    zone); air units fly missions and take no point. Old saves (no a.dest, no a.pos) keep the province centres. */
-const JOIN_R = 6;   // world units (about 50 km): a force arriving at an exact point merges only with a force of its own standing that close (rules/tick.js)
+// a force arriving at its spot merges only with a force of its own standing on that very point (rules/tick.js): 0.1 km, the heart's radius
+// (HEART_KM). The orders that mean "join it" hand over that exact point: a tap on or by a city goes to the city itself (index.html byCity) and
+// joins the garrison standing there; a tap on or by a force of yours goes to its spot (index.html byForce); a counter dragged onto another is a
+// join order (a.join, joinForces). Any wider radius pulls a force off the
+// spot that was tapped: it was 6 world units (about 50 km) until PINPOINT-3, then 1 (about 9 km), which still took a tap 7 to 9 km from a city of
+// yours at the closest zoom (byCity's 16 px reach there is 0.8 world units) into the garrison, and a halt or a tap that close to any force of yours
+const JOIN_R = 0.1*KM_W;   // world units
 const provOfPt = (x, y) => { const c = worldToCell(x, y); return c >= 0 ? G.prov[c] : -1; };
 // the point (x, y) if it lies in province (or sea zone) p, else the nearest point of p (the centre of its nearest cell): a zone's cells are water
 function ptIn(p, x, y){ if (!G.P[p] || !Number.isFinite(x) || !Number.isFinite(y)) return null; if (provOfPt(x, y) === p) return [x, y];
@@ -295,7 +301,7 @@ function orderMove(a, target, pt = null){ if (a.fly && !a.air){ refuse(a.owner, 
   if (q) a.dest = {p:target, x:q[0], y:q[1]}; else if (a.dest) a.dest = null;
   if (a.to !== null){ a.path = target === a.to ? [] : pathFor(a, a.to, target);
     const end1 = legEnds(a)[1]; if (end1[0] !== end0[0] || end1[1] !== end0[1]){ a.legFrom = legSpot(a); a.t = 0; } }   // the leg now ends elsewhere: it runs on from where the force is
-  else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; }
+  else { a.path = pathFor(a, a.at, target); a.forced = a.path.length > 0; if (!a.path.length && a.dest) a.dest = null; }   // (no route: no order, and no stale point left for the plan to show, stopNow)
   IM.emit('ordered', a);   // (display only: the client marks where the counter starts from)
 }
 // HALT: stop a force right now, exactly where it is. Movement is province to province (a.at -> a.to, a.t = 0..1 along the leg), but an idle force

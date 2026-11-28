@@ -10830,7 +10830,10 @@ function joinForces(a, b){ if (!a || !b || a === b) return false;
   if (a.at === b.at && a.to === null && b.to === null){ const n0 = count(a); merge(b, a); removeEmpty(); SPLIT = null;
     if (sel.army === a.id) sel.army = b.id; sel.group = sel.group.filter(id => id !== a.id); if (sel.group.length < 2) sel.group = [];
     sfx('order'); toast(`Merged ${pluN(n0, 'unit')} into ${armyName(b)}: ${pluN(count(b), 'unit')}.${warn}`, sp.over ? 'bad' : 'good', null); renderSide(true); return true; }
-  const dest = b.to ?? b.at; orderMove(a, dest); if (!a.path.length && a.to === null){ toast('No route to that force.', 'bad', null); return false; }
+  // (to the spot where the other force stands, not the centre of its province: it merges there, rules/combat.js joinHour; one on the move is
+  // followed province by province)
+  const dest = b.to ?? b.at, spot = b.to !== null || b.path.length ? null : b.sail ? (b.sail.nx || b.sail.to) : b.pos;
+  orderMove(a, dest, spot); if (!a.path.length && a.to === null && !a.sail){ toast('No route to that force.', 'bad', null); return false; }
   a.join = b.id; a.chase = null; sfx('order'); toast(`${armyName(a)} marches to join ${armyName(b)} at ${G.P[dest].cityName || G.P[dest].name}.${warn}`, sp.over ? 'bad' : 'info', null);
   if (sel.army === a.id){ sel.army = null; sel.group = []; } renderSide(true); return true; }
 // a move to a spot in the force's own province (rules/movement.js orderMove → orderSpot): it walks, or a fleet sails, there and takes the time
@@ -10919,8 +10922,11 @@ function tap(x, y, shift = false, long = false){
   const p = mk ? mk.p : provAt(x, y);
   if (aimMsl && p >= 0){ const am = aimMsl; aimMsl = null; launchMissile(PLAYER, am.from, p, am.k); renderSide(true); return; }
   if (dropFor !== null && p >= 0){ const d0 = armyById(dropFor); dropFor = null; if (d0) orderDrop(d0, p); renderSide(true); return; }
-  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   const a = sel.army !== null ? armyById(sel.army) : null;
+  // the Waypoint button on: a tap on water is a stop too (a fleet's stops are on water; troops embark through a port). Before PINPOINT-3 the
+  // line below deselected first (c67d74a, "a tap only selects"), so no fleet could be given a stop by a tap, and a phone had no other way
+  if (a && wpMode && !a.air && !long && p >= 0 && G.P[p].sea){ stopTap(a, p, x, y); return; }
+  if (p < 0 || G.P[p].sea){ clearSel(); return; }
   if (a){
     // a tap is only a selection: it never moves the force (owner's rule). Move or Attack in the command bar (M, K), then a tap, gives the order;
     // the Waypoint button on makes each tap a stop. Anything else: a city or building tapped opens its panel with the force deselected, empty land deselects
@@ -11016,8 +11022,19 @@ function pinPt(a, p, w){ if (!w || p < 0 || a.air || (shipsOnly(a) && !G.P[p].se
 const PIN_CITY = 26*KM_W;   // (about 3 world units)
 function byCity(p, w){ const P = G.P[p]; if (!P || P.sea || !w) return false; const [hx, hy] = toScreen(P.x, P.y), [tx, ty] = toScreen(w[0], w[1]);
   return Math.hypot(tx - hx, ty - hy) < 16 && Math.hypot(wdx(P.x, w[0]), w[1] - P.y) <= PIN_CITY; }
+// the exact spot of a force of yours standing still in province (or sea zone) p that the tapped point w is "on or by", for force a sent there:
+// the tap is inside its counter, or within 16 css px of its spot on screen and PIN_CITY on the map, as byCity. A force arriving joins only a
+// force standing on its very point (rules/movement.js JOIN_R, 0.1 km), so a tap meant for one of yours goes to that point (PINPOINT-3 round 2:
+// with JOIN_R about 9 km a tap near a force of yours ended in it whatever the zoom; now what you tap on screen is what you get)
+function byForce(a, p, w){ if (!a || a.air || !w || !G.P[p]) return null; const [tx, ty] = toScreen(w[0], w[1]), mine = new Set(groupArmies().map(q => q.id)); mine.add(a.id);
+  const ok = b => b && !mine.has(b.id) && b.owner === a.owner && b.at === p && !b.air && !b.fly && b.to === null && !b.path.length && !b.sail && !(b.wp && b.wp.length) && count(b) && shipsOnly(b) === shipsOnly(a);
+  const spot = b => b.pos ? b.pos : [G.P[p].x, G.P[p].y];
+  for (let i = hits.length - 1; i >= 0; i--){ const h = hits[i]; if (h.unk || tx < h.x || tx > h.x + h.w || ty < h.y || ty > h.y + h.h) continue; const b = h.ids.map(armyById).filter(ok).sort((u, v) => count(v) - count(u))[0]; if (b) return spot(b); }
+  let best = null, bd = 16; for (const b of S.armies){ if (!ok(b)) continue; const q = spot(b), [bx, by] = toScreen(q[0], q[1]), d = Math.hypot(bx - tx, by - ty); if (d < bd && Math.hypot(wdx(q[0], w[0]), w[1] - q[1]) <= PIN_CITY){ bd = d; best = q; } }
+  return best; }
 function setTarget(a, p){ sel.target = p; sel.surprise = null; sel.chase = null; sel.targetPt = lastClickW && provAt(...toScreen(lastClickW[0], lastClickW[1])) === p ? pinPt(a, p, lastClickW) : null; lastClickW = null;
   if (sel.targetPt && !a.air && ground(a) && !G.P[p].sea && byCity(p, sel.targetPt)) sel.targetPt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city goes to the city itself: its heart, where a province is captured)
+  else if (sel.targetPt){ const f = byForce(a, p, sel.targetPt); if (f) sel.targetPt = f.slice(); }   // (a tap on or by a force of yours standing there: its spot, where it joins it)
   targetPath = a.air ? [] : pathFor(a, a.to !== null ? a.to : a.at, p);
   if (!a.air && !targetPath.length){ const sp = surprisePath(a, a.to !== null ? a.to : a.at, p); if (sp.pth.length && sp.viol.length){ targetPath = sp.pth; sel.surprise = sp.viol; } }
   if (a.air && S.owner[p] >= 0 && S.owner[p] !== a.owner && !atWar(a.owner, S.owner[p]) && isStriker(a) && !friendly(a.owner, S.owner[p])) sel.surprise = [S.owner[p]];
@@ -11081,8 +11098,10 @@ function sendToTarget(a, keep = false){
   if (sel.chase != null){ for (const x of groupArmies()) if (!x.air) x.chase = sel.chase; sel.chase = null; }   // (after the surprise attack is confirmed: a chase needs a war)
   let ok = 0, g = [];
   if (sel.target !== null){ g = groupArmies(); const T = sel.target, P0 = sel.targetPt;
-    // the exact point (rules/movement.js orderMove): a group's forces stand round it, each on its own spot (the first on the point itself)
-    const ptOf = i => !P0 ? null : i ? pinPt(g[i], T, [P0[0] + Math.cos(i*2.4)*6, P0[1] + Math.sin(i*2.4)*5]) : pinPt(g[i], T, P0);
+    // the exact point (rules/movement.js orderMove), the same one for every force of a group: they end on the spot that was tapped and join there
+    // (rules/tick.js, the arrival join, JOIN_R), each within its stack limit. Until PINPOINT-3 round 3 the others were sent round it, 6 and 5
+    // world units off (43 to 52 km), and with the join on the very spot only (round 2) they stayed there, as separate stacks
+    const ptOf = i => !P0 ? null : pinPt(g[i], T, P0);
     g.forEach((x, i) => { delete x.join; if (x.air){ if (orderAir(x, T)) ok++; } else { orderMove(x, T, ptOf(i)); if (x.path.length || x.to !== null || x.sail) ok++; } }); if (ok){ sfx('order'); ftipAsk('move'); } if (g.length > 1) toast(`${ok} of ${g.length} forces ordered to ${G.P[sel.target].cityName || G.P[sel.target].name}.`, 'info', null); }
   sel.target = null; targetPath = null;
   // as in Conflict of Nations the force (or the whole group) stays selected once the order is given, its route drawn to the point with the ETA:
@@ -11090,11 +11109,12 @@ function sendToTarget(a, keep = false){
   if (ok){ sel.lastOrder = {ids:g.map(x => x.id), t:performance.now()}; hoverPath = null; cmdMode = null; }
   renderSide(true); }
 // Waypoint button on (or Shift): a tap adds a stop at that exact point (rules/movement.js addStop): an idle force sets off for it, one with orders
-// goes there after its last stop. A group: each force adds its own stop round the point (as sendToTarget spreads a group's points)
-function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '';
-  g.forEach((q, i) => { let pt = pinPt(q, p, i ? [w[0] + Math.cos(i*2.4)*6, w[1] + Math.sin(i*2.4)*5] : w);
+// goes there after its last stop. A group: every force adds a stop on the same point (as sendToTarget), and they join there at the end
+function stopTap(a, p, x, y){ const w = screenToWorld(x, y), g = groupArmies().filter(q => !q.air && !q.fly && q.owner === PLAYER); let ok = 0, why = '', at = null;
+  g.forEach(q => { let pt = pinPt(q, p, at || w);   // (at: the point the first force given a stop took; the others take the same one)
     if (pt && ground(q) && !G.P[p].sea && byCity(p, w)) pt = [G.P[p].x, G.P[p].y];   // (a tap on or by the city: its heart, where a province is captured)
-    if (pt && addStop(q, p, pt)){ ok++; delete q.join; return; }
+    else if (pt && !at){ const f = byForce(q, p, w); if (f) pt = f.slice(); }   // (on or by a force of yours standing there: its spot, where the group joins it)
+    if (pt && addStop(q, p, pt)){ ok++; delete q.join; if (!at) at = pt.slice(); return; }
     if (!why) why = !pt || (shipsOnly(q) && !G.P[p].sea) ? 'A fleet\'s stops are on water.' : !canEnter(PLAYER, p) ? `${placeOwner(p)} is not open to you: tap with Waypoint off to plan an attack.` : embarkWhy(q, p) || 'No route there from the last stop.'; });
   if (ok){ sfx('order'); visCache = null; sel.target = null; targetPath = null; hoverPath = null; sel.lastOrder = {ids:g.map(q => q.id), t:performance.now()}; ftipAsk('move'); }
   else toast(why, 'bad', null);
