@@ -1,8 +1,8 @@
 // The Army Base rule and the start forts (BLD-RULES, owner 2026-11-14), in plain Node:   node .test/armybase-rule.js   (exit 0 when every check holds)
-// 1. infantry (Motorized, Anti-Tank, Special Forces, Paratroopers) needs an Army Base of level I in its city (INF_NEEDS in rules/data.js): without one
-//    the reason is 'Needs Army Base level 1' and recruit() refuses; a Recruiting Office alone unlocks nothing; Paratroopers also need an Airbase;
+// 1. infantry (Motorized, Special Forces, Paratroopers) needs an Army Base in its city (INF_NEEDS in rules/data.js; its level: BASE_LV): without one
+//    the reason is 'Needs Army Base I' and recruit() refuses; a Recruiting Office alone unlocks nothing; Paratroopers also need an Airbase;
 //    the other ground units keep their Army Base levels. The switch INF_NEEDS = ['fac', 'rec'] (the owner's alternative) needs both buildings.
-// 2. a new game (START-RULES, owner 2026-11-15): no city starts with an Army Base (both worlds), so on day 1 infantry says 'Needs Army Base level 1'
+// 2. a new game (START-RULES, owner 2026-11-15): no city starts with an Army Base (both worlds), so on day 1 infantry says 'Needs Army Base I'
 //    everywhere; every capital has Fortifications I and no other province any; the starting units are the same as before the rule, plus the
 //    capital's fighter (startAir, owner 2026-11-25). Army Base level I is cheap and quick (BUILD.fac.lv1: $10M, 2,000 materials, 2,000 iron, 30
 //    minutes; owner 2026-11-25) and costs the same in every city (no 40% rise at level I); every nation can pay for it from its starting stock;
@@ -17,29 +17,29 @@ globalThis.window = globalThis; require(path.join(ROOT, 'world.js')); require(pa
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FILES = [...html.matchAll(/<script\s[^>]*\bsrc\s*=\s*"(rules\/[^"]+\.js)"/g)].map(m => m[1]);
 const SRC = "'use strict';\n" + FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
-  + '\nreturn {IM, UNITS, BUILD, INF_NEEDS, INF_T, START_FORT, reqsOf, canMobilize, mobBlock, recruit, desk, buildCost, build, hasC, get S(){ return S; }, get G(){ return G; }};';
+  + '\nreturn {IM, UNITS, BUILD, BASE_LV, INF_NEEDS, INF_T, START_FORT, reqsOf, canMobilize, mobBlock, recruit, desk, buildCost, build, hasC, get S(){ return S; }, get G(){ return G; }};';
 const load = (both = false) => { const src = both ? SRC.replace("const INF_NEEDS = ['fac'];", "const INF_NEEDS = ['fac', 'rec'];") : SRC; if (both && src === SRC) throw new Error('INF_NEEDS not found'); return new Function(src)(); };
 let bad = 0, n = 0; const ok = (c, msg, info) => { n++; if (!c){ bad++; console.log('FAIL  ' + msg + (info !== undefined ? '  ' + JSON.stringify(info).slice(0, 300) : '')); } };
 const units = S => { let u = 0; for (const a of S.armies) if (a.owner >= 0) for (const k in a.u) u += a.u[k] || 0; return u; };
-const NEED = 'Needs Army Base level 1';
+const NEED = 'Needs Army Base I';
 
 // ---- 1. the rule
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(12345, 0, [0]); const S = R.S, G = R.G;
   ok(JSON.stringify(R.INF_NEEDS) === '["fac"]', 'INF_NEEDS is the Army Base alone (the proposal)', R.INF_NEEDS);
-  ok(R.INF_T.every(t => R.reqsOf(t)[0].b === 'fac' && R.reqsOf(t)[0].l === 1), 'every infantry unit needs Army Base level I', R.INF_T.map(R.reqsOf));
-  ok(JSON.stringify(R.reqsOf('para')) === JSON.stringify([{b:'fac', l:1}, {b:'air', l:1}]), 'Paratroopers: Army Base and Airbase', R.reqsOf('para'));
+  ok(R.INF_T.every(t => R.reqsOf(t)[0].b === 'fac' && R.reqsOf(t)[0].l === R.BASE_LV.fac[t]), 'every infantry unit needs the Army Base at its level (BASE_LV: BUILD-REQS)', R.INF_T.map(R.reqsOf));
+  ok(JSON.stringify(R.reqsOf('para')) === JSON.stringify([{b:'fac', l:2}, {b:'air', l:1}]), 'Paratroopers: Army Base II and Airbase I', R.reqsOf('para'));
   ok(!Object.keys(R.UNITS).some(t => R.reqsOf(t).some(r => r.b === 'rec')), 'no unit needs a Recruiting Office');
-  ok(R.reqsOf('tank')[0].b === 'fac' && R.reqsOf('sam')[0].l === 2, 'the other ground units keep their Army Base levels');
+  ok(R.reqsOf('tank')[0].b === 'fac' && R.reqsOf('tank')[0].l === 2 && R.reqsOf('sam')[0].l === 3, 'the other ground units need their BASE_LV levels (tank II, SAM III)');
   const N = S.nations[0], city = G.P.find(P => S.owner[P.id] === 0 && P.city && P.id !== N.capital && !S.bld[P.id].fac).id, B = S.bld[city];
   N.cash = 5000; S.bld[city].rec = 1;
-  ok(R.canMobilize(0, city, 'inf') === NEED, 'a city with a Recruiting Office but no Army Base: infantry "Needs Army Base level 1"', R.canMobilize(0, city, 'inf'));
-  ok(R.mobBlock(0, city, 'at').kind === 'bld' && R.mobBlock(0, city, 'at').b === 'fac', 'the block names the Army Base');
+  ok(R.canMobilize(0, city, 'inf') === NEED, 'a city with a Recruiting Office but no Army Base: infantry "Needs Army Base I"', R.canMobilize(0, city, 'inf'));
+  ok(R.mobBlock(0, city, 'art').kind === 'bld' && R.mobBlock(0, city, 'art').b === 'fac', 'the block names the Army Base');
   ok(R.recruit(0, city, 'inf') === false && !S.queue[city].length, 'recruit() refuses infantry there');
-  ok(R.canMobilize(0, city, 'tank') === NEED, 'tanks say the same');
+  ok(R.canMobilize(0, city, 'art') === NEED, 'artillery says the same (tanks: level II)');
   B.fac = 1; B.rec = 0;
-  ok(R.canMobilize(0, city, 'inf') === '' && R.canMobilize(0, city, 'at') === '', 'Army Base I, no Recruiting Office: infantry can be trained');
+  ok(R.canMobilize(0, city, 'inf') === '' && R.canMobilize(0, city, 'art') === '', 'Army Base I, no Recruiting Office: infantry (and artillery) can be trained');
   ok(R.recruit(0, city, 'inf') === true, 'and recruit() queues it');
-  ok(/Needs Army Base level 2/.test(R.canMobilize(0, city, 'sam')), 'level II units: "Needs Army Base level 2"', R.canMobilize(0, city, 'sam'));
+  ok(R.canMobilize(0, city, 'tank') === 'Needs Army Base II' && R.canMobilize(0, city, 'sam') === 'Needs Army Base III', 'level II and III units: "Needs Army Base II / III"', [R.canMobilize(0, city, 'tank'), R.canMobilize(0, city, 'sam')]);
   ok(/Unlocks no units/.test(R.BUILD.rec.desc) && /infantry/.test(R.BUILD.fac.desc), 'the building texts follow the rule');
   S.cons[city] = null; B.fac = 0; S.cons[city] = {k:'fac', lvl:1, h:30, h0:72};
   ok(/^Army Base ready in 30 h$/.test(R.canMobilize(0, city, 'inf')), 'an Army Base going up: "ready in 30 h"', R.canMobilize(0, city, 'inf'));
@@ -77,19 +77,19 @@ for (const scn of ['world64', 'world']){ const R = load(), api = R.IM.api; api.u
 // ---- 3. an old save
 { const R = load(), api = R.IM.api; api.useScenario('world64'); api.newGame(777, 0, [0]); let S = R.S, G = R.G; S.started = true;
   const N = S.nations[0], city = G.P.find(P => S.owner[P.id] === 0 && P.city && P.id !== N.capital && !S.bld[P.id].fac).id;
-  S.bld[city].rec = 1; S.queue[city].push({t:'inf', h:3, h0:24}, {t:'at', h:30, h0:30});   // queued under the old rule (a Recruiting Office, no Army Base)
+  S.bld[city].rec = 1; S.queue[city].push({t:'inf', h:3, h0:24}, {t:'art', h:30, h0:48});   // queued under the old rule (a Recruiting Office, no Army Base)
   S.bld[N.capital].fac = 0;   // and a capital without an Army Base (one moved after a loss)
   const o = JSON.parse(api.saveJSON()); delete o.ab; const old = JSON.stringify(o);
   const R2 = load(), api2 = R2.IM.api; ok(api2.restore(JSON.parse(old)) !== false, 'an old save (no S.ab) loads'); S = R2.S; G = R2.G;
   ok(S.ab === 1, 'it is marked as under the rule');
-  ok(S.queue[city].length === 2 && S.queue[city][0].t === 'inf' && S.queue[city][1].t === 'at', 'the infantry queued in a city without an Army Base keeps its queue', S.queue[city]);
+  ok(S.queue[city].length === 2 && S.queue[city][0].t === 'inf' && S.queue[city][1].t === 'art', 'the infantry queued in a city without an Army Base keeps its queue', S.queue[city]);
   ok(S.bld[S.nations[0].capital].fac === 1, 'a capital without an Army Base gets one');
   const log = (R2.desk(0).log || []).find(e => /New rule: infantry/.test(e.text || ''));
   ok(!!log && /Army Base of level I/.test(log.text) && /carry on/.test(log.text), 'the seat is told about the rule', log);
   const before = S.armies.filter(a => a.owner === 0 && a.at === city).reduce((s, a) => s + (a.u.inf || 0), 0);
   for (let h = 0; h < 4*4; h++) api2.tickQ();
   const after = S.armies.filter(a => a.owner === 0 && a.at === city).reduce((s, a) => s + (a.u.inf || 0), 0);
-  ok(after === before + 1 && S.queue[city].length === 1 && S.queue[city][0].t === 'at', 'the queued infantry is trained (no Army Base needed for what was already queued)', {before, after, q:S.queue[city]});
+  ok(after === before + 1 && S.queue[city].length === 1 && S.queue[city][0].t === 'art', 'the queued infantry is trained (no Army Base needed for what was already queued)', {before, after, q:S.queue[city]});
   ok(R2.canMobilize(0, city, 'inf') === NEED, 'new infantry orders there follow the rule');
   const js = api2.saveJSON(), R3 = load(); R3.IM.api.restore(JSON.parse(js));
   ok(!(R3.desk(0).log || []).some(e => /New rule: infantry/.test(e.text || '') && e.h > S.hour), 'a save under the rule is not told again'); }

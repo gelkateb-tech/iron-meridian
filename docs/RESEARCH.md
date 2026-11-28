@@ -137,7 +137,7 @@ Each category starts with its day grid (what the screen shows: one column per li
 | 17 | Protection 3/3 (`inf_pr`) | Levels | defense +40% in all. Needs generation 2 | $80M, 24 mat, 8 rare | 3 |
 | 17 | Assault Infantry (`inf_g3`), picture `u-inf-3` | Generation | attack +1, defense +1, health +2. Needs Mechanized Infantry | $173M, 80 mat, 62 rare | 8 |
 
-**Anti-Tank Infantry**: 11 steps, 132 rare materials, $785M, 33 research days in all.
+**Anti-Tank Infantry** (removed 2026-11-27, BUILD-REQS: its line is gone; old saves carry it over or refund it, docs/ECONOMY.md section 15): 11 steps, 132 rare materials, $785M, 33 research days in all.
 
 | Day | Node (id) | Type | Effect | Price | Days |
 |---|---|---|---|---|---|

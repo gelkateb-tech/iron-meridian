@@ -25,7 +25,7 @@ const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has 
     S.rel[rk(0, nat('France'))] = { st: 'war', since: S.hour, until: null };
     const ber = by('Berlin'), mun = by('Munich');
     const inf = im.addArmy(0, ber.id, { inf: 6 }); inf.stance = 'defend'; im.addArmy(0, ber.id, { tank: 3, ifv: 2 });
-    const sq = im.addArmy(0, mun.id, { spec: 2, at: 2, inf: 2 });
+    const sq = im.addArmy(0, mun.id, { spec: 2, inf: 4 });
     S.speed = 1; im.tick(); im.tick(); S.speed = 0;
     return { ber: [ber.x, ber.y], mun: [mun.x, mun.y], inf: inf.id, sq: sq.id }; });
   const view = (xy, hp) => p.evaluate(([x, y, hp, W, H]) => { const v = window.__im.view, s = hp/12; v.s = s; v.x = W/2 - x*s; v.y = H/2 - y*s; }, [xy[0], xy[1], hp, W, H]);
@@ -49,7 +49,7 @@ const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has 
     return out; });
   // every infantry type shows the same plain helmet on its badge (owner, 2026-11-18)
   checks['infantry-one-helmet'] = await p.evaluate(() => { const U = window.__im.uicon, px = t => { const E = U.badge(t, 'own', 14, 0, false, false); return Array.from(E.c.getContext('2d').getImageData(0, 0, E.c.width, E.c.height).data).join(','); }, a = px('inf');
-    const same = ['para', 'spec', 'at'].map(t => px(t) === a); return { ok: same.every(Boolean), same }; });
+    const same = ['para', 'spec'].map(t => px(t) === a); return { ok: same.every(Boolean), same }; });
   for (const [t, q] of Object.entries(parts)) checks['badge-parts-' + t] = { ok: !!q && q.flag.cols >= 3 && q.count.white > 0.04 && q.tag.white > 0.2 && q.tag.navy > 0.03 && q.far.white > 0.2 && q.far.navy > 0.03 && q.farEdge.white < 0.2 && q.bar.white < 0.05, ...q };
   // (2) the infantry figures: 3D squads with a soft shadow, not single-colour blobs
   const sheets = await p.evaluate(async () => { const out = {};
@@ -65,7 +65,7 @@ const TIP = 'Dug in: +10% defence in the open, +25% inside a city. The unit has 
   // close in the squads are drawn as 3D models (no picture), and they bob on the march
   await view(sc.mun, 200); await p.evaluate(() => { window.__im.TM.dbg.on = true; }).catch(() => {}); await p.waitForTimeout(1800);
   const drawn = await p.evaluate(() => { const L = window.__im.TM && window.__im.TM.dbg; return L ? L.filter(q => /^(sol|sat|ssf)$/.test(q.t)).map(q => ({ t: q.t, art: q.art, lvl: q.lvl, h: q.h })) : null; });
-  checks.figuresDrawn = { ok: !!drawn && ['sol', 'sat', 'ssf'].every(t => drawn.some(q => q.t === t && !q.art && q.lvl !== 'art')) && drawn.every(q => q.h >= 15), drawn };
+  checks.figuresDrawn = { ok: !!drawn && ['sol', 'ssf'].every(t => drawn.some(q => q.t === t && !q.art && q.lvl !== 'art')) && drawn.every(q => q.h >= 15), drawn };
   const bob = await p.evaluate(async ([id]) => { const im = window.__im, S = im.S, G = im.G, a = S.armies.find(q => q.id === id), P = G.P[a.at], t = P.nbs.find(q => !G.P[q].sea && S.owner[q] === 0);
     im.orderMove(a, t); S.speed = 1; const ys = []; for (let i = 0; i < 40; i++){ await new Promise(r => setTimeout(r, 60)); const q = (im.TM.dbg || []).find(z => z.t === 'sol' && z.moving); if (q) ys.push(q.y - q.gl[1]); } S.speed = 0;
     let v = 0; for (let i = 1; i < ys.length; i++) v = Math.max(v, Math.abs(ys[i] - ys[i - 1])); return { n: ys.length, maxStep: +v.toFixed(2), spread: ys.length ? +(Math.max(...ys) - Math.min(...ys)).toFixed(2) : 0 }; }, [sc.sq]);

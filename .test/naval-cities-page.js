@@ -101,7 +101,7 @@ const OUT = process.argv[2] || null, W = 1440, H = 900;
 
   // 5. an assault landing into an enemy naval city (Mumbai, India at war)
   const A = await p.evaluate(mu => { const im = window.__im, S = im.S, G = im.G, ind = S.nations.findIndex(N => N.name === 'India'); setRel(0, ind, 'war');
-    const z = G.P[mu].nbs.find(v => G.P[v].sea), a = im.addArmy(0, z, { inf: 6, at: 2 }); a.m = 90; return { a: a.id, z, zxy: [G.P[z].x, G.P[z].y], ind }; }, C.mu);
+    const z = G.P[mu].nbs.find(v => G.P[v].sea), a = im.addArmy(0, z, { inf: 8 }); a.m = 90; return { a: a.id, z, zxy: [G.P[z].x, G.P[z].y], ind }; }, C.mu);
   // planning it: the panel's route says "assault landing"
   await look((C.muxy[0] + A.zxy[0])/2, (C.muxy[1] + A.zxy[1])/2 + 6, 64); await p.evaluate(id => window.__im.selectArmy(id), A.a); await p.waitForTimeout(200);
   await p.evaluate(([id, mu]) => { window.__im.setTarget(id, mu); window.dispatchEvent(new Event("im-bart")); }, [A.a, C.mu]); await settle(); await clear();

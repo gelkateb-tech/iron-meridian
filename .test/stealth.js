@@ -1,6 +1,6 @@
 // Stealth Bomber (unit 'stealth', research: bomb_up, then the unlock u_stealth): the rules, checked in plain Node with no browser.
 //   node .test/stealth.js [quick]
-// 1. the unit's numbers, its research (the unlock needs BOTH the Strategic Bomber Upgrade and Stealth Airframes, from day 14) and its building (Airbase III)
+// 1. the unit's numbers, its research (the unlock needs BOTH the Strategic Bomber Upgrade and Stealth Airframes, from day 14) and its building (Airbase V since BUILD-REQS, 2026-11-27)
 // 2. detection: Mobile SAMs, frigates and cruisers hit it 35% as often as a Heavy Bomber, fighters 40% as often (measured over many raids)
 // 3. bomb load: 60% of the Heavy Bomber's on cities and buildings, +25% (not +50%) on troops sheltering in a city
 // 4. fog of war: in flight only a SAM or jammer in or next to the province sees it; an AWACS only locates it, at half range (250 of its 500 km)
@@ -24,7 +24,7 @@ function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, [
   const K = R.RES_K, want = {cost:330, oil:26*K, metal:34*K, iron:6*K, elec:40*K, rare:8*K, mp:8, build:168, upk:14, fuel:3.5*K, atk:8, def:4, hp:12, spd:10};   // (goods at the resource scale)
   for (const k in want) ok(U[k] === want[k], `stealth.${k} is ${want[k]}`, U[k]);
   ok(U.vs.soft === 1 && U.vs.armored === 0.7 && U.vs.naval === 0.6 && U.vs.air === 0.2, 'damage by target class', U.vs);
-  ok(U.req.b === 'air' && U.req.l === 3 && U.tech === 'u_stealth', 'needs Airbase III and its own unlock', U.req);
+  ok(U.req.b === 'air' && U.req.l === 5 && U.tech === 'u_stealth', 'needs Airbase V and its own unlock', U.req);
   ok(R.AIR_RANGE.stealth === R.AIR_RANGE.bomb && R.AIR_RANGE.stealth === 34, 'range 34 hexes, the Heavy Bomber\'s');
   ok(U.bmb === 0.6 && UNITS.bomb.bmb === 1, 'bomb load 60% of the Heavy Bomber\'s');
   const c = R.ucost(0, 'stealth'), d = S.nations[0].doc; info.cost = c; ok(d || (c.cash === 330 && c.elec === 40*K && c.rare === 8*K && c.mp === 8), 'price', c);
@@ -55,15 +55,15 @@ function fresh(seed){ const R = new Function(SRC)(); R.IM.api.newGame(seed, 0, [
   ok(/Waits for Strategic Bomber Upgrade/.test(R.researchWhy(0, 'u_stealth')), 'the unlock waits while its prerequisite runs', R.researchWhy(0, 'u_stealth'));
   N.research = N.research2 = null; N.tech.bomb_up = 1; N.tv++; ok(R.canResearch(0, 'u_stealth') && R.researchWhy(0, 'u_stealth') === '', 'the unlock opens with both', R.researchWhy(0, 'u_stealth'));
   S.hour = 12*24; ok(/Opens on day 14/.test(R.researchWhy(0, 'u_stealth')), 'and not before day 14', R.researchWhy(0, 'u_stealth')); S.hour = 20*24;
-  // ---- mobilizing: the research and an Airbase III
-  const cap = N.capital; S.bld[cap].air = 2; ok(/Research required: Stealth Bomber/.test(R.canMobilize(0, cap, 'stealth')), 'not researched: blocked', R.canMobilize(0, cap, 'stealth'));
-  N.tech.u_stealth = 1; N.tv++; ok(/Airbase III/.test(R.canMobilize(0, cap, 'stealth')), 'Airbase II is not enough', R.canMobilize(0, cap, 'stealth'));
-  S.bld[cap].air = 3; ok(R.canMobilize(0, cap, 'stealth') === '', 'Airbase III: can be mobilized', R.canMobilize(0, cap, 'stealth'));
+  // ---- mobilizing: the research and an Airbase V
+  const cap = N.capital; S.bld[cap].air = 4; ok(/Research required: Stealth Bomber/.test(R.canMobilize(0, cap, 'stealth')), 'not researched: blocked', R.canMobilize(0, cap, 'stealth'));
+  N.tech.u_stealth = 1; N.tv++; ok(/Airbase V/.test(R.canMobilize(0, cap, 'stealth')), 'Airbase IV is not enough', R.canMobilize(0, cap, 'stealth'));
+  S.bld[cap].air = 5; ok(R.canMobilize(0, cap, 'stealth') === '', 'Airbase V: can be mobilized', R.canMobilize(0, cap, 'stealth'));
   ok(R.IM.api.recruit(0, cap, 'stealth') === true && S.queue[cap].some(j => j.t === 'stealth'), 'queued');
   info.trainH = R.trainH(cap, 'stealth', 0);
   const w = R.addArmy(0, cap, {stealth:2}); w.air = {base:cap, cd:0};
   ok(R.isStriker(w) && R.loWing(w) && /Stealth Bomber Wing/.test(R.armyName(w)), 'a wing of them strikes and is named', R.armyName(w));
-  ok(R.wingRange(w) === 34 + 2, 'wing range 34 (+2 for the Airbase III it flies from)', R.wingRange(w));
+  ok(R.wingRange(w) === 34 + 4, 'wing range 34 (+4 for the Airbase V it flies from)', R.wingRange(w));
 }
 
 // ---- 2 and 3: raids. A fresh game per series; nation 0 at war with nation E, a target province of E's next to a province of 0's
@@ -134,7 +134,7 @@ function arena(seed){ const R = fresh(seed), {S, G} = R; let E = -1, fp = -1, gp
   const rich = () => { for (const k of ['cash', 'oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = 40000*(R.GOODS.includes(k) ? R.RES_K : 1); };
   const mine = () => ({wings:S.armies.filter(a => a.owner === n && a.air && a.u.stealth > 0).length, planes:S.armies.reduce((s, a) => s + (a.owner === n ? a.u.stealth || 0 : 0), 0), queued:S.queue.reduce((s, q, p) => s + (S.owner[p] === n ? q.filter(j => j.t === 'stealth').length : 0), 0)});
   const turns = k => { for (let i = 0; i < k; i++){ rich(); R.aiTurn(n); } };
-  N.tech = {...N.tech, u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}; N.tv = (N.tv || 0) + 1; S.bld[cap].air = 3; S.bld[cap].fac = Math.max(1, S.bld[cap].fac); rich();
+  N.tech = {...N.tech, u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}; N.tv = (N.tv || 0) + 1; S.bld[cap].air = 5; S.bld[cap].fac = Math.max(1, S.bld[cap].fac); rich();
   const fc = S.nations[foe].capital; for (const a of S.armies) if (a.owner === foe) a.u.sam = 0;
   S.hour = 30*24; ok(!R.aiFoeSams(n), 'the enemy has no SAM stack yet');
   const sams = R.addArmy(foe, fc, {sam:3}); ok(R.aiFoeSams(n), 'now it has');
@@ -144,24 +144,24 @@ function arena(seed){ const R = fresh(seed), {S, G} = R; let E = -1, fp = -1, gp
   sams.u.sam = 1; ok(!R.aiFoeSams(n) && R.aiStealthWant(n, R.income(n)) === 0, 'day 60 but a single SAM is no stack: none');
   for (const q of S.queue) if (q.length) for (let i = q.length - 1; i >= 0; i--) if (q[i].t === 'stealth') q.splice(i, 1);
   turns(40); ok(mine().queued === 0, 'day 60 without enemy SAM stacks: the AI queues none in 40 turns', mine());
-  sams.u.sam = 3; ok(R.aiStealthWant(n, R.income(n)) === R.AI_STEALTH_MAX && R.aiStealthSite(n) === cap, 'day 60 with enemy SAM stacks: it wants its one wing, at its Airbase III', [R.aiStealthWant(n, R.income(n)), R.aiStealthSite(n), cap]);
+  sams.u.sam = 3; ok(R.aiStealthWant(n, R.income(n)) === R.AI_STEALTH_MAX && R.aiStealthSite(n) === cap, 'day 60 with enemy SAM stacks: it wants its one wing, at its Airbase V', [R.aiStealthWant(n, R.income(n)), R.aiStealthSite(n), cap]);
   S.rel['0,' + n] = {st:'peace', since:S.hour, until:null}; S.rel[n + ',0'] = S.rel['0,' + n];
   const others = S.nations.some(o => o.id !== n && o.id !== foe && R.aiFoeSams(n)); if (!others) ok(R.aiStealthWant(n, R.income(n)) === 0, 'at peace with the SAM power: none');
   S.rel['0,' + n] = {st:'war', since:S.hour, until:null}; S.rel[n + ',0'] = S.rel['0,' + n];
-  // play on: hourly ticks with money to spare; a second Airbase III city to tempt it into a second wing
-  const c2 = G.P.find(P => S.owner[P.id] === n && P.city && P.id !== cap); if (c2){ S.bld[c2.id].air = 3; S.bld[c2.id].fac = Math.max(1, S.bld[c2.id].fac); }
+  // play on: hourly ticks with money to spare; a second Airbase V city to tempt it into a second wing
+  const c2 = G.P.find(P => S.owner[P.id] === n && P.city && P.id !== cap); if (c2){ S.bld[c2.id].air = 5; S.bld[c2.id].fac = Math.max(1, S.bld[c2.id].fac); }
   let maxW = 0, maxP = 0, seen = 0, err = null; const days = QUICK ? 12 : 30;
   try { for (let h = 0; h < days*24 && !S.over; h++){ rich(); if (!S.armies.some(a => a.owner === foe && (a.u.sam || 0) >= 2)) R.addArmy(foe, fc, {sam:3}); R.IM.api.tick(); const m = mine(); maxW = Math.max(maxW, m.wings); maxP = Math.max(maxP, m.planes + m.queued); if (m.planes) seen++; } } catch (e){ err = e.stack; }
   ok(!err, 'the game ran', err); info.aiScenario = {days, maxWings:maxW, maxAircraft:maxP, hoursWithStealth:seen, alive:N.alive};
-  ok(maxP >= 1, 'with the research, an Airbase III, an enemy SAM stack and money the AI does build one', info.aiScenario);
+  ok(maxP >= 1, 'with the research, an Airbase V, an enemy SAM stack and money the AI does build one', info.aiScenario);
   ok(maxP <= R.AI_STEALTH_MAX, `never more than one wing's worth (${R.AI_STEALTH_MAX} aircraft) per nation`, info.aiScenario);
 }
-// a played game: every nation has the research and an Airbase III from day 50; the rules hold for all of them every hour
+// a played game: every nation has the research and an Airbase V from day 50; the rules hold for all of them every hour
 if (!QUICK){ const R = fresh(12345), {S, G} = R; let err = null, first = null, maxW = 0, noSam = 0, built = 0; const per = {};
   const census = () => { const w = {}, q = {}; for (const a of S.armies) if (a.owner >= 0 && a.air && a.u.stealth > 0) w[a.owner] = (w[a.owner] || 0) + 1;
     S.queue.forEach((l, p) => { for (const j of l) if (j.t === 'stealth') q[S.owner[p]] = (q[S.owner[p]] || 0) + 1; }); return {w, q}; };
   try { for (let h = 0; h < 80*24 && !S.over; h++){
-      if (h === 49*24) for (const N of S.nations){ if (!N.alive) continue; Object.assign(N.tech, {u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}); N.tv = (N.tv || 0) + 1; S.bld[N.capital].air = 3; }
+      if (h === 49*24) for (const N of S.nations){ if (!N.alive) continue; Object.assign(N.tech, {u_jet:1, u_int:1, jet_pgm:1, jet_lo:1, u_bomb:1, bomb_up:1, u_stealth:1}); N.tv = (N.tv || 0) + 1; S.bld[N.capital].air = 5; }
       if (h >= 49*24 && h % 24 === 0) for (const N of S.nations) if (N.alive){ N.cash = Math.max(N.cash, 1500); for (const k of ['oil', 'metal', 'iron', 'elec', 'rare', 'mp']) N[k] = Math.max(N[k], 400*(R.GOODS.includes(k) ? R.RES_K : 1)); }
       const q0 = census().q; R.IM.api.tick(); const c = census();
       for (const n in c.w) maxW = Math.max(maxW, c.w[n]);

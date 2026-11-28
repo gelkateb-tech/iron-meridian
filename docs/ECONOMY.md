@@ -280,6 +280,8 @@ or South Africa (11 to 14 rare a day) than two are to Russia or the USA (6 to 8)
 
 ### 5.1 Army Base (save key `fac`, was Arms Factory)
 
+(Its unlocks and training speed below are the economy plan's; since 2026-11-27 they are section 15, Build requirements.)
+
 Keeping the key means every old save's factories become Army Bases at the same level with no migration, and the pictures
 (`BART.fac = 'military-base'`, b-military-base-1..5) already match.
 
@@ -696,3 +698,73 @@ Measured headless, seeds 12345, 7 and 2024, 30 days, against master 15466ee.
 World gross income a day, three-seed mean, before > after: day 1 oil 510 > 521, materials 348 > 338, the rest unchanged;
 day 30 money 3951 > 4036, oil 426 > 444, materials 318 > 334, iron 278 > 278, electronics 79 > 83, rare 119 > 114,
 units 1392 > 1460.
+
+## 15. Build requirements (BUILD-REQS, owner 2026-11-27)
+
+Owner, verbatim: "only levels 4 and 5 build faster, since the Recruiting Office already handles speed". This replaces the unlocks and speeds
+of 5.1 above and the Airbase and Naval Yard level bonuses. One table in `rules/data.js` (`BASE_LV`) gives every unit the level of its base;
+`BASE_SPD` gives the build speed by level; the building texts are written from both (`baseDesc`), and the Build list shows them as a table.
+
+| Level | Army Base | Airbase | Naval Yard (round 2) |
+|---|---|---|---|
+| I | Motorized Infantry, Mobile Artillery, Marines (coastal cities); the recon vehicle's slot | Recon UAV, Attack Helicopter, Air Superiority Fighter, Interceptor | Frigate; the Corvette's slot |
+| II | Infantry Fighting Vehicle, Main Battle Tank, Paratroopers (also an Airbase I), Swarm Drones; Mobile Anti-Air's slot | Strike Fighter, Strike Drone | the Destroyer's slot |
+| III | Rocket Artillery, Mobile SAM, Special Forces, Mobile Jammer | Maritime Patrol Aircraft, AWACS, Heavy Bomber | Cruiser, Attack Submarine |
+| IV | no new units, 10% faster | no new units, 10% faster | no new units, 10% faster |
+| V | Missile Defence's slot, 20% faster | Stealth Bomber, 20% faster | Aircraft Carrier; the Ballistic Missile Submarine's slot; 20% faster |
+
+- Build speed: levels I-III add none on all three bases; IV trains in 0.9 of the time, V in 0.8. A unit counts only the base that trains it
+  (its first building need: `trainBase`): Swarm Drones and Paratroopers the Army Base, aircraft the Airbase, ships the Naval Yard. The
+  Recruiting Office (10% a level, 50% at V), the doctrine, the research final level (15%) and the 30% floor are unchanged and multiply as before.
+- Before: Army Base 20 / 40 / 60 / 65 / 70% faster at I-V (and every level a training line), Airbase 0 / 10 / 20 / 30 / 40%, Naval Yard
+  0 / 0 / 10 / 20 / 30%. The training lines stay as they were in the rules (1 + Army Base level, a queue holds at most 2), so in practice
+  Army Base I opens the second line for a member; the texts now say so.
+- Marked slots (no unit, skipped): `rcn` the recon vehicle (Army Base I; proposed on start-armies), `maa` Mobile Anti-Air (Army Base II; no
+  such vehicle, the Mobile SAM is at III), `mdef` Missile Defence (Army Base V; today only the research Anti-Missile Shield, nation-wide).
+- Research days and prices are unchanged. All three bases already went to level V (prices from the level formula, `bldLv`; nothing added).
+- Anti-Tank Infantry is removed (unit, research line, old-tree conversions, the computer's pick). Old saves: `atMigrate` and `atResMigrate`
+  (`rules/state.js`, flag `S.noAt`): units become Motorized Infantry with their share of health (wounds x 10/9), queued ones with their share
+  trained (hours x 24/30) and $7M, 3,000 materials and 3,000 iron back each, repeat orders repeat infantry; Ceramic Body Armour, Firepower and
+  Protection carry over to the infantry's (the higher level kept, the rest refunded), Tandem Warheads, Thermal Sights and Guided Missile Teams
+  are refunded at their old price (`AT_OLD`), a project of the line still running is refunded. Test: `.test/build-reqs.js` with a save made
+  by master (`.test/fixtures/at-oldsave.json`, `.test/at-oldsave-make.js`).
+- The computer (`rules/ai.js`): `aiFacWant` (the capital to Army Base II at once, to III with Rocket Artillery, Special Forces or Jammers
+  researched or enemy aircraft about, and AT WAR outright, keeping only $25M back over the price (`AI_FAC.war3`; at peace $140M), its other
+  cities at war $90M (`warO3`; at peace $200M): the peace-time reserve had left every warring nation without Mobile SAMs; the biggest other Army Base cities, the front first, 2-4 to II and 0-2 to III by size), `aiAirUp` and the
+  Airbase saving (`aiAirNeed`: II for Strike Fighters and Strike Drones, III for Heavy Bombers, AWACS and patrol aircraft), the stealth wing's
+  Airbase climbs III, IV, V, `aiRecWant` (Recruiting Offices to III in its training cities at war or when rich). Anti-Tank Infantry's
+  anti-armour weight went to the tank and the strike drone.
+
+### 15.1 Round 2: the Naval Yard and the wording (owner 2026-11-27)
+
+Owner, verbatim: "Naval Yard: use these levels instead of your table: Level 1: Corvette, Frigate; Level 2: Destroyer; Level 3: Cruiser,
+Attack Submarine; Level 4: no new units, builds faster; Level 5: Aircraft Carrier, Ballistic Missile Submarine, builds faster still. Corvette,
+Destroyer and Ballistic Missile Submarine don't exist yet, so give them marked slots, like the recon vehicle. Build the rest now." The table
+above shows it (`BASE_LV.yard`); research, prices and the speed of IV and V are unchanged.
+
+- Marked slots (no unit, skipped): `corv` Corvette (Naval Yard I), `dest` Destroyer (II), `ssbn` Ballistic Missile Submarine (V).
+- Wording (owner's point 4): a missing base level always reads with a Roman numeral: "Needs Army Base I", "Needs Army Base II", like "Needs
+  Airbase II" and "Needs Naval Yard III" (was "Needs Army Base level 2"). A missing Airbase or Naval Yard still says "Build an Airbase first".
+- Old saves (`yardMigrate`, `rules/state.js`, flag `S.yl`): nothing in the save changes. Ships at sea stay; a yard keeps its level; a ship queued
+  or in training in a yard now too low for it (a Cruiser or Attack Submarine below III, a Carrier below V) FINISHES AS QUEUED, since the queue
+  never checks the level again (`prodHour`); only new orders need the new level, and a repeat order of such a ship pauses with "Needs Naval Yard
+  III" until the yard is upgraded (`repeatHour`). The seat is told once. Test: `.test/build-reqs.js` section 6, with a save made by master
+  (`.test/fixtures/yard-oldsave.json`, `.test/yard-oldsave-make.js`).
+- The computer (`rules/ai.js`, `AI_YARD`, `aiYard3`, `aiYardUp`, `N.ySave`): its main yard (the highest, then the biggest city) climbs to III
+  at war at sea (two naval cities or more, enemy ships, or its convoys hit) and for a coastal power (3 naval cities or more) with $150M in the
+  bank; it saves for the next level like the Airbase (held back from new units by `aiReserve`). A second yard to III at war with 6 naval cities
+  or more. IV and V only for the main yard, with Carrier Aviation researched, at war or with $700M; then one carrier a nation (two with 6 naval
+  cities). The Attack Submarine's weight went from 0.5 to 1.6 (about half as many cities can train it now) and a yard-III city weighs frigates
+  at 0.6. Without the saving no yard reached III in 60 days (3 seeds) and no submarine was built.
+- Measured, all computer, 3 wars provoked every 10 days, seeds 12345 / 2024 / 7, ships put in training by the day (frigates, submarines,
+  cruisers, carriers):
+
+| | day 30 frig / sub / crui / carr | day 60 frig / sub / crui / carr | units on the map, day 30 / 60 | Naval Yards III, day 60 |
+|---|---|---|---|---|
+| master | 278-328 / 25-55 / 0-1 / 0 | 458-525 / 42-61 / 0-4 / 0 | - | 0 |
+| round 1 (b8cba48) | 293-308 / 30-41 / 1 / 0 | 463-496 / 43-55 / 2-3 / 0 | 5562-5672 / 6190-6309 | 0 |
+| round 2 | 323-334 / 12-21 / 3-5 / 0 | 489-552 / 34-48 / 13-14 / 0 | 5122-5188 / 6124-6265 | 44-46 |
+
+  Submarines come later (they wait for a yard III: 30-33 stand by day 30) and reach 80% of round 1's by day 60, cruisers are built at last (13-14, was 2-3),
+  frigates 5-10% more. The yards cost 8% of the units on the map at day 30, 1% at day 60. No carrier by day 60, as on master: 1-4 nations
+  have Carrier Aviation by then and none has the money for a Naval Yard V.

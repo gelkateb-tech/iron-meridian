@@ -63,10 +63,10 @@ const out = n => __dirname + '/v3-air-' + n + '.png';
       window.__scnC = {t1, t2, e1:e1.id, e2:e2.id, aw:aw.id, uv:uv.id, fp}; }
     // ---- D. heavy bombers vs a city, with and without enemy fighters (Air Superiority patrol over the city)
     { const bombRun = (fighters, n = 20) => { const bl = [], lv = [], dmg = [], broke = []; for (let i = 0; i < n; i++){ strip(gcity); const B0 = S.bld[gcity]; B0.fac = 3; B0.air = 2; B0.fdy = 1; B0.fort = 1;
-          const lv0 = Object.values(S.bld[gcity]).reduce((x, y) => x + y, 0); const g = im.addArmy(E, gcity, {inf:6, at:2}), h0 = 6*10 + 2*9;
+          const lv0 = Object.values(S.bld[gcity]).reduce((x, y) => x + y, 0); const g = im.addArmy(E, gcity, {inf:8}), h0 = 8*10;
           let f = null; if (fighters){ f = wing(E, gcity, {asf:3}); f.fly = {tgt:gcity, kind:'patrol', ph:'patrol', t:0, hrs:12}; }
           const w = wing(0, fp, {bomb:3}); const L0 = S.log.length; A.resolveStrike(w, gcity);
-          bl.push(3 - (w.u.bomb || 0)); lv.push(lv0 - Object.values(S.bld[gcity]).reduce((x, y) => x + y, 0)); dmg.push(h0 - (g.u.inf*10 - g.w.inf + g.u.at*9 - g.w.at)); broke.push(S.log.slice(0, 3).some(l => /jettison/.test(l.text)) ? 1 : 0);
+          bl.push(3 - (w.u.bomb || 0)); lv.push(lv0 - Object.values(S.bld[gcity]).reduce((x, y) => x + y, 0)); dmg.push(h0 - (g.u.inf*10 - g.w.inf)); broke.push(S.log.slice(0, 3).some(l => /jettison/.test(l.text)) ? 1 : 0);
           clear([g.id, w.id].concat(f ? [f.id] : [])); }
         return {bombersLost:avg(bl), buildingLevelsWrecked:avg(lv), garrisonHpLost:avg(dmg), raidsBrokenUp:avg(broke)}; };
       res.bomberNoFighters = bombRun(false); res.bomberVsAsf = bombRun(true);
@@ -83,7 +83,7 @@ const out = n => __dirname + '/v3-air-' + n + '.png';
       clear([sub.id, m.id]); }
     // ---- F. AI: counter-picks and use of the new air units
     { const mixBase = A.enemyMix(E); const ds = []; const dw = wing(0, fp, {swarm:60}), dw2 = wing(0, fp, {sdrone:12}); im.tick();
-      const mixDr = A.enemyMix(E); const city = gcity; S.bld[city].fac = 2; S.bld[city].air = 2;
+      const mixDr = A.enemyMix(E); const city = gcity; S.bld[city].fac = 3; S.bld[city].air = 3;   // (jammers and SAMs: Army Base III, bombers Airbase III since BUILD-REQS)
       const pick = n0 => { const c = {}; for (let i = 0; i < 400; i++){ const t = A.aiPickUnit(E, city); c[t] = (c[t] || 0) + 1; } return c; };
       const picksDr = pick(); clear([dw.id, dw2.id].concat(ds));
       const bw = wing(0, fp, {bomb:8}); im.tick(); const picksBomb = pick(); clear([bw.id]);
