@@ -2766,6 +2766,12 @@ body.devpick #map, body.devpick canvas{cursor:crosshair!important}
 .abs.fight{flex-direction:row; gap:5px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55)}
 .abs.fight canvas{width:24px; height:24px; flex:none}
 .ab-emb{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(111,176,232,.12); border-left:3px solid #6fb0e8; color:#cfe4f5} .ab-emb b{color:#fff}
+/* the fight row (combat display, owner 2026-11-27): "Fighting" and the foe, the countdown to the next damage round, the last round's losses */
+.ab-fight{display:flex; align-items:center; gap:8px; padding:4px 8px 5px 6px; border-radius:4px; background:rgba(224,87,79,.14); box-shadow:inset 0 0 0 1px rgba(224,87,79,.55); min-width:0}
+.ab-fight canvas{width:24px; height:24px; flex:none} .abf-t{min-width:0; flex:1; display:flex; flex-direction:column; gap:1px}
+.abf-l1{font-size:13px; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap} .abf-l1 .flag{vertical-align:-2px; margin-right:3px} .abf-k{font-weight:700; color:#ff9a90; text-transform:uppercase; font-size:10.5px; letter-spacing:.06em; margin-right:4px}
+.abf-l1 b.unk{color:#9fd8ff} .abf-more{color:var(--muted); font-weight:600}
+.abf-l2{font-size:11.5px; color:#e8c9c4; font-variant-numeric:tabular-nums} .abf-l2 .ab-tick{color:#fff} .abf-d{color:#ff8a80}
 .abs.dug em{display:flex; align-items:center; gap:3px; color:#ffd77a} .abs.dug b{color:#ffd77a} .castle{flex:none; display:inline-block; vertical-align:-1px}
 .ab-dug{display:flex; align-items:center; gap:6px; font-size:11.5px; padding:3px 8px; border-radius:4px; background:rgba(226,162,61,.12); border-left:3px solid #e2a23d; color:#f1dfb8} .ab-dug b{color:#ffd77a} .ab-dug .digsh{flex:none} .ab-dug-c{color:#bfae8c}
 .ab-stk{font-size:11.5px; padding:4px 8px; border-radius:4px; background:rgba(224,87,79,.12); border-left:3px solid var(--danger, #e0574f); color:var(--danger-t, #ff9a90)}
@@ -10675,12 +10681,14 @@ function draw(now){ draw.now = now;
     // counter's own strength badge stays on top of the one at its lower side
     const keepA = counter.ang, keepD = counter.dug;
     if (c.sats && c.pv){ const ga1 = fa0*pa*(c.tag ? c.ta : c.da); for (const q of c.sats){ if (q.x == null) continue; const al = ga1*(1 - (q.pa ?? 0)); if (al < 0.01) continue;
-        ctx.globalAlpha = al; const pr = satDraw(q, now); if (al > 0.3) HITX.push({...pr, ids:q.list.map(a => a.id), own:q.list.map(a => a.id), cx:q.x, cy:q.y, spread:q.list.some(a => a.at !== q.list[0].at), sat:1, a:+al.toFixed(3), tag:q.tag ? 1 : 0}); } }
+        ctx.globalAlpha = al; const pr = satDraw(q, now); if (al > 0.3) HITX.push({...pr, ids:q.list.map(a => a.id), own:q.list.map(a => a.id), cx:q.x, cy:q.y, spread:q.list.some(a => a.at !== q.list[0].at), sat:1, a:+al.toFixed(3), tag:q.tag ? 1 : 0});
+        if (al > 0.3 && !q.quiet && q.cl.some(pbFight) && FPILL.length < 200){ const ld = q.list.reduce((b, z) => count(z) > count(b) ? z : b, q.list[0]); FPILL.push({c:{list:q.list, at:ld.at, owner:ld.owner}, r:pr, sl:q.list.some(z => z.id === sel.army || z.id === sel.foe || sel.group.includes(z.id)), al}); } } }   // (a covered side's counter beside it: its fight label too)
     ctx.globalAlpha = fa0*pa; const L = c.mlist ? c.list.concat(c.mlist) : c.list;
     counter.ang = keepA; counter.dug = keepD;   // (satDraw set the shared marks state: back to this force's own)
     const ua = unitAnim(L, now), uo = ua && (ua.dx || ua.dy); if (uo){ ctx.save(); ctx.translate(ua.dx, ua.dy); }   // (fx.js: the counter of a force that fires or is hit kicks and shakes)
     const r = counter(c, lead, L, c.n + (c.mn || 0), L.some(a => a.id === sel.army || sel.group.includes(a.id)), fighting, now);
     if (uo) ctx.restore(); if (ua && ua.red > 0.02) unitHitMark(r.x, r.y, r.w, r.h, ua.red*fa0*pa);
+    if (fighting && c.pv && fa0*pa > 0.3 && FPILL.length < 200) FPILL.push({c, r, sl:L.some(a => a.id === sel.army || a.id === sel.foe || sel.group.includes(a.id)), al:fa0*pa});   // (its fight label: fightPills, below)
     ctx.globalAlpha = 1;
     const hb = {...r, ids:L.map(a => a.id), own:c.list.map(a => a.id), cx:c.tag ? c.sx : c.px, cy:c.tag ? c.sy : c.py, px:c.px, py:c.py, spread:L.some(a => a.at !== c.at), a:+(fa0*pa*(c.tag ? c.ta : c.da)).toFixed(3), tag:c.tag ? 1 : 0, heart:c.heart && c.tag ? 1 : 0};   // (cx, cy: its world point on screen, its position dot (the diamond stands just above it) or the tag's pin; px, py: the dot; a: as drawn, the cross-fade included; tag: the flag tag over its pictures, else the diamond)
     if (c.pv){ hits.push(hb); if (c.fm && c.art >= 0.5) HITX.push({x:c.fm.box[0], y:c.fm.box[1], w:c.fm.box[2] - c.fm.box[0], h:c.fm.box[3] - c.fm.box[1], ids:hb.ids, own:hb.own, cx:c.sx, cy:c.sy, spread:hb.spread, art:1}); }   // close in its pictures are tapped as it too
@@ -10704,6 +10712,7 @@ function draw(now){ draw.now = now;
     for (const list of grp.values()){ const a0 = list[0], pa = a0.air ? (a0.air.base ?? a0.at) : a0.at, M = !pinOf(a0) && a0.to === null ? ROLES.get(pa) : null, e = M && M.get(fkey(a0, pa) + a0.owner);
       const hp = !a0.air && heartCity(pa) && heartOn(a0), [wx, wy] = hp ? [G.P[pa].x, G.P[pa].y] : e ? anchorOf(ROLES, pa, roleOf(pa, e), now) : armyPos(a0), [x, y] = toScreen(wx, wy); if (x < -40 || y < -40 || x > cw + 40 || y > ch + 40) continue;
       const r = unkPlate(x, y, k, now, hp ? heartRingR(hexPx) + 3.2 - dotR() - 2 : 0);   /* (units in cities: a contact on the centre point has its dot on the marker, its plate above the ring) */ hits.push({...r, ids:list.map(a => a.id), cx:x, cy:y, px:x, py:y, spread:false, unk:true}); } }   // (its dot on its spot, the plate above)
+  fightPills(now, hits.filter(h => h.unk), hits.concat(HITX.filter(h => h.sat)));   // the fight labels of the counters in battle, over the counters, the names and the '?' contacts, never on one (combat display)
   FXM.PLATECLIP = null; FXM.PLATEBOX = plateBoxes(hits);   // (this frame's plates; the aircraft below are not in it)
   drawIntelLegend(vis, unkA.length);
   // aircraft in flight: formation of jets with contrails
@@ -12005,7 +12014,7 @@ const TUT_STEPS = [
   {t:'Your nation', d:() => `You lead <b>${S.nations[PLAYER].name}</b>: the land with the bright outline. Your capital is <b>${G.P[S.nations[PLAYER].capital].cityName}</b>.`, map:() => S.nations[PLAYER].capital, next:true},
   {t:'Open your capital', d:() => `Tap your capital, <b>${G.P[S.nations[PLAYER].capital].cityName}</b>, on the map to open its city panel.`, map:() => S.nations[PLAYER].capital, done:() => { const cap = S.nations[PLAYER].capital, a = sel.army !== null && armyById(sel.army); if (a && a.at === cap){ selectProv(cap); } return sel.prov === cap; }},
   {t:'Build an Army Base', d:() => { const c = buildCost(PLAYER, 'fac', 1, S.nations[PLAYER].capital); return `Tap <b>BUILD</b> in the city panel, then <b>Build</b> on the Army Base (the first row: $${c.cash}M, ${dayTxt(c.h)}). Infantry and every other ground unit train only in a city with an Army Base, and no city starts with one.`; }, el:'#csheet:not([hidden]) .cs-bldb, #sheet .bld[data-bk="fac"] .btn', map:() => S.nations[PLAYER].capital, done:() => hasBase(PLAYER)},
-  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run: your Army Base goes up in 30 minutes. Battles are fought hour by hour; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
+  {t:'Start the clock', d:() => 'Press 1× (top bar) to let time run: your Army Base goes up in 30 minutes. Battles deal damage every 15 game minutes; watch the damage numbers and the strength bar.', el:'#sp1', done:() => S.speed > 0},
   {t:'Resources', d:() => 'The top bar shows money, oil, materials, iron, electronics, rare materials and manpower with today\'s net change (hover one for the breakdown). Your provinces and trade routes produce them; units and buildings cost them; armies cost money and burn oil. Research runs on money, materials and rare materials.', el:'#res', next:true},
   {t:'Recruit', d:() => ownedBy(PLAYER).some(p => S.bld[p].fac >= 1) ? `Your Army Base stands. Tap <b>MOBILIZE UNIT</b> in the city panel${innerWidth > 820 ? ' (or use the unit cards in the panel on the right)' : ''}, then a unit card (Motorized Infantry is cheap) to queue it. Units train over a day or two.` : 'Your Army Base is still going up (the BUILD square shows the time left). When it stands, tap <b>MOBILIZE UNIT</b> in the city panel, then a unit card (Motorized Infantry is cheap). Tap Next to carry on meanwhile.', el:'#csheet:not([hidden]) .cs-mob, #ctx', next:() => !ownedBy(PLAYER).some(p => S.bld[p].fac >= 1), done:() => S.queue[S.nations[PLAYER].capital].length > 0 || (S.tut && S.tut.recruit)},
   {t:'Select your army', d:() => 'Now tap your soldiers (or their number badge) on the map to select them. Tapping only selects: the army bar opens at the bottom.', map:() => S.nations[PLAYER].capital, done:() => { const a = sel.army !== null && armyById(sel.army); return !!a && !a.air; }},
@@ -12585,7 +12594,7 @@ function achHTML(){ const keys = Object.keys(ACH), got = keys.filter(k => ACHS[k
   return `<div class="eyebrow" style="margin-top:12px">Achievements · ${got} of ${keys.length}</div><div class="achs">${keys.map(k => `<div class="ach ${ACHS[k] ? 'on' : ''}" title="${ACH[k][1]}"><b>${ACHS[k] ? '★' : '☆'} ${ACH[k][0]}</b><span class="small muted">${ACH[k][1]}</span></div>`).join('')}</div>`; }
 function statusText(a){
   const P = G.P;
-  if (S.battles.includes(a.at) && a.to === null) return {cls:'battle', short:'in battle', long:`In battle at ${cpName(a.at)}`};
+  if (S.battles.includes(a.at) && a.to === null) return (F => ({cls:'battle', short:F ? 'fighting' : 'in battle', long:F ? `Fighting ${F.main ? armyLabel(F.main, PLAYER) : 'an unidentified army'}${F.more ? ` and ${F.more} more` : ''} at ${cpName(a.at)}` : `In battle at ${cpName(a.at)}`}))(fightFoes(a));
   if (a.wp && a.wp.length && a.to === null && !a.path.length && !a.sail) return {cls:'move', short:'at a stop', long:`At a waypoint in ${P[a.at].cityName || P[a.at].name}: it sets off for the next stop within the hour (${pluN(a.wp.length, 'stop')} to go)`};
   if (a.escort != null && routeById(a.escort)){ const r = routeById(a.escort); return {cls:'move', short:'escorting', long:`Escorting the ${trName(r, a.owner)} trade route${a.to !== null || a.path.length ? `: sailing to station, about ${etaHours(a)} h` : ` · on station in ${cpName(a.at)}, resupplied at sea by the convoys`}`}; }
   if (a.raid && routeById(a.raid.r)){ const r = routeById(a.raid.r), nm = `${S.nations[r.a].name}–${trName(r, r.a)}`; return {cls:'move', short:'raiding', long:a.to !== null || a.path.length || a.sail ? `Raiding the ${nm} convoys: sailing to the lane, about ${a.sail ? sailHours(a) : etaHours(a)} h` : `Raiding the ${nm} convoys in ${cpName(a.at)}: it attacks any convoy within ${fleetKm(a)} km`}; }
@@ -12607,6 +12616,93 @@ function statusText(a){
     if (own && !a.air && ground(a)) return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}: digs in after ${Math.max(1, DIG_H - h)} more h here (dug in: +${digPct(P[a.at].city)}% defence here; the Defend stance digs in at once)`}; }
   return {cls:'', short:'holding', long:`Holding ${cpName(a.at)}`};
 }
+// ---- the fight readout (combat display, owner 2026-11-27: fights read as in Conflict of Nations): while a force fights, its army bar and its map
+// label say "Fighting" and the enemy force it fights, count down to the next damage round and, after each round, show what each side lost in it.
+// Display only. The rounds are the rules' own battle steps (rules/tick.js battleStep: every 15 game minutes, BATTLE_Q a game hour, so damage
+// already lands on a fixed tick); a round's damage is what a force's health fell by since the round before: the battle step itself and any ranged
+// fire, air strike or missile that hit it between the two (rangedStep, airTick, missileTick run before battleStep sets a._h). Its first round: a._h.
+// Nothing here reads rng() or changes rule state. Fog (P3-01): a foe is named only once the player has identified it (knowA; a battle with your
+// or an ally's force identifies the other side); others are "? Unidentified" (never named, counted or measured); a foe not seen is left out.
+const CBR = new Map();   // the last round of each battle: p -> {k: its step (cbStamp), t: performance.now(), nid: S.nid then, f: Map(force id -> {lost, h0, h1})}; UI only, not saved
+const cbStamp = () => S.hour*BATTLE_Q + (S.q || 0);
+// each force's health at the end of the round before (h1) is the start of this one, or its health as the step began (a._h) where that is more (a force
+// joined it) or there was no round just before; a side with a force made here since then (a split) starts from a._h too (the health went with it, not to fire)
+IM.on('fxBattle', (p, owners, sides) => { const P0 = CBR.get(p), prev = P0 && P0.k === cbStamp() - 1 ? P0 : null, f = new Map();
+  for (const o of owners){ const split = !!prev && S.armies.some(b => b.owner === o && b.id >= prev.nid && b.at === p);
+    for (const a of sides.get(o)){ const e = prev && !split ? prev.f.get(a.id) : null, h1 = effHP(a), h0 = Math.max(a._h || 0, e ? e.h1 : 0); f.set(a.id, {lost:Math.max(0, h0 - h1), h0, h1}); } }
+  CBR.delete(p); CBR.set(p, {k:cbStamp(), t:performance.now(), nid:S.nid, f}); if (CBR.size > 300) CBR.delete(CBR.keys().next().value); });
+// the foes force a fights (null when it is not fighting): every hostile force at war with it standing in its province that the player sees.
+// main: the strongest identified one (by strength), more: how many others (all unidentified ones count as one, as the map shows them: one '?')
+function fightFoes(a, vis = visibleSet(PLAYER)){
+  if (!a || a.to !== null || a.air || a.fly || !count(a) || !S.battles.includes(a.at)) return null;
+  const all = stationaryAt(a.at).filter(b => b.owner !== a.owner && count(b) > 0 && atWar(a.owner, b.owner) && (b.owner === PLAYER || armyShown(b, vis)));
+  if (!all.length) return null;
+  const known = all.filter(b => knowA(b, vis)).sort((x, y) => power(y) - power(x)), unk = known.length < all.length, main = known[0] || null;
+  return {main, known, unk, all, more:main ? known.length - 1 + (unk ? 1 : 0) : 0}; }
+// what forces L lost in the battle's last round at p ({lost, h0}: health points, and their health at its start), null before the first round or long after
+function fightLost(p, L){ const R = CBR.get(p), d = R ? cbStamp() - R.k : -1; if (!R || d < 0 || d > 1) return null; let lost = 0, h0 = 0, n = 0;
+  for (const a of L){ const e = R.f.get(a.id); if (e){ lost += e.lost; h0 += e.h0; n++; } } return n ? {lost, h0, age:performance.now() - R.t} : null; }
+const fightPct = e => { const v = e && e.h0 > 0 ? e.lost/e.h0*100 : 0; return '−' + (v < 9.95 ? v.toFixed(1) : String(Math.round(v))) + '%'; };
+// the army bar's fight row: the swords, "Fighting" and the foe (+N others), the next round's countdown (abTickText, kept live by abTickPatch) and the last
+// round's losses: this force's in health points and as a share (a foreign force's as a share only, as its bar shows its health), the identified foes' as a share
+function fightRowHTML(a, ro){ const F = fightFoes(a); if (!F) return ''; const me = fightLost(a.at, [a]), fo = F.known.length ? fightLost(a.at, F.known) : null, m = F.main;
+  const nm = m ? `${m.owner >= 0 ? flagHTML(m.owner, 14) : ''}<b>${armyLabel(m, PLAYER)}</b>` : '<b class="unk">? Unidentified</b>';
+  return `<div class="ab-fight" title="In battle: both sides deal damage every 15 game minutes (a round). The next round is in the time shown. Last round: what each side lost since the round before, in the battle and to any artillery, air strike or missile that hit it."><canvas class="ab-sw" aria-hidden="true"></canvas><div class="abf-t">
+    <div class="abf-l1"><span class="abf-k">Fighting</span> ${nm}${F.more ? ` <span class="abf-more">+${F.more}</span>` : ''}</div>
+    <div class="abf-l2">Next round <b class="ab-tick">${abTickText()}</b>${me ? ` · last round: ${ro ? 'it' : 'this force'} <b class="abf-d">${ro ? fightPct(me) : `−${me.lost < 9.95 ? me.lost.toFixed(1) : Math.round(me.lost)} (${fightPct(me).slice(1)})`}</b>${fo ? ` · enemy <b class="abf-d">${fightPct(fo)}</b>` : ''}` : ''}</div></div></div>`; }
+// the map label of a force in battle: a small dark pill over its counter with the round ring (the share of the round gone) and the countdown; for
+// your and your allies' battles and a force you selected also "Fighting" and the foe (other battles you see: the ring and the countdown only);
+// for 2 s after each round a red chip with what its side here lost in it (the foe's own label shows the foe's). Collected while the counters are
+// drawn (FPILL), drawn over them and the late names (fightPills)
+const FPILL = [];
+/*@TEST*/const FPDBG = []; if (location.protocol === 'file:') window.__imFight = {pills:FPDBG, foes:id => { const F = fightFoes(armyById(id)); return F && {main:F.main ? F.main.id : null, more:F.more, unk:F.unk, ids:F.all.map(b => b.id)}; }, cbr:p => { const R = CBR.get(p); return R && {k:R.k, now:cbStamp(), f:[...R.f]}; }};/*@ENDTEST*/
+function fightPills(now, unk = [], all = []){ /*@TEST*/FPDBG.length = 0;/*@ENDTEST*/ if (!FPILL.length) return;
+  const vis = visibleSet(PLAYER), Q = BATTLE_Q, left = Math.min(1/Q, Math.max(0, ((S.q || 0) + 1)/Q - acc)), done = 1 - left*Q, tt = abTickText(), run = S.speed > 0 && !S.over, mine = o => o === PLAYER || isAlly(PLAYER, o);
+  const H = 16, f1 = `700 10.5px ${BODY}`, f0 = `800 9px ${BODY}`, boxes = [], plates = [], ov = (q, b) => q[0] < b[2] + 2 && q[2] > b[0] - 2 && q[1] < b[3] + 1 && q[3] > b[1] - 1, hit = (q, me) => q[0] < 0 || q[2] > cw || boxes.some(b => ov(q, b)) || plates.some(b => b !== me && ov(q, b));   // (labels never cover one another, nor another fighting counter)
+  const cut = t => (t = t.replace(/ Division$/, ' Div.').replace(/ Brigade$/, ' Bde.')).length > 18 ? t.slice(0, 17).trimEnd() + '…' : t, mw = (t, f) => (ctx.font = f, mtw(t, f));   // (mtw measures in the current font: f is only its cache key)
+  // each label: its force, its foes, what it says; the selected force's first, then yours and your allies' battles, then the rest (the first placed get the spots
+  // next to their counters); within each, your own forces first, then your allies', then the others
+  const J = []; for (const {c, r, sl, al} of FPILL){ const here = c.list.filter(a => a.at === c.at && a.to === null && count(a) > 0); if (!here.length) continue;
+    const lead = here.reduce((b, a) => count(a) > count(b) ? a : b, here[0]), F = fightFoes(lead, vis); if (!F) continue;
+    const full = mine(c.owner) || F.all.some(b => mine(b.owner)) || sl; J.push({c, r, sl, al, here, lead, F, full, pr:sl ? 0 : full ? 1 : 2, ow:c.owner === PLAYER ? 0 : mine(c.owner) ? 1 : 2}); }
+  J.sort((x, y) => x.pr - y.pr || x.ow - y.ow); for (const j of J){ j.pb = [j.r.x, j.r.y, j.r.x + j.r.w, j.r.y + j.r.h]; plates.push(j.pb); }
+  for (const h of unk) plates.push([h.x, h.y, h.x + h.w, h.y + h.h]);   // (the '?' contacts: no label over one)
+  let fade = false; ctx.save(); ctx.textBaseline = 'middle';
+  for (const {c, r, sl, al, here, lead, F, full, pr, pb} of J){ if (r.x + r.w < 0 || r.x > cw || r.y + r.h < 0 || r.y > ch) continue;   // (a counter off the screen: no label pulled onto it)
+    const L0 = fightLost(c.at, here); /*@TEST*/if (L0 && (window.__imFight || {}).hold) L0.age = 0;/*@ENDTEST*/ let chip = L0 && L0.age < 2000 && L0.lost > 0.05 ? 'lost ' + fightPct(L0) : '', ca = chip ? (L0.age < 1300 ? 1 : 1 - (L0.age - 1300)/700) : 0; if (chip) fade = true;
+    const cx = r.x + (r.bg ? r.w - r.bg.w - 2 : r.w)/2, up = Math.round(r.y - H - 4), dn = Math.round(r.y + r.h + 7); let cW = chip ? mw(chip, f1) + 10 : 0;
+    const dims = fl => { const nm = !fl ? '' : F.main ? cut(armyName(F.main)) : '? Unidentified', more = fl && F.more ? ` +${F.more}` : ''; const wK = fl ? mw('FIGHTING', f0) + 4 : 0, wN = nm ? mw(nm + more, f1) + 11 : 0;
+      return {fl, nm, more, wK, wN, W:5 + 10 + 4 + wK + wN + mw(tt, f1) + 6}; };
+    // over its counter; where another label stands there, under it (two sides side by side: one over, one under); with no room for the whole
+    // label next to its counter, the ring and the countdown alone (zoomed out, crowded), a row further out at most, then the same without the round's
+    // chip; still no room: a battle of others gets none, yours and the selected force's the short one (with its chip) over the counter.
+    // Your own force's whole label (owner 2026-11-28: zoomed out and crowded, "let your own full label sit a little further from its counter"): the
+    // nearer spots first, then a row further out, then two, before the short one; out there it covers no counter at all (yours included), nor a label
+    const R = H + 3, far = c.owner === PLAYER, clear = q => !all.some(h => ov(q, [h.x, h.y, h.x + h.w, h.y + h.h]));
+    let D = null, x0 = 0, y0 = up; const chip0 = chip, cW0 = cW;
+    for (const [fl, ck] of full ? [[true, 1], [false, 1], [false, 0]] : [[false, 1], [false, 0]]){ if (!ck){ if (!chip0) break; chip = ''; cW = 0; }
+      const d = dims(fl), xx = Math.max(2, Math.min(cw - d.W - cW - 5, Math.round(cx - (d.W + (chip ? cW + 3 : 0))/2)));
+      for (const y of fl ? far ? [up, dn, up - R, dn + R, up - 2*R, dn + 2*R] : [up, dn] : [up, dn, up - R, dn + R]){ const q = [xx, y, xx + d.W + cW + 3, y + H];
+        if (!hit(q, pb) && (!fl || y === up || y === dn || clear(q))){ D = d; x0 = xx; y0 = y; break; } } if (D) break; }
+    // (that last one: over the counter, or where a label stands there the nearest of a row out, under it, a row under that free of labels and, for
+    // another nation's force, of your counters; none free: yours and the force you selected over the counter as before, another's none: your label
+    // in the same battle shows the same round and countdown)
+    if (!D){ if (pr > 1) continue; chip = chip0; cW = cW0; D = dims(false); x0 = Math.max(2, Math.min(cw - D.W - cW - 5, Math.round(cx - (D.W + (chip ? cW + 3 : 0))/2)));
+      const q = y => [x0, y, x0 + D.W + cW + 3, y + H], my = far ? null : new Set(S.armies.filter(a => a.owner === PLAYER).map(a => a.id));
+      const bad = y => y < 0 || y + H > ch || boxes.some(b => ov(q(y), b)) || (!!my && all.some(h => h.ids && h.ids.some(i => my.has(i)) && ov(q(y), [h.x, h.y, h.x + h.w, h.y + h.h])));
+      const yy = [up, up - R, dn, dn + R].find(y => !bad(y)); if (yy == null && !far && !sl) continue; y0 = yy ?? up; }
+    const W = D.W; boxes.push([x0, y0, x0 + W + cW + 3, y0 + H]);
+    const CT = sideT(forceSide(lead)); ctx.globalAlpha = al; roundRect(ctx, x0, y0, W, H, H/2); ctx.fillStyle = 'rgba(16,9,8,.88)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = CT[0]; ctx.stroke();   // (its edge in its side's colour, as its counter)
+    const rx = x0 + 5 + 5, ry = y0 + H/2; ctx.beginPath(); ctx.arc(rx, ry, 4.2, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(rx, ry, 4.2, -Math.PI/2, -Math.PI/2 + Math.max(0.05, done)*Math.PI*2); ctx.strokeStyle = '#ff8a7a'; ctx.stroke();
+    let tx = x0 + 19; ctx.textAlign = 'left';
+    if (D.fl){ ctx.font = f0; ctx.fillStyle = '#ff9a90'; ctx.fillText('FIGHTING', tx, ry + 0.5); tx += D.wK; ctx.font = f1; ctx.fillStyle = F.main ? '#f4efe4' : '#9fd8ff'; ctx.fillText(D.nm, tx, ry + 0.5);
+      if (D.more){ ctx.fillStyle = '#b9aea6'; ctx.fillText(D.more, tx + mw(D.nm, f1), ry + 0.5); } tx += D.wN; ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(tx - 6, y0 + 4, 1, H - 8); }   // (a thin line between the foe and the countdown)
+    ctx.font = f1; ctx.fillStyle = '#ffd9a8'; ctx.fillText(tt, tx, ry + 0.5);
+    if (chip){ const kx = x0 + W + 3; ctx.globalAlpha = al*Math.max(0, ca); roundRect(ctx, kx, y0, cW, H, 4); ctx.fillStyle = '#b8302a'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,190,180,.8)'; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText(chip, kx + 5, ry + 0.5); }
+    /*@TEST*/FPDBG.push({ids:here.map(a => a.id), owner:c.owner, at:c.at, x:x0, y:y0, w:W, h:H, box:[x0, y0, x0 + W + cW + 3, y0 + H], full:D.fl, row:y0 === up ? 'up' : y0 === dn ? 'dn' : String(Math.round((y0 < up ? up - y0 : y0 - dn)/R)) + (y0 < up ? 'up' : 'dn'), name:D.nm, more:F.more, time:tt, chip, chipA:+ca.toFixed(2), ring:+done.toFixed(3), plate:[r.x, r.y, r.w, r.h], sel:!!sl});/*@ENDTEST*/ }
+  ctx.restore(); FPILL.length = 0;
+  if (fade) animFast(); else if (run) animIn(200); }   // (the chip fades; the countdown and the ring move with the clock)
 function oddsHTML(a, t, foes){
   if (!foes.length) return G.P[t].sea || S.owner[t] === PLAYER ? '' : `<br><span class="small">No defenders seen${visibleSet(PLAYER).has(t) ? '' : ' (fog: there may be some)'}.</span>`;
   const r = odds(a, t, foes, undefined, viaOf(a)), cls = r >= 1.5 ? 'good' : r >= 0.9 ? 'even' : 'bad', label = r >= 1.5 ? 'Favourable' : r >= 0.9 ? 'Even fight' : 'Likely defeat';
@@ -12729,7 +12825,7 @@ let abUnit = null;   // {id, t}: the unit type whose details are open under the 
 const abSpd = a => Math.round((shipsOnly(a) ? seaSpeed(a) : landSpeed(a))*KM_HEX/10)*10;
 // game time to the next battle step (every 15 game minutes), as real seconds at the running speed, or game minutes when paused
 function abTickText(){ const Q = BATTLE_Q; let left = (((S.q || 0) + 1)/Q) - acc; left = Math.min(1/Q, Math.max(0, left));
-  if (S.speed && !S.over){ const sec = left/HOURS_PER_SEC[S.speed]; return sec < 1 ? 'now' : Math.ceil(sec) + ' s'; }
+  if (S.speed && !S.over){ const sec = left/HOURS_PER_SEC[S.speed]; return sec < 1 ? (1/Q/HOURS_PER_SEC[S.speed] < 1.5 || sec < 1e-6 ? '<1 s' : '1 s') : Math.ceil(sec) + ' s'; }   // (under a second left: "1 s" until the step runs; "<1 s" at 4x and 8x, a round under 1.5 s, and while the step itself runs)
   return Math.max(1, Math.ceil(left*60 - 1e-6)) + ' min'; }
 function abTickPatch(){ const els = document.querySelectorAll('.ab-tick'); if (!els.length) return; const t = abTickText(); for (const e of els) if (e.textContent !== t) e.textContent = t; }
 // the crossed swords of the map (battleBadge: the one function) on the small canvases of the army bar
@@ -12752,9 +12848,9 @@ function armyBarHTML(a, ro = false){
   const col = hf > 0.6 ? 'var(--ok)' : hf > 0.3 ? 'var(--accent)' : 'var(--danger)', types = UT.filter(t => a.u[t] > 0).sort((x, y) => a.u[y]*UNITS[y].hp - a.u[x]*UNITS[x].hp);
   const nm = ro ? `<h2 class="aname">${armyLabel(a, PLAYER)}</h2>` : renaming === a.id ? `<input class="rn" data-id="${a.id}" maxlength="32" value="${armyName(a)}" aria-label="Force name" style="font:inherit;font-size:18px;width:100%;margin:0">` : `<h2 class="aname" data-act="rename" data-id="${a.id}" title="Click to rename">${armyName(a)} <span class="small muted">✎</span></h2>`;
   const cell = (k, v, tip, cls = '') => `<span class="abs ${cls}" title="${tip}"><em>${k}</em><b>${v}</b></span>`;
-  const knownMorale = !ro, sw = fight ? `<span class="abs fight" title="In battle: both sides deal damage every 15 game minutes. The next exchange is in the time shown."><canvas class="ab-sw" aria-hidden="true"></canvas><b class="ab-tick">${abTickText()}</b></span>` : '';
+  const knownMorale = !ro, fr = fight ? fightRowHTML(a, ro) : '', sw = fight && !fr ? `<span class="abs fight" title="In battle: both sides deal damage every 15 game minutes. The next exchange is in the time shown."><canvas class="ab-sw" aria-hidden="true"></canvas><b class="ab-tick">${abTickText()}</b></span>` : '';   // (the fight row, fightRowHTML, carries the swords and the countdown)
   return `<div class="abar">
-    <div class="ab-top">${o >= 0 ? flagHTML(o, 18) : ''}<div class="ab-nm">${nm}<div class="ab-sub">${ro ? 'Foreign force' : 'Your force'} · ${pluN(count(a), 'unit')}</div></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>
+    <div class="ab-top">${o >= 0 ? flagHTML(o, 18) : ''}<div class="ab-nm">${nm}<div class="ab-sub">${ro ? 'Foreign force' : 'Your force'} · ${pluN(count(a), 'unit')}</div></div><button class="ab-i" data-act="army-info" data-id="${a.id}" aria-label="Army Info" title="Army Info: attack and defence against each kind of target">i</button></div>${fr}
     <div class="ab-hp" role="img" aria-label="Health ${hp.cur} of ${hp.max}" title="Health of the whole force: ${hp.cur} of ${hp.max} health points"><i style="width:${Math.round(hf*100)}%;background:${col}"></i><b>${ro ? Math.round(hf*100) + '%' : hp.cur + '/' + hp.max}</b></div>
     ${hl[0] ? `<div class="ab-heal ${hl[1]}">${hl[0]}</div>` : ''}
     ${a.land > 0 && a.to === null ? `<div class="ab-emb" title="Troops coming ashore from the sea: they cannot move on or capture until they have landed, and fight at ${Math.round(rLandF(o)*100)}% on their first day ashore">⚓ <b>Landing</b> · ${durTxt(a.land)} left</div>` : a.emb != null && a.to === null && a.path.length ? `<div class="ab-emb" title="Ground forces board ships only at a naval city. The force stays in the port until it is aboard, then sails.">⚓ <b>Embarking</b> · ${durTxt(a.emb)} left</div>` : ''}
@@ -14150,7 +14246,7 @@ function battleBlasts(p, owners, sides, lostBy){ const B = S.bt && S.bt[p], P = 
   for (let i = jobs.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [jobs[i], jobs[j]] = [jobs[j], jobs[i]]; }   // (both sides' blasts mixed through the hour)
   jobs.slice(0, cap).forEach(([z, at], i, J) => fxLater(i*span/J.length + Math.random()*span*0.25/J.length, () => FXW.blast(z, ...fxOff(at[0] + (Math.random() - 0.5)*5, at[1] + (Math.random() - 0.5)*3, 2), {sea:P.sea}))); }
 IM.on('fxBattle', (p, owners, sides, list) => { const showFx = owners.includes(PLAYER) || visibleSet(PLAYER).has(p), lostBy = [];
-  if (showFx) owners.forEach((o, i) => { const lost = lostBy[i] = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); if (lost >= 0.5) fx('dmg', p, {owner:o, val:lost, text:`−${Math.round(lost)}`, color:o === PLAYER ? '#ff8f86' : o < 0 ? '#d8d2c0' : shade(colorOf(o), 0.35), dx:(i - (owners.length - 1)/2)*50, dy:-42}); });
+  if (showFx) owners.forEach((o, i) => { lostBy[i] = sides.get(o).reduce((s0, a) => s0 + Math.max(0, (a._h || 0) - effHP(a)), 0); });   // (the round's losses: each side's own fight label shows them, fightPills; the floating "−N" by the counters is gone)
   if (showFx && booted){ battleBlasts(p, owners, sides, lostBy); for (const a of list) if ((a._h || 0) - effHP(a) > 0.2) unitHit(a.id, blastSize(mainT(a))); }   // (fx.js: a hit force flashes red and shakes)   // the hour's hits: a blast for each kind of unit lost, sized by its class (the only blasts of the hour: no drawn discs or sprite pops beside them)
   if (showFx && booted){ const P = G.P[p], nB = list.reduce((s0, a) => s0 + (a._n0 ?? count(a)), 0);   // visual only (Math.random, never rng)
     if (!P.sea && nB >= 6 && Math.random() < Math.min(0.7, nB/30)) afxCrater(P.x + (Math.random() - 0.5)*14, P.y + (Math.random() - 0.5)*8, 2 + Math.min(2.5, nB/12), {a:0.7, life:60});
