@@ -1038,18 +1038,19 @@ STYLE_UL_SCENE = STYLE_V2_SCENE   # photo-real scenes: kept (owner)
 assert "no cast shadow" in STYLE_UL_TOP and "no shadow at all" in STYLE_UL_TOP
 UD = {}   # key -> dict(label, cls, kind (the word for "real {kind}"), groups {g: (family, [g1, g2, g3])}, action, paint, setting, note, gens)
 
-def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule='', side_frame=None, side_style=None):
+def unit_def(key, label, cls, kind, action, groups, paint=None, setting=None, frame_note='', gens=None, scene_frame=None, rule='', side_frame=None, side_style=None, only=None):
     """label: the unit's name in the prompts; action: what it does in its card scene (a phrase after "A single {label}"); groups: {group: (family look, [3 generations])};
     paint/setting: per-group overrides; frame_note: an extra sentence for the side and top frames; gens: the 'Generation n of 3' lead-ins [oldest, newer, newest];
     scene_frame: replaces the class's card-scene frame (e.g. to allow one prop); rule: an extra sentence after the tail of every description (the units made before it have none);
-    side_frame / side_style: replace the class's side-view frame (with {u}) and the side-view style (e.g. no shadow at all for an aircraft in flight)"""
+    side_frame / side_style: replace the class's side-view frame (with {u}) and the side-view style (e.g. no shadow at all for an aircraft in flight);
+    only: a unique unit (docs/DOCTRINES.md section 4): that one group and one look only (groups {only: (family, [the one look])}), named ul-<key>-<only>-1-<kind>"""
     UD[key] = dict(label=label, cls=cls, kind=kind, action=action, groups=groups, paint=paint or UL_PAINT[cls], setting=setting or UL_SETTING[cls], note=frame_note,
                    scene_frame=scene_frame or UL_CLS[cls]['scene_frame'], rule=rule, side=side_frame or UL_CLS[cls]['side'], side_style=side_style or STYLE_V2_SIDE,
-                   gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "])
+                   gens=gens or ["Generation 1 of 3, the oldest, ", "Generation 2 of 3, a clearly newer design: ", "Generation 3 of 3, the newest, a near-future design: "], only=only)
     d, C = UD[key], UL_CLS[cls]; u = label
-    for g in UNIT_GROUPS:
+    for g in ([only] if only else UNIT_GROUPS):
         fam, gl = groups[g]
-        for n in (1, 2, 3):
+        for n in ((1,) if only else (1, 2, 3)):
             desc = f"{fam} Paint: {d['paint'][g]}. {d['gens'][n - 1]}{gl[n - 1]}" + UL_UNIT_TAIL.format(kind=kind) + (' ' + rule if rule else '')
             nm = f'ul-{key}-{g}-{n}'
             UNIT_LOOKS[nm + '-side'] = {
@@ -1748,6 +1749,109 @@ unit_def('stealth', 'stealth bomber (a large long-range bomber shaped to hide fr
 assert "no shadow at all" in UD['stealth']['side'] and "LOWER RIGHT" in UD['stealth']['side'] and "outline seen from above" in UD['stealth']['scene_frame']
 
 
+# ---- THE FIVE UNIQUE UNITS (docs/DOCTRINES.md section 4): one unit per group, built by that group only, ONE look each (no generations),
+# 3 pictures each (side, card scene, top-down) = 15 pictures; names ul-<key>-<group>-1-<kind> (the look number is always 1, so the picture
+# lookup and --match work as for every other unit). Keys: gunship (US/NATO), thermo (Eastern), asbm (China; drawn as its launcher truck,
+# owner default), aipsub (Europe), technical (Export). What batches A-C taught (28 November 2026): real rifles, helmets, transports and
+# attack jets came through even with the look-alike rule, so each unit's OWN distinctive shapes are written out in detail and the rule names
+# makers, not types; the facing is said twice in the side frame (front to the LOWER RIGHT, never left, never from behind); no shadow at all
+# for the aircraft in flight, and only a small, tight contact shadow for the vehicles and the submarine (a long cast shadow became a slab in
+# the cut-out); thin tips (antennas, barrels, propeller blades, wingtips) in dark or mid tones so the cut-out keeps them; the gunship is a
+# big propeller transport with side guns (not a fighter); no text, numbers, flags or emblems anywhere. Every rule carries the owner's default.
+STYLE_UL_SIDE_CONTACT = STYLE_V2_SIDE.replace("with a soft shadow under each object", "with only a small, tight contact shadow right under each object (no long cast shadow)").replace(
+    "with only a soft shadow;", "with only a small, tight contact shadow right under the unit, no long cast shadow;")
+assert STYLE_UL_SIDE_CONTACT.count("tight contact shadow") == 2 and "soft shadow" not in STYLE_UL_SIDE_CONTACT
+_GND_SIDE_SHADOW = "only a faint, tight soft shadow right under it."
+_GND_SIDE_FACING = "its front turned toward the lower right of the picture so that the viewer sees its front and one long side."
+_SUB_SIDE_SHADOW = "only a faint, tight soft shadow under it."
+_SUB_SIDE_FACING = "one long side, drawn as"
+assert UL_CLS['gnd']['side'].count(_GND_SIDE_SHADOW) == 1 and UL_CLS['gnd']['side'].count(_GND_SIDE_FACING) == 1
+assert UL_CLS['sub']['side'].count(_SUB_SIDE_SHADOW) == 1 and UL_CLS['sub']['side'].count(_SUB_SIDE_FACING) == 1
+_CONTACT = "only a small, tight contact shadow right under it where it would touch the ground: no long cast shadow stretching across the background."
+_FACING_GND = (" FACING: its front points to the LOWER RIGHT corner of the picture and its rear to the upper left; it must not face left and must not be seen from behind.")
+UNIQUE_GND_SIDE = UL_CLS['gnd']['side'].replace(_GND_SIDE_SHADOW, _CONTACT).replace(_GND_SIDE_FACING, _GND_SIDE_FACING + _FACING_GND)
+UNIQUE_SUB_SIDE = UL_CLS['sub']['side'].replace(_SUB_SIDE_SHADOW, _CONTACT.replace("where it would touch the ground", "along the bottom of the hull")).replace(
+    _SUB_SIDE_FACING, "one long side (FACING: the bow points to the LOWER RIGHT corner of the picture and the stern to the upper left; it must not face left and must not be seen from behind), drawn as")
+UNIQUE_AIR_SIDE = UL_CLS['air']['side'].replace(_AIR_SIDE_SHADOW, "no shadow at all: it is in flight, so no cast shadow and no contact shadow on the background, only the plain grey all round it.").replace(
+    _AIR_SIDE_FACING, _AIR_SIDE_FACING + " FACING: the nose points to the LOWER RIGHT corner of the picture and the tail to the upper left; it must not face left and must not be seen from behind.")
+UNIQUE_GEN = ["One look only (a unique unit with a single design for all levels): "]
+_OWNER = "Look-alike rule: original generic design; the checker must not be able to name a real model. "
+
+# ---- Gunship (key gunship, US/NATO only; parent Strike Fighter)
+unit_def('gunship', 'gunship (a big, slow propeller transport aircraft armed with side-firing guns)', 'air', 'aircraft',
+    "circling slowly in a wide right-hand turn high above the ground, its right wing dipped toward the ground, the guns on its right side pointing down and out at the ground far below, a small muzzle flash at the end of the big gun",
+    {'nato': ("Family look (US/NATO): a big, slow, heavy, propeller-driven transport aircraft turned into a flying gun platform, with crisp straight-edged shapes, a smooth matte finish and its guns firing out of one side of the fuselage.",
+              ["a modern design: a long, deep, slab-sided fuselage with flat, upright sides and a flat belly; a blunt, angular, wedge-shaped nose with a wide band of six flat, dark cockpit panes and a big round sensor ball turret under the chin; a long, straight, untapered high wing on top of the fuselage just ahead of its middle, with square-cut tips; four turboprop engines in long, angular, box-shaped nacelles under the wing, two on each side, each with a five-bladed propeller with straight, square-tipped blades; the landing gear folded into two long, flat-sided blister fairings low on the fuselage sides under the wing; a rear fuselage that sweeps up into a tall, straight-edged, swept tail fin with the tailplane set HALFWAY up the fin (a cross-shaped tail) and a closed loading ramp under it; on its RIGHT side only (the long side that faces the viewer in the side view), three guns pointing straight out sideways at right angles to the fuselage: one large, thick howitzer barrel with a box-shaped muzzle brake through a big square port just behind the wing, and two slimmer cannon barrels through round ports ahead of the wing, below the rear of the cockpit; a second, smaller sensor ball turret on the right side just behind the cockpit; a row of small flare dispensers at the rear of each gear blister."])},
+    paint={'nato': "a matte dark charcoal grey all over, the propeller blades, wingtips, fin tip and gun barrels in the same dark grey"},
+    setting={'nato': "a clear blue sky with a few soft clouds, high above dry grassland hills with scattered scrub, a winding dirt road and a few small fields far below"},
+    frame_note=("Its three side-firing guns (one big barrel and two slimmer ones, sticking straight out sideways from the RIGHT side of the fuselage, the side that faces the viewer "
+                "in the side view and the right-hand side of the top-down) are clearly visible; the four engines, the five blades on each propeller, the nose, the straight high wing, "
+                "the cross-shaped tail and the guns are exactly as described and the same in every view. The whole aircraft, the thin wingtips, propeller blades, fin tip and gun "
+                "barrels included, is in the same dark paint: no pale, white or light grey tips or edges."),
+    side_frame=UNIQUE_AIR_SIDE, side_style=STYLE_UL_SIDE_FLIGHT,
+    scene_frame=UL_CLS['air']['scene_frame'].replace(_AIR_SCENE_CAM, "Seen from a three-quarter angle slightly below and beside it, on its right side (the side of its guns), so that the three guns sticking out of its right side are clearly visible, banking gently to the right,"),
+    rule=(_OWNER + "It must not look like any real aircraft type (no Lockheed Martin, Boeing, Airbus, Leonardo, Alenia, Antonov, Ilyushin, Shaanxi, Kawasaki, Embraer or Fairchild "
+          "transport, tanker or gunship); it is a big, slow propeller transport with side-firing guns, not a fighter, attack jet or bomber; its fuselage, nose, wing, engines, "
+          "propellers, cross-shaped tail and guns are this game's own design, exactly as described here."),
+    gens=UNIQUE_GEN, only='nato')
+
+# ---- Thermobaric Launcher (key thermo, Eastern only; parent Rocket Artillery)
+unit_def('thermo', 'thermobaric rocket launcher (a heavy multi-tube rocket launcher on a tracked armoured hull)', 'gnd', 'rocket launcher vehicle',
+    "standing in a firing position beside the dirt road, its launcher pods raised toward the distant hills, one rocket leaving a tube in a bright flash with a short plume of smoke, dust blown up from the ground around it",
+    {'east': ("Family look (Eastern): a heavy, low, rugged tracked armoured vehicle with thick sloped armour, rubber-and-steel side skirts, a log and fuel drums at the rear, and a big rocket launcher on its back.",
+              ["a modern design: a long, low tracked armoured hull with seven small, evenly spaced road wheels per side behind full-length rubber-and-steel side skirts with a wavy lower edge; a wide, flat hull front with a sharply sloped upper plate; a raised, boxy armoured crew cab across the front third of the hull with flat, sloped sides and front, three small square vision blocks in its front face, a square laser rangefinder box on its roof and two short, thick, dark antenna stubs; on the rear two thirds of the hull, a low round turntable carrying TWO separate rectangular launcher pods side by side on one hinged cradle with a gap between them, each pod a flat-sided armoured box holding three rows of four round tubes (24 tubes in all), the open tube mouths facing FORWARD over the crew cab, the pods raised at a low angle of about 20 degrees on two thick hydraulic rams; a rack with two fuel drums and a log across the rear of the hull."])},
+    paint={'east': "dark olive-green all over, the tube mouths, tracks and antenna stubs dark grey"},
+    frame_note=("Its two launcher pods side by side (24 tube mouths in all, facing forward), its raised crew cab and its seven road wheels per side are exactly as described and the same "
+                "in every view. The antenna stubs and the tube mouths are dark: no pale or white tips or edges."),
+    side_frame=UNIQUE_GND_SIDE, side_style=STYLE_UL_SIDE_CONTACT,
+    rule=(_OWNER + "It must not look like any real vehicle (no Uralvagonzavod, Omsktransmash, Motovilikha, Splav, NORINCO, Roketsan, Hanwha, Lockheed Martin or Rheinmetall rocket "
+          "launcher or tank hull; not one single big rectangular launcher box on a tank chassis); its hull, road wheels, crew cab and two launcher pods are this game's own design, "
+          "exactly as described here."),
+    gens=UNIQUE_GEN, only='east')
+
+# ---- Anti-Ship Ballistic Missile (key asbm, China only; parent Strategic Weapons): drawn as its launcher truck (owner default)
+unit_def('asbm', 'anti-ship ballistic missile launcher truck (a heavy multi-axle truck carrying one big missile in a canister)', 'gnd', 'missile launcher truck',
+    "standing in a firing position on the clifftop track, its four stabiliser jacks pressed down on the ground and its big missile canister raised up at a steep angle on its erector frame, pointing at the sky over the sea, ready to fire",
+    {'china': ("Family look (China, its own lines): a long, tidy, smoothly finished heavy missile truck with clean, flat-sided panels, neat closed equipment boxes and one big missile canister on its back.",
+               ["a modern design: a long, heavy wheeled truck with SIX axles and twelve big off-road tyres, set in two groups of three (one group under the front half, one under the rear half, with a gap between them); one single wide, armoured, forward-control cab across the full width at the very front, its front an angular, sloped wedge with a wide, short windscreen of four flat dark panes, two doors on each side and a flat roof with one short, thick, dark antenna stub; behind the cab, a low, flat-topped engine box with louvred grilles on its sides; then a long flat bed carrying ONE big, long, smooth, round missile canister, as long as the bed, with flat, ribbed end caps at both ends and three raised reinforcing rings along it, held in a slim erector frame hinged at the rear of the bed (when travelling, the canister lies flat along the bed); four fold-down stabiliser jacks (two behind the cab, two at the very rear); neat closed equipment boxes along both sides of the bed below the canister."])},
+    paint={'china': "plain mid-green all over, the canister in the same green, the tyres dark grey"},
+    setting={'china': "hazy green coastal hills above a blue-green sea, the edge of a low cliff and a faint distant coastline of low hills on the horizon under a pale, slightly hazy sky, on a rough yellow-brown dirt track along the clifftop"},
+    frame_note=("In this view the canister lies flat along the truck in its travel position. Its six axles in two groups of three, its one wide cab and its one big missile canister "
+                "are exactly as described and the same in every view. The antenna stub and the tyres are dark: no pale or white tips or edges."),
+    side_frame=UNIQUE_GND_SIDE, side_style=STYLE_UL_SIDE_CONTACT,
+    rule=(_OWNER + "It must not look like any real vehicle (no Wanshan, Taian, Sanjiang, MZKT, MAZ, KAMAZ, Tatra, Oshkosh or MAN missile truck or heavy truck chassis; not two small "
+          "separate cabs on either side of the engine); its cab, axles, bed and missile canister are this game's own design, exactly as described here."),
+    gens=UNIQUE_GEN, only='china')
+
+# ---- Air-Independent Submarine (key aipsub, Europe only; parent Attack Submarine)
+unit_def('aipsub', 'air-independent submarine (a quiet, non-nuclear submarine)', 'sub', 'submarine',
+    "running quietly on the surface at low speed, with only a small white bow wave and a short, gentle wake behind it, the low sail rising from the hull",
+    {'europe': ("Family look (Europe): a slim, smooth, elegant, medium-sized conventional submarine with long flowing lines, a smooth rubber-tiled finish and a carefully faired sail.",
+                ["a modern air-independent design: a slim, medium-length hull with a long, parallel middle body and a blunt, rounded, almost hemispherical bow with a slight chin under it; a narrow, flat deck casing along the top from the bow to behind the sail; a LOW, LONG, wedge-shaped sail set a little ahead of the middle, its front edge raked back in one straight slope and its flat top sloping down at the back into the deck (not a tall upright rectangle), its masts lowered so only their stubby tops show; a pair of small hydroplanes low on the hull sides near the bow; two long, low, flat fairings on the hull sides beside and behind the sail (the air-independent power section); a long, gently tapered stern ending in an X-shaped tail of four short fins with square tips; a single large propeller with seven curved blades, no shroud; a smooth rubber-tiled skin."])},
+    paint={'europe': "dark slate grey all over"},
+    frame_note=("Its low, long, wedge-shaped sail, its blunt rounded bow, its side fairings and its X-shaped tail of four fins are exactly as described and the same in every view; "
+                "the masts are lowered. No hull number, no flag, no national markings."),
+    side_frame=UNIQUE_SUB_SIDE, side_style=STYLE_UL_SIDE_CONTACT,
+    rule=(_OWNER + "It must not look like any real submarine (no TKMS, HDW, Naval Group, Saab Kockums, Navantia, Fincantieri, Mitsubishi, Kawasaki, Hanwha Ocean or Admiralty "
+          "Shipyards submarine); its hull, bow, sail, planes, tail and propeller are this game's own design, exactly as described here, with no hull number, no flag and no national markings."),
+    gens=UNIQUE_GEN, only='europe')
+
+# ---- Technical (key technical, Export only; parent Motorized Infantry)
+unit_def('technical', 'technical (a civilian pickup truck armed with a machine gun)', 'gnd', 'pickup truck or machine gun',
+    "driving fast along the dirt road, bouncing over the ruts with a long trail of dust behind it, its machine gun pointing forward over the cab",
+    {'export': ("Family look (Export, a mix of widely exported designs): a plain, rugged, practical civilian pickup truck turned into a fighting vehicle by its buyer, with welded-on parts, worn, mud-streaked paint and a machine gun in the back.",
+                ["a modern design: a mid-size, two-door, single-cab pickup truck: a boxy, flat-sided cab with upright square side windows, thick dark window frames and a flat roof; a short, flat, square bonnet; a plain flat grille of five simple horizontal dark bars with no badge and no logo, two round headlights in square dark surrounds at its outer corners; a thick, plain, dark steel tube bull bar across the front; square wheel arches with flat black flares; four chunky off-road tyres on plain dark steel wheels; a long open cargo bed with low flat sides; a dark steel tube roll bar across the bed just behind the cab; in the middle of the bed, a sturdy post mount with a heavy machine gun of its own design: a long, thick, round barrel with a short slotted cylindrical muzzle, a squared receiver box with a flat ammunition box on its left side and two spade grips at its rear, the barrel pointing forward over the cab roof, behind a small, flat, square-cornered gun shield; a spare wheel, two jerrycans and a rolled tarpaulin in the bed; a few dark steel plates welded onto the doors."])},
+    paint={'export': "faded ochre-sand with a few patches of darker touch-up paint and streaks of dried mud, the gun, roll bar, bull bar and wheels dark grey steel"},
+    frame_note=("Its machine gun on the post mount in the open cargo bed (barrel pointing forward over the cab roof), its roll bar, its plain badge-free grille and its bull bar are "
+                "exactly as described and the same in every view. The gun barrel, the roll bar and the bull bar are dark steel: no pale or chrome parts, no pale tips."),
+    side_frame=UNIQUE_GND_SIDE, side_style=STYLE_UL_SIDE_CONTACT,
+    rule=(_OWNER + "It must not look like any real pickup truck or gun (no Toyota, Nissan, Ford, Mitsubishi, Isuzu, Land Rover, Chevrolet, Mahindra or Tata grille, badge, headlights "
+          "or cab shape; no Browning, FN Herstal or Kalashnikov machine gun); its cab, grille, bed, wheels and gun are this game's own design, exactly as described here."),
+    gens=UNIQUE_GEN, only='export')
+UNIQUES = {'gunship': 'nato', 'thermo': 'east', 'asbm': 'china', 'aipsub': 'europe', 'technical': 'export'}
+assert all(UD[k]['only'] == g and len([n for n in UNIT_LOOKS if UNIT_LOOKS[n].get('unit_key') == k]) == 3 for k, g in UNIQUES.items())
+
+
 # ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
 
 PRINT_ONLY = False   # --print / --dry-run: prompts are built without needing the earlier pictures, and nothing is sent
@@ -2104,6 +2208,15 @@ def collect(job, force):
 def doc_unit(key):
     """the markdown section of docs/UNIT-LOOKS-PROMPTS.md for one unit (printed; paste or append it): the unit-specific words of all 15 looks, and how the 45 prompts are put together"""
     d = UD[key]; C = UL_CLS[d['cls']]; u = d['label']; GN = {'nato': 'US/NATO', 'east': 'Eastern', 'china': 'China', 'europe': 'Europe', 'export': 'Export'}
+    if d.get('only'):   # a unique unit: one group, one look, 3 prompts
+        g = d['only']; fam, gl = d['groups'][g]
+        o = [f"#### {u[0].upper() + u[1:]} (`{key}`, {GN[g]} only): 3 prompts, built from these words", '',
+             f"Class of picture: `{d['cls']}`. One look, in its own group only. Files: `assets/art-src/ul-{key}-{g}-1-<side|scene|top>.webp` (the look number is always 1, so the picture lookup and `--match ul-{key}-{g}-1` work as for every other unit). Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-{g}-1-side` prints it; the prefix is the look-1 one.", '',
+             f"- **Side frame:** {d['side'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+             f"- **Top-down frame:** {C['top'].format(u=u)}" + (' ' + d['note'] if d['note'] else ''),
+             f"- **Card scene:** \"A single {u} {d['action']}. The setting: {d['setting'][g]}. {d['scene_frame']} The {u} is described in words as: <the words below>\""] + ([f"- **Side view style (this unit's own, instead of the shared one):** {d['side_style']}"] if d['side_style'] != STYLE_V2_SIDE else []) + [
+             f"- **Family look:** {fam} Paint: {d['paint'][g]}.", f"- **The one look (all levels):** {d['gens'][0]}{gl[0]}", f"- **Extra sentence after the tail of the description:** {d['rule']}", '']
+        print('\n'.join(o)); return
     o = [f"### {u[0].upper() + u[1:]} (`{key}`): 45 prompts, built from these words", '',
          f"Class of picture: `{d['cls']}`. Files: `assets/art-src/ul-{key}-<group>-<look>-<side|scene|top>.webp`. Batches: 1 = the 5 look-1 side views, 2 = the 10 look-2 and look-3 side views, 3 = the 30 scenes and top-downs (each from its own side view).", '',
          f"Each prompt is `prefix` + blank line + `subject` + blank line + `style`, exactly as `python3 -I tools/gen-art.py --dry-run ul-{key}-nato-1-side` prints it. The prefix, the style and the class frames are the shared blocks of the section \"The other units\" above; what is unit-specific is below.", '',
