@@ -99,7 +99,7 @@ function afxPuff(wx, wy, o = {}){
   return true; }
 // ground crater (world radius r, at most 2.5, or o.cap: a missile's 3.5) on land; a hit inside a crater adds a new small one elsewhere in the
 // province while it holds fewer than 6, else deepens that crater (never grows it), so a long fight leaves several small craters, not one huge disc
-// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS); only the tactical nuke's and the ICBM's craters
+// scorch marks (crater decals) stay about 20 real seconds and fade out over the last 6 (CRATER_MS); only the nuclear missiles' and the ICBM's craters
 // keep their long life in game hours (o.keep), with their burning ground
 const CRATER_MS = 20000, crRT = (q, now) => !q.rl ? 1 : Math.max(0, Math.min(1, (q.rl - (now - q.t0))/6000));
 function afxCrater(wx, wy, r, o = {}){
@@ -292,8 +292,8 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
 }
 /* ---- strike and blast effects (WFX), all drawn with code (no video): one look per weapon. cm: cruise missile (a quick, sharp blast: bright
    orange fireball, sparks, a small dark smoke puff); bm: ballistic missile (white flash, ground shock ring, big fireball, thick smoke column);
-   chem: chemical (a small burst, then a sickly yellow-green gas cloud that spreads slowly and lingers); tac: tactical nuclear (blinding flash,
-   fireball, fast shock ring, small mushroom cloud); icbm: the biggest (a screen-wide flash, huge fireball, large shock ring, tall mushroom
+   chem: chemical (a small burst, then a sickly yellow-green gas cloud that spreads slowly and lingers); nuc: nuclear (blinding flash,
+   fireball, fast shock ring, small mushroom cloud; ncm: the same, smaller, for the Nuclear Cruise Missile); icbm: the biggest (a screen-wide flash, huge fireball, large shock ring, tall mushroom
    cloud, then burning ground for several game hours); and combat blasts by size: exS (infantry, drones), exM (tanks, aircraft), exL (ships,
    buildings). Every part lives in WORLD units round its world spot: its offset, rise, spread and size, so an effect stays fixed to the map and
    scales with it while zooming and panning (far out a blast keeps a minimum size, drawn bigger about its spot, so it still reads; close in a
@@ -304,11 +304,11 @@ function explode(wx, wy, big = 1, air = false, lite = false, fz = 1){   // fz: t
    the page round the map (a veil that fades on its own clock). Battery: at most wfxCap() heavy and light effects at once (fewer on Low and with the Battery saver:
    the oldest fades out), none started off screen, off-screen ones not drawn, frames asked (animFast) only while one on screen runs; the burning
    ground after an ICBM moves on the paused game clock (animAmb). Low: fewer parts, no smoke column, no ripple, shorter.
-   The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, tac, icbm), and a blast
-   with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / tactical / icbm / blast. */
+   The rules can trigger the warheads they do not have yet with IM.emit('fxWarhead', {kind, p, by}) (kind cm, bm, chem, nuc, ncm, icbm), and a blast
+   with IM.emit('fxBlast', {size:'S'|'M'|'L', p}); the page's own entry points are FXW.cruise / ballistic / chemical / nuclear / icbm / blast. */
 const WFX = {list:[], burn:[], flash:null, veil:null, area:0, bud:0, S:null, id:0, ks:1, occ:[], og:null/*@TEST*/, fz:0, dbg:null/*@ENDTEST*/};   // occ: last frame's dense fire and smoke (wfxOcc), og: the group being drawn
-const WFX_R = {cm:2.6, bm:4.2, chem:0.9, tac:4.5, icbm:12, exS:1.6, exM:2.4, exL:3.6};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
-const WFX_MP = {cm:18, bm:28, chem:9, tac:20, icbm:26, exS:12, exM:14, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
+const WFX_R = {cm:2.6, bm:4.2, chem:0.9, nuc:4.5, ncm:3.2, icbm:12, exS:1.6, exM:2.4, exL:3.6};   // the fireball's world radius (a world unit is about 8.7 km; a province about 12)
+const WFX_MP = {cm:18, bm:28, chem:9, nuc:20, ncm:16, icbm:26, exS:12, exM:14, exL:16};   // the fireball's smallest drawn radius (css px): at mid zoom a blast still reads, a ballistic one plainly bigger than a cruise one
 // on a phone-sized map those floors grow (up to 1.5x on a 430 px screen), so a cruise blast or a small combat blast still reads at mid zoom
 const wfxPh = () => { const m = Math.min(PG.cw, PG.ch); return m >= 640 ? 1 : m <= 440 ? 1.5 : 1 + 0.5*(640 - m)/200; };
 const wfxKr = e => Math.max(PG.view.s, WFX_MP[e.k]*wfxPh()/e.R);   // an effect's world-to-screen scale: the map's, or bigger about its spot far out (the floor)
@@ -418,7 +418,7 @@ function wfxBuild(e){ const k = e.k, R = e.R, r = mulberry(e.seed), L = e.low, r
     smoke(10, 'gas', R*0.3, 40, 400, life*0.55, 0.4, G*0.4, R*1.2, 3, 0.6, {even:true, w:0.35, sq:0.6, p:2.2, fi:0.015, fo:0.45});   // the first cloud, rolling out of the burst
     smoke(30, 'gas', R*0.45, 250, 2600, life, -0.2, G, R*0.8, 5.4, 0.42, {even:true, late:true, w:0.5, sq:0.55, p:1.25, fi:0.1, fo:0.58});   // then spreading over the area,
     smoke(8, 'gas', R*0.5, 900, 3500, life*1.05, -0.1, G*0.7, 3, G*0.75, 0.3, {even:true, w:0.55, sq:0.5, p:1.15, fi:0.18, fo:0.6}); }   // a thin haze joining the lobes
-  else if (k === 'tac'){ light(0, 340, R*2, R*9, 1); light(0, 2800, R*3, R*6.2, 0.85, true); ring('rip', 0, 1150, R*5.6, 1); ring('shock', 0, 900, R*5, 0.32); ring('shock', 140, 1350, R*6.6, 0.12); ring('dust', 160, 4400, R*3.7, 0.55);
+  else if (k === 'nuc' || k === 'ncm'){ light(0, 340, R*2, R*9, 1); light(0, 2800, R*3, R*6.2, 0.85, true); ring('rip', 0, 1150, R*5.6, 1); ring('shock', 0, 900, R*5, 0.32); ring('shock', 140, 1350, R*6.6, 0.12); ring('dust', 160, 4400, R*3.7, 0.55);
     smoke(10, 'dust', R*1.1, 250, 900, 5200, R*0.35, R*2.3, R*0.5, R*1.3, 0.48, {w:0.4, sq:0.56}); mush(red ? 6000 : 10500, R*4, R*1.6, 18, 16); sparks(20, R*5, R*8, 1150); }
   else if (k === 'icbm'){ light(0, 520, R*2, R*7, 1); light(0, 5200, R*2.6, R*5.2, 0.9, true); ring('rip', 0, 1950, R*5.6, 1); ring('shock', 0, 1650, R*5, 0.32); ring('shock', 220, 2300, R*6.6, 0.12); ring('dust', 300, 7200, R*3.4, 0.6);
     smoke(14, 'dust', R*1.1, 300, 1300, 8000, R*0.35, R*2.6, R*0.5, R*1.4, 0.5, {w:0.4, sq:0.55}); mush(red ? 8000 : 15500, R*4.2, R*1.75, 22, 18); sparks(26, R*3.5, R*5, 1500); }
@@ -450,17 +450,17 @@ function wfxStart(k, wx, wy, o = {}){ if (!PG.booted || !S || !WFX_R[k] || !fxLv
   for (let i = 0; i <= live.length - cap; i++) live[i].die = now + 350;   // over the cap: the oldest fade out over 0.35 s
   const c = worldToCell(wx, wy), p = c >= 0 ? G.prov[c] : -1, e = {k, wx, wy, R, t0:now, id:++WFX.id, seed:(Math.random()*2**31) | 0, low:PG.SET.fx !== 'high', red:PG.afxReduced(), sea:o.sea ?? (p >= 0 && G.P[p].sea), night:fxNight(wx, wy), els:[]};
   wfxBuild(e); WFX.list.push(e); wfxTrim(e);
-  if (k === 'icbm' || k === 'tac'){ const a = (k === 'icbm' ? 1 : 0.42)*(e.red ? 0.3 : 1);   // the flash: the whole map whitens (an ICBM) or a strong white veil (tactical)
+  if (k === 'icbm' || k === 'nuc' || k === 'ncm'){ const a = (k === 'icbm' ? 1 : k === 'ncm' ? 0.3 : 0.42)*(e.red ? 0.3 : 1);   // the flash: the whole map whitens (an ICBM) or a strong white veil (nuclear)
     if (!WFX.flash || a > WFX.flash.a*(1 - (now - WFX.flash.t0)/WFX.flash.d)){ WFX.flash = {t0:now, d:k === 'icbm' ? (e.low ? 650 : 950) : 450, a}; wfxVeil(k === 'icbm' ? a*0.85 : 0, WFX.flash.d*0.8); } }
-  if ((k === 'icbm' || k === 'tac') && !e.sea){ WFX.burn.push({wx, wy, r:R*(k === 'icbm' ? 1.5 : 1.1), h0:S.hour + (S.speed && !S.over ? PG.acc : 0), life:10, seed:e.seed}); if (WFX.burn.length > 6) WFX.burn.shift(); }   // burning ground: ten game hours (an ICBM's, a tactical nuclear one's: docs/MISSILES.md 11)
+  if ((k === 'icbm' || k === 'nuc' || k === 'ncm') && !e.sea){ WFX.burn.push({wx, wy, r:R*(k === 'icbm' ? 1.5 : 1.1), h0:S.hour + (S.speed && !S.over ? PG.acc : 0), life:10, seed:e.seed}); if (WFX.burn.length > 6) WFX.burn.shift(); }   // burning ground: ten game hours (an ICBM's, a nuclear missile's: docs/MISSILES.md 11)
   PG.redraw(); return e; }
 // a strike: the effect, the crater and the burning city it leaves, the shake and the sound (o.p: the province hit)
 function wfxStrike(k, wx, wy, o = {}){ const e = wfxStart(k, wx, wy, o), p = o.p ?? (() => { const c = worldToCell(wx, wy); return c >= 0 ? G.prov[c] : -1; })(), land = p >= 0 && !G.P[p].sea;
-  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'tac' ? 120 : 96, cap:3.5, keep:k === 'icbm' || k === 'tac'});
-  if (land && k !== 'chem') afxMark(p, {cm:30, bm:48, tac:72, icbm:120}[k] || 24);
+  if (land && k !== 'chem') afxCrater(wx, wy, k === 'cm' ? 3 : 3.5, {a:0.95, life:k === 'icbm' ? 160 : k === 'nuc' || k === 'ncm' ? 120 : 96, cap:3.5, keep:k === 'icbm' || k === 'nuc' || k === 'ncm'});
+  if (land && k !== 'chem') afxMark(p, {cm:30, bm:48, nuc:72, ncm:56, icbm:120}[k] || 24);
   if (e) bigShake(wx, wy, k); PG.sfx('boom'); return e; }   // (the shake: only for a big blast near the middle of the view, see bigShake)
 const FXW = {cruise:(x, y, o) => wfxStrike('cm', x, y, o), ballistic:(x, y, o) => wfxStrike('bm', x, y, o), chemical:(x, y, o) => wfxStrike('chem', x, y, o),
-  tactical:(x, y, o) => wfxStrike('tac', x, y, o), icbm:(x, y, o) => wfxStrike('icbm', x, y, o), blast:(size, x, y, o) => wfxStart('ex' + size, x, y, o)};
+  nuclear:(x, y, o) => wfxStrike('nuc', x, y, o), nuclearCruise:(x, y, o) => wfxStrike('ncm', x, y, o), icbm:(x, y, o) => wfxStrike('icbm', x, y, o), blast:(size, x, y, o) => wfxStart('ex' + size, x, y, o)};
 // ---- drawing (under the counters, after the small particles); the flash over everything at the end of the frame
 // one sprite at (x, y) css px, radii rx, ry, alpha a, blend op; culled off screen; smoke (budget) is charged to the frame's fill budget
 function wfxSpr(big, small, x, y, rx, ry, a, op, budget){ if (a < 0.004 || rx < 0.3 || x + rx < 0 || x - rx > PG.cw || y + ry < 0 || y - ry > PG.ch) return;
@@ -1043,7 +1043,7 @@ function kick(x, y, sea){ if (fxFar()) return; const k = Math.max(1, 3/Math.max(
 function splash(x, y, r){ emit('splash', x, y, {ws:1, s0:r*0.55, s1:r*1.1, life:900 + 300*r, vx:0, vy:0}); emit('ring', x, y, {ws:1, s0:r*0.4, s1:r*2.2, life:800, vx:0, vy:0}); if (fxLv() > 1) for (let i = 0; i < 3; i++) emit('splash', x + (Math.random() - 0.5)*r, y + (Math.random() - 0.5)*r*0.5, {ws:1, s0:r*0.25, s1:r*0.45, life:600, vx:0, vy:0}); }
 // screen shake: only for big blasts, on screen and near the middle of the view; never on Low or Off, with reduced motion, or when turned off
 function bigShake(x, y, k){ if (fxLv() < 2 || PG.SET.shake === false) return; const [sx, sy] = PG.toScreen(x, y), d = Math.hypot(sx - PG.cw/2, sy - PG.ch/2)/Math.max(1, Math.min(PG.cw, PG.ch));
-  if (!onScr(sx, sy, 0) || d > 0.45) return; const f = 1 - d/0.45, amp = ({cm:3, bm:5, tac:7, icbm:9, chem:1.5, bomb:4, stealth:3}[k] || 2.5)*f; if (amp >= 1) PG.shake(amp, k === 'icbm' ? 1100 : k === 'bomb' || k === 'stealth' ? 400 : 600); }
+  if (!onScr(sx, sy, 0) || d > 0.45) return; const f = 1 - d/0.45, amp = ({cm:3, bm:5, nuc:7, ncm:6, icbm:9, chem:1.5, ccm:1.2, bomb:4, stealth:3}[k] || 2.5)*f; if (amp >= 1) PG.shake(amp, k === 'icbm' ? 1100 : k === 'bomb' || k === 'stealth' ? 400 : 600); }
 
 // ---- the missile warning: a pulsing red marker on the target (from a few seconds before impact; always for a missile aimed at the player) ----
 const WARN = [];   // {wx, wy, t1 (impact, performance clock), t0, big, mine}
@@ -1067,7 +1067,7 @@ function radSign(g, x, y, r, col){ g.save(); g.fillStyle = col; g.beginPath(); g
 // (label: a word beside the arrow, clear of it: NUCLEAR)
 function edgeArrow(tx, ty, now, label){ const g = PG.ctx, cx = PG.cw/2, cy = PG.ch/2, an = Math.atan2(ty - cy, tx - cx), m = 26, k = Math.min((cx - m)/Math.max(1e-6, Math.abs(Math.cos(an))), (cy - m)/Math.max(1e-6, Math.abs(Math.sin(an)))), x = cx + Math.cos(an)*k, y = cy + Math.sin(an)*k, p = 0.6 + 0.4*Math.sin(now/120);
   g.save(); g.translate(x, y); g.rotate(an); g.globalAlpha = p; g.fillStyle = '#e8483c'; g.strokeStyle = 'rgba(3,6,8,.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-4, 0); g.lineTo(-8, 10); g.closePath(); g.stroke(); g.fill(); g.restore();
-  if (label){ const lx = x - Math.cos(an)*90, ly = y - Math.sin(an)*30; g.save(); warnTag(g, Math.max(36, Math.min(PG.cw - 36, lx)), Math.max(14, Math.min(PG.ch - 14, ly)), label, 'nuc'); g.restore(); } }
+  if (label){ const lx = x - Math.cos(an)*90, ly = y - Math.sin(an)*30; g.save(); warnTag(g, Math.max(36, Math.min(PG.cw - 36, lx)), Math.max(14, Math.min(PG.ch - 14, ly)), label, /NUCLEAR/.test(label) ? 'nuc' : ''); g.restore(); } }
 function drawWarn(now){ for (let i = WARN.length - 1; i >= 0; i--){ const W0 = WARN[i]; if (now > W0.t1 + 200){ WARN.splice(i, 1); continue; } if (W0.t1 - now > 3500 && !W0.mine) continue;
     const [x, y] = PG.toScreen(W0.wx, W0.wy); if (!onScr(x, y)) continue; warnMark(x, y, now, W0.big, W0.t1 - now < 3500, W0.mine && now - W0.t0 < 4000 ? 'INCOMING' : ''); }
   if (WARN.length) PG.animFast(); }
@@ -1122,7 +1122,7 @@ function cfxFire(w, A, B, o = {}){ const lv = fxLv(); if (!lv || w === 'recon') 
   return true; }
 // air defence: an interceptor streak climbs from A and meets an incoming missile (or drone) over B; both burst. The incoming one is drawn on its
 // last stretch (it flies in from the far side), so the player sees the shot being stopped
-function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0], B[0]), B[1]]; { const [bx, by] = PG.toScreen(B[0], B[1]); if (!onScr(bx, by, 200)) return false; } const k = o.kind === 'chem' || o.kind === 'nuc' ? 'bm' : o.kind || 'cm', hM = k === 'bm' ? 9 : k === 'dot' ? 2 : 3, du = 900;
+function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0], B[0]), B[1]]; { const [bx, by] = PG.toScreen(B[0], B[1]); if (!onScr(bx, by, 200)) return false; } const k = MISSILES[o.kind] ? MISSILES[o.kind].car : o.kind || 'cm', hM = k === 'bm' ? 9 : k === 'dot' ? 2 : 3, du = 900;
   const dir = o.dir ?? (Math.atan2(B[1] - A[1], B[0] - A[0]) + Math.PI*0.6), inA = [B[0] + Math.cos(dir)*14, B[1] + Math.sin(dir)*10];
   if (fxFar()){ cqAdd(du, () => airBurst(B[0], B[1] - hM, 1)); return true; }
   const inc = shot2(k === 'bm' ? 'bm' : k === 'dot' ? 'drn' : 'cm', inA, B, {dur:du/0.8, arc:1, cut:0.8}); if (inc) inc.arc = hM/Math.max(0.05, prAt(inc, 0.8)[2]);   // stopped at 80 % of its run, at height hM
@@ -1133,33 +1133,56 @@ function intercept(A, B, o = {}){ if (!fxLv()) return false; B = [A[0] + wdx(A[0
 // ---- missiles in flight (the rules' S.inflight): a cruise missile low and weaving with its exhaust trail, a ballistic missile on a tall arc
 // over its smoke column, the launch plume; the warning on a target of the player's (a pulsing red marker, INCOMING at first). Shown when the
 // player launched it, can see where it flies from or to, or is its target (always) ----
-const MSL = {seen:new Map()};   // missile id -> when first drawn (its launch plume, the alert)
-// by kind (docs/MISSILES.md 11): the trail's colour and strength, the launch plume, the warning's word. Chemical and nuclear missiles fly the
-// ballistic missile's arc and picture (names only, no pictures of their own: AIR-6); a faint olive trail for the chemical one, a white one for the nuclear
+const MSL = {seen:new Map(), hit:new Map(), taps:[]};   // missile id -> when first drawn (its launch plume, the alert); id -> when last hit (the chip's flash); this frame's tap boxes
+// by kind (docs/MISSILES.md 11; MISSILES PLAN 2): the trail's colour and strength, the launch plume, the warning's word. The cruise kinds fly the
+// cruise missile's low weave and picture, the ballistic kinds its arc and picture (names only, no pictures of their own: AIR-6); a faint olive
+// trail for a chemical one, a white one for a nuclear one
 const MSL_LOOK = {cm:{tr:'226,224,218', ta:0.45, tw:0.14, puff:1.4, n:4, sfx:'rocket'}, bm:{tr:'226,224,218', ta:0.6, tw:0.35, puff:2.4, n:4, sfx:'launch'},
+  ccm:{tr:'178,184,112', ta:0.42, tw:0.16, puff:1.4, n:4, sfx:'rocket', word:'CHEMICAL'}, ncm:{tr:'250,250,246', ta:0.6, tw:0.2, puff:1.8, n:4, sfx:'rocket', word:'NUCLEAR'},
   chem:{tr:'178,184,112', ta:0.42, tw:0.3, puff:2.4, n:4, sfx:'launch', word:'CHEMICAL'}, nuc:{tr:'250,250,246', ta:0.72, tw:0.42, puff:3.2, n:6, sfx:'icbm', word:'NUCLEAR'}};
 const mslLook = k => MSL_LOOK[k] || MSL_LOOK.bm;
-function drawMissiles(now, vis){ MSL.on = 0; const L = S.inflight; if (!L || !L.length){ if (MSL.seen.size) MSL.seen.clear(); return; } const g = PG.ctx, s = PG.view.s, lv = fxLv();
-  for (const m of L){ const B = G.P[m.to], mine = S.owner[m.to] === PG.PLAYER || stationaryAt(m.to).some(b => b.owner === PG.PLAYER), Lk = mslLook(m.k), cm = m.k === 'cm';
+// HP in flight on the marker (docs/MISSILES-PLAN2.md C.4): a thin bar under the picture (20 / 26 / 32 px: cruise, ballistic, ICBM), white when
+// full, amber below two thirds, red below one third; a chip "HP 16/16" beside it for the player's own missiles, those aimed at the player and any
+// that has been hit (on a phone only when zoomed in), flashing red when hit; drawn over the zone chips on a dark plate (not in their obstacles)
+const MSL_BAR = {cm:20, bm:26, icbm:32};
+const mslHpCol = f => f >= 2/3 ? '#f4f1ea' : f >= 1/3 ? '#f2b23a' : '#ff5a48';
+function mslHpDraw(g, x, y, m, chip, now){ const car = MISSILES[m.k] ? MISSILES[m.k].car : 'bm', mx = MSL_CAR[car].hp, hp = m.hp ?? mx, f = Math.max(0, hp/mx), w = MSL_BAR[car] || 26, t = MSL.hit.get(m.id), fl = t != null && now - t < 1400 ? 1 - (now - t)/1400 : 0;
+  g.save(); g.fillStyle = 'rgba(8,10,12,.8)'; g.fillRect(x - w/2 - 1, y - 1, w + 2, 5); g.fillStyle = mslHpCol(f); g.fillRect(x - w/2, y, w*f, 3);
+  if (chip){ const txt = `HP ${hp}/${mx}`; g.font = `800 9.5px ${PG.BODY}`; g.textAlign = 'left'; g.textBaseline = 'middle'; const cw = g.measureText(txt).width + 8, cx = x + w/2 + 4;
+    g.fillStyle = fl > 0 ? `rgba(${Math.round(70 + 150*fl)},16,12,.94)` : 'rgba(10,13,15,.86)'; g.fillRect(cx, y - 5.5, cw, 13); g.lineWidth = 1; g.strokeStyle = fl > 0 ? '#ff7a68' : 'rgba(255,255,255,.22)'; g.strokeRect(cx + 0.5, y - 5, cw - 1, 12);
+    g.fillStyle = fl > 0 ? '#fff' : f < 1/3 ? '#ff9c8c' : f < 2/3 ? '#ffd27a' : '#e8e4da'; g.fillText(txt, cx + 4, y + 1); }
+  g.restore(); return `HP ${hp}/${mx}`; }
+// the rules' mslHit (a missile hit by air defence, rules/air.js mslDefend): its chip flashes and a small spark shows where it flies
+function mslHitFx(E){ const m = E.m; if (!m || !G.P[m.to]) return; MSL.hit.set(m.id, performance.now()); if (MSL.hit.size > 100) MSL.hit.delete(MSL.hit.keys().next().value);
+  if (!fxLv()) return; const q = PG.missilePos(m); emit('flash', q.x, q.y, {ws:1, s0:0.8, s1:0.3, life:160, vx:0, vy:0}); for (let i = 0; i < 4; i++) emit('spark', q.x, q.y, {ws:1, s0:0.12, s1:0.05, life:260, vx:(Math.random() - 0.5)*5, vy:-1 - Math.random()*2}); PG.animFast(); }
+// the missile drawn under the screen point (x, y) this frame (its tap box, at least 32 px), or null
+const mslTapAt = (x, y) => { let best = null, bd = Infinity; for (const T of MSL.taps){ if (x < T.x - T.r || x > T.x + T.r || y < T.y - T.r || y > T.y + T.r) continue; const d = Math.hypot(x - T.x, y - T.y); if (d < bd){ bd = d; best = T.m; } } return best; };
+function drawMissiles(now, vis){ MSL.on = 0; MSL.taps = []; const L = S.inflight; if (!L || !L.length){ if (MSL.seen.size) MSL.seen.clear(); return; } const g = PG.ctx, s = PG.view.s, lv = fxLv();
+  const phone = PG.cw <= 600, zoomed = s*HS0 >= 16;
+  for (const m of L){ const B = G.P[m.to], mine = S.owner[m.to] === PG.PLAYER || stationaryAt(m.to).some(b => b.owner === PG.PLAYER), Lk = mslLook(m.k), M = MISSILES[m.k] || MISSILES.bm, cm = M.car === 'cm';
     if (!(m.owner === PG.PLAYER || mine || m.all || vis.has(m.to) || vis.has(m.from))) continue;   // (m.all: a nuclear missile, seen by every nation)
     const q0 = PG.missilePos(m), A = q0.A, first = !MSL.seen.has(m.id); if (first){ MSL.seen.set(m.id, now); if (MSL.seen.size > 200) MSL.seen.delete(MSL.seen.keys().next().value);
-      if (lv && q0.t < 0.15 && (m.owner === PG.PLAYER || m.all || vis.has(m.from))){ for (let i = 0; i < (lv < 2 ? Lk.n/2 : Lk.n); i++) bsmPuff(A.x + (Math.random() - 0.5)*0.8*(Lk.n/4), A.y, {delay:i*150, r0:0.6, r1:Lk.puff, dur:m.k === 'nuc' ? 5200 : 4000, vy:-(0.8 + i*0.5), tone:'grey', a:0.8}); snd('fire', Lk.sfx, A.x, A.y, m.k === 'nuc'); }
+      if (lv && q0.t < 0.15 && (m.owner === PG.PLAYER || m.all || vis.has(m.from))){ for (let i = 0; i < (lv < 2 ? Lk.n/2 : Lk.n); i++) bsmPuff(A.x + (Math.random() - 0.5)*0.8*(Lk.n/4), A.y, {delay:i*150, r0:0.6, r1:Lk.puff, dur:m.k === 'nuc' ? 5200 : 4000, vy:-(0.8 + i*0.5), tone:'grey', a:0.8}); snd('fire', Lk.sfx, A.x, A.y, M.wmd === 'nuc'); }
       if (mine && m.owner !== PG.PLAYER){ snd('alert', 'alert', B.x, B.y, true); if (PG.missileAlert) PG.missileAlert(m); } }
     const [x, y] = PG.toScreen(q0.x, q0.y), t = q0.t, d = Math.hypot(B.x - A.x, B.y - A.y), hpx = PG.HOURS_PER_SEC[S.speed] || 0, left = hpx > 0 ? (1 - t)/m.dt/hpx*1000 : Infinity;
-    const at = tt => { tt = Math.max(0, Math.min(1, tt)); let px = A.x + (B.x - A.x)*tt, py = A.y + (B.y - A.y)*tt - Math.sin(tt*Math.PI)*q0.arc; if (cm){ const w = Math.sin(tt*Math.PI*9 + m.id)*Math.min(1.2, d*0.01)*Math.sin(tt*Math.PI); px += -(B.y - A.y)/(d || 1)*w; py += (B.x - A.x)/(d || 1)*w; } return [x + (px - q0.x)*s, y + (py - q0.y)*s]; };   // (only the cruise missile weaves)
-    const [hx, hy] = at(t);
-    if (onScr(hx, hy, 60)){ MSL.on++; if (lv){ const span = !cm ? Math.min(t, 0.3) : 0.12, n = lv < 2 ? 6 : 12; g.lineCap = 'round'; g.strokeStyle = `rgb(${Lk.tr})`; let [px, py] = [hx, hy];   // the trail (no particles: a fading line back along the path)
+    const at = tt => { tt = Math.max(0, Math.min(1, tt)); let px = A.x + (B.x - A.x)*tt, py = A.y + (B.y - A.y)*tt - Math.sin(tt*Math.PI)*q0.arc; if (cm){ const w = Math.sin(tt*Math.PI*9 + m.id)*Math.min(1.2, d*0.01)*Math.sin(tt*Math.PI); px += -(B.y - A.y)/(d || 1)*w; py += (B.x - A.x)/(d || 1)*w; } return [x + (px - q0.x)*s, y + (py - q0.y)*s]; };   // (only the cruise missiles weave)
+    const [hx, hy] = at(t), foe = mine && m.owner !== PG.PLAYER, hurt = m.hp != null && m.hp < MSL_CAR[M.car].hp, chip = (m.owner === PG.PLAYER || mine || hurt) && (!phone || zoomed);
+    let hpTxt = '', onS = false;
+    if (onScr(hx, hy, 60)){ MSL.on++; onS = onScr(hx, hy, 0); if (lv){ const span = !cm ? Math.min(t, 0.3) : 0.12, n = lv < 2 ? 6 : 12; g.lineCap = 'round'; g.strokeStyle = `rgb(${Lk.tr})`; let [px, py] = [hx, hy];   // the trail (no particles: a fading line back along the path)
         for (let j = 1; j <= n; j++){ const [qx, qy] = at(t - span*j/n), f = 1 - j/n; g.globalAlpha = Lk.ta*f; g.lineWidth = Math.max(1, Lk.tw*s*(1 + 1.5*(1 - f))); g.beginPath(); g.moveTo(px, py); g.lineTo(qx, qy); g.stroke(); px = qx; py = qy; } g.globalAlpha = 1; }
       const [nx, ny] = at(t + 0.01), ang = Math.atan2(ny - hy, nx - hx);
       g.save(); g.translate(hx, hy); g.rotate(ang); g.globalCompositeOperation = 'lighter'; g.drawImage(GLOW(), -22, -9, 22, 18); g.globalCompositeOperation = 'source-over';
       const L0 = !cm ? 16 : 11, MQ = L0*1.5/0.95, mp = PG.ART.sprite(!cm ? 'u-ballistic-missile' : 'u-cruise-missile', Math.round(MQ*PG.dpr));   // the owner's missile picture (nose up: turned along the flight) once loaded, else the drawn arrowhead
       if (mp){ g.rotate(Math.PI/2); g.drawImage(mp, -MQ/2, -MQ/2, MQ, MQ); } else { g.fillStyle = '#e8e4da'; g.strokeStyle = '#1a1c1b'; g.lineWidth = 1; g.beginPath(); g.moveTo(L0/2, 0); g.lineTo(-L0/2, -2.2); g.lineTo(-L0/2, 2.2); g.closePath(); g.fill(); g.stroke(); }
-      g.restore(); }
+      g.restore();
+      hpTxt = mslHpDraw(g, hx, hy + (cm ? 11 : 14), m, chip, now); MSL.taps.push({x:hx, y:hy, r:16, m}); }
+    else hpTxt = `HP ${m.hp ?? MSL_CAR[M.car].hp}/${MSL_CAR[M.car].hp}`;
     // the target: a pulsing red marker when it is the player's (all through the flight; INCOMING, or CHEMICAL, for the first 4 s), and for any
-    // missile in the last seconds. A nuclear missile's target reads NUCLEAR for the whole flight on every map that sees the missile (M6)
-    const foe = mine && m.owner !== PG.PLAYER, nuc = m.k === 'nuc', early = now - MSL.seen.get(m.id) < 4000;
-    if (foe){ MSL.on++; const [tx, ty] = PG.toScreen(B.x, B.y); if (!onScr(tx, ty, -10)) edgeArrow(tx, ty, now, nuc ? 'NUCLEAR' : ''); }
-    if (foe || nuc || left < 4000){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)){ MSL.on++; warnMark(tx, ty, now, !cm ? (nuc ? 1.4 : 1) : 0.6, left < 4000, nuc ? 'NUCLEAR' : foe && early ? Lk.word || 'INCOMING' : '', nuc ? 'nuc' : m.k === 'chem' ? 'chem' : ''); } } }
+    // missile in the last seconds. A nuclear missile's target reads NUCLEAR for the whole flight on every map that sees the missile (M6). With
+    // the missile itself off the screen (a ballistic one often flies above its top), its HP shows on the target's tag or the edge arrow (C.4)
+    const nuc = M.wmd === 'nuc', early = now - MSL.seen.get(m.id) < 4000, hpOn = !onS && (m.owner === PG.PLAYER || mine || hurt), withHP = w => hpOn ? (w ? w + ' · ' : '') + hpTxt : w;
+    if (foe){ MSL.on++; const [tx, ty] = PG.toScreen(B.x, B.y); if (!onScr(tx, ty, -10)) edgeArrow(tx, ty, now, withHP(nuc ? 'NUCLEAR' : '')); }
+    if (foe || nuc || left < 4000 || hpOn){ const [tx, ty] = PG.toScreen(B.x, B.y); if (onScr(tx, ty)){ MSL.on++; warnMark(tx, ty, now, !cm ? (nuc ? 1.4 : 1) : 0.6, left < 4000, withHP(nuc ? 'NUCLEAR' : foe && early ? Lk.word || 'INCOMING' : ''), nuc ? 'nuc' : M.wmd === 'chem' ? 'chem' : ''); } } }
   if (MSL.on) PG.animFast(); else if (L.length) PG.animAmb(); }
 
 // ---- sound: each effect has three slots, fire, flight and impact, played by synthesized placeholders (WebAudio noise and oscillator envelopes,
@@ -1247,7 +1270,7 @@ const fxStats = () => ({cf:{n:CF.n, anim:CF.anim, ms:+CF.ms.toFixed(3), burning:
 
 // a lost graphics context (index.html gfxReset): the canvases' pixels are gone, so the sprites and the crater canvas are made again
 const gfxReset = () => { for (const k in SPR) delete SPR[k]; AFX.mips.clear(); if (CRD.cv) CRD.cv.width = CRD.cv.height = 0; CRD.cv = null; CRD.key = ''; };
-return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, radSign, warnTag, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
+return {/*@TEST*/setReact:v => { RX.on = !!v; },/*@ENDTEST*/ gfxReset, turnTo, moveFig, fxLive, bigShake, mslOn:() => MSL.on || 0, mslTapAt, mslHitFx, mslTaps:() => MSL.taps, radSign, warnTag, AFX, orderMark, drawMarks, tapCombat, targetMark, fxStats, flightStep, airImg, wdx, fxLv, fxFar, cfxFire, CFX_W, weaponOf, intercept, impact, destroyed, strikeAt, unitAnim, unitHitMark, unitFace, unitHit, drawMissiles, drawWarn, warnMark, cqRun, snd, airBurst, splash, ANIM, WARN, CQ,
   BFX,
   BSM,
   CLPOS,

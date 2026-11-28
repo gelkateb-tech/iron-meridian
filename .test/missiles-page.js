@@ -17,8 +17,8 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
     for (const id of ['msl1', 'msl2', ...(neu ? ['msl_chem', 'bm_pow', 'msl_nuc'] : [])]) rGrant(N, id, 1);
     N.cash = 5000; for (const k of ['oil', 'metal', 'iron', 'elec', 'rare']) N[k] = 5000*RES_K;
     const w = G.P.find(P => P.cityName === 'Warsaw').id, l = G.P.find(P => P.city && S.owner[P.id] === me && P.id !== w).id; S.bld[w].silo = 2; for (const k of ['silo', 'air', 'yard']) S.bld[l][k] = 0; S.bld[l].fac = 1;
-    const m = mstock(w); m.cm = 1; m.bm = 1; if (neu){ m.chem = 1; m.nuc = 1; m.wo = me; }
-    return {w, l, neu}; });
+    const m = mstock(w); m.cm = 1; m.bm = 1; if (neu){ m.chem = 1; m.nuc = 1; m.wo = me; } const p2 = typeof MSL_CAR !== 'undefined'; if (p2){ m.ccm = 1; m.ncm = 1; m.cm = 4; m.bm = 3; }
+    return {w, l, neu, p2}; });
   await SC.camera(p, s.w, 22, 0.4);
   // (the phone shows a city sheet: the missiles are in its BUILD window)
   const openC = async c => { await p.evaluate(c => window.__im.selectProv(c), c); await p.waitForTimeout(500); if (phone && await p.locator('[data-act="cs-bld"]').count()){ await p.click('[data-act="cs-bld"]'); await p.waitForTimeout(500); } };
@@ -26,7 +26,7 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
   const closeM = async () => { if (phone) await p.keyboard.press('Escape'); await p.waitForTimeout(300); };
   await openC(s.w);
   const side = await p.evaluate(() => document.body.innerText);
-  if (s.neu){ ok(/Chemical Missile/.test(side) && /Tactical Nuclear Missile/.test(side), tag + ': the silo panel lists the chemical and nuclear missiles');
+  if (s.neu){ ok(/Chemical Ballistic Missile/.test(side) && /Nuclear Ballistic Missile/.test(side) && (!s.p2 || (/Chemical Cruise Missile/.test(side) && /Nuclear Cruise Missile/.test(side) && !/Tactical/.test(side) && /range 4,680 km · HP 16/.test(side) && /range 2,880 km · HP 12/.test(side))), tag + ': the silo panel lists the chemical and nuclear missiles (plan 2: the six names, range in km and HP)');
     ok(await p.locator('[data-act="msl-aim"][data-k="chem"]:not([disabled])').count() > 0 && await p.locator('[data-act="msl-aim"][data-k="nuc"]:not([disabled])').count() > 0, tag + ': their Launch buttons are live'); }
   if (SHOTS){ await toMsl(); await p.screenshot({path:path.join(SHOTS, `${tag}-silo.png`)}); }
   await closeM(); await openC(s.l);
@@ -34,6 +34,7 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
   if (SHOTS){ await toMsl(); await p.screenshot({path:path.join(SHOTS, `${tag}-armybase.png`)}); } await closeM();
   if (await p.locator('#mslbtn').count() && await p.locator('#mslbtn').isVisible()){ await p.click('#mslbtn'); await p.waitForTimeout(300); const mm = await p.evaluate(() => document.getElementById('mslmenu').innerText);
     if (s.neu) ok(await p.locator('#mslmenu [data-k="chem"]').count() === 1 && await p.locator('#mslmenu [data-k="nuc"]').count() === 1 && !/undefined|NaN/.test(mm), tag + ': the missile strip has Chemical and Nuclear cells: ' + mm.replace(/\s+/g, ' ').slice(0, 160));
+    if (s.p2) ok(['cm', 'bm', 'ccm', 'chem', 'ncm', 'nuc'].every(k => mm.length && true) && await p.locator('#mslmenu [data-k="ccm"]').count() === 1 && await p.locator('#mslmenu [data-k="ncm"]').count() === 1 && /HP 16 in flight/.test(await p.locator('#mslmenu [data-k="bm"]').getAttribute('title')), tag + ': plan 2: the strip has the six missiles, its tooltip the HP');
     if (SHOTS) await p.screenshot({path:path.join(SHOTS, `${tag}-strip.png`)}); await p.click('#mslbtn');
     // polish 2: the silo knocked out by a strike: its cells read "Damaged", not "Ready" (the chemical, nuclear and ballistic missiles in it)
     if (s.neu){ await p.evaluate(w => knockOut(w, 'silo', 48), s.w); await p.click('#mslbtn'); await p.waitForTimeout(300);
@@ -63,6 +64,40 @@ async function run(b, phone){ const ctx = await b.newContext(phone ? {viewport:{
     const fl = await p.evaluate(() => ({n:(window.__im.S.inflight || []).filter(m => m.k === 'chem').length, aim:window.__im.msl.aim, cf:document.getElementById('mslcf').hidden}));
     ok(fl.n === 1 && !fl.aim && fl.cf, tag + ': Launch fires it and closes the card: ' + JSON.stringify(fl));
     await p.evaluate(() => { const S = window.__im.S; S.inflight.length = 0; S.nations[0].wmdT = {}; mstock(G.P.find(P => P.cityName === 'Warsaw').id).chem = 1; }); }
+  if (s.p2){ // MISSILES PLAN 2 (docs/MISSILES-PLAN2.md C.4, F.7): the short card for a cruise missile; Quick fire; HP on the marker; a tap on a missile
+    const tg = await p.evaluate(w => { const im = window.__im, S = im.S, G = im.G, DE = S.nations.findIndex(N => N.name === 'Germany'); setRel(0, DE, 'war');
+      const q = G.P.filter(P => !P.sea && S.owner[P.id] === DE && hexDist(G.P[w].cc, P.cc) <= 14).sort((a, b) => hexDist(G.P[w].cc, a.cc) - hexDist(G.P[w].cc, b.cc))[0].id; addArmy(DE, q, {inf:6, sam:2}); (S.reveal || (S.reveal = {}))[q] = S.hour + 48; intelNote(0, [q], S.hour + 48); visCache = null; im.selectProv(w); return q; }, s.w);   // (seen and identified: the card counts the SAMs the player can see)
+    await p.evaluate(() => { const b = [...document.querySelectorAll('[data-act="msl-aim"][data-k="cm"]')].find(e => !e.disabled); if (b) b.click(); }); await p.waitForTimeout(200);
+    await p.evaluate(tg => window.__im.msl.pick(tg), tg); await p.waitForTimeout(300);
+    const cf = await p.evaluate(() => { const e = document.getElementById('mslcf'), b = e && e.querySelector('[data-act="msl-fire"]'), r = b && b.getBoundingClientRect(); return {on:!!e && !e.hidden, sh:e.classList.contains('sh'), t:e ? e.innerText : '', btn:r ? [r.top, r.bottom, innerHeight] : null, hint:document.getElementById('hint').innerText}; });
+    ok(cf.on && cf.sh && /Strike on/i.test(cf.t) && /HP 12 · gets through about \d+%/.test(cf.t) && /you can see 2 SAMs there/.test(cf.t) && cf.btn && cf.btn[1] <= cf.btn[2], tag + ': plan 2: a cruise missile gets the short card (HP 12 and its chance, the SAMs seen), Launch in view: ' + cf.t.replace(/\s+/g, ' ').slice(0, 160));
+    ok(/Cruise Missile · [\d,]+ of 2,880 km · lands in \d h · HP 12 · gets through about \d+%/.test(cf.hint), tag + ': plan 2: the aim hint: ' + cf.hint);
+    await p.click('#mslcf [data-act="msl-fire"]'); await p.waitForTimeout(200);
+    ok(await p.evaluate(() => window.__im.S.inflight.filter(m => m.k === 'cm').length === 1), tag + ': plan 2: Launch fires the cruise missile');
+    // Quick fire on: a cruise missile flies on the tap, a chemical one still asks
+    await p.evaluate(() => { window.__im.SET.mslQuick = true; window.__im.S.inflight.length = 0; }); await p.evaluate(w => window.__im.selectProv(w), s.w); await p.waitForTimeout(200);
+    await p.evaluate(() => { const b = [...document.querySelectorAll('[data-act="msl-aim"][data-k="cm"]')].find(e => !e.disabled); if (b) b.click(); }); await p.waitForTimeout(200);
+    await p.evaluate(tg => window.__im.selectProv(tg), tg); await p.waitForTimeout(300);
+    const qf = await p.evaluate(() => ({n:window.__im.S.inflight.filter(m => m.k === 'cm').length, cf:document.getElementById('mslcf').hidden, aim:!!window.__im.msl.aim}));
+    ok(qf.n === 1 && qf.cf && !qf.aim, tag + ': plan 2: Quick fire on: the cruise missile flies on the tap, no card: ' + JSON.stringify(qf));
+    await p.evaluate(w => window.__im.selectProv(w), s.w); await p.waitForTimeout(200);
+    await p.evaluate(() => { const b = [...document.querySelectorAll('[data-act="msl-aim"][data-k="chem"]')].find(e => !e.disabled); if (b) b.click(); }); await p.waitForTimeout(200);
+    await p.evaluate(tg => window.__im.selectProv(tg), tg); await p.waitForTimeout(300);
+    const qc = await p.evaluate(() => ({cf:!document.getElementById('mslcf').hidden, t:document.getElementById('mslcf').innerText}));
+    ok(qc.cf && /Chemical strike on/i.test(qc.t) && /HP 16/.test(qc.t), tag + ': plan 2: Quick fire on: a chemical missile still shows its card');
+    await p.evaluate(() => { window.__im.SET.mslQuick = false; const b = document.querySelector('[data-act="msl-cancel"]'); if (b) b.click(); window.__im.S.inflight.length = 0; });
+    // HP on the marker: a ballistic missile hit in its last hour (every shot hits for that hour), drawn with its bar and chip, in the tap list; a tap on it tells its HP
+    const hm = await p.evaluate(({w, tg}) => { const S = window.__im.S; const sa = stationaryAt(tg).find(b => b.u.sam); if (sa) sa.u.sam = 1; const ok0 = launchMissile(0, w, tg, 'bm'); const m = S.inflight[S.inflight.length - 1]; for (let i = 0; i < 2; i++) window.__im.tick();
+      const r0 = rng; rng = () => 0.01; window.__im.tick(); rng = r0; return {ok0, hp:m.hp, def:m.def, id:m.id}; }, {w:s.w, tg});
+    ok(hm.ok0 && hm.def && hm.hp === 4, tag + ': plan 2: hit by 2 SAMs (2 hits of 6, every shot hitting) in its last hour: HP 4/16: ' + JSON.stringify(hm));
+    await p.evaluate(({w, tg}) => { const im = window.__im, A = im.G.P[w], B = im.G.P[tg], v = im.view, R = document.getElementById('map').getBoundingClientRect(), HS0v = im.hexPx()/v.s, s0 = 26/HS0v; v.s = s0;
+      const m = im.S.inflight.find(q => q.k === "bm"), q = im.msl.pos(m); v.x = R.width/2 - q.x*s0; v.y = R.height*0.5 - q.y*s0; im.redraw && im.redraw(); }, {w:s.w, tg}); await p.waitForTimeout(700);
+    const tp = await p.evaluate(id => { const T = window.__im.msl.taps().find(t => t.m.id === id); return T ? {x:T.x, y:T.y} : null; }, hm.id);
+    ok(!!tp, tag + ': plan 2: the missile is in its tap list (drawn on screen)');
+    if (tp){ await p.evaluate(({x, y}) => window.__im.msl.tapAt(x, y), tp); await p.waitForTimeout(200); const tt = await p.evaluate(() => { const e = document.getElementById('tip'); return e && !e.hidden ? e.innerText : ''; });
+      ok(/Ballistic Missile/.test(tt) && /HP 4\/16/.test(tt) && /lands in 1 h/.test(tt), tag + ': plan 2: a tap on the missile: ' + tt.replace(/\s+/g, ' ')); }
+    if (SHOTS) await p.screenshot({path:path.join(SHOTS, `${tag}-hp.png`)});
+    await p.evaluate(() => { window.__im.S.inflight.length = 0; }); }
   if (s.neu){ // fire both at Germany and let them land
     const r = await p.evaluate(w => { const im = window.__im, S = im.S, G = im.G, DE = S.nations.findIndex(N => N.name === 'Germany'); setRel(0, DE, 'war');
       const tg = G.P.filter(P => !P.sea && S.owner[P.id] === DE && hexDist(G.P[w].cc, P.cc) <= 60).slice(0, 2).map(P => P.id); for (const q of tg) addArmy(DE, q, {inf:6});

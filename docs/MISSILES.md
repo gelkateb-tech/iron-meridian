@@ -487,3 +487,62 @@ The same 60-day games as in 22 (3 wars provoked every 10 days, seeds 12345 / 202
 | nation-days saving for a silo with income at or below 0 | 15 / 0 / 0 / 0 (one nation) | 0 | 0 | 0 |
 
 In the merged games no nation happened to save for a silo while broke, so the fix changes nothing there (the 10-day golden game is unchanged too); on polish 2's games it removes the one broke nation's 15 days of saving. Fewer nations take up missiles in the merged games (seed 99: one) because of the merged computer's other savings (Army Base, Airbase and Naval Yard levels, BUILD-REQS), not because of this fix.
+
+## 24. Missiles plan 2 (branch `missiles-plan2`, owner 2026-11-28)
+
+**The owner's words (verbatim):** "MISSILES PLAN 2: defaults on 1–4 and 6–8. Build it as its own job on top of the merged missiles." and "Answers to every open question: take your default (in brackets) everywhere, except where I say otherwise below." Question 5 (the USA, Japan, Australia and Brazil until the ICBM) was not answered, so nothing was changed for it. The full plan and its numbers are in `docs/MISSILES-PLAN2.md`; this section says what the build did. **Where this section and sections 1 to 23 disagree, this section holds.**
+
+**The missiles now** (`MISSILES`, `rules/data.js`; keys `chem` and `nuc` kept, so v74 saves load with no conversion):
+
+| Key | Name | Body | Range (map km) | Speed | Cost | Build | Silo | Limit | Wait |
+|---|---|---|---|---|---|---|---|---|---|
+| `cm` | Cruise Missile | cruise | 2,880 (3,600) | 9 hexes/h (11, 13) | $50M | 36 h | none needed | 2 in a city without a silo | none |
+| `bm` | Ballistic Missile | ballistic | 4,680 (5,760) | 22 | $140M | 72 h | I | none | none |
+| `ccm` | Chemical Cruise Missile (new) | cruise | 2,880 (3,600) | 9 | $110M | 54 h | I | 2 a silo, 4 a nation | 8 h |
+| `chem` | Chemical Ballistic Missile (was Chemical Missile) | ballistic | 4,680 (5,760) | 22 (was 18) | $170M | 84 h | I | 2 a silo, 6 a nation | 12 h |
+| `ncm` | Nuclear Cruise Missile (new) | cruise | 2,880 (3,600) | 9 | $260M | 96 h | I | 1 a silo, 2 a nation | 12 h |
+| `nuc` | Nuclear Ballistic Missile (was Tactical Nuclear Missile) | ballistic | 4,680 (5,760) | 22 | $400M | 120 h | II | 1 a silo, 3 a nation (`MSL_GRP.nucBig`, later shared with the ICBM) | 24 h |
+
+- Shortest flights: cruise 2 h, Nuclear Cruise 3 h, ballistic and Chemical Ballistic 4 h, Nuclear Ballistic 6 h. Range research by body (`mslOf`, `rules/research.js`): Cruise Missile Range +2 hexes a step for every cruise missile, Ballistic Missile Range +3 for every ballistic one, Cruise Missile Speed for every cruise missile; Heavier Warhead on the Ballistic Missile only.
+- Blasts by missile (B.3): the Chemical Cruise Missile a small blast (power 5, about 15 health on a stack) and gas 8 h (12 with Persistent Agent), war damage 25 / 12, 2% of the people; the Nuclear Cruise Missile 30% of every force's health (armour and ships 25%), nothing next door, one building hit, every building out 24 h, roads 48 h, war damage 40, 6% of the people, radiation 24 h that halves output. The ballistic kinds keep the v74 blasts.
+- The warheads keep their rules in `MSL_WMD` (the zones' hourly rate and battle factor, the opinion costs, the fallout, peace refused 72 h): every nuclear missile costs the same opinion and draws allies in (F.4); the opinion mark and `nucShunned` read the latest launch of any missile of the warhead (`wmdLast`).
+
+**HP in flight** (C; `rules/air.js` `mslDefend`, `mslPools`, `mslOdds`): `MSL_CAR` holds the body's HP (cruise 12, ballistic 16, ICBM 24), its hit chance (25%, 23% and 21% with Cruise Missile Speed; 20%; 10%) and its shot limit (6 / 10 / 16). `MSL_DEF` is the defender table, one line a unit type: HP off per hit, shots an hour, a hit factor (x the body's chance), the bodies it can shoot, whether it counts only on patrol over the target, and the research that makes it count fully next door. Today: Mobile SAM 2 x 6 HP (Long-Range SAM: full next door), Cruiser 3 x 6, Frigate 2 x 4 (not at an ICBM), Interceptor and Air Superiority Fighter on patrol 1 x 6 (cruise missiles only). **A later Missile Defence unit is one more line in `MSL_DEF`.** The Anti-Missile Shield multiplies the hit chance x1.25 / 1.5 / 1.8 (`MSL_SHIELD`).
+- The defence fires once, in the last hour before the missile lands (`missileTick`), or at impact if it has not fired yet (a v74 save's missile). Shots come in pools by nation and unit type, the most HP off first; a defender next door costs two of its shots for one (half strength); swarm saturation lowers the shots. A missile at 0 HP falls; a hurt one lands the next hour with its full damage. Missiles landing in the same hour share the shots: the most dangerous first (nuclear, chemical, plain; ballistic before cruise), then the most hurt, then the order of launch.
+- Messages: "Your Cruise Missile was shot down over Warsaw.", "Air defences hit an enemy Ballistic Missile over Warsaw: HP 4/16." The rules emit `mslHit {m, dmg, by, hp}` for the spark.
+- `mslOdds(viewer, from, to, k)`: the exact chance to get through (no dice), counting only the defenders the viewer can see: a person's seat the forces its screen identifies (`armyKnown`), a computer nation the forces it sees (`armyVisible`, the sight the AI plays on). The Army Info missile row is "the chance this force alone stops a lone cruise missile" (`mslStopBy`).
+
+**Measured** (`.test/missiles.js` section 13; exact sums from `mslOdds`, and the rules' own dice over 4,000 seeded trials a case, 20,000 for the card check): the C.2 table matches the plan to the point in every cell (1 to 8 SAMs, no shield to Shield III, cruise / ballistic / ICBM, the ICBM on its body only); ships and fighters 5/0/0 then 24/2/0 (2 Frigates), 47/10/0 then 84/37/1 (2 Cruisers), 47/26/0 then 84/68/1 (both), 26% then 61% (4 fighters). The worked examples C.3:
+
+| Example | Plan | Exact | Dice |
+|---|---|---|---|
+| 1. ballistic, 3 SAMs + 2 next door, Long-Range SAM, no shield / I / II / III | 68 / 53 / 38 / 24% | 68 / 53 / 38 / 24% | 67 / 53 / 38 / 24% |
+| 1. the same without Long-Range SAM | 80 / 68 / 55 / 40% | 80 / 68 / 55 / 40% | 81 / 66 / 55 / 41% |
+| 1. HP of those that get through (4 / 10 / 16) | 45 / 40 / 16% | 45 / 40 / 16% | 45 / 39 / 16% |
+| the card against the dice, 20,000 missiles | within 2 points | 68% | 68.2% |
+| 2. cruise at the same city | 53 / 39 / 27 / 16% | 53 / 39 / 27 / 16% | 54 / 40 / 27 / 16% |
+| 3. 3 ballistic into 4 SAMs, Shield II | 2.5 of 3 (one alone 55%) | one alone 55% | 2.55 of 3 |
+| 3. 4 cruise into 3 SAMs, no shield | 3.5 of 4 (one alone 53%) | one alone 53% | 3.50 of 4 |
+| 4. a nuke and 2 cruise on 6 SAMs, Shield II: the nuke | 38% | 38% | 38% |
+| 5. ICBM (its body), Shield III: 4 SAMs / +2 next door LR / 6 SAMs + 2 Cruisers; no shield best | 4 / 16 / 32%; 7% | 4 / 16 / 32%; 7% | 32% (the third) |
+
+**The screens** (`index.html`, `fx.js`): every missile has a launch card; a cruise or ballistic one gets the short card (target, lands in, "HP 12 · gets through about 53% · you can see 3 SAMs there", stock left), with Launch and Cancel kept in view at the bottom; Settings has "Quick fire for cruise and ballistic missiles" (off; chemical and nuclear missiles always ask). The aim hint reads "Ballistic Missile · 1,380 of 4,680 km · lands in 4 h · HP 16 · gets through about 80%"; the silo panel "range 4,680 km · HP 16"; the strip's tooltip the HP. The marker: a thin HP bar under the picture (20 px cruise, 26 ballistic, 32 ICBM; white, amber below two thirds, red below one third), an "HP 16/16" chip for your own missiles, those aimed at you and any that was hit (on a phone only zoomed in), flashing red with a spark when hit; off screen the HP shows on the target's tag or the edge arrow. A tap on a missile (its own tap list, not while aiming) tells its name, HP, from, to and when it lands. The cruise kinds fly the cruise missile's picture and weave, the ballistic kinds the ballistic one's arc; the effect key `tac` is now `nuc`, and the Nuclear Cruise Missile has a smaller one (`ncm`); the developer buttons read "Nuclear (ballistic)" and "Nuclear (cruise)".
+
+**The computer** (`rules/ai.js`): enemy missiles in reach of its capital or a silo city, or missiles fired at it within 7 days (`N.mslAt`), make it keep 2 to 4 Mobile SAMs at those cities (`AI_SAM_WANT`, set apart from its moves like the capital's garrison) and research the Anti-Missile Shield (weight 12); it fires a cruise or ballistic missile only where it gets through 35% or more, or a salvo of 2 to 3 at a defended target, and a chemical or nuclear one only at 35% or more; at war its next silo goes to its city nearest its main enemy's capital (at most 2 silos); in a Silo I it builds a Nuclear Cruise Missile, in a Silo II a Nuclear Ballistic Missile (still one nuclear missile in all); the Chemical Cruise Missile when the Chemical Ballistic one cannot be built. MS1 to MS5 are kept.
+
+**60-day computer games** (`node tools/missiles-check.js ai|wars 60`, seeds 12345 / 7 / 99; before: master ee7e438 through `IM_ROOT`):
+
+| | before, ai | after, ai | before, wars | after, wars |
+|---|---|---|---|---|
+| nations that built a missile | 0 / 0 / 0 | 0 / 0 / 0 | 4 / 4 / 5 | 6 / 5 / 2 |
+| nations that fired one | 0 / 0 / 0 | 0 / 0 / 0 | 5 / 4 / 5 | 6 / 5 / 2 |
+| missiles built (cruise + ballistic; no other kind) | 0 | 0 | 10+2 / 9+5 / 11+2 | 20+3 / 32+2 / 4+1 |
+| missiles fired | 0 | 0 | 10+1 / 9+3 / 11+2 | 17+3 / 30+2 / 3+1 |
+| missiles shot down | 0 | 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+| silos standing, day 60 | 0 / 0 / 0 | 0 / 0 / 0 | 2 / 4 / 2 | 4 / 2 / 2 |
+
+No computer game used a chemical or nuclear missile, before or after, and none shot a missile down: their missiles go at field armies, which seldom stand with SAMs (an Army Base III is needed to train them). More cruise missiles were built on seeds 12345 and 7 (the Cruise Missile now costs $50M) and fewer on seed 99; why seed 99 went the other way was not traced. The 10-day golden game is unchanged.
+
+**Old saves:** a v74 save (`.test/fixtures/missiles-v74-save.json`, made from master ee7e438 by `.test/missiles-v74-make.js`) loads with no step: its `chem` and `nuc` stock and launch clocks are the Chemical and Nuclear Ballistic Missiles', the new kinds read 0 (`mstock` fills every missing kind), its four missiles in flight (no HP saved) start with full HP, keep their saved speed, and land, fall or self-destruct; it plays on and saves again (`.test/missiles.js` section 14).
+
+**Choices the plan left open** (listed in `docs/MISSILES-PLAN2.md`, "As built"): the goods the two new missiles cost; the Chemical Cruise Missile's blast power 5; next door at half strength as half the shots; the computer counting what it sees rather than what it has identified; at most 2 computer silos.

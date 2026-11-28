@@ -20,7 +20,7 @@ const W = +(process.argv[2] || 1440), H = +(process.argv[3] || 900), DPR = +(pro
   // the burning spot and the effects (time running, so the particles have flown off their start spots before the clock is frozen)
   await p.evaluate(P => { const im = window.__im, w = im.wfx; w.mark(P.id, 48); w.WRECKS.push({ wx: P.x + 3, wy: P.y + 2, t0: performance.now() }); w.explode(P.x - 4, P.y + 1, 1.4);
     for (let i = 0; i < 6; i++) w.puff(P.x + i - 3, P.y, { s0: 5, s1: 20, dur: 9000, vx: 6, vy: -12, ox: (i - 3)*3 });
-    const K = ['cm', 'bm', 'chem', 'tac', 'icbm', 'exS', 'exM', 'exL'];
+    const K = ['cm', 'bm', 'chem', 'nuc', 'icbm', 'exS', 'exM', 'exL'];
     K.forEach((k, i) => w.start(k, P.x + (i - 3.5)*7, P.y + ((i % 3) - 1)*5, { force: true })); }, P);
   await p.waitForTimeout(1300);
   const res = await p.evaluate(async P => { const im = window.__im, w = im.wfx, fr = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));

@@ -483,10 +483,10 @@ const R_SPECIAL = [
     {id:'bm_pow', name:'Heavier Warhead', kind:'kit', ic:'warhead', req:['msl2'], lv:[[14, 'power 16 to 19 (the Ballistic Missile)', {cash:170, metal:60, rare:44, days:6}]]}]},
   // chemical and nuclear missiles (owner point 12, docs/MISSILES.md 4): their own lines, prerequisites inside the missile line (RES-3)
   {cat:'msl', line:'Chemical Missile', pic:'bm', nodes:[
-    {id:'msl_chem', name:'Chemical Warhead', kind:'unlock', ic:'bm', req:['msl2'], lv:[[10, 'Missile Silos build Chemical Cruise and Chemical Ballistic Missiles.', {cash:183, metal:40, rare:55, days:7}]]},
+    {id:'msl_chem', name:'Chemical Warhead', kind:'unlock', ic:'bm', req:['msl2'], lv:[[10, 'Missile Silos build Chemical Cruise and Chemical Ballistic Missiles', {cash:183, metal:40, rare:55, days:7}]]},
     {id:'chem_long', name:'Persistent Agent', kind:'kit', ic:'warhead', req:['msl_chem'], lv:[[16, 'gas lasts half as long again: 12 hours instead of 8 (cruise), 18 instead of 12 (ballistic)', {cash:130, metal:45, rare:30, days:5}]]}]},
   {cat:'msl', line:'Nuclear Missile', pic:'bm', nodes:[
-    {id:'msl_nuc', name:'Nuclear Warhead', kind:'unlock', ic:'bm', req:['bm_pow'], lv:[[20, 'Missile Silos build Nuclear Cruise Missiles. Silos II and up also build Nuclear Ballistic Missiles.', {cash:390, metal:90, rare:112, days:10}]]}]},
+    {id:'msl_nuc', name:'Nuclear Warhead', kind:'unlock', ic:'bm', req:['bm_pow'], lv:[[20, 'Missile Silos build Nuclear Cruise Missiles. Silos II and up also build Nuclear Ballistic Missiles', {cash:390, metal:90, rare:112, days:10}]]}]},
   {cat:'msl', line:'Missile Defence', pic:'def', nodes:[
     {id:'msl3', name:'Anti-Missile Shield', kind:'kit', ic:'def2', req:['msl2'], lv:[[9, 'your air defences hit missiles 25% more often', {cash:132, metal:60, rare:96, days:7}], [15, '50% more often', {cash:170, metal:60, rare:60, days:6}], [21, '80% more often', {cash:220, metal:80, rare:80, days:7}]]}]},
   {cat:'msl', line:'Satellites', pic:'sat', nodes:[

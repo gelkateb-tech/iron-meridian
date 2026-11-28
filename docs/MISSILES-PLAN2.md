@@ -1,4 +1,20 @@
-# Missiles plan 2: final proposal (planning only, nothing changed)
+# Missiles plan 2: final proposal (built)
+
+**Status: built on branch `missiles-plan2` (2026-11-28), not merged.** The owner's answers (verbatim): "MISSILES PLAN 2: defaults on 1–4 and 6–8. Build it as its own job on top of the merged missiles." and "Answers to every open question: take your default (in brackets) everywhere, except where I say otherwise below." So F.1 to F.4 and F.6 to F.8 take the defaults in brackets, F.9 (MS1 to MS5, built in missiles polish 2) is kept, and **F.5 is not answered: nothing was changed for it** (no earlier ICBM, no ship-launched missiles). The ICBM (section D) is not built. What the build did, its measured numbers and the 60-day games are in `docs/MISSILES.md` section 24.
+
+**As built: deviations and choices the plan left open**
+- The goods of the two new missiles are not in the plan: the Chemical Cruise Missile costs oil 12, materials 14, iron 6, electronics 10, rare 7; the Nuclear Cruise Missile 20, 26, 10, 20, 20 (about the ballistic kind's goods scaled by price).
+- The Chemical Cruise Missile's blast is power 5 (the Chemical Ballistic Missile's 9 scaled by the plan's "about 15" against "about 27" health); Persistent Agent makes its gas 12 h, as in B.3.
+- "Forces next door count at half" is built as half the shots: a defender next door spends two of its shots for one, and a pool's whole shots are counted down (1 SAM next door: 1 shot). This gives every C.2 and C.3 number of the plan.
+- The chance on the card counts the forces a person's screen has identified; a computer nation counts the forces it sees (the sight it plays on everywhere), since it identifies almost nothing.
+- The computer: 2 Mobile SAMs at its capital and silo cities when enemy missiles can reach them, 3 when fired at within 7 days, 4 with a nuclear threat (the plan's "2 to 4"); at most 2 silos of its own.
+- Not done: the reach table (B.2) was not measured again; the stack-damage table (MISSILES.md 7.3) was not extended to the two new kinds (the Nuclear Cruise Missile's 30% / 25% is checked on its own); the 60-day games do not count SAMs at capitals on days 20 and 40.
+- No two numbers in the plan disagreed with the table; every number of B and C is the table's.
+
+---
+
+(The plan as written follows.)
+
 
 **In short**
 - There are **7 missiles**: Cruise, Ballistic, Chemical Cruise, Chemical Ballistic, Nuclear Cruise and Nuclear Ballistic now, and the Nuclear ICBM later. The word "Tactical" is gone. Two more slots, a conventional ICBM and a chemical ICBM, are shown in the table with numbers but are **not proposed**.
