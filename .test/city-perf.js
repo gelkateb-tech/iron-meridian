@@ -57,7 +57,7 @@ function aggregate(prof){ const byId = new Map(); prof.nodes.forEach(n => byId.s
   await go(150); await quiet();
   const one = await p.evaluate(() => { const im = window.__im, out = {}; for (const nm of ['Berlin', 'Kabul', 'Damascus']){ const P = im.G.P.find(q => q.cityName === nm), r = im.cityDbg.time(P.id, 1218); out[nm] = {info:+r.info.toFixed(1), day:+r.bake.toFixed(1), night:+r.night.toFixed(1), S:r.S}; } return out; });
   const heap = await p.evaluate(() => performance.memory ? +(performance.memory.usedJSHeapSize/1e6).toFixed(1) : null);
-  const res = {when:new Date().toISOString(), page:PAGE, load:os.loadavg().map(x => +x.toFixed(2)), device:PHONE ? 'phone Pixel 7 412x915 dpr2.625 cpu x2' : 'desktop 1440x900 dpr2', heap, night:NIGHT, settle, cache, one, runs, errors:errs.slice(0, 5)};
+  const res = {when:new Date().toISOString(), page:PAGE, load:os.loadavg().map(x => +x.toFixed(2)), device:PHONE ? `phone Pixel 7 ${process.env.VW || 412}x${process.env.VH || 915} dpr2.625 cpu x2` : 'desktop 1440x900 dpr2', heap, night:NIGHT, settle, cache, one, runs, errors:errs.slice(0, 5)};
   console.log(JSON.stringify(res));
   if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify(res, null, 1));
   await b.close(); process.exit(errs.length ? 1 : 0); })();
