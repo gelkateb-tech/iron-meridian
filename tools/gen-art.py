@@ -320,6 +320,10 @@ R_LOOK = {
             "launcher frame at its rear and a flat rectangular radar panel folded behind the cab; olive-khaki paint"),
     'jam': ("a generic six-wheeled armoured military truck of an original design with a telescopic mast of short flat "
             "antenna panels and a small dish on its roof; olive-khaki paint"),
+    'rcn': ("a generic small, lightly armoured four-wheeled scout car of an original design: a low, flat-sided angular armoured body "
+            "with a sharply sloped front plate, a small square windscreen of dark armoured panes, four big off-road wheels, a small remote "
+            "machine-gun mount on the roof and a slim telescopic sensor mast with a box-shaped sensor head raised at the rear of the roof; "
+            "olive-khaki paint"),
     'heli': ("a generic tandem two-seat attack helicopter of an original design: a narrow angular fuselage with two stepped "
              "cockpits, short stub wings with missile racks, a chin gun turret, a four-blade main rotor and a tail rotor; "
              "matte grey-green paint"),
@@ -435,6 +439,7 @@ R_ICONS = {   # ri-<key>: cat-<category> (the category icon), a unit unlock or a
     'ri-u_mlrs': "Rocket Artillery: " + L['mlrs'] + ", its launcher box raised at a steep angle, seen from its front left on dusty ground.",
     'ri-u_sam': "Mobile SAM: " + L['sam'] + ", its canisters raised upright and the radar panel unfolded, seen from its front left.",
     'ri-u_jam': "Mobile Jammer: " + L['jam'] + ", its antenna mast raised, seen from its front left on a dirt track.",
+    'ri-u_rcn': "Recon Vehicle: " + L['rcn'] + ", driving along a dirt track on a low grassy ridge, scouting ahead, seen from its front left.",
     'ri-u_heli': "Attack Helicopter: " + L['heli'] + ", hovering low over dry grass, seen from its front left, close.",
     'ri-u_int': "Interceptor: " + L['int'] + ", climbing steeply in a clear sky, seen from its front left, close.",
     'ri-u_jet': "Strike Fighter: " + L['jet'] + ", flying level above clouds, seen from its front left, close.",
@@ -477,6 +482,12 @@ R_ICONS = {   # ri-<key>: cat-<category> (the category icon), a unit unlock or a
     'ri-tank_gun': "Smoothbore Main Gun: " + L['tank'] + ", seen from its front left, close, the long gun barrel crossing the box toward the right.",
     'ri-tank_terr': "Wide Tracks: " + L['tank'] + ", driving through deep mud, seen from a low angle at its front left, its wide tracks prominent.",
     'ri-tank_eng': "Turbine Engines: " + L['tank'] + ", speeding over dry ground with a cloud of dust and a faint heat shimmer over its rear deck, seen from its front left.",
+    # Recon Vehicle (docs/RECON-VEHICLE-PROPOSAL.md on master, section 3; Firepower and Protection use t-fp and t-pr; ri-rcn_spd can be left out, the game then shows ri-ifv_spd)
+    'ri-rcn_optics': ("Mast-Mounted Sensors: the sensor head on top of the raised telescopic mast of " + L['rcn'] + ", close up from its front left: a "
+                      "box-shaped head with two round camera lenses and a small flat dark laser window, the top of the vehicle's roof below it, hazy hills far behind."),
+    'ri-rcn_spd': "Uprated Powerpack: " + L['rcn'] + ", driving fast toward the viewer along a dusty dirt road, a dust cloud behind it, seen from its front left.",
+    'ri-rcn_camo': ("Signature Reduction: " + L['rcn'] + ", standing still at the edge of a wood under a draped camouflage net with leaves woven into it, "
+                    "its front, its wheels and its raised mast still clearly showing, seen from its front left."),
     # Artillery & Air Defence
     'ri-art_radar': ("Counter-Battery Radar: a generic six-wheeled military truck of an original design carrying a big flat "
                      "rectangular radar panel raised upright on its rear; olive-khaki; seen from its front left."),
@@ -1850,6 +1861,145 @@ unit_def('technical', 'technical (a civilian pickup truck armed with a machine g
     gens=UNIQUE_GEN, only='export')
 UNIQUES = {'gunship': 'nato', 'thermo': 'east', 'asbm': 'china', 'aipsub': 'europe', 'technical': 'export'}
 assert all(UD[k]['only'] == g and len([n for n in UNIT_LOOKS if UNIT_LOOKS[n].get('unit_key') == k]) == 3 for k, g in UNIQUES.items())
+
+
+# ---- Recon Vehicle (key rcn; docs/RECON-VEHICLE-PROPOSAL.md on master, section 4, the owner's default rule "original generic design; the checker must not be
+# able to name a real model"). An original, lightly armoured wheeled 4x4 scout car with a telescopic sensor mast and a light machine gun: look 1 a
+# Cold War open-roof scout car (a short optics post and a gun on a post), look 2 armoured with a remote weapon station and the mast, look 3 a
+# near-future low-signature hybrid with a drone launch tube. What batches A-D taught (28 November 2026) is in every prompt: each of the 15 looks
+# writes out its OWN shapes (nose and front plate angle, windows, doors, where the engine sits, the four wheels and their arches, the mast and its
+# head, the gun of its own design, where the drone tube sits) and the rule names makers, not types; the side frame says the facing twice; only a
+# small, tight contact shadow; the thin parts (mast, antennas, gun barrel) and the tyres are dark; no text, numbers, flags or emblems. The Export
+# car is a closed-walled armoured utility car, clearly not the Jammer's six-wheeled truck and not the rebels' open pickup.
+_RCN_ROOF = ("Its four big wheels on two axles (no other wheels), its hull and nose shape, its windows and doors, its mast or optics post and its gun are exactly "
+             "as described and the same in every view; the mast stands raised to the same height in every view, and the whole vehicle, the raised mast and its "
+             "head included, is inside the frame. The mast, the antennas, the gun barrel and the tyres are dark: no pale or white tips or edges.")
+unit_def('rcn', 'recon vehicle (a small, lightly armoured four-wheeled scout car)', 'gnd', 'armoured car or scout car',
+    "driving at moderate speed along the dirt road, scouting ahead, a modest trail of dust behind its wheels",
+    {'nato': ("Family look (US/NATO): a small, lightly armoured four-wheeled scout car built from flat, slab-sided armour plates with sharp straight edges and "
+              "square corners, upright flat sides, a flat roof line, four big off-road wheels on two axles, a raised sensor or optics mast at the rear and a light "
+              "machine gun on top.",
+              ["a tall, narrow, open-topped armoured box on four big wheels: a short, flat engine bonnet at the front with a flat armoured radiator grille of six "
+               "horizontal slots and two small round headlights in square dark wire cages on the front corners; behind it a flat, upright armoured windscreen plate "
+               "with two small rectangular vision slits; an open crew compartment with NO roof, its flat upright side walls the full height of the body, a square "
+               "side door with one small vision slit in each side; the front wheels right under the bonnet and the rear wheels near the back, under flat-topped, "
+               "square-cut mudguards; a flat, upright rear plate carrying the spare wheel; a light machine gun of its own design on a pivot post in the middle of "
+               "the open compartment, its thin dark barrel with a short slotted muzzle pointing forward over the windscreen, behind a small flat square gun "
+               "shield; a short, upright, dark optics post at the rear of the compartment: a thin pole about as tall as the body with a small square periscope box "
+               "on top; one tall, thin, dark whip antenna at the rear; jerrycans in racks and a rolled canvas sheet on the rear deck.",
+               "a closed armoured scout car with a tall, square-cut body of flat upright plates and a flat roof: a short, flat, nearly level bonnet ending in a blunt "
+               "square nose with a flat armoured grille of vertical slots and a straight steel bumper; a small upright windscreen of two nearly square flat dark "
+               "armoured panes in thick dark frames; two square side doors in each side, each with one small square window and flat outside hinges; four big wheels "
+               "under square-cut, flat-topped wheel arches, the front axle under the bonnet and the rear axle close to the back; a remote weapon station of its own "
+               "design in the middle of the roof: a low, flat-sided square box on a small turntable carrying a light machine gun with a thin dark barrel and a "
+               "square sight box beside it; at the rear of the roof a telescopic sensor mast, raised to about the height of the body again, made of three square "
+               "dark tubes, each thinner than the one below, carrying a flat rectangular sensor head with two square windows facing forward; a cluster of four "
+               "smoke-grenade tubes on each front corner of the roof; stowage baskets on the rear roof and a flat rear door with the spare wheel.",
+               "a lower, wider scout car built of large flat faceted panels set at shallow angles, every edge straight and sharp: a long, low, flat bonnet sloping "
+               "gently down to a sharp horizontal front edge; a narrow windscreen strip of three flat dark panes set at a steep slant; flat side skirts that hide "
+               "the upper half of each of the four big wheels; no grille and no exhaust pipes (a quiet hybrid-electric drive), only two flat dark vents on the "
+               "bonnet; a small, flat-sided remote weapon station on the front of the roof with a slim light machine gun; a slim telescopic sensor mast in the "
+               "middle of the roof, raised, of two thin dark square tubes, carrying a narrow flat wedge-shaped sensor head; behind the mast, ONE square-section "
+               "drone launch tube lying along the centre of the rear roof, its front end raised about 20 degrees, closed by a flat dark cover; a dull, matte, "
+               "radar-absorbing finish on every panel."]),
+     'east': ("Family look (Eastern): a small, low, lightly armoured four-wheeled amphibious scout car with a low boat-shaped hull (a pointed, upswept prow like a "
+              "small boat's bow, hull sides that slope inward toward the top, a rounded chine along each side), a small round turret or round gun ring on the "
+              "roof, and four big wheels on two axles in deep rounded arches cut into the hull.",
+              ["a low, open-topped amphibious scout car: the boat hull's pointed, upswept prow rising ahead of the front wheels; the engine at the FRONT under a "
+               "flat, sloped deck with a grille of small square holes; two small square hinged armoured vision flaps in the plate in front of the driver, folded "
+               "up; an open crew compartment with NO roof in the middle of the hull, ringed by a low armoured rim; at the rear of that compartment a small round, "
+               "open-topped gun ring (a short armoured cylinder) carrying a light machine gun of its own design with a thin dark barrel and a round drum magazine, "
+               "behind a curved shield; four big wheels in deep rounded arches, the front pair set well back from the prow and the rear pair close to the squared-off "
+               "stern; a flat stern with one round water-jet outlet and a small hinged rudder blade; a short, upright, dark optics post beside the gun ring: a thin "
+               "pole with a small round periscope head; one tall, thin, dark whip antenna; a towing cable coiled on the hull side, a spade and an axe clipped beside it.",
+               "a closed armoured amphibious scout car: the boat hull's pointed, upswept prow; a steep upper front plate with a wide, low band of three small square "
+               "dark armoured windows; the small round turret set well FORWARD on the roof, right behind the windows: an unmanned turret shaped like a low "
+               "flattened dome (a remote weapon station) with a short light machine gun and a small square sight on its front, a row of four smoke-grenade tubes on "
+               "each of its sides; flat, inward-sloping upper hull sides with one small round-cornered door in each side between the wheels; four big wheels in deep "
+               "rounded arches and no other wheels (no small wheels under the belly); the engine at the rear under a flat deck with a grille of narrow slots; at the "
+               "rear of the roof a telescopic sensor mast of three dark round tubes, raised to about the height of the hull again, carrying a round drum-shaped "
+               "sensor head with one big round lens; a log and a fuel drum strapped across the rear deck.",
+               "a very low, smooth, near-future amphibious scout car: the boat hull with rounded edges and a long, gently upswept prow, its sides covered by smooth "
+               "curved composite panels that reach down over the upper half of the four big wheels; a narrow band of two small dark slit windows high in the front "
+               "slope; no grille and no exhaust (a quiet hybrid-electric drive), only a low flat vent at the stern; a small round unmanned turret shaped like a low "
+               "flattened dome with a slim light machine gun, in the middle of the roof; behind it a slim telescopic sensor mast of two thin dark round tubes, "
+               "raised, carrying a small ball-shaped sensor head; ONE round drone launch tube standing upright at the rear of the roof, on the centre line, its top "
+               "closed by a dark round cap; two small round water-jet outlets at the stern."]),
+     'china': ("Family look (China, its own lines): a small, clean, tidy, boxy lightly armoured four-wheeled scout car with smooth flat panels and neat flush "
+               "hatches, a long, sharply sloped front plate that runs in one flat face from the front bumper up toward the roof, upright flat sides, and four big "
+               "wheels on two axles in square-cut arches.",
+               ["a boxy, open-topped scout car: the long, flat, sharply sloped front plate running from the front bumper up to the open top, with a flat grille of "
+                "small square holes at its lower end and one wide rectangular hinged vision flap (folded up) at its top; flat upright side walls with a straight top "
+                "edge and one square door in each side; NO roof over the open crew compartment; four big wheels in square-cut arches with flat-topped mudguards; a "
+                "light machine gun of its own design on a pivot post at the front of the compartment, with a thin dark barrel and a flat rectangular box magazine on "
+                "top, behind a small square shield; a short, upright, dark optics post at the rear: a thin pole with a small square periscope head; one tall, thin, "
+                "dark whip antenna; a spare wheel lying flat on the rear deck and two jerrycans in a rack on the rear plate.",
+                "a closed armoured scout car with a clean, smooth, boxy body: the long, sharply sloped front plate running in one flat face from the bumper all the way "
+                "up to the roof (no separate bonnet and no step), with a wide, shallow windscreen band of three flat dark panes set flush into the slope; flat upright "
+                "sides with two flush square doors in each side, each with one small square window; a flat roof with neat flush hatches; four big wheels in square-cut "
+                "arches; a compact remote weapon station of its own design in the middle of the roof: a neat square box on a turntable with a light machine gun with "
+                "a thin dark barrel and a square sight box with two round lenses; at the rear of the roof a slim telescopic sensor mast of three dark square tubes, "
+                "raised, carrying a box-shaped sensor head with three round lenses in a row; a pair of small flat laser-warning sensors on the front corners of the "
+                "roof; a flat rear door with a stowage box.",
+                "a near-future, low-signature hybrid scout car with a clean, smooth, faceted boxy body: an even longer, sharper sloped front plate meeting the roof in "
+                "a crisp edge, with a narrow windscreen strip of two flat dark panes in the slope; smooth flat side panels that hang down over the upper half of the "
+                "four big wheels; no grille and no exhaust (a quiet hybrid-electric drive); a small, low, faceted remote weapon station with a slim light machine gun "
+                "on the front of the roof; a slim telescopic sensor mast of two thin dark square tubes in the middle of the roof, raised, carrying a flat square "
+                "sensor head; ONE long, square-section drone launch tube lying flat along the centre of the rear roof, its rear end closed by a dark square cover."]),
+     'europe': ("Family look (Europe): a very low, long, sleek, lightly armoured four-wheeled scout car with smoothly rounded and gently faceted shapes, a roof "
+                "only a little higher than the tops of the wheels, the four big wheels set at the very corners of the body with very short overhangs, and a small "
+                "panoramic sight (a round periscope head) on the roof.",
+                ["a very low, open-topped scout car: a long, low, smoothly rounded bonnet sloping down to a rounded nose, with two small round headlights set into "
+                 "it; a low, raked, curved windscreen of two narrow dark armoured panes; a low open crew compartment with NO roof, its sides no higher than the tops "
+                 "of the wheel arches, rounded body edges all round; the four big wheels at the very corners of the body under smoothly rounded arches; a light "
+                 "machine gun of its own design on a curved rail around the open compartment, with a thin dark barrel in a slim perforated cooling jacket; the "
+                 "panoramic sight on a short, dark optics post in front of the gun: a round periscope head with one dark window; one tall, thin, dark whip antenna at the "
+                 "rear; a spare wheel set flat into the rear deck and a canvas-covered stowage box at the back.",
+                 "a very low, sleek, closed armoured scout car with smoothly faceted, gently rounded plates: a long, low, gently sloped bonnet ending in a rounded, "
+                 "wedge-like nose; a low, sharply raked windscreen of three narrow dark armoured panes that wraps around to the sides; a long, low roof; one long, "
+                 "low side door with a narrow window in each side; the four big wheels at the very corners under smoothly rounded arches; on the front of the roof "
+                 "the panoramic sight: a round, rotating periscope head with a dark window on a short post; in the middle of the roof a small, low remote weapon "
+                 "station of its own design with a slim light machine gun; at the rear of the roof a telescopic sensor mast of three slim dark round tubes, raised, "
+                 "carrying an oval sensor head shaped like a flattened egg with two round lenses; a row of three smoke-grenade tubes on each front corner.",
+                 "a near-future, very low, sleek hybrid scout car of smooth, softly faceted composite panels: a long, low nose that rises in one smooth curve to the "
+                 "roof; a thin wraparound windscreen strip of dark glass; smooth side panels that cover the upper half of the four big wheels at the corners; no "
+                 "grille and no exhaust (a quiet hybrid-electric drive); the panoramic sight as a low round dome with a dark glass top on the front of the roof; a "
+                 "small, low remote weapon station with a slim light machine gun behind it; a slim telescopic sensor mast of two thin dark round tubes, raised, "
+                 "carrying a small flat disc-shaped sensor head; ONE short round drone launch tube built into the rear of the roof on the centre line, angled up "
+                 "toward the rear at about 45 degrees, its end closed by a dark round cap."]),
+     'export': ("Family look (Export, a mix of widely exported designs): a rugged, practical armoured utility four-wheeler on a heavy commercial-style truck "
+                "chassis, tall and square, with flat steel plates bolted on over its body (rows of round bolt heads along every plate edge); its armoured walls "
+                "run all the way to the rear, with no open cargo bed (it is not a pickup truck and not a six-wheeled truck); four big wheels on two axles.",
+                ["an open-topped armoured utility car: a long, tall, flat bonnet covered by bolted-on steel plates, with a square armoured radiator guard of vertical "
+                 "slots at the front and a thick steel bumper; a flat, upright armoured windscreen plate with two small square vision slits; behind it an open crew "
+                 "compartment with NO roof, enclosed on all four sides by tall flat bolted steel plates with small square firing ports, the plates running all the "
+                 "way to the rear; four big wheels on plain round steel rims under flat steel mudguards; a light machine gun of its own design on a tall pivot post "
+                 "in the middle of the compartment, its thin dark barrel pointing forward, behind a flat square shield with bolts; a short, dark optics post at the "
+                 "rear: a thin pole with a small square periscope head; two thin dark whip antennas; a spare wheel on the rear plate, jerrycans and canvas bags tied on.",
+                 "a closed armoured utility scout car: a tall, square, rugged steel body with a short, flat, upright-fronted bonnet, a square radiator guard of "
+                 "vertical slots and a heavy push bar; a small upright windscreen of two square dark armoured panes in bolted steel frames; flat upright sides "
+                 "covered by extra square steel plates bolted on in rows, with one square door with a small square window in each side; a closed, boxy rear body as "
+                 "tall as the cab with a square rear door; four big wheels under square, slightly flared mudguards; a simple remote weapon station of its own design "
+                 "on the roof: a squared cradle on a turntable carrying a light machine gun with a thin dark barrel and a square ammunition box; at the rear of the "
+                 "roof a telescopic sensor mast of three dark square tubes, raised, carrying a simple box-shaped sensor head with one round lens; jerrycans in side "
+                 "racks and a spare wheel on a roof rack.",
+                 "a near-future, modular export scout car with a hybrid drive: a tall, square, rugged armoured body of large flat modular armour panels bolted onto a "
+                 "frame; a flat-fronted bonnet with no grille, only two square dark vents (a quiet hybrid-electric drive); a narrow windscreen of two small square "
+                 "dark panes; a closed, boxy rear body as tall as the cab; bolt-on flat armour plates over the upper half of the four big wheels; a compact remote "
+                 "weapon station with a slim light machine gun in the middle of the roof; a slim telescopic sensor mast of two dark square tubes at the rear of the "
+                 "roof, raised, carrying a flat rectangular sensor head; ONE square-section drone launch tube bolted onto a rack across the very rear of the roof, "
+                 "angled up toward the rear at about 30 degrees, its end closed by a dark square cover; a roof rack with stowage."])},
+    paint={g: UL_PAINT['gnd'][g] + ", the mast, the antennas, the gun barrel and the tyres dark grey" for g in UNIT_GROUPS},
+    frame_note=_RCN_ROOF, side_frame=UNIQUE_GND_SIDE, side_style=STYLE_UL_SIDE_CONTACT,
+    rule=(_OWNER + "It must not look like any real armoured car, scout car or utility vehicle (no Krauss-Maffei Wegmann, Rheinmetall, Panhard, Arquus, Renault, "
+          "Iveco, Mowag, General Dynamics, AM General, Oshkosh, Textron, Cadillac Gage, Alvis, Daimler, GAZ, Arzamas, NORINCO, Dongfeng, Otokar, Nurol, FNSS, "
+          "Engesa, Denel, Paramount, Streit, Land Rover or Toyota scout car, armoured car or patrol vehicle); it is not an open pickup truck and not a six- or "
+          "eight-wheeled vehicle, and it has no small extra wheels under its belly; its hull, nose, windows, doors, wheels, mast and gun are this game's own "
+          "design, exactly as described here."),
+    gens=["Generation 1 of 3, the oldest, a Cold War era open-roof scout car: ", "Generation 2 of 3, a clearly newer, modern armoured scout car with a remote "
+          "weapon station and a telescopic sensor mast: ", "Generation 3 of 3, the newest, a near-future low-signature hybrid-electric scout car with a drone "
+          "launch tube: "])
+assert len([n for n in UNIT_LOOKS if UNIT_LOOKS[n].get('unit_key') == 'rcn']) == 45 and "LOWER RIGHT" in UD['rcn']['side'] and "contact shadow" in UD['rcn']['side']
 
 
 # ---- END OF THE UNIT DEFINITIONS (new units are added above this line)
