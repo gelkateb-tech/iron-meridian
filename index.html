@@ -8560,7 +8560,7 @@ function drawBuildings(hexPx, now, kl, boxes0){ BNHIT = []; /*@TEST*/BNDBG.lengt
     { const lr = bLevel(p + ':bn:' + e.k, e.lv, now); let f = lr.t0 ? (now - lr.t0)/TRAY_ANIM : -1; if (f >= 1){ lr.t0 = 0; f = -1; }
       if (f >= 0 && !saverOn()){ animFast(); const cx = (b[0] + b[2])/2, cy = (b[1] + b[3])/2, R0 = Math.max(10, w*0.5), E0 = easeOut(f); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = q.a*0.7*(1 - f); ctx.drawImage(GLOW(), cx - R0*1.3, cy - R0*1.3, R0*2.6, R0*2.6);
         ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = q.a*(1 - f)*(1 - f); ctx.lineWidth = 1.2 + 1.6*(1 - f); ctx.strokeStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(cx, cy, R0*(0.5 + 0.8*E0), 0, Math.PI*2); ctx.stroke(); ctx.restore(); } }
-    if (q.a > 0.3){ BNHIT.push({p, b, hq:e.k === 'hq'}); const bx = [b[0], b[1], b[2], b[3]]; bx.unit = true; bx.b3 = true; bx.at = -5; boxes0.push(bx); if (e.k === 'hq' && S.owner[p] === PLAYER) HQBOX = [b]; }
+    if (q.a > 0.3){ BNHIT.push({p, b, hq:e.k === 'hq'}); const bx = [b[0], b[1], b[2], b[3]]; bx.unit = true; bx.b3 = true; bx.bp = p; bx.at = -5; boxes0.push(bx); if (e.k === 'hq' && S.owner[p] === PLAYER) HQBOX = [b]; }
     /*@TEST*/BNDBG.push({p, k:e.k, nm:e.nm, lv:e.lv, pf:+pf.toFixed(3), site:e.site ? 1 : 0, cons:e.c ? 1 : 0, hq:e.k === 'hq' ? 1 : 0, mir:q.mir ? 1 : 0, x:+q.x.toFixed(3), y:+q.y.toFixed(3), wx:q.wx, wy:q.wy, a:+q.a.toFixed(3), box:b.map(v => +v.toFixed(1)), L:+q.L.toFixed(2), px:c.width, pic:q.pic || e.nm, basin:q.basin ? 1 : 0, fl:e.k === 'hq' ? BNF_DBG.slice() : null});/*@ENDTEST*/ }
   ctx.globalAlpha = ga0; ctx.imageSmoothingQuality = sm0; }
 /* ---- The HQ's flags: its nation's real flag on each of the HQ picture's 8 flagpoles (BNMETA flags: each pole's top and length), drawn in code
@@ -11742,8 +11742,10 @@ function draw(now){ draw.now = now;
           [L.x + L.mr + 2, L.my - f - 2], [L.x - L.mr - 2 - w, L.my - f - 2], [L.x + L.mr + 2, L.my + 2], [L.x - L.mr - 2 - w, L.my + 2], [L.x - w/2, L.my - L.mr - f - 4], [L.x - w/2, y0 + 2*f + 6], [L.x + L.mr + 6, y0 + f], [L.x - L.mr - 6 - w, y0 + f]];
         else { const blk = blkN; if (!blk.every(q => q.unit)) continue; const t0 = Math.min(...blk.map(q => q[1])), t1 = Math.max(...blk.map(q => q[3]));
           cand = [[L.x - w/2, t0 - f - 3], [L.x - w/2, t1 + 1]].filter(q => Math.abs(q[1] - y0) <= 3*f); }
+        // (its own town's building pictures never push it away: on their lots they can stand where a step goes, and a name taken off them went far from its
+        // town, over the sea by the next town's point (Brighton at hex 25 on a phone, cities merge); it is drawn over them, as on its own spot)
         let ok = false; for (const [x0, yt] of cand){ b[0] = x0; b[2] = x0 + w; b[1] = yt - 1; b[3] = yt + f + 2;
-          if (b[0] < 0 || b[2] > cw || mkHit(b) || bxNear(boxes, b).some(hit) || cpNear(b).some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || offLand(b)) continue;
+          if (b[0] < 0 || b[2] > cw || mkHit(b) || bxNear(boxes, b).some(q => hit(q) && !(q.b3 && q.bp === L.p)) || cpNear(b).some(m => m.p !== L.p && m.x + m.r > b[0] && m.x - m.r < b[2] && m.y + m.r > b[1] && m.y - m.r < b[3]) || offLand(b)) continue;
           lx = x0 + w/2; ly = yt; ok = true; break; }
         if (!ok){ const mine = L.cap && L.p === S.nations[PLAYER].capital; if (!(mine || L.cap || (L.city && L.tier >= 1))) continue;
           // boxed in on every side: a capital or big city may still take its spot (or a nearby one) over the edges of a counter - its marks, padding or figures -
@@ -12424,6 +12426,9 @@ const tip = document.getElementById('tip');
    Every naval city (a coastal city: rules/state.js navalCity) shows an anchor in a small square frame beside its name, like the port icon of the
    owner's Conflict of Nations screenshot (Karachi, Hyderabad): on the left of the name, or on its right where the left is taken, never over the
    name, a counter, its position dot, a control or another name (its box joins the placed boxes, so the names laid out after it keep clear of it).
+   A building picture blocks it only where the tile itself would cover the picture: not the tile's 1 px margin, nor a graze of the tile's own edge
+   pixel (cities merge: with the pictures on their lots London's anchor at hex 25 on a phone was dropped for a neighbour's Naval Yard picture whose
+   box corner, its transparent edge, touched the tile's bottom row by 0.1 px).
    It shows with the city names (from hexPx 8; not beside a capital's name zoomed further out) and is sized to them. Hovering it says what it means (NC_TIP); the city sheet says the same. */
 const NC_TIP = 'Naval city: Naval Yard can be built here; troops board and land here';
 const NC_ICON = '<svg class="ncic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x=".7" y=".7" width="22.6" height="22.6" rx="4" fill="#0e1e2e" stroke="#ece6d4" stroke-width="1.4"/><g transform="translate(3.6 3.4) scale(.7)" fill="#ece6d4"><circle cx="12" cy="4.6" r="2.6" fill="none" stroke="#ece6d4" stroke-width="2.4"/><path d="M10.8 7.2h2.4v13.4h-2.4zM7 10h10v2H7zM2.8 13.2c.4 4.8 4.1 8.2 9.2 8.2s8.8-3.4 9.2-8.2l-2.6 1.7c-.7 2.8-3.3 4.3-6.6 4.3s-5.9-1.5-6.6-4.3z"/></g></svg>';
@@ -12433,7 +12438,7 @@ let NCHIT = [];
 function ncPlace(L, lx, ly, f, w, b, boxes){ const s = Math.round(Math.min(17, Math.max(12, f + 3))), y0 = Math.round(ly + f/2 - s/2 + 0.5);
   for (const x0 of [Math.floor(lx - w/2 - s - 2), Math.ceil(lx + w/2 + 2)]){ const bx = [x0 - 1, y0 - 1, x0 + s + 1, y0 + s + 1];
     if (bx[0] < 0 || bx[2] > cw || bx[1] < 0 || bx[3] > ch) continue;
-    if (bxNear(boxes, bx).some(q => q !== b && q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1])) continue;
+    if (bxNear(boxes, bx).some(q => q !== b && (q.b3 ? q[0] < x0 + s - 1 && q[2] > x0 + 1 && q[1] < y0 + s - 1 && q[3] > y0 + 1 : q[0] < bx[2] && q[2] > bx[0] && q[1] < bx[3] && q[3] > bx[1]))) continue;   // (a building picture only where the tile itself would cover it: its box is the whole picture, transparent edge and all, so a graze of 1 px is not)
     if (cpNear(bx).some(m => m.p !== L.p && m.x + m.r > bx[0] && m.x - m.r < bx[2] && m.y + m.r > bx[1] && m.y - m.r < bx[3])) continue;
     bx.nc = true; boxes.push(bx); const m = {p:L.p, x:x0, y:y0, s, a:L.a}; NCHIT.push([x0, y0, x0 + s, y0 + s, L.p]); return m; }
   return null; }
